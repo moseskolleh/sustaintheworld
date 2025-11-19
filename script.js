@@ -390,6 +390,262 @@ projectCards.forEach(card => {
 });
 
 // ===================================
+// PROJECT DETAIL MODAL
+// ===================================
+const projectData = {
+    'coastal': {
+        title: 'Coastal Water Pollution Dynamics',
+        image: 'Coastal Water Pollution Dynamics 1.jpeg',
+        description: 'Master\'s thesis research studying socioeconomic drivers of river export of multiple pollutants in sub-basins worldwide and developing qualitative future storylines for African coastal water pollution.',
+        challenge: 'Understanding the complex relationship between socioeconomic factors and coastal water pollution across global sub-basins, with specific focus on developing future scenarios for African coastal regions.',
+        approach: [
+            'Analyzed global river export data of multiple pollutants across various sub-basins',
+            'Identified key socioeconomic drivers influencing pollution patterns',
+            'Developed statistical models to understand pollution dynamics',
+            'Created qualitative future storylines specific to African coastal regions',
+            'Integrated climate change scenarios into pollution projections'
+        ],
+        results: [
+            'Identified critical socioeconomic factors affecting coastal pollution',
+            'Developed comprehensive future scenarios for African coastal water quality',
+            'Provided data-driven insights for policy development',
+            'Contributed to understanding of global water pollution patterns'
+        ],
+        technologies: ['Python', 'R', 'QGIS', 'Statistical Modeling', 'Data Visualization'],
+        duration: '2023 - 2024',
+        role: 'Lead Researcher',
+        institution: 'Wageningen University & Research'
+    },
+    'wuppertal': {
+        title: 'Flood-Resilient Wuppertal',
+        image: 'Wuppertal_Flood_Resilence.jpeg',
+        description: 'Academic consultancy project for the Municipality of Wuppertal: "Preventing the Schwebebahn from Becoming a Boat: Towards a Flood-Resilient Wuppertal". Led interdisciplinary team on comprehensive flood risk assessment.',
+        challenge: 'Develop a comprehensive flood risk management strategy for Wuppertal, protecting critical infrastructure including the iconic Schwebebahn suspension railway system.',
+        approach: [
+            'Conducted comprehensive flood risk assessment for Wuppertal region',
+            'Led interdisciplinary team combining climate science, engineering, and policy expertise',
+            'Analyzed historical flood data and climate projections',
+            'Developed climate adaptation strategies for critical infrastructure',
+            'Created actionable recommendations for municipality implementation'
+        ],
+        results: [
+            'Delivered comprehensive flood risk management framework',
+            'Identified critical vulnerabilities in city infrastructure',
+            'Proposed cost-effective adaptation measures',
+            'Provided municipality with actionable implementation roadmap',
+            'Enhanced community resilience to climate change'
+        ],
+        technologies: ['Climate Modeling', 'GIS', 'Risk Assessment', 'Policy Development'],
+        duration: '2023',
+        role: 'Team Lead & Climate Analyst',
+        institution: 'Wageningen University & Research'
+    },
+    'sustainable-ai': {
+        title: 'Sustainable AI Framework',
+        image: 'Sustainable_AI_2.jpeg',
+        description: 'Developing framework and prototype to balance benefits of generative AI adoption with environmental costs for the Dutch Ministry of Finance. Creating decision-support tools for sustainable AI implementation.',
+        challenge: 'Balance the transformative benefits of generative AI with its environmental costs, creating a practical framework for sustainable AI adoption in government operations.',
+        approach: [
+            'Researching environmental impacts of generative AI systems',
+            'Developing sustainability assessment framework for AI use cases',
+            'Creating decision-support tools for AI implementation',
+            'Aligning framework with UN SDG 12 (Responsible Consumption) and 13 (Climate Action)',
+            'Prototyping practical tools for Ministry of Finance use'
+        ],
+        results: [
+            'Comprehensive framework for sustainable AI evaluation',
+            'Decision-support prototype for AI implementation',
+            'Guidelines aligned with UN Sustainable Development Goals',
+            'Practical tools for balancing innovation and sustainability'
+        ],
+        technologies: ['AI', 'Sustainability Assessment', 'Data Framework', 'SDGs', 'Environmental Analysis'],
+        duration: 'Sept 2025 - Present',
+        role: 'Researcher',
+        institution: 'Digital Society School, Amsterdam University of Applied Sciences',
+        partner: 'Dutch Ministry of Finance'
+    },
+    'water-management': {
+        title: 'Soft Path Water Management',
+        image: 'Soft_path_to_water_management 2.jpeg',
+        description: 'Master\'s thesis on "Approach to Soft Path Water Management - Thinking Beyond Cement, Steel and Pipes" using Freetown, Sierra Leone as a case study. Innovative approach to sustainable water resource management.',
+        challenge: 'Develop alternative water management approaches that move beyond traditional hard infrastructure, addressing water security challenges in resource-constrained settings.',
+        approach: [
+            'Analyzed Freetown\'s water management challenges and opportunities',
+            'Developed soft path approach alternatives to traditional infrastructure',
+            'Integrated community-based water management strategies',
+            'Evaluated sustainability and feasibility of proposed solutions',
+            'Created implementation framework for resource-constrained contexts'
+        ],
+        results: [
+            'Innovative soft path framework for water management',
+            'Cost-effective alternatives to traditional infrastructure',
+            'Community-centered sustainable water solutions',
+            'Scalable model for similar urban contexts in developing regions'
+        ],
+        technologies: ['Water Management', 'Sustainability', 'Systems Analysis', 'Community Engagement'],
+        duration: '2020 - 2021',
+        role: 'Lead Researcher',
+        institution: 'Hunan University, China'
+    },
+    'un-disaster': {
+        title: 'UN Disaster Risk Reduction',
+        image: 'UN Disaster Risk Reduction 2.jpeg',
+        description: 'Comprehensive risk management framework for Trinidad and Tobago, supporting UN Sendai Framework. Documented 54 global hazard information systems and standardized disaster reporting terminologies.',
+        challenge: 'Develop comprehensive disaster risk management framework aligned with UN Sendai Framework, improving data quality and accessibility for effective disaster risk reduction.',
+        approach: [
+            'Reviewed and validated disaster loss data for Caribbean countries',
+            'Analyzed 54 global hazard information systems',
+            'Developed comprehensive risk management factsheet for Trinidad and Tobago',
+            'Standardized disaster reporting terminologies',
+            'Supported UN Sendai Framework implementation'
+        ],
+        results: [
+            'Comprehensive risk management framework for Trinidad and Tobago',
+            'Documentation of 54 global hazard information systems',
+            'Improved disaster data quality and accessibility',
+            'Enhanced regional disaster risk reduction capacity',
+            'Contribution to UN Sendai Framework goals'
+        ],
+        technologies: ['UN Frameworks', 'Disaster Management', 'Data Analysis', 'Policy Development'],
+        duration: 'Jun 2023 - Oct 2023',
+        role: 'Climate Change Adaptation Intern',
+        institution: 'United Nations Office for Disaster Risk Reduction, Bonn, Germany'
+    },
+    'groundwater': {
+        title: 'Groundwater Potential Mapping',
+        image: null,
+        description: 'Bachelor\'s dissertation on "Mapping Groundwater Potential in the Freetown Complex: A Geophysical Approach". Applied geophysical methods for sustainable water resource identification.',
+        challenge: 'Map groundwater potential in the geologically complex Freetown region to support sustainable water resource development and improve water access.',
+        approach: [
+            'Applied geophysical surveying methods for groundwater detection',
+            'Analyzed geological and hydrogeological data for Freetown Complex',
+            'Created groundwater potential maps using GIS',
+            'Validated findings through field verification',
+            'Developed recommendations for borehole placement'
+        ],
+        results: [
+            'Comprehensive groundwater potential maps for Freetown region',
+            '70% success rate in subsequent aquifer detection',
+            'Scientific foundation for water infrastructure development',
+            'Improved water access for local communities'
+        ],
+        technologies: ['Geophysics', 'GIS', 'Hydrogeology', 'Field Survey Methods'],
+        duration: '2016 - 2017',
+        role: 'Lead Researcher',
+        institution: 'University of Sierra Leone, Freetown'
+    }
+};
+
+const modal = document.getElementById('projectModal');
+const modalBody = document.getElementById('modalBody');
+const closeModal = document.querySelector('.close-modal');
+const viewDetailsButtons = document.querySelectorAll('.view-details-btn');
+
+viewDetailsButtons.forEach(button => {
+    button.addEventListener('click', (e) => {
+        e.preventDefault();
+        const projectCard = button.closest('.project-card');
+        const projectId = projectCard.getAttribute('data-project');
+        const project = projectData[projectId];
+
+        if (project) {
+            showProjectModal(project);
+        }
+    });
+});
+
+function showProjectModal(project) {
+    const modalHTML = `
+        ${project.image ? `
+        <div class="modal-header">
+            <img src="${project.image}" alt="${project.title}">
+            <div class="modal-header-overlay">
+                <h2>${project.title}</h2>
+            </div>
+        </div>
+        ` : `
+        <div class="modal-body" style="padding-top: 60px;">
+            <h2 style="color: var(--primary-green); margin-bottom: 20px;">${project.title}</h2>
+        </div>
+        `}
+        <div class="modal-body">
+            <div class="modal-section">
+                <h3><i class="fas fa-info-circle"></i> Overview</h3>
+                <p>${project.description}</p>
+                ${project.partner ? `<p style="color: var(--primary-green); font-weight: 600; margin-top: 10px;">Partner: ${project.partner}</p>` : ''}
+            </div>
+
+            <div class="modal-section">
+                <h3><i class="fas fa-tasks"></i> Challenge</h3>
+                <p>${project.challenge}</p>
+            </div>
+
+            <div class="modal-section">
+                <h3><i class="fas fa-cogs"></i> Approach</h3>
+                <ul>
+                    ${project.approach.map(item => `<li>${item}</li>`).join('')}
+                </ul>
+            </div>
+
+            <div class="modal-section">
+                <h3><i class="fas fa-trophy"></i> Results & Impact</h3>
+                <ul>
+                    ${project.results.map(item => `<li>${item}</li>`).join('')}
+                </ul>
+            </div>
+
+            <div class="modal-section">
+                <h3><i class="fas fa-tools"></i> Technologies & Methods</h3>
+                <div class="modal-tech-stack">
+                    ${project.technologies.map(tech => `<span>${tech}</span>`).join('')}
+                </div>
+            </div>
+
+            <div class="modal-section">
+                <div class="modal-stats">
+                    <div class="modal-stat-card">
+                        <div class="modal-stat-number"><i class="fas fa-calendar"></i></div>
+                        <div class="modal-stat-label">${project.duration}</div>
+                    </div>
+                    <div class="modal-stat-card">
+                        <div class="modal-stat-number"><i class="fas fa-user-tie"></i></div>
+                        <div class="modal-stat-label">${project.role}</div>
+                    </div>
+                    <div class="modal-stat-card">
+                        <div class="modal-stat-number"><i class="fas fa-university"></i></div>
+                        <div class="modal-stat-label">${project.institution}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    modalBody.innerHTML = modalHTML;
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+closeModal.addEventListener('click', () => {
+    modal.classList.remove('active');
+    document.body.style.overflow = 'auto';
+});
+
+modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+        modal.classList.remove('active');
+        document.body.style.overflow = 'auto';
+    }
+});
+
+// Close modal with Escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal.classList.contains('active')) {
+        modal.classList.remove('active');
+        document.body.style.overflow = 'auto';
+    }
+});
+
+// ===================================
 // THEME TOGGLE (Optional Feature)
 // ===================================
 const createThemeToggle = () => {
@@ -415,16 +671,23 @@ const createThemeToggle = () => {
     document.body.appendChild(toggle);
 
     toggle.addEventListener('click', () => {
-        document.body.classList.toggle('light-theme');
+        document.body.classList.toggle('light-mode');
         const icon = toggle.querySelector('i');
-        icon.className = document.body.classList.contains('light-theme')
-            ? 'fas fa-sun'
-            : 'fas fa-moon';
+        const isLightMode = document.body.classList.contains('light-mode');
+
+        icon.className = isLightMode ? 'fas fa-sun' : 'fas fa-moon';
+
+        // Save preference
+        localStorage.setItem('theme', isLightMode ? 'light' : 'dark');
     });
 };
 
-// Optional: Uncomment to enable theme toggle
-// createThemeToggle();
+// Enable theme toggle and restore saved preference
+const currentTheme = localStorage.getItem('theme') || 'dark';
+if (currentTheme === 'light') {
+    document.body.classList.add('light-mode');
+}
+createThemeToggle();
 
 // ===================================
 // PRELOADER

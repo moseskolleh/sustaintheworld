@@ -15,7 +15,7 @@
     <nav class="navbar" id="navbar">
         <div class="nav-container">
             <div class="nav-logo">
-                <span class="logo-eco">Sustain</span><span class="logo-search">TheWorld</span>
+                <span class="logo-eco">Moses Kolleh</span><span class="logo-search"> Sesay</span>
             </div>
             <div class="nav-toggle" id="navToggle">
                 <span></span>
@@ -71,6 +71,9 @@
             <h2 class="section-title">ABOUT <span class="highlight">ME</span></h2>
             <div class="section-underline"></div>
             <div class="about-content">
+                <div class="about-image">
+                    <img src="profile_pic.png" alt="Moses Kolleh Sesay - Sustainability & Climate Analyst">
+                </div>
                 <div class="about-text">
                     <p class="about-intro">
                         Sustainability professional with dual master's degrees in <strong>Environmental Sciences</strong> and
@@ -254,7 +257,10 @@
                 Bridging environmental science, data analytics, and policy for sustainable impact
             </p>
             <div class="projects-grid">
-                <div class="project-card">
+                <div class="project-card" data-project="coastal">
+                    <div class="project-image">
+                        <img src="Coastal Water Pollution Dynamics 1.jpeg" alt="Coastal Water Pollution Dynamics">
+                    </div>
                     <div class="project-icon">
                         <i class="fas fa-water"></i>
                     </div>
@@ -271,11 +277,14 @@
                         <span>Statistical Modeling</span>
                     </div>
                     <div class="project-links">
-                        <a href="#" class="project-link">View Details</a>
+                        <a href="#" class="project-link view-details-btn">View Details</a>
                     </div>
                 </div>
 
-                <div class="project-card">
+                <div class="project-card" data-project="wuppertal">
+                    <div class="project-image">
+                        <img src="Wuppertal_Flood_Resilence.jpeg" alt="Flood-Resilient Wuppertal">
+                    </div>
                     <div class="project-icon">
                         <i class="fas fa-cloud-sun-rain"></i>
                     </div>
@@ -292,11 +301,14 @@
                         <span>Policy Development</span>
                     </div>
                     <div class="project-links">
-                        <a href="#" class="project-link">View Details</a>
+                        <a href="#" class="project-link view-details-btn">View Details</a>
                     </div>
                 </div>
 
-                <div class="project-card">
+                <div class="project-card" data-project="sustainable-ai">
+                    <div class="project-image">
+                        <img src="Sustainable_AI_2.jpeg" alt="Sustainable AI Framework">
+                    </div>
                     <div class="project-icon">
                         <i class="fas fa-robot"></i>
                     </div>
@@ -313,11 +325,14 @@
                         <span>SDGs</span>
                     </div>
                     <div class="project-links">
-                        <a href="#" class="project-link">View Details</a>
+                        <a href="#" class="project-link view-details-btn">View Details</a>
                     </div>
                 </div>
 
-                <div class="project-card">
+                <div class="project-card" data-project="water-management">
+                    <div class="project-image">
+                        <img src="Soft_path_to_water_management 2.jpeg" alt="Soft Path Water Management">
+                    </div>
                     <div class="project-icon">
                         <i class="fas fa-tint"></i>
                     </div>
@@ -333,11 +348,14 @@
                         <span>Systems Analysis</span>
                     </div>
                     <div class="project-links">
-                        <a href="#" class="project-link">View Details</a>
+                        <a href="#" class="project-link view-details-btn">View Details</a>
                     </div>
                 </div>
 
-                <div class="project-card">
+                <div class="project-card" data-project="un-disaster">
+                    <div class="project-image">
+                        <img src="UN Disaster Risk Reduction 2.jpeg" alt="UN Disaster Risk Reduction">
+                    </div>
                     <div class="project-icon">
                         <i class="fas fa-globe-africa"></i>
                     </div>
@@ -353,11 +371,11 @@
                         <span>Data Analysis</span>
                     </div>
                     <div class="project-links">
-                        <a href="#" class="project-link">View Details</a>
+                        <a href="#" class="project-link view-details-btn">View Details</a>
                     </div>
                 </div>
 
-                <div class="project-card">
+                <div class="project-card" data-project="groundwater">
                     <div class="project-icon">
                         <i class="fas fa-map-marked-alt"></i>
                     </div>
@@ -373,12 +391,20 @@
                         <span>Hydrogeology</span>
                     </div>
                     <div class="project-links">
-                        <a href="#" class="project-link">View Details</a>
+                        <a href="#" class="project-link view-details-btn">View Details</a>
                     </div>
                 </div>
             </div>
         </div>
     </section>
+
+    <!-- Project Detail Modal -->
+    <div id="projectModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <div id="modalBody"></div>
+        </div>
+    </div>
 
     <!-- Skills Section -->
     <section id="skills" class="skills">
@@ -662,7 +688,7 @@
         <div class="container">
             <div class="footer-content">
                 <div class="footer-logo">
-                    <span class="logo-eco">Sustain</span><span class="logo-search">TheWorld</span>
+                    <span class="logo-eco">Moses Kolleh</span><span class="logo-search"> Sesay</span>
                 </div>
                 <p>&copy; 2025 Moses Kolleh Sesay. All rights reserved.</p>
                 <p class="footer-tagline">Building a sustainable future through data-driven environmental solutions</p>
