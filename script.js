@@ -1,4 +1,32 @@
 // ===================================
+// HERO BACKGROUND SLIDESHOW
+// ===================================
+const initBackgroundSlideshow = () => {
+    const slides = document.querySelectorAll('.hero-bg-slide');
+    let currentSlide = 0;
+
+    const showSlide = (index) => {
+        slides.forEach((slide, i) => {
+            slide.classList.remove('active');
+            if (i === index) {
+                slide.classList.add('active');
+            }
+        });
+    };
+
+    const nextSlide = () => {
+        currentSlide = (currentSlide + 1) % slides.length;
+        showSlide(currentSlide);
+    };
+
+    // Change background every 5 seconds
+    setInterval(nextSlide, 5000);
+};
+
+// Initialize slideshow on page load
+window.addEventListener('load', initBackgroundSlideshow);
+
+// ===================================
 // SMOOTH SCROLLING & NAVIGATION
 // ===================================
 
@@ -396,6 +424,7 @@ const projectData = {
     'coastal': {
         title: 'Coastal Water Pollution Dynamics',
         image: 'Coastal Water Pollution Dynamics 1.jpeg',
+        images: ['Coastal Water Pollution Dynamics 1.jpeg'],
         description: 'Master\'s thesis research studying socioeconomic drivers of river export of multiple pollutants in sub-basins worldwide and developing qualitative future storylines for African coastal water pollution.',
         challenge: 'Understanding the complex relationship between socioeconomic factors and coastal water pollution across global sub-basins, with specific focus on developing future scenarios for African coastal regions.',
         approach: [
@@ -419,6 +448,7 @@ const projectData = {
     'wuppertal': {
         title: 'Flood-Resilient Wuppertal',
         image: 'Wuppertal_Flood_Resilence.jpeg',
+        images: ['Wuppertal_Flood_Resilence.jpeg', 'Wuppertal_flood resilence.jpeg'],
         description: 'Academic consultancy project for the Municipality of Wuppertal: "Preventing the Schwebebahn from Becoming a Boat: Towards a Flood-Resilient Wuppertal". Led interdisciplinary team on comprehensive flood risk assessment.',
         challenge: 'Develop a comprehensive flood risk management strategy for Wuppertal, protecting critical infrastructure including the iconic Schwebebahn suspension railway system.',
         approach: [
@@ -443,6 +473,7 @@ const projectData = {
     'sustainable-ai': {
         title: 'Sustainable AI Framework',
         image: 'Sustainable_AI_2.jpeg',
+        images: ['Sustainable_AI_2.jpeg', 'Sustainable_AI_3.jpeg'],
         description: 'Developing framework and prototype to balance benefits of generative AI adoption with environmental costs for the Dutch Ministry of Finance. Creating decision-support tools for sustainable AI implementation.',
         challenge: 'Balance the transformative benefits of generative AI with its environmental costs, creating a practical framework for sustainable AI adoption in government operations.',
         approach: [
@@ -467,6 +498,7 @@ const projectData = {
     'water-management': {
         title: 'Soft Path Water Management',
         image: 'Soft_path_to_water_management 2.jpeg',
+        images: ['Soft_path_to_water_management 2.jpeg', 'Soft_path_to_water_management 3.jpeg', 'Soft_path_to_water_management 4.jpeg'],
         description: 'Master\'s thesis on "Approach to Soft Path Water Management - Thinking Beyond Cement, Steel and Pipes" using Freetown, Sierra Leone as a case study. Innovative approach to sustainable water resource management.',
         challenge: 'Develop alternative water management approaches that move beyond traditional hard infrastructure, addressing water security challenges in resource-constrained settings.',
         approach: [
@@ -490,6 +522,7 @@ const projectData = {
     'un-disaster': {
         title: 'UN Disaster Risk Reduction',
         image: 'UN Disaster Risk Reduction 2.jpeg',
+        images: ['UN Disaster Risk Reduction 2.jpeg'],
         description: 'Comprehensive risk management framework for Trinidad and Tobago, supporting UN Sendai Framework. Documented 54 global hazard information systems and standardized disaster reporting terminologies.',
         challenge: 'Develop comprehensive disaster risk management framework aligned with UN Sendai Framework, improving data quality and accessibility for effective disaster risk reduction.',
         approach: [
@@ -513,7 +546,8 @@ const projectData = {
     },
     'groundwater': {
         title: 'Groundwater Potential Mapping',
-        image: null,
+        image: 'Groundwater Potential Mapping.JPG',
+        images: ['Groundwater Potential Mapping.JPG', 'Groundwater Potential Mapping2.jpg'],
         description: 'Bachelor\'s dissertation on "Mapping Groundwater Potential in the Freetown Complex: A Geophysical Approach". Applied geophysical methods for sustainable water resource identification.',
         challenge: 'Map groundwater potential in the geologically complex Freetown region to support sustainable water resource development and improve water access.',
         approach: [
@@ -568,6 +602,19 @@ function showProjectModal(project) {
             <h2 style="color: var(--primary-green); margin-bottom: 20px;">${project.title}</h2>
         </div>
         `}
+        <div class="modal-body">
+            ${project.images && project.images.length > 1 ? `
+            <div class="modal-section">
+                <h3><i class="fas fa-images"></i> Project Gallery</h3>
+                <div class="modal-image-gallery">
+                    ${project.images.map(img => `
+                        <div class="modal-gallery-item">
+                            <img src="${img}" alt="${project.title}">
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            ` : ''}
         <div class="modal-body">
             <div class="modal-section">
                 <h3><i class="fas fa-info-circle"></i> Overview</h3>
