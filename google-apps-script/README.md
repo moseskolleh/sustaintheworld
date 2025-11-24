@@ -18,7 +18,7 @@ Automatically capture form responses and store them in Google Sheets using Googl
 ## ✨ Features
 
 - ✅ Auto-creates Google Sheet with proper headers
-- ✅ Captures timestamp, name, email, message, and custom fields
+- ✅ Captures timestamp, name, email, subject, message, and custom fields
 - ✅ Accepts JSON and form-data payloads
 - ✅ Returns JSON response with status
 - ✅ No external dependencies required
@@ -31,6 +31,7 @@ Automatically capture form responses and store them in Google Sheets using Googl
 <form action="YOUR_WEB_APP_URL" method="POST">
   <input name="name" required>
   <input name="email" type="email" required>
+  <input name="subject" required>
   <textarea name="message" required></textarea>
   <button type="submit">Submit</button>
 </form>
@@ -44,6 +45,7 @@ fetch('YOUR_WEB_APP_URL', {
   body: JSON.stringify({
     name: 'John Doe',
     email: 'john@example.com',
+    subject: 'Inquiry',
     message: 'Hello!'
   })
 });
@@ -53,7 +55,7 @@ fetch('YOUR_WEB_APP_URL', {
 ```bash
 curl -X POST "YOUR_WEB_APP_URL" \
   -H "Content-Type: application/json" \
-  -d '{"name":"John","email":"john@example.com","message":"Test"}'
+  -d '{"name":"John","email":"john@example.com","subject":"Test","message":"Test message"}'
 ```
 
 ## 🔒 Security

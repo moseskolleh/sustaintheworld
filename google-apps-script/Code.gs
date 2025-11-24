@@ -15,11 +15,12 @@ function getSheetWithHeaders() {
       'Timestamp',
       'Name',
       'Email',
+      'Subject',
       'Message'
     ]);
 
     // Format header row
-    var headerRange = sheet.getRange(1, 1, 1, 4);
+    var headerRange = sheet.getRange(1, 1, 1, 5);
     headerRange.setFontWeight('bold');
     headerRange.setBackground('#4285f4');
     headerRange.setFontColor('#ffffff');
@@ -58,6 +59,7 @@ function doPost(e) {
       new Date(), // Timestamp
       data.name || '',
       data.email || '',
+      data.subject || '',
       data.message || ''
     ];
 
@@ -65,7 +67,7 @@ function doPost(e) {
     sheet.appendRow(rowData);
 
     // Auto-resize columns for better readability
-    sheet.autoResizeColumns(1, 4);
+    sheet.autoResizeColumns(1, 5);
 
     // Return success response
     return ContentService.createTextOutput(JSON.stringify({
@@ -101,6 +103,7 @@ function testCapture() {
       contents: JSON.stringify({
         name: 'Test User',
         email: 'test@example.com',
+        subject: 'Test Subject',
         message: 'This is a test submission from the contact form'
       })
     }
