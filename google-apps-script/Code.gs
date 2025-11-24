@@ -69,6 +69,37 @@ function doPost(e) {
     // Auto-resize columns for better readability
     sheet.autoResizeColumns(1, 5);
 
+    // Send email notification
+    var name = data.name || 'Anonymous';
+    var email = data.email || '';
+    var subject = data.subject || 'No Subject';
+    var message = data.message || '';
+    var timestamp = new Date();
+
+    var emailSubject = "New Submission from " + name;
+    var emailBody = "Here are the details of the new response:\n\n" +
+                    "Name: " + name + "\n" +
+                    "Email: " + email + "\n" +
+                    "Subject: " + subject + "\n" +
+                    "Message: " + message + "\n\n" +
+                    "Timestamp: " + timestamp;
+
+    // Check if an email was actually provided before trying to CC
+    if (email && email.includes("@")) {
+      MailApp.sendEmail(
+        "moseskollehsesay@gmail.com", // Send to owner
+        emailSubject,
+        emailBody,
+        {
+          cc: email,           // CC the sender
+          replyTo: email       // Allows you to hit "Reply" to email them back directly
+        }
+      );
+    } else {
+      // Fallback: If no valid email was given, just email yourself
+      MailApp.sendEmail("moseskollehsesay@gmail.com", emailSubject, emailBody);
+    }
+
     // Return success response
     return ContentService.createTextOutput(JSON.stringify({
       'status': 'success',
