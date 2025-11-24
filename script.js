@@ -264,7 +264,10 @@ heroSearch.addEventListener('keypress', (e) => {
 // ===================================
 const contactForm = document.getElementById('contactForm');
 
-contactForm.addEventListener('submit', (e) => {
+// Google Apps Script Web App URL
+const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzgyqRUmu0d2UFjb0WxbYyoDbO8F9jVnlvIQnNAfMU0v8JFpH5KAefy4z9BNoQqd68/exec';
+
+contactForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
     // Get form values
@@ -273,17 +276,50 @@ contactForm.addEventListener('submit', (e) => {
     const subject = document.getElementById('subject').value;
     const message = document.getElementById('message').value;
 
-    // Create mailto link
-    const mailtoLink = `mailto:moseskollehsesay@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(`Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`)}`;
+    // Get submit button
+    const submitBtn = contactForm.querySelector('.btn-submit');
+    const originalBtnContent = submitBtn.innerHTML;
 
-    // Open email client
-    window.location.href = mailtoLink;
+    // Show loading state
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span>Sending...</span><i class="fas fa-spinner fa-spin"></i>';
 
-    // Show success message
-    alert('Thank you for your message! Your email client will open to send the message.');
+    // Prepare data for Google Apps Script
+    const formData = {
+        name: name,
+        email: email,
+        subject: subject,
+        message: message,
+        submitted_at: new Date().toISOString(),
+        source: 'Portfolio Website'
+    };
 
-    // Reset form
-    contactForm.reset();
+    try {
+        // Send data to Google Apps Script
+        const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData),
+            mode: 'no-cors' // Required for Google Apps Script
+        });
+
+        // Note: With no-cors mode, we can't read the response
+        // But if no error is thrown, it likely succeeded
+        alert('✅ Thank you for your message! Your response has been submitted successfully. I will get back to you soon.');
+
+        // Reset form
+        contactForm.reset();
+
+    } catch (error) {
+        console.error('Error submitting form:', error);
+        alert('❌ There was an error submitting your message. Please try again or contact me directly at moseskollehsesay@gmail.com');
+    } finally {
+        // Restore button state
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnContent;
+    }
 });
 
 // ===================================
