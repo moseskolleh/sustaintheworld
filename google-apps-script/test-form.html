@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Form Response Capture - Test Form</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            color: #555;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .url-input-group {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+        }
+
+        .url-input-group label {
+            color: #d63384;
+        }
+
+        .url-input-group input {
+            background: white;
+            border-color: #d63384;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .response {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .response.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .response.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .response.show {
+            display: block;
+        }
+
+        .note {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            margin-bottom: 20px;
+        }
+
+        .note strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📝 Form Response Capture</h1>
+        <p class="subtitle">Test your Google Apps Script deployment</p>
+
+        <div class="note">
+            <strong>⚠️ Important:</strong>
+            Replace the Web App URL below with your deployed Google Apps Script URL.
+        </div>
+
+        <form id="testForm">
+            <div class="url-input-group">
+                <div class="form-group">
+                    <label for="webAppUrl">🔗 Your Web App URL *</label>
+                    <input
+                        type="url"
+                        id="webAppUrl"
+                        placeholder="https://script.google.com/macros/s/.../exec"
+                        required
+                    >
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="name">📛 Full Name *</label>
+                <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    placeholder="John Doe"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="email">📧 Email Address *</label>
+                <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    placeholder="john@example.com"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="message">💬 Message *</label>
+                <textarea
+                    id="message"
+                    name="message"
+                    placeholder="Enter your message here..."
+                    required
+                ></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="source">🌐 Source (Optional)</label>
+                <input
+                    type="text"
+                    id="source"
+                    name="source"
+                    placeholder="e.g., Website, Mobile App, API"
+                >
+            </div>
+
+            <button type="submit" id="submitBtn">
+                Submit Response
+            </button>
+        </form>
+
+        <div id="response" class="response"></div>
+    </div>
+
+    <script>
+        const form = document.getElementById('testForm');
+        const responseDiv = document.getElementById('response');
+        const submitBtn = document.getElementById('submitBtn');
+        const webAppUrlInput = document.getElementById('webAppUrl');
+
+        // Load saved URL from localStorage
+        const savedUrl = localStorage.getItem('webAppUrl');
+        if (savedUrl) {
+            webAppUrlInput.value = savedUrl;
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const webAppUrl = webAppUrlInput.value.trim();
+
+            // Validate URL
+            if (!webAppUrl.includes('script.google.com')) {
+                showResponse('error', '❌ Please enter a valid Google Apps Script URL');
+                return;
+            }
+
+            // Save URL to localStorage
+            localStorage.setItem('webAppUrl', webAppUrl);
+
+            // Show loading state
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = 'Sending... <span class="spinner"></span>';
+            responseDiv.className = 'response';
+
+            // Collect form data
+            const formData = new FormData(form);
+            const data = {};
+            formData.forEach((value, key) => {
+                if (key !== 'webAppUrl') {
+                    data[key] = value;
+                }
+            });
+
+            // Add timestamp
+            data.submitted_at = new Date().toISOString();
+
+            try {
+                const response = await fetch(webAppUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data),
+                    mode: 'no-cors' // Required for Google Apps Script
+                });
+
+                // Note: With no-cors, we can't read the response
+                // But if no error is thrown, it likely succeeded
+                showResponse('success', '✅ Response submitted successfully! Check your Google Sheet to verify.');
+
+                // Reset form (except URL)
+                const urlValue = webAppUrlInput.value;
+                form.reset();
+                webAppUrlInput.value = urlValue;
+
+            } catch (error) {
+                console.error('Error:', error);
+                showResponse('error', `❌ Error: ${error.message}. Please check your Web App URL and try again.`);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Submit Response';
+            }
+        });
+
+        function showResponse(type, message) {
+            responseDiv.className = `response ${type} show`;
+            responseDiv.textContent = message;
+
+            // Auto-hide after 5 seconds for success messages
+            if (type === 'success') {
+                setTimeout(() => {
+                    responseDiv.classList.remove('show');
+                }, 5000);
+            }
+        }
+    </script>
+</body>
+</html>
