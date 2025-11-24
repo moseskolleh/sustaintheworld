@@ -1,24 +1,28 @@
 /**
- * Google Apps Script - Form Response Capture
- * This script captures form submissions and stores them in a Google Sheet
+ * Google Apps Script - Contact Form Response Collector
+ * This script collects contact form submissions and stores them in a Google Sheet
  */
-
-// Configuration - You can customize these
-var SHEET_NAME = "Form Responses";
-var TIMESTAMP_COLUMN = "Timestamp";
 
 /**
- * Creates a new sheet if it doesn't exist
+ * Gets the active sheet and ensures headers are present
  */
-function setupSheet() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(SHEET_NAME);
+function getSheetWithHeaders() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
 
-  if (!sheet) {
-    sheet = ss.insertSheet(SHEET_NAME);
-    // Add header row
-    sheet.appendRow([TIMESTAMP_COLUMN, "Name", "Email", "Message", "Additional Data"]);
-    sheet.getRange(1, 1, 1, 5).setFontWeight("bold");
+  // If this is the first time, add headers
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow([
+      'Timestamp',
+      'Name',
+      'Email',
+      'Message'
+    ]);
+
+    // Format header row
+    var headerRange = sheet.getRange(1, 1, 1, 4);
+    headerRange.setFontWeight('bold');
+    headerRange.setBackground('#4285f4');
+    headerRange.setFontColor('#ffffff');
   }
 
   return sheet;
@@ -43,82 +47,52 @@ function doGet(e) {
  */
 function doPost(e) {
   try {
-    // Get the sheet
-    var sheet = setupSheet();
+    // Get the sheet with headers
+    var sheet = getSheetWithHeaders();
 
     // Parse the incoming data
-    var data = {};
+    var data = JSON.parse(e.postData.contents);
 
-    // Handle JSON payload
-    if (e.postData && e.postData.type === 'application/json') {
-      data = JSON.parse(e.postData.contents);
-    }
-    // Handle form data
-    else if (e.parameter) {
-      data = e.parameter;
-    }
-    // Handle text payload
-    else if (e.postData && e.postData.contents) {
-      try {
-        data = JSON.parse(e.postData.contents);
-      } catch (err) {
-        data = { raw_data: e.postData.contents };
-      }
-    }
+    // Prepare row data
+    var rowData = [
+      new Date(), // Timestamp
+      data.name || '',
+      data.email || '',
+      data.message || ''
+    ];
 
-    // Extract common fields
-    var timestamp = new Date();
-    var name = data.name || data.fullname || data.full_name || "";
-    var email = data.email || "";
-    var message = data.message || data.comment || data.feedback || "";
+    // Append the data to the sheet
+    sheet.appendRow(rowData);
 
-    // Collect any additional fields
-    var additionalData = {};
-    for (var key in data) {
-      if (key !== 'name' && key !== 'fullname' && key !== 'full_name' &&
-          key !== 'email' && key !== 'message' && key !== 'comment' && key !== 'feedback') {
-        additionalData[key] = data[key];
-      }
-    }
-
-    var additionalDataStr = Object.keys(additionalData).length > 0 ?
-                           JSON.stringify(additionalData) : "";
-
-    // Append the row to the sheet
-    sheet.appendRow([
-      timestamp,
-      name,
-      email,
-      message,
-      additionalDataStr
-    ]);
-
-    // Auto-resize columns for better visibility
-    sheet.autoResizeColumns(1, 5);
+    // Auto-resize columns for better readability
+    sheet.autoResizeColumns(1, 4);
 
     // Return success response
-    return ContentService
-      .createTextOutput(JSON.stringify({
-        'status': 'success',
-        'message': 'Form response captured successfully',
-        'timestamp': timestamp.toISOString(),
-        'row': sheet.getLastRow()
-      }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return ContentService.createTextOutput(JSON.stringify({
+      'status': 'success',
+      'message': 'Response recorded successfully!'
+    })).setMimeType(ContentService.MimeType.JSON);
 
   } catch (error) {
     // Return error response
-    return ContentService
-      .createTextOutput(JSON.stringify({
-        'status': 'error',
-        'message': error.toString()
-      }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return ContentService.createTextOutput(JSON.stringify({
+      'status': 'error',
+      'message': error.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
   }
 }
 
 /**
- * Test function to verify the script works
+ * Test function to verify the script is working
+ */
+function testScript() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  Logger.log('Sheet name: ' + sheet.getName());
+  Logger.log('Last row: ' + sheet.getLastRow());
+}
+
+/**
+ * Test function to simulate a form submission
  */
 function testCapture() {
   var testData = {
@@ -127,8 +101,7 @@ function testCapture() {
       contents: JSON.stringify({
         name: 'Test User',
         email: 'test@example.com',
-        message: 'This is a test submission',
-        source: 'manual test'
+        message: 'This is a test submission from the contact form'
       })
     }
   };
