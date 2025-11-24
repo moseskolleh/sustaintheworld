@@ -815,34 +815,6 @@ const debouncedScroll = debounce(() => {
 window.addEventListener('scroll', debouncedScroll);
 
 // ===================================
-// COPY EMAIL ON CLICK
-// ===================================
-const emailLinks = document.querySelectorAll('a[href^="mailto:"]');
-
-emailLinks.forEach(link => {
-    link.addEventListener('click', (e) => {
-        const email = link.textContent || link.getAttribute('href').replace('mailto:', '');
-
-        // Create temporary input to copy email
-        const temp = document.createElement('input');
-        temp.value = email;
-        document.body.appendChild(temp);
-        temp.select();
-        document.execCommand('copy');
-        document.body.removeChild(temp);
-
-        // Show feedback
-        const originalText = link.textContent;
-        if (originalText) {
-            link.textContent = 'Email Copied!';
-            setTimeout(() => {
-                link.textContent = originalText;
-            }, 2000);
-        }
-    });
-});
-
-// ===================================
 // EASTER EGG: Console Message
 // ===================================
 console.log('%c👋 Welcome to my portfolio!', 'color: #7CFC00; font-size: 24px; font-weight: bold;');
