@@ -651,7 +651,6 @@ function showProjectModal(project) {
                 </div>
             </div>
             ` : ''}
-        <div class="modal-body">
             <div class="modal-section">
                 <h3><i class="fas fa-info-circle"></i> Overview</h3>
                 <p>${project.description}</p>
