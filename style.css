@@ -566,6 +566,7 @@ body.light-mode .hero-bg-slide::before {
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 30px;
     margin-top: 50px;
+    grid-column: 1 / -1;
 }
 
 .stat-card {
