@@ -651,7 +651,6 @@ function showProjectModal(project) {
                 </div>
             </div>
             ` : ''}
-        <div class="modal-body">
             <div class="modal-section">
                 <h3><i class="fas fa-info-circle"></i> Overview</h3>
                 <p>${project.description}</p>
@@ -901,10 +900,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Add loading class removal
     document.body.classList.add('loaded');
-
-    // Initialize all features
-    observeElements();
-    lazyLoadImages();
 
     // Smooth scroll to section if hash exists
     if (window.location.hash) {
