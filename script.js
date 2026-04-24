@@ -34,7 +34,14 @@ window.addEventListener('load', initBackgroundSlideshow);
 document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     anchor.addEventListener('click', function (e) {
         e.preventDefault();
-        const target = document.querySelector(this.getAttribute('href'));
+        const href = this.getAttribute('href');
+        // Skip bare "#" placeholders (e.g. project "View Details" links) —
+        // querySelector("#") throws SyntaxError.
+        if (!href || href === '#') {
+            navMenu.classList.remove('active');
+            return;
+        }
+        const target = document.querySelector(href);
         if (target) {
             target.scrollIntoView({
                 behavior: 'smooth',
@@ -732,7 +739,8 @@ document.addEventListener('keydown', (e) => {
 // ===================================
 const createThemeToggle = () => {
     const toggle = document.createElement('button');
-    toggle.innerHTML = '<i class="fas fa-moon"></i>';
+    const startsLight = document.body.classList.contains('light-mode');
+    toggle.innerHTML = `<i class="fas ${startsLight ? 'fa-sun' : 'fa-moon'}"></i>`;
     toggle.className = 'theme-toggle';
     toggle.style.cssText = `
         position: fixed;
