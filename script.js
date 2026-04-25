@@ -35,12 +35,9 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     anchor.addEventListener('click', function (e) {
         e.preventDefault();
         const href = this.getAttribute('href');
-        // Skip bare "#" placeholders (e.g. project "View Details" links) —
-        // querySelector("#") throws SyntaxError.
-        if (!href || href === '#') {
-            navMenu.classList.remove('active');
-            return;
-        }
+        // Bare "#" hrefs (e.g. project "View Details" links) are not real targets;
+        // querySelector('#') would throw SyntaxError, so bail out.
+        if (!href || href === '#') return;
         const target = document.querySelector(href);
         if (target) {
             target.scrollIntoView({
@@ -49,6 +46,7 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
             });
             // Close mobile menu after clicking
             navMenu.classList.remove('active');
+            navToggle.classList.remove('active');
         }
     });
 });
@@ -66,6 +64,7 @@ navToggle.addEventListener('click', () => {
 document.addEventListener('click', (e) => {
     if (!navToggle.contains(e.target) && !navMenu.contains(e.target)) {
         navMenu.classList.remove('active');
+        navToggle.classList.remove('active');
     }
 });
 
@@ -740,7 +739,7 @@ document.addEventListener('keydown', (e) => {
 const createThemeToggle = () => {
     const toggle = document.createElement('button');
     const startsLight = document.body.classList.contains('light-mode');
-    toggle.innerHTML = `<i class="fas ${startsLight ? 'fa-sun' : 'fa-moon'}"></i>`;
+    toggle.innerHTML = `<i class="fas fa-${startsLight ? 'sun' : 'moon'}"></i>`;
     toggle.className = 'theme-toggle';
     toggle.style.cssText = `
         position: fixed;
