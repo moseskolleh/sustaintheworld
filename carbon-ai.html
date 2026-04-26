@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carbon-Aware AI — Moses Kolleh Sesay</title>
+    <meta name="description" content="Interactive estimator for the energy and carbon footprint of LLM queries across models and electricity grids.">
+    <link rel="stylesheet" href="carbon-ai.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <main class="ca-shell">
+        <a href="index.html#projects" class="ca-back"><i class="fas fa-arrow-left"></i> Back to portfolio</a>
+
+        <header class="ca-hero">
+            <h1>Carbon-Aware <span class="ca-accent">AI</span></h1>
+            <p>
+                Estimate the energy and carbon cost of an LLM query. Pick a model
+                class, the electricity grid it runs on, and how chatty your prompt is.
+                Companion to my Sustainable AI research at the
+                <strong>Digital Society School</strong> (Amsterdam UAS) for the
+                <strong>Dutch Ministry of Finance</strong>.
+            </p>
+        </header>
+
+        <div class="ca-presets">
+            <button data-preset="chat"><i class="fas fa-comment"></i> Personal chat</button>
+            <button data-preset="rag"><i class="fas fa-database"></i> RAG / search bot</button>
+            <button data-preset="enterprise"><i class="fas fa-building"></i> Enterprise rollout</button>
+            <button data-preset="edge"><i class="fas fa-microchip"></i> Edge / tiny model</button>
+        </div>
+
+        <section class="ca-grid">
+            <div class="ca-card">
+                <h2>Inputs</h2>
+                <div class="ca-field">
+                    <label for="modelSelect">Model class</label>
+                    <select id="modelSelect"></select>
+                </div>
+                <div class="ca-field">
+                    <label for="regionSelect">Grid region</label>
+                    <select id="regionSelect"></select>
+                </div>
+                <div class="ca-field">
+                    <label for="inputTokens">Input tokens / query</label>
+                    <input id="inputTokens" type="number" min="0" value="500">
+                </div>
+                <div class="ca-field">
+                    <label for="outputTokens">Output tokens / query</label>
+                    <input id="outputTokens" type="number" min="0" value="500">
+                </div>
+                <div class="ca-field">
+                    <label for="queriesPerDay">Queries / day</label>
+                    <input id="queriesPerDay" type="number" min="0" value="100">
+                </div>
+                <div class="ca-field">
+                    <label for="pue">Data-center PUE</label>
+                    <input id="pue" type="number" step="0.05" min="1" max="2" value="1.2">
+                </div>
+            </div>
+
+            <div class="ca-card">
+                <h2>Per-query result</h2>
+                <div class="ca-out">
+                    <div class="ca-out-cell">
+                        <div class="ca-num" id="outEnergy">—</div>
+                        <div class="ca-unit">Wh</div>
+                    </div>
+                    <div class="ca-out-cell">
+                        <div class="ca-num" id="outCarbon">—</div>
+                        <div class="ca-unit">g CO₂e</div>
+                    </div>
+                    <div class="ca-out-cell">
+                        <div class="ca-num" id="outAnnual">—</div>
+                        <div class="ca-unit">kg CO₂e / yr</div>
+                    </div>
+                </div>
+
+                <div class="ca-equiv">
+                    <h3>That's roughly equivalent to</h3>
+                    <ul>
+                        <li><span>LED bulb running for</span><span><span id="equivLed">—</span> hours</span></li>
+                        <li><span>Driving a gasoline car</span><span><span id="equivKm">—</span> km</span></li>
+                        <li><span>Smartphone charges</span><span><span id="equivPhone">—</span></span></li>
+                        <li><span>Mature trees needed (annual offset)</span><span><span id="equivTrees">—</span></span></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="ca-card ca-chart-card">
+                <h2>Comparison</h2>
+                <div class="ca-chart-controls">
+                    <label for="compareMode">Compare across</label>
+                    <select id="compareMode">
+                        <option value="regions">Grid regions (current model)</option>
+                        <option value="models">Model classes (current grid)</option>
+                    </select>
+                </div>
+                <div id="chartBars"></div>
+            </div>
+        </section>
+
+        <section class="ca-method">
+            <h2>Methodology &amp; sources</h2>
+            <p>
+                Per-query carbon = <code>(Wh per 1k tokens × tokens / 1000 / 1000) × PUE × grid intensity</code>.
+                Numbers are <strong>order-of-magnitude estimates</strong>, not measurements; real workloads vary
+                by hardware (H100 vs. TPU v5), batching, KV-cache reuse, and quantisation.
+            </p>
+            <ul>
+                <li>Per-token energy bands: Patterson et al. 2021 ("Carbon Emissions and Large Neural Network Training"); Luccioni, Viguier &amp; Ligozat 2023 ("Power Hungry Processing"); de Vries 2023 ("The growing energy footprint of AI", <em>Joule</em>).</li>
+                <li>Frontier-model query energy anchored on Epoch AI &amp; SemiAnalysis 2024 estimates (~0.3 Wh / short ChatGPT request).</li>
+                <li>Grid intensity (gCO₂e/kWh): Ember Climate <em>Yearly Electricity Data 2023</em>, IEA <em>Electricity 2024</em>.</li>
+                <li>Equivalents: EEA 2022 (gasoline car ~170 gCO₂e/km), Berners-Lee <em>How Bad Are Bananas?</em> (~8 g per phone charge), US EPA &amp; US Forest Service (~21 kg CO₂e absorbed per mature tree per year).</li>
+                <li>PUE defaults to 1.2 — typical for hyperscalers (Google 2023: 1.10; Meta: 1.08; industry avg ~1.5).</li>
+            </ul>
+            <div class="ca-disclaimer">
+                <strong>Caveat:</strong> figures here cover <em>inference only</em>. Training is amortised across millions
+                of queries and is not modelled. Embodied carbon of GPUs is also excluded. Use this as a relative
+                comparator, not an absolute audit.
+            </div>
+        </section>
+    </main>
+
+    <script src="carbon-ai.js"></script>
+</body>
+</html>

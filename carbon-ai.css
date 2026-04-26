@@ -1,0 +1,281 @@
+/* Inherits the dark/green palette from the main portfolio. */
+:root {
+    --primary-green: #7CFC00;
+    --dark-bg: #0a0a0a;
+    --darker-bg: #000000;
+    --card-bg: #1a1a1a;
+    --card-bg-2: #222;
+    --text-primary: #ffffff;
+    --text-secondary: #b0b0b0;
+    --border: rgba(124, 252, 0, 0.18);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--darker-bg);
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.55;
+}
+
+a { color: var(--primary-green); }
+
+.ca-shell {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 32px 24px 80px;
+}
+
+.ca-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: 24px;
+}
+.ca-back:hover { color: var(--primary-green); }
+
+.ca-hero h1 {
+    font-size: clamp(2rem, 4vw, 3rem);
+    margin: 0 0 8px;
+    letter-spacing: -0.5px;
+}
+.ca-hero h1 .ca-accent { color: var(--primary-green); }
+.ca-hero p {
+    color: var(--text-secondary);
+    max-width: 70ch;
+    margin: 0 0 24px;
+}
+
+.ca-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 32px;
+}
+.ca-presets button {
+    background: var(--card-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    padding: 8px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+}
+.ca-presets button:hover {
+    background: var(--primary-green);
+    color: var(--darker-bg);
+    border-color: var(--primary-green);
+}
+
+.ca-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 32px;
+}
+@media (max-width: 800px) {
+    .ca-grid { grid-template-columns: 1fr; }
+}
+
+.ca-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+}
+.ca-card h2 {
+    margin: 0 0 16px;
+    font-size: 1.1rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--primary-green);
+}
+
+.ca-field {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+.ca-field label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+.ca-field input,
+.ca-field select {
+    background: var(--darker-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 0.9rem;
+    width: 100%;
+}
+.ca-field input:focus,
+.ca-field select:focus {
+    outline: 2px solid var(--primary-green);
+    outline-offset: 1px;
+}
+
+.ca-out {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+}
+.ca-out-cell {
+    background: var(--darker-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    text-align: center;
+}
+.ca-out-cell .ca-num {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--primary-green);
+}
+.ca-out-cell .ca-unit {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+}
+
+.ca-equiv h3 {
+    margin: 0 0 10px;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
+}
+.ca-equiv ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 8px;
+}
+.ca-equiv li {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: var(--darker-bg);
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.05);
+    font-size: 0.9rem;
+}
+.ca-equiv li span:last-child {
+    color: var(--primary-green);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.ca-chart-card {
+    grid-column: 1 / -1;
+}
+.ca-chart-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+.ca-chart-controls label { color: var(--text-secondary); font-size: 0.85rem; }
+.ca-chart-controls select {
+    background: var(--darker-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 10px;
+}
+
+.bar-row {
+    display: grid;
+    grid-template-columns: 280px 1fr 100px;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.bar-row:last-child { border-bottom: none; }
+.bar-label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.bar-track {
+    height: 18px;
+    background: var(--darker-bg);
+    border-radius: 4px;
+    overflow: hidden;
+}
+.bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, rgba(124,252,0,0.4), var(--primary-green));
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+.bar-row-highlight .bar-label { color: var(--primary-green); font-weight: 600; }
+.bar-row-highlight .bar-fill {
+    background: linear-gradient(90deg, var(--primary-green), #b8ff5a);
+    box-shadow: 0 0 12px rgba(124,252,0,0.4);
+}
+.bar-value {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-primary);
+    font-size: 0.85rem;
+}
+
+@media (max-width: 700px) {
+    .bar-row { grid-template-columns: 1fr; gap: 4px; }
+    .bar-value { text-align: left; }
+}
+
+.ca-method {
+    margin-top: 32px;
+    padding: 24px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+}
+.ca-method h2 {
+    color: var(--primary-green);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-size: 1.1rem;
+    margin: 0 0 12px;
+}
+.ca-method p, .ca-method li {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+.ca-method ul { padding-left: 20px; }
+.ca-method code {
+    background: var(--darker-bg);
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: var(--primary-green);
+    font-size: 0.85rem;
+}
+
+.ca-disclaimer {
+    margin-top: 16px;
+    padding: 12px 16px;
+    background: rgba(124, 252, 0, 0.05);
+    border-left: 3px solid var(--primary-green);
+    border-radius: 4px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
