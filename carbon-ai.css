@@ -40,6 +40,18 @@ a { color: var(--primary-green); }
 }
 .ca-back:hover { color: var(--primary-green); }
 
+.ca-hero-tag {
+    display: inline-block;
+    font-size: 0.7rem;
+    letter-spacing: 2px;
+    color: var(--primary-green);
+    background: rgba(124, 252, 0, 0.08);
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    border-radius: 4px;
+    margin-bottom: 12px;
+    font-weight: 600;
+}
 .ca-hero h1 {
     font-size: clamp(2rem, 4vw, 3rem);
     margin: 0 0 8px;
@@ -51,6 +63,7 @@ a { color: var(--primary-green); }
     max-width: 70ch;
     margin: 0 0 24px;
 }
+.ca-hero p a { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
 
 .ca-presets {
     display: flex;
@@ -127,10 +140,11 @@ a { color: var(--primary-green); }
 
 .ca-out {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
     gap: 12px;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
 }
+.ca-out-3 { grid-template-columns: repeat(3, 1fr); }
+.ca-out-2 { grid-template-columns: repeat(2, 1fr); }
 .ca-out-cell {
     background: var(--darker-bg);
     border: 1px solid var(--border);
@@ -138,10 +152,17 @@ a { color: var(--primary-green); }
     padding: 14px;
     text-align: center;
 }
+.ca-out-cell .ca-icon {
+    color: var(--primary-green);
+    opacity: 0.7;
+    font-size: 0.95rem;
+    margin-bottom: 6px;
+}
 .ca-out-cell .ca-num {
     font-size: 1.6rem;
     font-weight: 700;
     color: var(--primary-green);
+    font-variant-numeric: tabular-nums;
 }
 .ca-out-cell .ca-unit {
     font-size: 0.7rem;
@@ -150,6 +171,7 @@ a { color: var(--primary-green); }
     color: var(--text-secondary);
     margin-top: 4px;
 }
+.ca-out-soft .ca-num { font-size: 1.3rem; opacity: 0.95; }
 
 .ca-equiv h3 {
     margin: 0 0 10px;
@@ -179,6 +201,44 @@ a { color: var(--primary-green); }
     font-weight: 600;
     font-variant-numeric: tabular-nums;
 }
+.ca-equiv li span:first-child i {
+    width: 18px;
+    margin-right: 6px;
+    color: var(--primary-green);
+    opacity: 0.7;
+}
+
+/* Optimisation tips card */
+.ca-tips-card { grid-column: 1 / -1; }
+.ca-tips-card h2 i { margin-right: 6px; }
+.ca-tips {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 10px;
+}
+.ca-tips li {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 14px;
+    background: var(--darker-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 0.92rem;
+}
+.ca-tips li i {
+    color: var(--primary-green);
+    font-size: 1.1rem;
+    margin-top: 2px;
+    width: 22px;
+    text-align: center;
+    flex-shrink: 0;
+}
+.ca-tips li.tip-clean { color: var(--primary-green); }
+.ca-tips li strong { color: var(--primary-green); }
 
 .ca-chart-card {
     grid-column: 1 / -1;
