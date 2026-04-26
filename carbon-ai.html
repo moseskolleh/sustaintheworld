@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Carbon-Aware AI — Moses Kolleh Sesay</title>
-    <meta name="description" content="Interactive estimator for the energy and carbon footprint of LLM queries across models and electricity grids.">
+    <title>EcoPrompt Coach — Moses Kolleh Sesay</title>
+    <meta name="description" content="Web companion to EcoPrompt Coach: visualize the energy, water, and carbon cost of LLM queries across named models and electricity grids.">
     <link rel="stylesheet" href="carbon-ai.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -13,13 +13,13 @@
         <a href="index.html#projects" class="ca-back"><i class="fas fa-arrow-left"></i> Back to portfolio</a>
 
         <header class="ca-hero">
-            <h1>Carbon-Aware <span class="ca-accent">AI</span></h1>
+            <div class="ca-hero-tag">DIGITAL SOCIETY SCHOOL · MINISTRY OF FINANCE (NL)</div>
+            <h1>EcoPrompt <span class="ca-accent">Coach</span></h1>
             <p>
-                Estimate the energy and carbon cost of an LLM query. Pick a model
-                class, the electricity grid it runs on, and how chatty your prompt is.
-                Companion to my Sustainable AI research at the
-                <strong>Digital Society School</strong> (Amsterdam UAS) for the
-                <strong>Dutch Ministry of Finance</strong>.
+                Web companion to <a href="https://github.com/moseskolleh/promptcoach" target="_blank" rel="noopener">github.com/moseskolleh/promptcoach</a> —
+                the Chrome-extension prototype I built at the Digital Society School to help users
+                visualise the <strong>energy, water, and carbon cost</strong> of every LLM query and
+                receive sustainability-aware optimisation tips.
             </p>
         </header>
 
@@ -27,6 +27,7 @@
             <button data-preset="chat"><i class="fas fa-comment"></i> Personal chat</button>
             <button data-preset="rag"><i class="fas fa-database"></i> RAG / search bot</button>
             <button data-preset="enterprise"><i class="fas fa-building"></i> Enterprise rollout</button>
+            <button data-preset="reasoning"><i class="fas fa-brain"></i> Reasoning workload</button>
             <button data-preset="edge"><i class="fas fa-microchip"></i> Edge / tiny model</button>
         </div>
 
@@ -34,12 +35,16 @@
             <div class="ca-card">
                 <h2>Inputs</h2>
                 <div class="ca-field">
-                    <label for="modelSelect">Model class</label>
+                    <label for="modelSelect">Model</label>
                     <select id="modelSelect"></select>
                 </div>
                 <div class="ca-field">
                     <label for="regionSelect">Grid region</label>
                     <select id="regionSelect"></select>
+                </div>
+                <div class="ca-field">
+                    <label for="wueSelect">Water profile (WUE)</label>
+                    <select id="wueSelect"></select>
                 </div>
                 <div class="ca-field">
                     <label for="inputTokens">Input tokens / query</label>
@@ -54,46 +59,68 @@
                     <input id="queriesPerDay" type="number" min="0" value="100">
                 </div>
                 <div class="ca-field">
-                    <label for="pue">Data-center PUE</label>
+                    <label for="pue">Data-centre PUE</label>
                     <input id="pue" type="number" step="0.05" min="1" max="2" value="1.2">
                 </div>
             </div>
 
             <div class="ca-card">
-                <h2>Per-query result</h2>
-                <div class="ca-out">
+                <h2>Per-query footprint</h2>
+                <div class="ca-out ca-out-3">
                     <div class="ca-out-cell">
+                        <div class="ca-icon"><i class="fas fa-bolt"></i></div>
                         <div class="ca-num" id="outEnergy">—</div>
-                        <div class="ca-unit">Wh</div>
+                        <div class="ca-unit">Wh energy</div>
                     </div>
                     <div class="ca-out-cell">
+                        <div class="ca-icon"><i class="fas fa-cloud"></i></div>
                         <div class="ca-num" id="outCarbon">—</div>
                         <div class="ca-unit">g CO₂e</div>
                     </div>
                     <div class="ca-out-cell">
-                        <div class="ca-num" id="outAnnual">—</div>
+                        <div class="ca-icon"><i class="fas fa-tint"></i></div>
+                        <div class="ca-num" id="outWater">—</div>
+                        <div class="ca-unit">mL water</div>
+                    </div>
+                </div>
+
+                <div class="ca-out ca-out-2">
+                    <div class="ca-out-cell ca-out-soft">
+                        <div class="ca-num" id="outAnnualCarbon">—</div>
                         <div class="ca-unit">kg CO₂e / yr</div>
+                    </div>
+                    <div class="ca-out-cell ca-out-soft">
+                        <div class="ca-num" id="outAnnualWater">—</div>
+                        <div class="ca-unit">L water / yr</div>
                     </div>
                 </div>
 
                 <div class="ca-equiv">
-                    <h3>That's roughly equivalent to</h3>
+                    <h3>Relatable conversions</h3>
                     <ul>
-                        <li><span>LED bulb running for</span><span><span id="equivLed">—</span> hours</span></li>
-                        <li><span>Driving a gasoline car</span><span><span id="equivKm">—</span> km</span></li>
-                        <li><span>Smartphone charges</span><span><span id="equivPhone">—</span></span></li>
-                        <li><span>Mature trees needed (annual offset)</span><span><span id="equivTrees">—</span></span></li>
+                        <li><span><i class="fas fa-lightbulb"></i> LED bulb runtime</span><span><span id="equivLed">—</span> min</span></li>
+                        <li><span><i class="fas fa-mug-hot"></i> Cups of coffee brewed</span><span><span id="equivCoffee">—</span></span></li>
+                        <li><span><i class="fas fa-car"></i> Driving a gasoline car</span><span><span id="equivKm">—</span> km</span></li>
+                        <li><span><i class="fas fa-mobile-screen"></i> Smartphone charges</span><span><span id="equivPhone">—</span></span></li>
+                        <li><span><i class="fas fa-bottle-water"></i> 500 mL water bottles</span><span><span id="equivBottles">—</span></span></li>
+                        <li><span><i class="fas fa-tree"></i> Mature trees needed (annual offset)</span><span><span id="equivTrees">—</span></span></li>
                     </ul>
                 </div>
+            </div>
+
+            <div class="ca-card ca-tips-card">
+                <h2><i class="fas fa-lightbulb"></i> Optimisation tips</h2>
+                <ul id="tipsList" class="ca-tips"></ul>
             </div>
 
             <div class="ca-card ca-chart-card">
                 <h2>Comparison</h2>
                 <div class="ca-chart-controls">
-                    <label for="compareMode">Compare across</label>
+                    <label for="compareMode">Compare</label>
                     <select id="compareMode">
-                        <option value="regions">Grid regions (current model)</option>
-                        <option value="models">Model classes (current grid)</option>
+                        <option value="regions">Carbon across grid regions</option>
+                        <option value="models">Carbon across models</option>
+                        <option value="water">Water across models</option>
                     </select>
                 </div>
                 <div id="chartBars"></div>
@@ -103,21 +130,24 @@
         <section class="ca-method">
             <h2>Methodology &amp; sources</h2>
             <p>
-                Per-query carbon = <code>(Wh per 1k tokens × tokens / 1000 / 1000) × PUE × grid intensity</code>.
-                Numbers are <strong>order-of-magnitude estimates</strong>, not measurements; real workloads vary
-                by hardware (H100 vs. TPU v5), batching, KV-cache reuse, and quantisation.
+                <code>energy = Wh/1k tokens × tokens / 1000 / 1000 × PUE</code> ·
+                <code>carbon = energy × grid_intensity</code> ·
+                <code>water = energy × WUE</code>.
+                These are <strong>order-of-magnitude estimates</strong>; real workloads vary by hardware,
+                batching, KV-cache reuse, and quantisation.
             </p>
             <ul>
-                <li>Per-token energy bands: Patterson et al. 2021 ("Carbon Emissions and Large Neural Network Training"); Luccioni, Viguier &amp; Ligozat 2023 ("Power Hungry Processing"); de Vries 2023 ("The growing energy footprint of AI", <em>Joule</em>).</li>
-                <li>Frontier-model query energy anchored on Epoch AI &amp; SemiAnalysis 2024 estimates (~0.3 Wh / short ChatGPT request).</li>
-                <li>Grid intensity (gCO₂e/kWh): Ember Climate <em>Yearly Electricity Data 2023</em>, IEA <em>Electricity 2024</em>.</li>
-                <li>Equivalents: EEA 2022 (gasoline car ~170 gCO₂e/km), Berners-Lee <em>How Bad Are Bananas?</em> (~8 g per phone charge), US EPA &amp; US Forest Service (~21 kg CO₂e absorbed per mature tree per year).</li>
-                <li>PUE defaults to 1.2 — typical for hyperscalers (Google 2023: 1.10; Meta: 1.08; industry avg ~1.5).</li>
+                <li>Per-token energy and water benchmarks: Jegham, Abedin, Ali et al. 2025, <em>"How Hungry is AI? Benchmarking Energy, Water, and Carbon Footprint of LLM Inference"</em>.</li>
+                <li>Supporting work: Patterson et al. 2021; Luccioni, Viguier &amp; Ligozat 2023 ("Power Hungry Processing"); de Vries 2023, <em>Joule</em>.</li>
+                <li>Grid carbon intensity: Ember Climate <em>Yearly Electricity Data 2023</em>, IEA <em>Electricity 2024</em>.</li>
+                <li>Provider PUE/WUE disclosures: Google 2024 (PUE 1.10, WUE ~1.1 L/kWh), Microsoft 2024, AWS 2023.</li>
+                <li>Equivalents: EEA 2022 (gasoline ~170 gCO₂e/km), Berners-Lee <em>How Bad Are Bananas?</em>, US EPA / US Forest Service.</li>
             </ul>
             <div class="ca-disclaimer">
-                <strong>Caveat:</strong> figures here cover <em>inference only</em>. Training is amortised across millions
-                of queries and is not modelled. Embodied carbon of GPUs is also excluded. Use this as a relative
-                comparator, not an absolute audit.
+                <strong>Caveat:</strong> covers <em>inference only</em>. Training is amortised across millions of
+                queries and is not modelled here. Embodied carbon of GPUs is excluded. Use as a relative
+                comparator, not an absolute audit. The full prototype lives at
+                <a href="https://github.com/moseskolleh/promptcoach" target="_blank" rel="noopener">github.com/moseskolleh/promptcoach</a>.
             </div>
         </section>
     </main>
