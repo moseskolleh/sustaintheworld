@@ -85,6 +85,22 @@ function assert(cond, msg) {
     );
 }
 
+// --- Bug 3: carbon-ai suggest() must not emit "NaN%" when baseline carbon is 0 ---
+{
+    const { suggest } = require('../carbon-ai.js');
+    const tips = suggest({
+        modelKey: 'gpt-4o',
+        regionKey: 'nl',
+        wueKey: 'avg',
+        inputTokens: 0,
+        outputTokens: 0,
+        queriesPerDay: 100,
+        pue: 1.2
+    });
+    const hasNaN = tips.some(t => /NaN/.test(t.text));
+    assert(!hasNaN, 'Bug3: cleaner-grid tip must not render "NaN%" when token counts are 0');
+}
+
 if (failures > 0) {
     console.log(`\n${failures} assertion(s) failed`);
     process.exit(1);
