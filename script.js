@@ -871,18 +871,19 @@ createSkipLink();
 // KEYBOARD NAVIGATION ENHANCEMENT
 // ===================================
 document.addEventListener('keydown', (e) => {
+    // Ignore browser/OS shortcuts (Ctrl+C copy, Cmd+H hide, Ctrl+H history, etc.)
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const t = e.target;
+    if (t && typeof t.matches === 'function' && t.matches('input, textarea, select, [contenteditable="true"]')) return;
+
     // Press 'H' to go to home
     if (e.key === 'h' || e.key === 'H') {
-        if (!e.target.matches('input, textarea')) {
-            document.querySelector('#home').scrollIntoView({ behavior: 'smooth' });
-        }
+        document.querySelector('#home').scrollIntoView({ behavior: 'smooth' });
     }
 
     // Press 'C' to go to contact
     if (e.key === 'c' || e.key === 'C') {
-        if (!e.target.matches('input, textarea')) {
-            document.querySelector('#contact').scrollIntoView({ behavior: 'smooth' });
-        }
+        document.querySelector('#contact').scrollIntoView({ behavior: 'smooth' });
     }
 });
 

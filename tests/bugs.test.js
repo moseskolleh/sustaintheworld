@@ -85,6 +85,26 @@ function assert(cond, msg) {
     );
 }
 
+// --- Bug 3: Ctrl+C / Cmd+H must not hijack browser shortcuts to scroll ---
+// In real browsers, keydown with no focused element targets <body>.
+{
+    const { window } = run('dark');
+    const calls = [];
+    window.HTMLElement.prototype.scrollIntoView = function () { calls.push(this); };
+
+    const fire = (init) => window.document.body.dispatchEvent(
+        new window.KeyboardEvent('keydown', { bubbles: true, ...init })
+    );
+
+    fire({ key: 'c', ctrlKey: true });   // Ctrl+C -> copy, must NOT scroll
+    fire({ key: 'h', metaKey: true });   // Cmd+H  -> hide,  must NOT scroll
+    assert(calls.length === 0,
+        'Bug3: modifier-key shortcuts (Ctrl+C, Cmd+H) must not trigger scroll (got ' + calls.length + ')');
+
+    fire({ key: 'h' });                  // Bare H -> scroll to #home
+    assert(calls.length === 1, 'Bug3 sanity: bare H still scrolls to #home');
+}
+
 if (failures > 0) {
     console.log(`\n${failures} assertion(s) failed`);
     process.exit(1);
