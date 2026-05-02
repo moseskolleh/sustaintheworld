@@ -85,6 +85,53 @@ function assert(cond, msg) {
     );
 }
 
+// --- Bug 3: H/C keyboard shortcuts must not fire on Ctrl+C / Cmd+C / etc.,
+//      and must not scroll the page while the project modal is open. ---
+{
+    const { window } = run('dark');
+    const { document } = window;
+
+    // Track every scrollIntoView call after we install the spy.
+    const calls = [];
+    window.HTMLElement.prototype.scrollIntoView = function () {
+        calls.push(this.id || this.className || this.tagName);
+    };
+
+    // 3a) Ctrl+C must not navigate to #contact
+    const ctrlC = new window.KeyboardEvent('keydown', {
+        key: 'c', ctrlKey: true, bubbles: true, cancelable: true
+    });
+    document.body.dispatchEvent(ctrlC);
+    const ctrlNavigated = calls.some(id => id === 'contact');
+    assert(!ctrlNavigated, 'Bug3a: Ctrl+C must not scroll to #contact (calls=' + JSON.stringify(calls) + ')');
+
+    // 3b) Cmd+H (mac) must not navigate to #home
+    calls.length = 0;
+    const metaH = new window.KeyboardEvent('keydown', {
+        key: 'h', metaKey: true, bubbles: true, cancelable: true
+    });
+    document.body.dispatchEvent(metaH);
+    assert(!calls.some(id => id === 'home'), 'Bug3b: Cmd/Meta+H must not scroll to #home (calls=' + JSON.stringify(calls) + ')');
+
+    // 3c) Plain 'h' SHOULD still scroll (preserve the feature)
+    calls.length = 0;
+    const plainH = new window.KeyboardEvent('keydown', {
+        key: 'h', bubbles: true, cancelable: true
+    });
+    document.body.dispatchEvent(plainH);
+    assert(calls.some(id => id === 'home'), 'Bug3c: plain "h" should still scroll to #home (calls=' + JSON.stringify(calls) + ')');
+
+    // 3d) When the project modal is open, plain 'c' must NOT scroll behind it
+    calls.length = 0;
+    const modal = document.getElementById('projectModal');
+    modal.classList.add('active');
+    const modalC = new window.KeyboardEvent('keydown', {
+        key: 'c', bubbles: true, cancelable: true
+    });
+    document.body.dispatchEvent(modalC);
+    assert(!calls.some(id => id === 'contact'), 'Bug3d: "c" while modal is open must not scroll behind it (calls=' + JSON.stringify(calls) + ')');
+}
+
 if (failures > 0) {
     console.log(`\n${failures} assertion(s) failed`);
     process.exit(1);

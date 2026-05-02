@@ -871,18 +871,21 @@ createSkipLink();
 // KEYBOARD NAVIGATION ENHANCEMENT
 // ===================================
 document.addEventListener('keydown', (e) => {
+    // Skip when a modifier is held (Ctrl+C, Cmd+H, etc. are reserved for the
+    // browser/OS) or when the project modal is open or the user is typing.
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (modal && modal.classList.contains('active')) return;
+    const t = e.target;
+    if (t && typeof t.matches === 'function' && t.matches('input, textarea, [contenteditable="true"]')) return;
+
     // Press 'H' to go to home
     if (e.key === 'h' || e.key === 'H') {
-        if (!e.target.matches('input, textarea')) {
-            document.querySelector('#home').scrollIntoView({ behavior: 'smooth' });
-        }
+        document.querySelector('#home').scrollIntoView({ behavior: 'smooth' });
     }
 
     // Press 'C' to go to contact
     if (e.key === 'c' || e.key === 'C') {
-        if (!e.target.matches('input, textarea')) {
-            document.querySelector('#contact').scrollIntoView({ behavior: 'smooth' });
-        }
+        document.querySelector('#contact').scrollIntoView({ behavior: 'smooth' });
     }
 });
 
