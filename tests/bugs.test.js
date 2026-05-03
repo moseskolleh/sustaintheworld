@@ -85,6 +85,24 @@ function assert(cond, msg) {
     );
 }
 
+// --- Bug 3: carbon-ai cleaner-grid tip must not render "NaN%" when tokens are 0 ---
+// Repro: user clears the token inputs while staying on a high-intensity grid (e.g. NL, 268 g/kWh).
+// Before the fix, suggest() pushed a tip with `(1 - 0/0) * 100 = NaN`.
+{
+    const carbon = require('../carbon-ai.js');
+    const tips = carbon.suggest({
+        modelKey: 'gpt-4o-mini',
+        regionKey: 'nl',
+        wueKey: 'avg',
+        inputTokens: 0,
+        outputTokens: 0,
+        queriesPerDay: 100,
+        pue: 1.2
+    });
+    const hasNaN = tips.some((t) => /NaN/.test(t.text));
+    assert(!hasNaN, 'Bug3: cleaner-grid tip must not render "NaN%" when token counts are 0');
+}
+
 if (failures > 0) {
     console.log(`\n${failures} assertion(s) failed`);
     process.exit(1);

@@ -113,8 +113,10 @@ function suggest(params) {
     }
 
     // 2. Suggest a cleaner grid region.
+    // baseline.carbonPerQuery_g can be 0 when the user clears the token inputs;
+    // skip the tip in that case so we don't render "cut carbon by NaN%".
     const greenest = Object.entries(REGIONS).sort((a, b) => a[1].intensity - b[1].intensity)[0];
-    if (greenest[0] !== params.regionKey && REGIONS[params.regionKey].intensity > 100) {
+    if (greenest[0] !== params.regionKey && REGIONS[params.regionKey].intensity > 100 && baseline.carbonPerQuery_g > 0) {
         const cleanCarbon = baseline.energyPerQuery_Wh / 1000 * greenest[1].intensity;
         const saving = 1 - cleanCarbon / baseline.carbonPerQuery_g;
         tips.push({
