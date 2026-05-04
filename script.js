@@ -871,6 +871,9 @@ createSkipLink();
 // KEYBOARD NAVIGATION ENHANCEMENT
 // ===================================
 document.addEventListener('keydown', (e) => {
+    // Skip when modifier keys are held (e.g. Ctrl+C copy, Cmd+H hide).
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+
     // Press 'H' to go to home
     if (e.key === 'h' || e.key === 'H') {
         if (!e.target.matches('input, textarea')) {
