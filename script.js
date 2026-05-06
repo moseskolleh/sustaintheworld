@@ -225,7 +225,9 @@ const searchContent = (query) => {
         'analytics': '#skills',
         'environmental': '#about',
         'disaster': '#projects',
-        'un': '#experience',
+        // 'un' as a 2-char key matched too greedily inside words like
+        // "University", so use the full phrase instead.
+        'united nations': '#experience',
         'wageningen': '#education',
         'experience': '#experience'
     };
@@ -871,18 +873,14 @@ createSkipLink();
 // KEYBOARD NAVIGATION ENHANCEMENT
 // ===================================
 document.addEventListener('keydown', (e) => {
-    // Press 'H' to go to home
-    if (e.key === 'h' || e.key === 'H') {
-        if (!e.target.matches('input, textarea')) {
-            document.querySelector('#home').scrollIntoView({ behavior: 'smooth' });
-        }
-    }
+    // Don't hijack browser/OS shortcuts like Ctrl+C, Cmd+C, Ctrl+H, etc.
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.target && typeof e.target.matches === 'function' && e.target.matches('input, textarea')) return;
 
-    // Press 'C' to go to contact
-    if (e.key === 'c' || e.key === 'C') {
-        if (!e.target.matches('input, textarea')) {
-            document.querySelector('#contact').scrollIntoView({ behavior: 'smooth' });
-        }
+    if (e.key === 'h' || e.key === 'H') {
+        document.querySelector('#home').scrollIntoView({ behavior: 'smooth' });
+    } else if (e.key === 'c' || e.key === 'C') {
+        document.querySelector('#contact').scrollIntoView({ behavior: 'smooth' });
     }
 });
 

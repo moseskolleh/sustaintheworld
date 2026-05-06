@@ -27,8 +27,11 @@ function run(theme) {
     const onUncaught = (err) => errors.push(err);
     process.on('uncaughtException', onUncaught);
 
-    // Stub things the script touches but jsdom doesn't fully implement
-    window.HTMLElement.prototype.scrollIntoView = function () {};
+    // Record scrollIntoView targets so tests can assert on navigation behavior
+    const scrollTargets = [];
+    window.HTMLElement.prototype.scrollIntoView = function () {
+        scrollTargets.push(this.id || this.tagName);
+    };
     window.scrollTo = () => {};
     window.IntersectionObserver = class {
         constructor() {}
@@ -41,7 +44,7 @@ function run(theme) {
     // Execute the site script in the window context
     window.eval(js);
 
-    return { window, errors };
+    return { window, errors, scrollTargets };
 }
 
 let failures = 0;
@@ -82,6 +85,37 @@ function assert(cond, msg) {
     assert(
         icon && icon.classList.contains('fa-sun'),
         'Bug2: icon should be fa-sun when loaded in light mode (was: ' + (icon && icon.className) + ')'
+    );
+}
+
+// --- Bug 3: Ctrl+C / Cmd+C must not hijack the universal Copy shortcut ---
+//   Pre-fix repro: pressing Ctrl+C anywhere outside a form field scrolled
+//   the page to #contact, stealing the user's clipboard shortcut.
+{
+    const { window, scrollTargets } = run('dark');
+    scrollTargets.length = 0;
+    const ev = new window.KeyboardEvent('keydown', { key: 'c', ctrlKey: true, bubbles: true, cancelable: true });
+    window.document.body.dispatchEvent(ev);
+    assert(
+        !scrollTargets.includes('contact'),
+        'Bug3: Ctrl+C must not scroll the page to #contact (got: ' + scrollTargets.join(',') + ')'
+    );
+}
+
+// --- Bug 4: search 'un' substring must not pre-empt longer keys ---
+//   Pre-fix repro: query "Wageningen University" matched 'un' inside
+//   "University" before reaching the 'wageningen' key, routing to the
+//   experience timeline instead of the education section.
+{
+    const { window, scrollTargets } = run('dark');
+    scrollTargets.length = 0;
+    const heroSearch = window.document.getElementById('heroSearch');
+    const searchBtn = window.document.querySelector('.search-btn');
+    heroSearch.value = 'Wageningen University';
+    searchBtn.click();
+    assert(
+        scrollTargets.includes('education') && !scrollTargets.includes('experience'),
+        'Bug4: "Wageningen University" should route to #education, not #experience (got: ' + scrollTargets.join(',') + ')'
     );
 }
 
