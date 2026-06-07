@@ -85,6 +85,22 @@ function assert(cond, msg) {
     );
 }
 
+// --- Bug 3: carbon-ai suggest() must not emit "NaN%" when tokens are zero ---
+{
+    const { suggest } = require('../carbon-ai.js');
+    const tips = suggest({
+        modelKey: 'gpt-4o',
+        regionKey: 'nl',       // intensity > 100, so region tip is eligible
+        wueKey: 'avg',
+        inputTokens: 0,
+        outputTokens: 0,       // -> baseline.carbonPerQuery_g === 0
+        queriesPerDay: 100,
+        pue: 1.0
+    });
+    const hasNaN = tips.some(t => /NaN|Infinity/.test(t.text));
+    assert(!hasNaN, 'Bug3: region tip must not render "NaN%"/"Infinity" when baseline carbon is 0');
+}
+
 if (failures > 0) {
     console.log(`\n${failures} assertion(s) failed`);
     process.exit(1);
