@@ -1,30 +1,46 @@
 // ===================================================================
 // ECOPROMPT COACH — web companion
-// Mirrors the calculation model of github.com/moseskolleh/promptcoach
+// Mirrors the calculation model of github.com/moseskolleh/promptcoach v2
 // (Digital Society School). Energy, water, and carbon per LLM query.
 //
 // Model benchmarks adapted from:
-//   Jegham, Abedin, Ali, et al. (2025) "How Hungry is AI? Benchmarking
-//   Energy, Water, and Carbon Footprint of LLM Inference."
-// Provider PUE/WUE disclosures: Google 2024, Microsoft 2024, AWS 2023.
+//   Jegham et al. (2025) "How Hungry is AI?" arXiv:2505.09598 (v6, Nov 2025)
+//   Google (2025) arXiv:2508.15734 — 0.24 Wh median Gemini prompt
+//   Mistral AI LCA (Jul 2025); Epoch AI (Feb 2025); Oviedo et al., Joule 2026
+// Provider PUE/WUE disclosures: Google 2025, Microsoft FY2024, AWS 2024.
 // All numbers are order-of-magnitude estimates, not measurements.
+// The full v2 engine (per-token fit, uncertainty bands, relatable
+// equivalents) lives in the promptcoach repo; this page keeps a
+// deliberately simple Wh-per-1k-token approximation of the same data.
 // ===================================================================
 
 // Energy per 1k tokens (Wh, combined input+output, inference only).
+// Derived from the v2 medium benchmark (1000 in / 1000 out) ÷ 2.
 const MODELS = {
-    'gpt-4o':           { label: 'GPT-4o',            provider: 'OpenAI',    energyPer1kTokens_Wh: 0.50, params: '~200B (MoE)' },
-    'gpt-4o-mini':      { label: 'GPT-4o mini',       provider: 'OpenAI',    energyPer1kTokens_Wh: 0.08, params: '~8B (distilled)' },
-    'gpt-4-1-nano':     { label: 'GPT-4.1 nano',      provider: 'OpenAI',    energyPer1kTokens_Wh: 0.03, params: '~3B' },
-    'claude-37-sonnet': { label: 'Claude 3.7 Sonnet', provider: 'Anthropic', energyPer1kTokens_Wh: 0.40, params: '~70B class' },
-    'gemini-20-flash':  { label: 'Gemini 2.0 Flash',  provider: 'Google',    energyPer1kTokens_Wh: 0.15, params: '~30B class' },
-    'gemini-15-flash':  { label: 'Gemini 1.5 Flash',  provider: 'Google',    energyPer1kTokens_Wh: 0.10, params: '~20B class' },
-    'gemini-15-pro':    { label: 'Gemini 1.5 Pro',    provider: 'Google',    energyPer1kTokens_Wh: 0.60, params: '~340B class' },
-    'llama-33-70b':     { label: 'Llama 3.3 70B',     provider: 'Meta',      energyPer1kTokens_Wh: 0.30, params: '70B' },
-    'llama-32-1b':      { label: 'Llama 3.2 1B',      provider: 'Meta',      energyPer1kTokens_Wh: 0.005, params: '1B' },
-    'deepseek-r1':      { label: 'DeepSeek-R1',       provider: 'DeepSeek',  energyPer1kTokens_Wh: 1.20, params: '671B (MoE), reasoning' }
+    'gpt-5':            { label: 'GPT-5 (Instant)',    provider: 'OpenAI',    energyPer1kTokens_Wh: 0.79, params: 'frontier (MoE)' },
+    'gpt-5-thinking':   { label: 'GPT-5 (Thinking)',   provider: 'OpenAI',    energyPer1kTokens_Wh: 9.20, params: 'frontier, reasoning' },
+    'gpt-4o':           { label: 'GPT-4o',             provider: 'OpenAI',    energyPer1kTokens_Wh: 0.61, params: '~200B (MoE)' },
+    'gpt-4o-mini':      { label: 'GPT-4o mini',        provider: 'OpenAI',    energyPer1kTokens_Wh: 0.26, params: '~8B (distilled)' },
+    'gpt-4-1-nano':     { label: 'GPT-4.1 nano',       provider: 'OpenAI',    energyPer1kTokens_Wh: 0.14, params: '~3B' },
+    'claude-45-sonnet': { label: 'Claude Sonnet 4.5',  provider: 'Anthropic', energyPer1kTokens_Wh: 1.07, params: 'frontier class' },
+    'claude-45-haiku':  { label: 'Claude Haiku 4.5',   provider: 'Anthropic', energyPer1kTokens_Wh: 0.21, params: 'small class' },
+    'claude-37-sonnet': { label: 'Claude 3.7 Sonnet',  provider: 'Anthropic', energyPer1kTokens_Wh: 1.39, params: '~70B class' },
+    'gemini-25-pro':    { label: 'Gemini 2.5 Pro',     provider: 'Google',    energyPer1kTokens_Wh: 0.59, params: 'frontier class' },
+    'gemini-25-flash':  { label: 'Gemini 2.5 Flash',   provider: 'Google',    energyPer1kTokens_Wh: 0.23, params: 'Google-anchored: 0.24 Wh median prompt' },
+    'gemini-20-flash':  { label: 'Gemini 2.0 Flash',   provider: 'Google',    energyPer1kTokens_Wh: 0.14, params: '~30B class' },
+    'mistral-large':    { label: 'Mistral Large 2',    provider: 'Mistral',   energyPer1kTokens_Wh: 1.08, params: 'LCA-anchored (Jul 2025)' },
+    'llama-4-scout':    { label: 'Llama 4 Scout',      provider: 'Meta',      energyPer1kTokens_Wh: 0.28, params: 'MoE' },
+    'llama-33-70b':     { label: 'Llama 3.3 70B',      provider: 'Meta',      energyPer1kTokens_Wh: 0.43, params: '70B' },
+    'llama-32-1b':      { label: 'Llama 3.2 1B',       provider: 'Meta',      energyPer1kTokens_Wh: 0.11, params: '1B' },
+    'deepseek-v3':      { label: 'DeepSeek V3',        provider: 'DeepSeek',  energyPer1kTokens_Wh: 0.71, params: '671B (MoE)' },
+    'deepseek-r1':      { label: 'DeepSeek-R1',        provider: 'DeepSeek',  energyPer1kTokens_Wh: 14.5, params: '671B (MoE), reasoning' },
+    'grok-3':           { label: 'Grok 3',             provider: 'xAI',       energyPer1kTokens_Wh: 1.45, params: 'frontier class' }
 };
 
-// Grid carbon intensity (gCO2e/kWh). Ember 2023 + IEA 2024.
+// Reasoning models burn hidden chain-of-thought tokens — flagged in tips.
+const REASONING_KEYS = ['gpt-5-thinking', 'deepseek-r1'];
+
+// Grid carbon intensity (gCO2e/kWh). Ember 2024 + IEA Electricity 2025.
 const REGIONS = {
     'no':     { label: 'Norway',                 intensity: 30  },
     'ca-qc':  { label: 'Canada — Quebec',        intensity: 30  },
@@ -33,7 +49,7 @@ const REGIONS = {
     'br':     { label: 'Brazil',                 intensity: 95  },
     'us-wa':  { label: 'US — Washington',        intensity: 96  },
     'nl':     { label: 'Netherlands',            intensity: 268 },
-    'us-avg': { label: 'US — national avg',      intensity: 367 },
+    'us-avg': { label: 'US — national avg',      intensity: 384 },
     'de':     { label: 'Germany',                intensity: 381 },
     'cn':     { label: 'China',                  intensity: 538 },
     'au':     { label: 'Australia',              intensity: 549 },
@@ -44,9 +60,9 @@ const REGIONS = {
 // Water Usage Effectiveness (litres of water per kWh consumed).
 // Includes on-site cooling water; excludes thermoelectric scope-2 in 'low'.
 const WUE_PROFILES = {
-    'low':  { label: 'Hyperscaler best-in-class (Google ~0.5)', wue_L_per_kWh: 0.5 },
-    'avg':  { label: 'Industry typical (~1.8)',                 wue_L_per_kWh: 1.8 },
-    'high': { label: 'Older / inland data centre (~5.0)',       wue_L_per_kWh: 5.0 }
+    'low':  { label: 'Hyperscaler disclosed (Google 1.15, ISO Cat 2)', wue_L_per_kWh: 1.15 },
+    'avg':  { label: 'Industry typical (~1.8)',                        wue_L_per_kWh: 1.8 },
+    'high': { label: 'Older / inland data centre (~5.0)',              wue_L_per_kWh: 5.0 }
 };
 
 const EQUIV = {
@@ -92,13 +108,20 @@ function suggest(params) {
 
     // 1. Suggest a smaller model from the same family if available.
     const SMALLER = {
+        'gpt-5': 'gpt-4o-mini',
+        'gpt-5-thinking': 'gpt-5',
         'gpt-4o': 'gpt-4o-mini',
         'gpt-4o-mini': 'gpt-4-1-nano',
-        'gemini-15-pro': 'gemini-15-flash',
-        'gemini-20-flash': 'gemini-15-flash',
-        'claude-37-sonnet': 'gpt-4o-mini',
+        'claude-45-sonnet': 'claude-45-haiku',
+        'claude-37-sonnet': 'claude-45-haiku',
+        'gemini-25-pro': 'gemini-25-flash',
+        'gemini-25-flash': 'gemini-20-flash',
+        'mistral-large': 'gpt-4o-mini',
+        'llama-4-scout': 'llama-32-1b',
         'llama-33-70b': 'llama-32-1b',
-        'deepseek-r1': 'gpt-4o-mini'
+        'deepseek-v3': 'gpt-4o-mini',
+        'deepseek-r1': 'deepseek-v3',
+        'grok-3': 'gpt-4o-mini'
     };
     if (SMALLER[params.modelKey]) {
         const altKey = SMALLER[params.modelKey];
@@ -134,10 +157,10 @@ function suggest(params) {
     }
 
     // 4. Reasoning model warning.
-    if (params.modelKey === 'deepseek-r1') {
+    if (REASONING_KEYS.includes(params.modelKey)) {
         tips.push({
             icon: 'fa-brain',
-            text: `Reasoning models burn 4–10× more energy per token. Reserve <strong>DeepSeek-R1</strong> for genuinely hard problems; route simple chat to a non-reasoning model.`
+            text: `Reasoning models burn 10–70× more energy per answer (hidden chain-of-thought tokens). Reserve <strong>${MODELS[params.modelKey].label}</strong> for genuinely hard problems; route simple chat to a non-reasoning model.`
         });
     }
 
@@ -302,10 +325,10 @@ if (typeof document !== 'undefined') {
         document.querySelectorAll('[data-preset]').forEach(btn => {
             btn.addEventListener('click', () => {
                 const presets = {
-                    'chat':       { model: 'gpt-4o',           region: 'nl',     wue: 'avg', input: 200,  output: 400,  qpd: 50,     pue: 1.2 },
-                    'rag':        { model: 'claude-37-sonnet', region: 'fr',     wue: 'avg', input: 4000, output: 800,  qpd: 200,    pue: 1.2 },
+                    'chat':       { model: 'gpt-5',            region: 'nl',     wue: 'avg', input: 200,  output: 400,  qpd: 50,     pue: 1.2 },
+                    'rag':        { model: 'claude-45-sonnet', region: 'fr',     wue: 'avg', input: 4000, output: 800,  qpd: 200,    pue: 1.2 },
                     'enterprise': { model: 'gpt-4o',           region: 'us-avg', wue: 'avg', input: 800,  output: 1200, qpd: 100000, pue: 1.4 },
-                    'reasoning':  { model: 'deepseek-r1',      region: 'us-avg', wue: 'avg', input: 1500, output: 3000, qpd: 500,    pue: 1.3 },
+                    'reasoning':  { model: 'gpt-5-thinking',   region: 'us-avg', wue: 'avg', input: 1500, output: 3000, qpd: 500,    pue: 1.3 },
                     'edge':       { model: 'llama-32-1b',      region: 'se',     wue: 'low', input: 200,  output: 200,  qpd: 1000,   pue: 1.0 }
                 };
                 const p = presets[btn.getAttribute('data-preset')];
