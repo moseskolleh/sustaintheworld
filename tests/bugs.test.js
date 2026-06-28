@@ -85,6 +85,22 @@ function assert(cond, msg) {
     );
 }
 
+// --- Bug 3: suggest() must not render "NaN%" when token inputs are zero ---
+{
+    const { suggest } = require('../carbon-ai.js');
+    const tips = suggest({
+        modelKey: 'gpt-4o',
+        regionKey: 'nl',
+        wueKey: 'avg',
+        inputTokens: 0,
+        outputTokens: 0,
+        queriesPerDay: 100,
+        pue: 1.2
+    });
+    const hasNaN = tips.some(t => /NaN/.test(t.text));
+    assert(!hasNaN, 'Bug3: suggest() must not produce "NaN%" tips when there is no usage');
+}
+
 if (failures > 0) {
     console.log(`\n${failures} assertion(s) failed`);
     process.exit(1);

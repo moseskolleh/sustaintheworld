@@ -90,6 +90,10 @@ function suggest(params) {
     const baseline = calculate(params);
     const tips = [];
 
+    // No tokens = no workload = no meaningful "saving"; bail before divide-by-zero
+    // produces "NaN%" in the rendered tip text.
+    if (!(baseline.carbonPerQuery_g > 0)) return tips;
+
     // 1. Suggest a smaller model from the same family if available.
     const SMALLER = {
         'gpt-4o': 'gpt-4o-mini',
