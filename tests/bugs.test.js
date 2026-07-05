@@ -85,6 +85,23 @@ function assert(cond, msg) {
     );
 }
 
+// --- Bug 3: EcoPrompt Coach suggest() must not render "NaN%" when tokens = 0 ---
+{
+    const { suggest } = require('../carbon-ai.js');
+    const params = {
+        modelKey: 'gpt-4o',
+        regionKey: 'nl',   // NL is above the 100 gCO2/kWh gate that triggers the greener-grid tip
+        wueKey: 'avg',
+        inputTokens: 0,
+        outputTokens: 0,
+        queriesPerDay: 100,
+        pue: 1.2
+    };
+    const tips = suggest(params);
+    const anyNaN = tips.some((t) => /NaN/.test(t.text));
+    assert(!anyNaN, 'Bug3: suggest() must not emit "NaN%" when both token counts are zero');
+}
+
 if (failures > 0) {
     console.log(`\n${failures} assertion(s) failed`);
     process.exit(1);

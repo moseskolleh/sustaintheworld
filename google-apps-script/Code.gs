@@ -48,11 +48,27 @@ function doGet(e) {
  */
 function doPost(e) {
   try {
+    // Reject empty or malformed bodies before touching the sheet.
+    if (!e || !e.postData || !e.postData.contents) {
+      return ContentService.createTextOutput(JSON.stringify({
+        'status': 'error',
+        'message': 'Empty request body.'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
     // Get the sheet with headers
     var sheet = getSheetWithHeaders();
 
     // Parse the incoming data
-    var data = JSON.parse(e.postData.contents);
+    var data;
+    try {
+      data = JSON.parse(e.postData.contents);
+    } catch (parseErr) {
+      return ContentService.createTextOutput(JSON.stringify({
+        'status': 'error',
+        'message': 'Invalid JSON payload.'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
 
     // Prepare row data
     var rowData = [
@@ -84,8 +100,13 @@ function doPost(e) {
                     "Message: " + message + "\n\n" +
                     "Timestamp: " + timestamp;
 
-    // Check if an email was actually provided before trying to CC
-    if (email && email.includes("@")) {
+    // Only use the submitter's email when it looks like a single, well-formed
+    // address. Reject commas, semicolons, whitespace, or CR/LF so a malicious
+    // submitter cannot inject extra CC recipients or mail headers.
+    var isSingleAddress = typeof email === 'string' &&
+      /^[^\s,;<>"\r\n]+@[^\s,;<>"\r\n]+\.[^\s,;<>"\r\n]+$/.test(email);
+
+    if (isSingleAddress) {
       MailApp.sendEmail(
         "moseskollehsesay@gmail.com", // Send to owner
         emailSubject,
@@ -96,7 +117,7 @@ function doPost(e) {
         }
       );
     } else {
-      // Fallback: If no valid email was given, just email yourself
+      // Fallback: no valid single address — just email yourself.
       MailApp.sendEmail("moseskollehsesay@gmail.com", emailSubject, emailBody);
     }
 
@@ -107,10 +128,12 @@ function doPost(e) {
     })).setMimeType(ContentService.MimeType.JSON);
 
   } catch (error) {
-    // Return error response
+    // Log server-side; return a generic error to the caller so internal
+    // messages (stack fragments, spreadsheet ids) are not leaked.
+    console.error('doPost error:', error);
     return ContentService.createTextOutput(JSON.stringify({
       'status': 'error',
-      'message': error.toString()
+      'message': 'Server error while processing submission.'
     })).setMimeType(ContentService.MimeType.JSON);
   }
 }
