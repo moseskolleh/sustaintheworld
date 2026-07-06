@@ -90,4 +90,7 @@ if (failures > 0) {
     process.exit(1);
 } else {
     console.log('\nAll assertions passed');
+    // The site script leaves timers running (slideshow, typewriter) which
+    // would otherwise keep the process alive forever.
+    process.exit(0);
 }

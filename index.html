@@ -7,6 +7,47 @@
     <meta name="keywords" content="Sustainability, Climate Analyst, ESG, Environmental Sciences, Water Resources, Sustainable AI, Data Analytics">
     <meta name="author" content="Moses Kolleh Sesay">
     <title>Moses Kolleh Sesay | Sustainability & Climate Analyst</title>
+    <link rel="canonical" href="https://moseskolleh.github.io/sustaintheworld/">
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+    <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+    <meta name="theme-color" content="#0a0a0a">
+
+    <!-- Open Graph / social sharing -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Moses Kolleh Sesay | Sustainability & Climate Analyst">
+    <meta property="og:description" content="From mapping groundwater in Freetown to building sustainable AI frameworks in Amsterdam — water, climate, and the data that connects them.">
+    <meta property="og:url" content="https://moseskolleh.github.io/sustaintheworld/">
+    <meta property="og:image" content="https://moseskolleh.github.io/sustaintheworld/assets/img/og-image.jpg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Moses Kolleh Sesay | Sustainability & Climate Analyst">
+    <meta name="twitter:description" content="From mapping groundwater in Freetown to building sustainable AI frameworks in Amsterdam.">
+    <meta name="twitter:image" content="https://moseskolleh.github.io/sustaintheworld/assets/img/og-image.jpg">
+
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "name": "Moses Kolleh Sesay",
+        "jobTitle": "Sustainability & Climate Analyst",
+        "url": "https://moseskolleh.github.io/sustaintheworld/",
+        "image": "https://moseskolleh.github.io/sustaintheworld/assets/img/profile.webp",
+        "email": "mailto:moseskollehsesay@gmail.com",
+        "address": { "@type": "PostalAddress", "addressLocality": "Amsterdam", "addressCountry": "NL" },
+        "alumniOf": [
+            { "@type": "CollegeOrUniversity", "name": "Wageningen University & Research" },
+            { "@type": "CollegeOrUniversity", "name": "Hunan University" },
+            { "@type": "CollegeOrUniversity", "name": "University of Sierra Leone" }
+        ],
+        "knowsAbout": ["Sustainability", "Climate Risk", "ESG", "Water Resource Management", "Sustainable AI", "GIS"],
+        "sameAs": [
+            "https://github.com/moseskolleh",
+            "https://linkedin.com/in/moseskollehsesay"
+        ]
+    }
+    </script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -48,8 +89,10 @@
                 <li><a href="#about" class="nav-link"><span class="nav-num">02</span>About</a></li>
                 <li><a href="#experience" class="nav-link"><span class="nav-num">03</span>Experience</a></li>
                 <li><a href="#projects" class="nav-link"><span class="nav-num">04</span>Projects</a></li>
-                <li><a href="#skills" class="nav-link"><span class="nav-num">05</span>Skills</a></li>
-                <li><a href="#education" class="nav-link"><span class="nav-num">06</span>Education</a></li>
+                <li><a href="#ecoprompt" class="nav-link"><span class="nav-num">05</span>AI, Weighed</a></li>
+                <li><a href="#skills" class="nav-link"><span class="nav-num">06</span>Skills</a></li>
+                <li><a href="#education" class="nav-link"><span class="nav-num">07</span>Education</a></li>
+                <li><a href="#notes" class="nav-link"><span class="nav-num">08</span>Notes</a></li>
                 <li><a href="#contact" class="nav-link contact-btn">Contact</a></li>
             </ul>
         </div>
@@ -58,10 +101,10 @@
     <!-- Hero -->
     <header id="home" class="hero">
         <div class="hero-background" aria-hidden="true">
-            <div class="hero-bg-slide active" style="background-image: url('Groundwater Potential Mapping.JPG');"></div>
-            <div class="hero-bg-slide" style="background-image: url('Wuppertal_flood resilence.jpeg');"></div>
-            <div class="hero-bg-slide" style="background-image: url('Coastal Water Pollution Dynamics 1.jpeg');"></div>
-            <div class="hero-bg-slide" style="background-image: url('Sustainable_AI_2.jpeg');"></div>
+            <div class="hero-bg-slide active" style="background-image: url('assets/img/groundwater-mapping-1-hero.webp');"></div>
+            <div class="hero-bg-slide" data-bg="assets/img/wuppertal-resilience-1-hero.webp"></div>
+            <div class="hero-bg-slide" data-bg="assets/img/coastal-pollution-1-hero.webp"></div>
+            <div class="hero-bg-slide" data-bg="assets/img/sustainable-ai-2-hero.webp"></div>
         </div>
         <div class="hero-overlay" aria-hidden="true"></div>
         <div class="contour-layer" aria-hidden="true"></div>
@@ -117,12 +160,17 @@
             <div class="section-header">
                 <span class="section-index">01</span>
                 <h2 class="section-title">The <span class="highlight">Journey</span></h2>
-                <p class="section-description">Four countries, three continents, one thread: water, climate, and the data that connects them.</p>
+                <p class="section-description">Four countries, three continents, one thread: water, climate, and the data that connects them. Watch the route unfold — then scroll the stops.</p>
+            </div>
+            <div class="journey-scroller">
+            <div class="journey-map reveal" id="journeyMap" aria-hidden="true">
+                <div class="journey-map-frame" id="journeyMapFrame"><!-- world map SVG injected by script.js --></div>
+                <div class="journey-map-readout mono-label" id="journeyMapReadout">8.4657° N, 13.2317° W — Freetown</div>
             </div>
             <div class="journey-track">
                 <div class="journey-line" aria-hidden="true"></div>
                 <ol class="journey-stops">
-                    <li class="journey-stop reveal">
+                    <li class="journey-stop reveal" data-stop="0">
                         <div class="journey-marker"><span></span></div>
                         <div class="journey-card">
                             <span class="journey-coords">8.48° N, 13.23° W</span>
@@ -131,7 +179,7 @@
                             <p>Graduated top of class in Geology, then took it to the field: leading drilling crews that delivered <strong>164 water points</strong> for communities across the country.</p>
                         </div>
                     </li>
-                    <li class="journey-stop reveal">
+                    <li class="journey-stop reveal" data-stop="1">
                         <div class="journey-marker"><span></span></div>
                         <div class="journey-card">
                             <span class="journey-coords">28.23° N, 112.94° E</span>
@@ -140,7 +188,7 @@
                             <p>MSc Industrial Engineering on a full Chinese Government scholarship. Thesis: rethinking water management <strong>beyond cement, steel and pipes</strong>.</p>
                         </div>
                     </li>
-                    <li class="journey-stop reveal">
+                    <li class="journey-stop reveal" data-stop="2">
                         <div class="journey-marker"><span></span></div>
                         <div class="journey-card">
                             <span class="journey-coords">50.72° N, 7.12° E</span>
@@ -149,7 +197,7 @@
                             <p>Climate adaptation at the <strong>UN Office for Disaster Risk Reduction</strong> — documenting 54 global hazard information systems.</p>
                         </div>
                     </li>
-                    <li class="journey-stop reveal">
+                    <li class="journey-stop reveal" data-stop="3">
                         <div class="journey-marker"><span></span></div>
                         <div class="journey-card">
                             <span class="journey-coords">51.97° N, 5.67° E</span>
@@ -158,7 +206,7 @@
                             <p>MSc Environmental Sciences. Modelled <strong>river export of pollutants worldwide</strong> and wrote future storylines for Africa's coastal waters.</p>
                         </div>
                     </li>
-                    <li class="journey-stop reveal">
+                    <li class="journey-stop reveal" data-stop="4">
                         <div class="journey-marker journey-marker-current"><span></span></div>
                         <div class="journey-card journey-card-current">
                             <span class="journey-coords">52.37° N, 4.90° E</span>
@@ -168,6 +216,7 @@
                         </div>
                     </li>
                 </ol>
+            </div>
             </div>
         </div>
     </section>
@@ -182,13 +231,16 @@
             <div class="about-grid">
                 <div class="about-portrait reveal">
                     <div class="portrait-frame">
-                        <img src="profile_pic.png" alt="Moses Kolleh Sesay — Sustainability & Climate Analyst">
+                        <img src="assets/img/profile.webp" alt="Moses Kolleh Sesay — Sustainability & Climate Analyst" loading="lazy" width="640" height="640">
                         <div class="portrait-ring" aria-hidden="true"></div>
                     </div>
                     <div class="portrait-meta">
                         <span class="mono-label">Currently in</span>
                         <span class="portrait-location"><i class="fas fa-map-marker-alt"></i> Amsterdam, NL</span>
                     </div>
+                    <a href="assets/Moses_Kolleh_Sesay_CV.pdf" class="btn btn-secondary btn-small btn-cv" download>
+                        <i class="fas fa-file-arrow-down"></i> Download CV
+                    </a>
                 </div>
                 <div class="about-text reveal">
                     <p class="about-lead">
@@ -256,10 +308,16 @@
             <div class="section-header">
                 <span class="section-index">03</span>
                 <h2 class="section-title">Professional <span class="highlight">Experience</span></h2>
+                <p class="section-description">Logged the way a geologist logs a borehole: depth is time, every layer is a chapter. Drill down.</p>
             </div>
-            <div class="timeline">
-                <div class="timeline-item reveal">
-                    <div class="timeline-marker"></div>
+            <div class="corelog">
+                <div class="corelog-head mono-label" aria-hidden="true">
+                    <span><i class="fas fa-ruler-vertical"></i> CORE LOG MKS-01 · SURFACE = TODAY</span>
+                    <span>SCALE ≈ 10 m / YEAR</span>
+                </div>
+                <div class="corelog-item reveal">
+                    <div class="corelog-depth mono-label"><strong>0 m</strong><span>surface</span></div>
+                    <div class="corelog-strata strata-synthetic" aria-hidden="true"></div>
                     <div class="timeline-content">
                         <div class="timeline-date">Sept 2025 — Present</div>
                         <h3>Researcher — Sustainable Artificial Intelligence</h3>
@@ -278,8 +336,9 @@
                     </div>
                 </div>
 
-                <div class="timeline-item reveal">
-                    <div class="timeline-marker"></div>
+                <div class="corelog-item reveal">
+                    <div class="corelog-depth mono-label"><strong>8 m</strong><span>2025</span></div>
+                    <div class="corelog-strata strata-accel" aria-hidden="true"></div>
                     <div class="timeline-content">
                         <div class="timeline-date">Mar 2025 — Apr 2025</div>
                         <h3>Cohort 7 Member — Sustainability Consulting Accelerator</h3>
@@ -297,8 +356,9 @@
                     </div>
                 </div>
 
-                <div class="timeline-item reveal">
-                    <div class="timeline-marker"></div>
+                <div class="corelog-item reveal">
+                    <div class="corelog-depth mono-label"><strong>24 m</strong><span>2023</span></div>
+                    <div class="corelog-strata strata-alluvium" aria-hidden="true"></div>
                     <div class="timeline-content">
                         <div class="timeline-date">Jun 2023 — Oct 2023</div>
                         <h3>Climate Change Adaptation Intern</h3>
@@ -316,8 +376,9 @@
                     </div>
                 </div>
 
-                <div class="timeline-item reveal">
-                    <div class="timeline-marker"></div>
+                <div class="corelog-item reveal">
+                    <div class="corelog-depth mono-label"><strong>63 m</strong><span>2019</span></div>
+                    <div class="corelog-strata strata-laterite" aria-hidden="true"></div>
                     <div class="timeline-content">
                         <div class="timeline-date">May 2019 — Sept 2019</div>
                         <h3>Field Operations Manager</h3>
@@ -336,8 +397,9 @@
                     </div>
                 </div>
 
-                <div class="timeline-item reveal">
-                    <div class="timeline-marker"></div>
+                <div class="corelog-item reveal">
+                    <div class="corelog-depth mono-label"><strong>70 m</strong><span>2018</span></div>
+                    <div class="corelog-strata strata-granite" aria-hidden="true"></div>
                     <div class="timeline-content">
                         <div class="timeline-date">Sept 2018 — Apr 2019</div>
                         <h3>Operations Supervisor</h3>
@@ -354,6 +416,7 @@
                         </div>
                     </div>
                 </div>
+                <div class="corelog-foot mono-label" aria-hidden="true">▼ BEDROCK · 2013 — 2017 · BSc GEOLOGY, FIRST CLASS — WHERE THE STORY STARTS</div>
             </div>
         </div>
     </section>
@@ -373,7 +436,7 @@
                 <article class="project-card reveal" data-project="sustainable-ai">
                     <a href="#" class="project-summary view-details-btn" aria-expanded="false">
                         <div class="project-thumb">
-                            <img src="Sustainable_AI_3.jpeg" alt="Moses demonstrating the sustainable AI prototype at the Digital Society School" loading="lazy">
+                            <img src="assets/img/sustainable-ai-3.webp" alt="Moses demonstrating the sustainable AI prototype at the Digital Society School" loading="lazy">
                         </div>
                         <div class="project-head">
                             <div class="project-meta">
@@ -417,11 +480,11 @@
                             </div>
                             <div class="project-gallery">
                                 <figure class="gallery-item" data-caption="Gathering public input on AI and energy at the Hogeschool van Amsterdam — testing assumptions with real people, sticky notes and all.">
-                                    <img src="Sustainable_AI_2.jpeg" alt="Moses at a public research stand at the Hogeschool van Amsterdam" loading="lazy">
+                                    <img src="assets/img/sustainable-ai-2.webp" alt="Moses at a public research stand at the Hogeschool van Amsterdam" loading="lazy">
                                     <figcaption>Public research stand at the Hogeschool van Amsterdam — testing assumptions with real people, sticky notes and all.</figcaption>
                                 </figure>
                                 <figure class="gallery-item" data-caption="Demonstrating an early decision-support prototype at the Digital Society School, Amsterdam.">
-                                    <img src="Sustainable_AI_3.jpeg" alt="Moses demonstrating an early prototype on a large screen" loading="lazy">
+                                    <img src="assets/img/sustainable-ai-3.webp" alt="Moses demonstrating an early prototype on a large screen" loading="lazy">
                                     <figcaption>Demonstrating an early decision-support prototype at the Digital Society School.</figcaption>
                                 </figure>
                             </div>
@@ -433,7 +496,7 @@
                 <article class="project-card reveal" data-project="coastal">
                     <a href="#" class="project-summary view-details-btn" aria-expanded="false">
                         <div class="project-thumb">
-                            <img src="Coastal Water Pollution Dynamics 1.jpeg" alt="Moses presenting the 'Dirty Delta' storyline at Wageningen University" loading="lazy">
+                            <img src="assets/img/coastal-pollution-1.webp" alt="Moses presenting the 'Dirty Delta' storyline at Wageningen University" loading="lazy">
                         </div>
                         <div class="project-head">
                             <div class="project-meta">
@@ -475,7 +538,7 @@
                             </div>
                             <div class="project-gallery">
                                 <figure class="gallery-item gallery-item-wide" data-caption="Presenting the pessimistic 'Dirty Delta' storyline — a future scenario for African coastal waters — to my research group at Wageningen University.">
-                                    <img src="Coastal Water Pollution Dynamics 1.jpeg" alt="Moses presenting the Dirty Delta storyline on a screen" loading="lazy">
+                                    <img src="assets/img/coastal-pollution-1.webp" alt="Moses presenting the Dirty Delta storyline on a screen" loading="lazy">
                                     <figcaption>Presenting the pessimistic "Dirty Delta" storyline to my research group at Wageningen University.</figcaption>
                                 </figure>
                             </div>
@@ -487,7 +550,7 @@
                 <article class="project-card reveal" data-project="wuppertal">
                     <a href="#" class="project-summary view-details-btn" aria-expanded="false">
                         <div class="project-thumb">
-                            <img src="Wuppertal_flood resilence.jpeg" alt="The consultancy team riding the Wuppertal Schwebebahn" loading="lazy">
+                            <img src="assets/img/wuppertal-resilience-1.webp" alt="The consultancy team riding the Wuppertal Schwebebahn" loading="lazy">
                         </div>
                         <div class="project-head">
                             <div class="project-meta">
@@ -529,11 +592,11 @@
                             </div>
                             <div class="project-gallery">
                                 <figure class="gallery-item" data-caption="Riding the famous Schwebebahn with my interdisciplinary consultancy team during fieldwork in Wuppertal — the very railway our project set out to protect.">
-                                    <img src="Wuppertal_flood resilence.jpeg" alt="The consultancy team inside a Schwebebahn cabin" loading="lazy">
+                                    <img src="assets/img/wuppertal-resilience-1.webp" alt="The consultancy team inside a Schwebebahn cabin" loading="lazy">
                                     <figcaption>Riding the Schwebebahn with the team — the very railway our project set out to protect.</figcaption>
                                 </figure>
                                 <figure class="gallery-item" data-caption="Mapping the drivers of flood vulnerability — land use, housing inequality, social cohesion — during a stakeholder analysis workshop.">
-                                    <img src="Wuppertal_Flood_Resilence.jpeg" alt="Workshop sheet with sticky notes mapping flood vulnerability drivers" loading="lazy">
+                                    <img src="assets/img/wuppertal-resilience-2.webp" alt="Workshop sheet with sticky notes mapping flood vulnerability drivers" loading="lazy">
                                     <figcaption>Mapping the drivers of flood vulnerability during a stakeholder analysis workshop.</figcaption>
                                 </figure>
                             </div>
@@ -545,7 +608,7 @@
                 <article class="project-card reveal" data-project="un-disaster">
                     <a href="#" class="project-summary view-details-btn" aria-expanded="false">
                         <div class="project-thumb">
-                            <img src="UN Disaster Risk Reduction 2.jpeg" alt="The UN Campus tower in Bonn, Germany" loading="lazy">
+                            <img src="assets/img/undrr-bonn.webp" alt="The UN Campus tower in Bonn, Germany" loading="lazy">
                         </div>
                         <div class="project-head">
                             <div class="project-meta">
@@ -586,7 +649,7 @@
                             </div>
                             <div class="project-gallery">
                                 <figure class="gallery-item gallery-item-tall" data-caption="The UN Campus in Bonn, Germany — my base for five months working with the UN Office for Disaster Risk Reduction.">
-                                    <img src="UN Disaster Risk Reduction 2.jpeg" alt="The UN Campus tower with the UN flag, Bonn" loading="lazy">
+                                    <img src="assets/img/undrr-bonn.webp" alt="The UN Campus tower with the UN flag, Bonn" loading="lazy">
                                     <figcaption>The UN Campus in Bonn — my base for five months with UNDRR.</figcaption>
                                 </figure>
                             </div>
@@ -598,7 +661,7 @@
                 <article class="project-card reveal" data-project="water-management">
                     <a href="#" class="project-summary view-details-btn" aria-expanded="false">
                         <div class="project-thumb">
-                            <img src="Soft_path_to_water_management 3.jpeg" alt="Moses defending his master's thesis at Hunan University" loading="lazy">
+                            <img src="assets/img/soft-path-3.webp" alt="Moses defending his master's thesis at Hunan University" loading="lazy">
                         </div>
                         <div class="project-head">
                             <div class="project-meta">
@@ -640,15 +703,15 @@
                             </div>
                             <div class="project-gallery">
                                 <figure class="gallery-item gallery-item-wide" data-caption="Defending the thesis — 'Approach for soft path water management: thinking beyond cement, steel and pipes' — at Hunan University, May 2021.">
-                                    <img src="Soft_path_to_water_management 3.jpeg" alt="Moses presenting his master's defense at Hunan University" loading="lazy">
+                                    <img src="assets/img/soft-path-3.webp" alt="Moses presenting his master's defense at Hunan University" loading="lazy">
                                     <figcaption>Defending the thesis at Hunan University, May 2021.</figcaption>
                                 </figure>
                                 <figure class="gallery-item" data-caption="Graduation day at Hunan University — the close of two years in China on a full MOFCOM scholarship.">
-                                    <img src="Soft_path_to_water_management 2.jpeg" alt="Moses in graduation gown at Hunan University" loading="lazy">
+                                    <img src="assets/img/soft-path-2.webp" alt="Moses in graduation gown at Hunan University" loading="lazy">
                                     <figcaption>Graduation day at Hunan University.</figcaption>
                                 </figure>
                                 <figure class="gallery-item" data-caption="At the table — representing graduate researchers at Hunan University.">
-                                    <img src="Soft_path_to_water_management 4.jpeg" alt="Moses seated at a conference table with his name plate" loading="lazy">
+                                    <img src="assets/img/soft-path-4.webp" alt="Moses seated at a conference table with his name plate" loading="lazy">
                                     <figcaption>At the table — representing graduate researchers at Hunan University.</figcaption>
                                 </figure>
                             </div>
@@ -660,7 +723,7 @@
                 <article class="project-card reveal" data-project="groundwater">
                     <a href="#" class="project-summary view-details-btn" aria-expanded="false">
                         <div class="project-thumb">
-                            <img src="Groundwater Potential Mapping.JPG" alt="A successful borehole striking water in rural Sierra Leone" loading="lazy">
+                            <img src="assets/img/groundwater-mapping-1.webp" alt="A successful borehole striking water in rural Sierra Leone" loading="lazy">
                         </div>
                         <div class="project-head">
                             <div class="project-meta">
@@ -702,11 +765,11 @@
                             </div>
                             <div class="project-gallery">
                                 <figure class="gallery-item" data-caption="Striking water — a successful borehole comes to life in rural Sierra Leone. Moments like this are why the mapping matters.">
-                                    <img src="Groundwater Potential Mapping.JPG" alt="Water gushing from a freshly drilled borehole" loading="lazy">
+                                    <img src="assets/img/groundwater-mapping-1.webp" alt="Water gushing from a freshly drilled borehole" loading="lazy">
                                     <figcaption>Striking water — a successful borehole comes to life in rural Sierra Leone.</figcaption>
                                 </figure>
                                 <figure class="gallery-item" data-caption="On site with the drilling crew — geophysics turned into clean water.">
-                                    <img src="Groundwater Potential Mapping2.jpg" alt="Moses on site with the drilling crew" loading="lazy">
+                                    <img src="assets/img/groundwater-mapping-2.webp" alt="Moses on site with the drilling crew" loading="lazy">
                                     <figcaption>On site with the drilling crew — geophysics turned into clean water.</figcaption>
                                 </figure>
                             </div>
@@ -718,36 +781,91 @@
         </div>
     </section>
 
+    <!-- EcoPrompt live widget -->
+    <section id="ecoprompt" class="ecoprompt">
+        <div class="contour-layer" aria-hidden="true"></div>
+        <div class="container">
+            <div class="section-header">
+                <span class="section-index">05</span>
+                <h2 class="section-title">AI, <span class="highlight">Weighed</span></h2>
+                <p class="section-description">A live slice of my current research. Pick a model and a workload — see what one AI answer costs the planet, in units you can actually feel.</p>
+            </div>
+            <div class="eco-widget reveal">
+                <div class="eco-widget-controls">
+                    <div class="eco-field">
+                        <label class="mono-label" for="ecoModel">Model</label>
+                        <select id="ecoModel"></select>
+                    </div>
+                    <div class="eco-field">
+                        <label class="mono-label" for="ecoPreset">Workload</label>
+                        <select id="ecoPreset">
+                            <option value="short">Quick question · 100 in / 300 out tokens</option>
+                            <option value="chat" selected>Everyday chat · 500 in / 500 out</option>
+                            <option value="doc">Document analysis · 4,000 in / 1,000 out</option>
+                            <option value="reasoning">Deep reasoning run · 1,000 in / 8,000 out</option>
+                        </select>
+                    </div>
+                    <div class="eco-field">
+                        <label class="mono-label" for="ecoGrid">Electricity grid</label>
+                        <select id="ecoGrid"></select>
+                    </div>
+                </div>
+                <div class="eco-widget-out">
+                    <div class="eco-stat"><span class="eco-num" id="ecoEnergy">—</span><span class="eco-unit">Wh energy</span></div>
+                    <div class="eco-stat"><span class="eco-num" id="ecoCarbon">—</span><span class="eco-unit">g CO₂e</span></div>
+                    <div class="eco-stat"><span class="eco-num" id="ecoWater">—</span><span class="eco-unit">mL water</span></div>
+                </div>
+                <p class="eco-equiv" id="ecoEquiv"></p>
+                <div class="eco-compare">
+                    <div class="mono-label eco-compare-title">Same workload on other models — g CO₂e per answer</div>
+                    <div id="ecoBars" class="eco-bars"></div>
+                </div>
+                <div class="eco-actions">
+                    <a class="btn btn-primary btn-small" href="carbon-ai.html"><i class="fas fa-bolt"></i> Open the full EcoPrompt Coach</a>
+                    <a class="btn btn-secondary btn-small" href="https://github.com/moseskolleh/promptcoach" target="_blank" rel="noopener"><i class="fab fa-github"></i> promptcoach — Chrome extension &amp; engine</a>
+                </div>
+                <p class="eco-footnote">Order-of-magnitude estimates, inference only — per-token benchmarks from Jegham et&nbsp;al. 2025, grid intensities from Ember 2023. Full methodology and sources in the coach.</p>
+            </div>
+        </div>
+    </section>
+
     <!-- Skills -->
     <section id="skills" class="skills">
         <div class="container">
             <div class="section-header">
-                <span class="section-index">05</span>
+                <span class="section-index">06</span>
                 <h2 class="section-title">Skills &amp; <span class="highlight">Expertise</span></h2>
+                <p class="section-description">No made-up percentages here — every tool comes with the receipt of where it earned its place.</p>
             </div>
             <div class="skills-grid">
                 <div class="skills-panel reveal">
-                    <h3><i class="fas fa-code"></i> Technical toolkit</h3>
-                    <div class="skill-item">
-                        <div class="skill-header"><span>Python (Pandas, NumPy, Matplotlib)</span><span class="mono-label">90%</span></div>
-                        <div class="skill-bar"><div class="skill-progress" data-progress="90"></div></div>
-                    </div>
-                    <div class="skill-item">
-                        <div class="skill-header"><span>Tableau &amp; Power BI</span><span class="mono-label">88%</span></div>
-                        <div class="skill-bar"><div class="skill-progress" data-progress="88"></div></div>
-                    </div>
-                    <div class="skill-item">
-                        <div class="skill-header"><span>SQL (PostgreSQL, MySQL)</span><span class="mono-label">85%</span></div>
-                        <div class="skill-bar"><div class="skill-progress" data-progress="85"></div></div>
-                    </div>
-                    <div class="skill-item">
-                        <div class="skill-header"><span>QGIS &amp; ArcGIS</span><span class="mono-label">85%</span></div>
-                        <div class="skill-bar"><div class="skill-progress" data-progress="85"></div></div>
-                    </div>
-                    <div class="skill-item">
-                        <div class="skill-header"><span>Machine Learning</span><span class="mono-label">80%</span></div>
-                        <div class="skill-bar"><div class="skill-progress" data-progress="80"></div></div>
-                    </div>
+                    <h3><i class="fas fa-code"></i> Technical toolkit — proof attached</h3>
+                    <ul class="toolkit-list">
+                        <li class="toolkit-item">
+                            <span class="toolkit-name">Python <span class="toolkit-sub">Pandas · NumPy · Matplotlib</span></span>
+                            <a class="toolkit-proof" href="#projects">Global river-export pollution analysis, MSc thesis <i class="fas fa-arrow-right"></i></a>
+                        </li>
+                        <li class="toolkit-item">
+                            <span class="toolkit-name">QGIS &amp; ArcGIS <span class="toolkit-sub">geospatial analysis</span></span>
+                            <a class="toolkit-proof" href="#projects">Groundwater maps that struck water 7 times out of 10 <i class="fas fa-arrow-right"></i></a>
+                        </li>
+                        <li class="toolkit-item">
+                            <span class="toolkit-name">SQL <span class="toolkit-sub">PostgreSQL · MySQL</span></span>
+                            <a class="toolkit-proof" href="#education">Masterschool data analytics — real business cases <i class="fas fa-arrow-right"></i></a>
+                        </li>
+                        <li class="toolkit-item">
+                            <span class="toolkit-name">Tableau &amp; Power BI <span class="toolkit-sub">visual analytics</span></span>
+                            <a class="toolkit-proof" href="#education">Climate-risk and ESG reporting dashboards <i class="fas fa-arrow-right"></i></a>
+                        </li>
+                        <li class="toolkit-item">
+                            <span class="toolkit-name">Machine Learning <span class="toolkit-sub">regression · classification</span></span>
+                            <a class="toolkit-proof" href="#education">Google Advanced Data Analytics certificate <i class="fas fa-arrow-right"></i></a>
+                        </li>
+                        <li class="toolkit-item">
+                            <span class="toolkit-name">JavaScript <span class="toolkit-sub">interactive tools</span></span>
+                            <a class="toolkit-proof" href="#ecoprompt">EcoPrompt Coach — the live widget on this page <i class="fas fa-arrow-right"></i></a>
+                        </li>
+                    </ul>
                 </div>
                 <div class="skills-panel reveal">
                     <h3><i class="fas fa-leaf"></i> Sustainability expertise</h3>
@@ -775,6 +893,42 @@
                         <span class="framework-card">CSRD</span>
                     </div>
                 </div>
+                <div class="skills-panel impact-panel reveal">
+                    <h3><i class="fas fa-chart-simple"></i> Field-tested numbers</h3>
+                    <div class="impact-viz">
+                        <div class="impact-row">
+                            <div class="impact-row-head">
+                                <span>164 water points delivered in Sierra Leone, itemised</span>
+                                <span class="mono-label">2018 — 2019</span>
+                            </div>
+                            <div class="impact-bar" role="img" aria-label="164 water points: 100 hand-dug wells rehabilitated, 50 boreholes constructed, 14 solar-powered boreholes">
+                                <span class="impact-seg impact-seg-a" style="--w: 61%;" title="100 hand-dug wells rehabilitated"></span>
+                                <span class="impact-seg impact-seg-b" style="--w: 30.5%;" title="50 boreholes constructed"></span>
+                                <span class="impact-seg impact-seg-c" style="--w: 8.5%;" title="14 solar-powered boreholes"></span>
+                            </div>
+                            <div class="impact-legend mono-label">
+                                <span><i class="impact-key impact-seg-a"></i>100 wells rehabilitated</span>
+                                <span><i class="impact-key impact-seg-b"></i>50 boreholes drilled</span>
+                                <span><i class="impact-key impact-seg-c"></i>14 solar-powered</span>
+                            </div>
+                        </div>
+                        <div class="impact-row">
+                            <div class="impact-row-head">
+                                <span>Aquifer strike rate where my potential maps guided the drill</span>
+                                <span class="mono-label">Freetown Complex</span>
+                            </div>
+                            <div class="impact-bar impact-bar-gauge" role="img" aria-label="70 percent aquifer strike rate">
+                                <span class="impact-seg impact-seg-a" style="--w: 70%;"><b>70%</b></span>
+                            </div>
+                            <div class="impact-legend mono-label"><span>7 of every 10 boreholes hit water — in geology where drilling is a gamble</span></div>
+                        </div>
+                        <div class="impact-row impact-row-inline">
+                            <div class="impact-fact"><span class="impact-fact-num">10,000+</span><span class="mono-label">people reached by these water systems</span></div>
+                            <div class="impact-fact"><span class="impact-fact-num">54</span><span class="mono-label">hazard information systems documented for the UN</span></div>
+                            <div class="impact-fact"><span class="impact-fact-num">95%</span><span class="mono-label">project completion rate leading a team of 23</span></div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
@@ -783,7 +937,7 @@
     <section id="education" class="education">
         <div class="container">
             <div class="section-header">
-                <span class="section-index">06</span>
+                <span class="section-index">07</span>
                 <h2 class="section-title">Education &amp; <span class="highlight">Certifications</span></h2>
             </div>
             <div class="education-grid">
@@ -866,12 +1020,58 @@
         </div>
     </section>
 
+    <!-- Field Notes -->
+    <section id="notes" class="fieldnotes">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-index">08</span>
+                <h2 class="section-title">Field <span class="highlight">Notes</span></h2>
+                <p class="section-description">Short dispatches from the intersection of mud, models and megawatts.</p>
+            </div>
+            <div class="fieldnotes-grid">
+                <details class="fieldnote reveal">
+                    <summary>
+                        <span class="fieldnote-tag mono-label">Note 01 · Water</span>
+                        <h3>What 164 boreholes taught me about data</h3>
+                        <span class="fieldnote-toggle" aria-hidden="true"><i class="fas fa-plus"></i></span>
+                    </summary>
+                    <div class="fieldnote-body">
+                        <p>In the Freetown Complex, a wrong guess isn't a bad cell in a spreadsheet — it's a dry hole a community paid for. Geophysics taught me that data only matters when someone stakes something on it. The resistivity surveys behind our groundwater maps pushed the strike rate to 70% in rock where drilling is a gamble, and every strike was the same lesson: collect the data <em>before</em> the drill bit, not after.</p>
+                        <p>I carry that into every ESG analysis and every AI framework I build now. The question is never "what does the data say?" — it's "who is about to spend money, or drink water, based on what I claim it says?"</p>
+                    </div>
+                </details>
+                <details class="fieldnote reveal">
+                    <summary>
+                        <span class="fieldnote-tag mono-label">Note 02 · Scenarios</span>
+                        <h3>Why I wrote a pessimistic future on purpose</h3>
+                        <span class="fieldnote-toggle" aria-hidden="true"><i class="fas fa-plus"></i></span>
+                    </summary>
+                    <div class="fieldnote-body">
+                        <p>My Wageningen thesis ended with "Dirty Delta" — a deliberately dark storyline for Africa's coastal waters by mid-century. Model output rarely moves a policymaker; a story they can picture does. Turning regression coefficients on income, urbanisation and agriculture into a narrative was the most useful translation work I've done.</p>
+                        <p>The lesson survived the thesis: if your analysis can't be retold in a corridor after the meeting, it doesn't exist. I now write the storyline first and let it demand the numbers it needs.</p>
+                    </div>
+                </details>
+                <details class="fieldnote reveal">
+                    <summary>
+                        <span class="fieldnote-tag mono-label">Note 03 · Sustainable AI</span>
+                        <h3>Every prompt has a footprint — so what?</h3>
+                        <span class="fieldnote-toggle" aria-hidden="true"><i class="fas fa-plus"></i></span>
+                    </summary>
+                    <div class="fieldnote-body">
+                        <p>A watt-hour means nothing to most people. "This answer boiled a fifth of a kettle" does. At the Digital Society School I'm building decision tools for the Dutch Ministry of Finance around exactly that translation — because the gap between the most and least efficient model on the same task can exceed an order of magnitude, and nobody puts that in front of the person typing the prompt.</p>
+                        <p>The point is not AI guilt. It's the same soft-path thinking I learned in water management: before you build a bigger pipe — or call a bigger model — ask whether the demand itself can be smarter. Try the widget above; that's the argument, running live.</p>
+                    </div>
+                </details>
+            </div>
+        </div>
+    </section>
+
     <!-- Contact -->
     <section id="contact" class="contact">
         <div class="contour-layer" aria-hidden="true"></div>
         <div class="container">
             <div class="section-header">
-                <span class="section-index">07</span>
+                <span class="section-index">09</span>
                 <h2 class="section-title">Get in <span class="highlight">Touch</span></h2>
                 <p class="section-description">Working on something at the intersection of climate, water or AI? Let's talk.</p>
             </div>
@@ -944,6 +1144,22 @@
                 <p class="footer-coords mono-label">52.3676° N, 4.9041° E — Amsterdam</p>
                 <p>&copy; <span class="current-year">2025</span> Moses Kolleh Sesay. All rights reserved.</p>
                 <p class="footer-tagline">From bedrock to cloud — building a sustainable future with data.</p>
+
+                <div class="carbon-badge" id="carbonBadge">
+                    <span class="blink-dot" aria-hidden="true"></span>
+                    <span id="carbonBadgeText">Weighing this page&hellip;</span>
+                    <button class="carbon-badge-info" id="carbonInfoBtn" aria-label="How this is calculated" aria-expanded="false">?</button>
+                </div>
+                <div class="carbon-method" id="carbonMethod" hidden>
+                    <p>Measured live in your browser: every byte this page transferred (via the Resource Timing API), converted with the
+                    <a href="https://sustainablewebdesign.org/estimating-digital-emissions/" target="_blank" rel="noopener">Sustainable Web Design model</a>
+                    (&asymp;0.36&nbsp;g CO&#8322;e per MB transferred, global average grid). Comparison point: the median web page ships &asymp;2.5&nbsp;MB
+                    (<a href="https://httparchive.org/reports/page-weight" target="_blank" rel="noopener">HTTP Archive</a>).
+                    Before this redesign, this page shipped ~25&nbsp;MB of images; it now ships a fraction of that — the site practises the sustainable-computing research it presents.</p>
+                </div>
+                <button class="eco-mode-toggle" id="ecoModeToggle" aria-pressed="false">
+                    <i class="fas fa-leaf"></i> <span id="ecoModeLabel">Low-energy mode: off</span>
+                </button>
             </div>
         </div>
     </footer>

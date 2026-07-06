@@ -11,17 +11,14 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 
 ## Features
 
-- **Modern Design**: Dark theme with vibrant green accents inspired by environmental sustainability
-- **Responsive Layout**: Fully optimized for desktop, tablet, and mobile devices
-- **Interactive Elements**: Smooth scrolling, animated counters, skill progress bars
-- **Comprehensive Sections**:
-  - Hero landing page with search functionality
-  - About section with expertise highlights
-  - Professional experience timeline
-  - Research & project showcase
-  - Technical skills and frameworks
-  - Education & certifications
-  - Contact form with social links
+- **Living journey map**: a hand-built SVG world map (Natural Earth data, zero runtime dependencies) that flies from Freetown to Changsha, Bonn, Wageningen and Amsterdam as you scroll the journey — regenerate it with `node scripts/generate-journey-map.js`
+- **Carbon-aware by construction**: all images ship as optimized WebP (~25 MB → under 2 MB for the whole site), and a live footer badge weighs each visit in the browser (Resource Timing API × Sustainable Web Design model). A low-energy mode pauses all animation and honours `prefers-reduced-motion`
+- **Borehole core-log experience timeline**: career history logged the way a geologist logs a core — depth is time, every layer is a chapter
+- **"AI, Weighed" live widget**: a homepage slice of the EcoPrompt Coach research — model × workload × grid → energy, carbon, water, in units people can feel
+- **Evidence-first skills**: no invented percentages — every tool links to the project where it earned its place, plus real field numbers (164 water points itemized, 70% strike rate)
+- **Field Notes**: short essays connecting boreholes, scenario storytelling and sustainable AI
+- **Modern design**: dark theme with vibrant green accents, light mode, responsive layout, full SEO/social metadata (Open Graph, JSON-LD, sitemap)
+- **Comprehensive sections**: journey, about (with CV download), experience, projects with photo dossiers, AI cost widget, skills, education, field notes, contact form
 
 ## Technologies Used
 
@@ -145,9 +142,12 @@ To change the color scheme, edit the CSS variables in `style.css`:
 - Add or remove projects, experiences, and skills as needed
 
 ### Images
-- Replace background images by updating the CSS `background-image` properties
-- Add profile photo by inserting an `<img>` tag in the About section
-- Store images in an `assets/images/` directory (create if needed)
+- All published images live in `assets/img/` as WebP; keep new ones under ~200 KB (e.g. `npx sharp-cli -i photo.jpg -o assets/img/photo.webp resize 900`)
+- Hero backgrounds use the `-hero.webp` variants (1600 px wide)
+- The journey map is generated, not drawn: edit `scripts/generate-journey-map.js` and re-run it to change stops
+
+### Custom domain (recommended)
+- Add a `CNAME` file with your domain and configure DNS per [GitHub Pages docs](https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site) — then update the `og:url`/canonical tags in `index.html`
 
 ## Browser Support
 
@@ -192,19 +192,21 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - Design inspiration: EcoSearch theme (environmental sustainability focus)
 - Icons: [Font Awesome](https://fontawesome.com/)
-- Fonts: System fonts for optimal performance
+- Fonts: Space Grotesk, Inter & IBM Plex Mono (Google Fonts)
+- Map data: [Natural Earth](https://www.naturalearthdata.com/) via world-atlas, projected with d3-geo
 - Hosting: [GitHub Pages](https://pages.github.com/)
 
 ## Future Enhancements
 
-- [ ] Blog section for sustainability articles
-- [ ] Dark/Light theme toggle
+- [x] Blog section for sustainability articles (Field Notes)
+- [x] Dark/Light theme toggle
 - [ ] Multi-language support (English, Dutch)
-- [ ] Project detail pages
-- [ ] Interactive data visualizations
-- [ ] PDF resume download
+- [x] Project detail pages (expandable dossiers)
+- [x] Interactive data visualizations (journey map, AI cost widget, impact charts)
+- [x] PDF resume download
 - [ ] Newsletter subscription
 - [ ] Testimonials section
+- [ ] Custom domain
 
 ---
 
