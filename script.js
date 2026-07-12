@@ -281,14 +281,15 @@ if (statsSection && 'IntersectionObserver' in window) {
         const dotComp = Math.pow(s, -0.7);
         const offComp = 2 / s;
         svg.style.setProperty('--zoom-comp', comp.toFixed(3));
-        svg.querySelectorAll('.map-stop-dot').forEach(el => el.setAttribute('r', (3.2 * dotComp).toFixed(2)));
+        svg.querySelectorAll('.map-stop-dot, .map-you-dot').forEach(el => el.setAttribute('r', (3.2 * dotComp).toFixed(2)));
         svg.querySelectorAll('.map-stop-halo').forEach(el => el.setAttribute('r', (10 * dotComp).toFixed(2)));
         svg.querySelectorAll('.map-stop-ring').forEach(el => el.setAttribute('r', (6.5 * dotComp).toFixed(2)));
         svg.querySelectorAll('.map-site-mark').forEach(el => {
             el.setAttribute('transform', `translate(${el.dataset.x} ${el.dataset.y}) scale(${(dotComp * 1.4).toFixed(3)})`);
         });
-        svg.querySelectorAll('.map-stop-label, .map-site-label').forEach(el => {
-            const base = el.classList.contains('map-site-label') ? 9.5 : 11;
+        svg.querySelectorAll('.map-stop-label, .map-site-label, .map-you-label').forEach(el => {
+            const base = el.classList.contains('map-site-label') ? 9.5 :
+                el.classList.contains('map-you-label') ? 9 : 11;
             el.style.fontSize = (base * comp).toFixed(2) + 'px';
             if (el.dataset.cx) {
                 el.setAttribute('x', (+el.dataset.cx + el.dataset.dx * offComp).toFixed(1));
@@ -327,6 +328,9 @@ if (statsSection && 'IntersectionObserver' in window) {
         .then(markup => {
             frame.innerHTML = markup;
             svg = frame.querySelector('svg');
+            // let enhancements (e.g. the visitor mark) attach before the
+            // first fly-to so their markers get counter-scaled with the rest
+            document.dispatchEvent(new CustomEvent('journeymap:ready', { detail: { svg, mapBox } }));
             setActive(0);
 
             const stops = document.querySelectorAll('.journey-stop');
@@ -785,5 +789,618 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
         const on = !document.body.classList.contains('eco-mode');
         apply(on);
         localStorage.setItem('eco-mode', on ? 'on' : 'off');
+    });
+})();
+
+// ===================================
+// SITE THE BOREHOLE — resistivity mini-game (groundwater dossier)
+// ===================================
+(() => {
+    const stage = document.getElementById('boreholeStage');
+    const drillBtn = document.getElementById('drillBtn');
+    const resetBtn = document.getElementById('drillResetBtn');
+    const result = document.getElementById('drillResult');
+    const score = document.getElementById('drillScore');
+    if (!stage || !drillBtn) return;
+
+    const NS = 'http://www.w3.org/2000/svg';
+    const W = 800, H = 430;
+    const SURFACE = 190, HOLE_BOTTOM = 380;
+    const CURVE_TOP = 55, CURVE_BOT = 150;
+    let zones = [];          // {center, half, kind: 'water'|'clay'}
+    let rigX = 400;
+    let drilling = false;
+    let attempts = 0, strikes = 0;
+    let svg, curveEl, rigEl, holesEl, revealEl;
+
+    const el = (tag, attrs, parent) => {
+        const n = document.createElementNS(NS, tag);
+        for (const k in attrs) n.setAttribute(k, attrs[k]);
+        (parent || svg).appendChild(n);
+        return n;
+    };
+    const calm = () => document.body.classList.contains('eco-mode') ||
+        (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+    // Apparent resistivity along the profile: high background with
+    // gaussian lows over the hidden zones (water reads lowest, clay close).
+    const resistivityAt = (x) => {
+        let r = 1 + 0.08 * Math.sin(x / 47) + 0.05 * Math.sin(x / 23 + 2);
+        zones.forEach(z => {
+            const depth = z.kind === 'water' ? 0.75 : 0.55;
+            r -= depth * Math.exp(-((x - z.center) ** 2) / (2 * (z.half * 0.8) ** 2));
+        });
+        return Math.max(0.08, Math.min(1.15, r));
+    };
+    const curveY = (x) => CURVE_BOT - resistivityAt(x) * (CURVE_BOT - CURVE_TOP) / 1.15;
+
+    const newZones = () => {
+        const kinds = ['water', 'water', 'clay'].sort(() => Math.random() - 0.5);
+        const centers = [];
+        while (centers.length < 3) {
+            const c = 90 + Math.random() * (W - 180);
+            if (centers.every(o => Math.abs(o - c) > 150)) centers.push(c);
+        }
+        zones = centers.map((c, i) => ({ center: c, half: 26 + Math.random() * 14, kind: kinds[i] }));
+    };
+
+    const surfaceY = (x) => SURFACE + 4 * Math.sin(x / 90) + 2 * Math.sin(x / 31);
+
+    const drawScene = () => {
+        stage.innerHTML = '';
+        svg = document.createElementNS(NS, 'svg');
+        svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+        svg.setAttribute('class', 'borehole-svg');
+        svg.setAttribute('aria-hidden', 'true');
+        stage.appendChild(svg);
+
+        // curve panel
+        el('text', { x: 10, y: 30, class: 'bh-label' }).textContent = 'apparent resistivity along the profile';
+        el('text', { x: 10, y: CURVE_TOP + 8, class: 'bh-label bh-label-dim' }).textContent = 'high';
+        el('text', { x: 10, y: CURVE_BOT, class: 'bh-label bh-label-dim' }).textContent = 'low';
+        let d = '';
+        for (let x = 40; x <= W - 12; x += 6) d += (d ? ' L ' : 'M ') + x + ' ' + curveY(x).toFixed(1);
+        el('path', { d, class: 'bh-curve' });
+
+        // ground
+        let gd = `M 0 ${surfaceY(0)}`;
+        for (let x = 10; x <= W; x += 10) gd += ` L ${x} ${surfaceY(x).toFixed(1)}`;
+        el('path', { d: gd + ` L ${W} ${H} L 0 ${H} Z`, class: 'bh-ground' });
+        el('path', { d: gd, class: 'bh-surface' });
+        el('text', { x: W - 12, y: SURFACE + 26, 'text-anchor': 'end', class: 'bh-label bh-label-dim' }).textContent = 'weathered regolith';
+        el('text', { x: W - 12, y: 300, 'text-anchor': 'end', class: 'bh-label bh-label-dim' }).textContent = 'gabbro bedrock';
+        el('line', { x1: 0, y1: 250, x2: W, y2: 250, class: 'bh-strata' });
+
+        revealEl = el('g', {});
+        holesEl = el('g', {});
+
+        // rig: base + derrick
+        rigEl = el('g', { class: 'bh-rig' });
+        el('rect', { x: -22, y: -12, width: 44, height: 8, rx: 2, class: 'bh-rig-base' }, rigEl);
+        el('path', { d: 'M -14 -12 L 0 -64 L 14 -12', class: 'bh-rig-mast' }, rigEl);
+        el('line', { x1: -9, y1: -28, x2: 9, y2: -28, class: 'bh-rig-mast' }, rigEl);
+        el('line', { x1: -5, y1: -46, x2: 5, y2: -46, class: 'bh-rig-mast' }, rigEl);
+        placeRig(rigX);
+    };
+
+    function placeRig(x) {
+        rigX = Math.max(50, Math.min(W - 50, x));
+        rigEl.setAttribute('transform', `translate(${rigX.toFixed(1)} ${surfaceY(rigX).toFixed(1)})`);
+    }
+
+    const toViewX = (clientX) => {
+        const r = svg.getBoundingClientRect();
+        return (clientX - r.left) * (W / r.width);
+    };
+
+    const updateScore = () => {
+        if (!attempts) { score.textContent = ''; return; }
+        let t = `Strikes: ${strikes}/${attempts}`;
+        if (attempts >= 3) t += ' · blind drilling here hits ~30% — our crews read the curve and hit 70%';
+        score.textContent = t;
+    };
+
+    const finishHole = (x) => {
+        const zone = zones.find(z => Math.abs(x - z.center) <= z.half);
+        const sy = surfaceY(x);
+        attempts++;
+        if (zone && zone.kind === 'water') {
+            strikes++;
+            el('ellipse', { cx: zone.center, cy: 330, rx: zone.half * 1.5, ry: 26, class: 'bh-reveal-water' }, revealEl);
+            el('line', { x1: x, y1: 330, x2: x, y2: sy, class: 'bh-water-col' }, holesEl);
+            const gush = el('path', { d: `M ${x} ${sy} q -14 -30 -24 -38 M ${x} ${sy} q 0 -36 0 -44 M ${x} ${sy} q 14 -30 24 -38`, class: 'bh-gush' }, holesEl);
+            if (!calm()) gush.classList.add('bh-gush-anim');
+            result.textContent = `STRIKE — water at ~${Math.round(38 + Math.random() * 14)} m. That dip was a saturated fracture zone. (${strikes}/${attempts})`;
+        } else if (zone) {
+            el('ellipse', { cx: zone.center, cy: 300, rx: zone.half * 1.4, ry: 20, class: 'bh-reveal-clay' }, revealEl);
+            result.textContent = 'Low resistivity… but it was a clay pocket, not water. Even good surveys get fooled — that\'s why we also ran pumping tests.';
+        } else {
+            result.textContent = 'Dry hole — hard gabbro all the way down. The curve was high here: high resistivity, no fractures, no water.';
+        }
+        updateScore();
+        drilling = false;
+        drillBtn.disabled = false;
+    };
+
+    const drill = () => {
+        if (drilling) return;
+        drilling = true;
+        drillBtn.disabled = true;
+        const x = rigX, sy = surfaceY(x);
+        const hole = el('line', { x1: x, y1: sy, x2: x, y2: sy, class: 'bh-hole' }, holesEl);
+        result.textContent = 'Drilling…';
+        if (calm()) {
+            hole.setAttribute('y2', HOLE_BOTTOM);
+            finishHole(x);
+            return;
+        }
+        const t0 = performance.now();
+        const step = (t) => {
+            const p = Math.min(1, (t - t0) / 900);
+            hole.setAttribute('y2', (sy + (HOLE_BOTTOM - sy) * p).toFixed(1));
+            if (p < 1) requestAnimationFrame(step);
+            else finishHole(x);
+        };
+        requestAnimationFrame(step);
+    };
+
+    const reset = () => {
+        newZones();
+        drawScene();
+        result.textContent = 'New site surveyed. Read the curve, place the rig, drill.';
+    };
+
+    newZones();
+    drawScene();
+
+    let dragging = false;
+    stage.addEventListener('pointerdown', (e) => {
+        if (drilling) return;
+        dragging = true;
+        stage.setPointerCapture(e.pointerId);
+        placeRig(toViewX(e.clientX));
+    });
+    stage.addEventListener('pointermove', (e) => {
+        if (dragging && !drilling) placeRig(toViewX(e.clientX));
+    });
+    stage.addEventListener('pointerup', () => { dragging = false; });
+    stage.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft') { placeRig(rigX - 14); e.preventDefault(); }
+        else if (e.key === 'ArrowRight') { placeRig(rigX + 14); e.preventDefault(); }
+        else if (e.key === 'Enter' || e.key === ' ') { drill(); e.preventDefault(); }
+    });
+    drillBtn.addEventListener('click', drill);
+    resetBtn.addEventListener('click', reset);
+})();
+
+// ===================================
+// DON'T LET IT BECOME A BOAT — Wupper flood-level slider (Wuppertal dossier)
+// ===================================
+(() => {
+    const stageBox = document.getElementById('floodStage');
+    const slider = document.getElementById('floodSlider');
+    const levelLabel = document.getElementById('floodLevelLabel');
+    const note = document.getElementById('floodNote');
+    if (!stageBox || !slider) return;
+
+    const NS = 'http://www.w3.org/2000/svg';
+    const W = 800, H = 340;
+    const BED = 303, BANK = 240, CH_L = 252, CH_R = 548;
+    const CAR_BOTTOM = 178;
+
+    const LEVELS = [
+        { y: 278, label: 'normal',
+          note: 'A calm day — the Wupper runs its channel, well below the suspended track.' },
+        { y: 248, label: '+1 m',
+          note: 'Riverside paths go under. In a warming climate, days like this come more often.' },
+        { y: 222, label: '+2 m',
+          note: 'Over the banks: streets and basements flood, and the city\'s lowest infrastructure is in the water.' },
+        { y: CAR_BOTTOM + 5, label: 'July 2021',
+          note: 'The 2021 flood pushed the Wupper towards the hanging cars — the "boat" scenario. Our roadmap: early warning, room for the river, unsealed surfaces.' }
+    ];
+
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    svg.setAttribute('class', 'flood-svg');
+    svg.setAttribute('aria-hidden', 'true');
+    stageBox.appendChild(svg);
+    const el = (tag, attrs, parent) => {
+        const n = document.createElementNS(NS, tag);
+        for (const k in attrs) n.setAttribute(k, attrs[k]);
+        (parent || svg).appendChild(n);
+        return n;
+    };
+
+    // banks + riverbed
+    el('path', { d: `M 0 ${BANK} L ${CH_L} ${BANK} L ${CH_L + 14} ${BED} L 0 ${BED} Z`, class: 'fl-bank' });
+    el('path', { d: `M ${W} ${BANK} L ${CH_R} ${BANK} L ${CH_R - 14} ${BED} L ${W} ${BED} Z`, class: 'fl-bank' });
+    el('rect', { x: 0, y: BED, width: W, height: H - BED, class: 'fl-bank' });
+    // buildings on the banks
+    [[30, 150, 60], [110, 170, 46], [660, 160, 52], [730, 145, 50]].forEach(([x, y, w]) => {
+        el('rect', { x, y, width: w, height: BANK - y, class: 'fl-building' });
+        for (let wy = y + 12; wy < BANK - 12; wy += 22)
+            for (let wx = x + 8; wx < x + w - 10; wx += 16)
+                el('rect', { x: wx, y: wy, width: 6, height: 8, class: 'fl-window' });
+    });
+
+    // water (overbank sheet + channel), drawn behind the structure
+    const overbank = el('rect', { x: 40, y: BANK, width: W - 80, height: 0, class: 'fl-water' });
+    const channel = el('rect', { x: CH_L, y: LEVELS[0].y, width: CH_R - CH_L, height: BED - LEVELS[0].y, class: 'fl-water' });
+
+    // July 2021 reference line
+    el('line', { x1: 46, y1: LEVELS[3].y, x2: W - 46, y2: LEVELS[3].y, class: 'fl-refline' });
+    el('text', { x: 52, y: LEVELS[3].y - 6, class: 'fl-label' }).textContent = 'July 2021';
+
+    // Schwebebahn: pylons, track beam, hanging car
+    [290, 510].forEach(px => {
+        el('path', { d: `M ${px - 44} ${BANK} L ${px} 112 L ${px + 44} ${BANK}`, class: 'fl-pylon' });
+    });
+    el('rect', { x: 210, y: 104, width: 380, height: 10, rx: 3, class: 'fl-beam' });
+    el('line', { x1: 400, y1: 114, x2: 400, y2: 140, class: 'fl-pylon' });
+    const car = el('g', { class: 'fl-car-g' });
+    el('rect', { x: 352, y: 140, width: 96, height: 38, rx: 10, class: 'fl-car' }, car);
+    [362, 382, 402, 422].forEach(wx => el('rect', { x: wx, y: 148, width: 14, height: 12, rx: 2, class: 'fl-car-window' }, car));
+
+    const calm = () => document.body.classList.contains('eco-mode') ||
+        (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+    let anim = null;
+    const setWater = (y, instant) => {
+        const chFrom = +channel.getAttribute('y');
+        const obTarget = Math.max(0, BANK - y);
+        const obFrom = +overbank.getAttribute('height');
+        const apply = (p) => {
+            const cy = chFrom + (y - chFrom) * p;
+            channel.setAttribute('y', cy.toFixed(1));
+            channel.setAttribute('height', (BED - cy).toFixed(1));
+            const oh = obFrom + (obTarget - obFrom) * p;
+            overbank.setAttribute('height', oh.toFixed(1));
+            overbank.setAttribute('y', (BANK - oh).toFixed(1));
+        };
+        if (instant || calm()) { apply(1); return; }
+        if (anim) cancelAnimationFrame(anim);
+        const t0 = performance.now();
+        const step = (t) => {
+            const p = Math.min(1, (t - t0) / 650);
+            apply(p * (2 - p)); // ease-out
+            if (p < 1) anim = requestAnimationFrame(step);
+        };
+        anim = requestAnimationFrame(step);
+    };
+
+    const update = (instant) => {
+        const lv = LEVELS[+slider.value] || LEVELS[0];
+        levelLabel.textContent = lv.label;
+        note.textContent = lv.note;
+        setWater(lv.y, instant);
+    };
+    slider.addEventListener('input', () => update(false));
+    update(true);
+})();
+
+// ===================================
+// FIELD TERMINAL — press ` or the footer button
+// ===================================
+(() => {
+    const toggleBtn = document.getElementById('terminalToggle');
+    let overlay = null, screen = null, input = null, lastFocus = null;
+    const history = [];
+    let histIdx = -1;
+
+    const print = (text, cls) => {
+        const line = document.createElement('div');
+        line.className = 'ft-row' + (cls ? ' ' + cls : '');
+        line.textContent = text;
+        screen.appendChild(line);
+        screen.scrollTop = screen.scrollHeight;
+    };
+
+    const calm = () => document.body.classList.contains('eco-mode');
+
+    const COMMANDS = {
+        help: () => {
+            print('available commands:');
+            [['journey', 'the route, Freetown to Amsterdam'],
+             ['projects', 'list the six project dossiers'],
+             ['drill', 'spud in a borehole right here'],
+             ['co2', 'how much this visit weighed'],
+             ['whoami', 'who runs this place'],
+             ['cv', 'download the CV (PDF)'],
+             ['map', 'fly to the journey map'],
+             ['eco', 'toggle low-energy mode'],
+             ['theme', 'toggle light/dark'],
+             ['kushe', 'a greeting from Freetown'],
+             ['clear', 'wipe the screen'],
+             ['exit', 'close the terminal']
+            ].forEach(([c, d]) => print(`  ${c.padEnd(10)} ${d}`));
+        },
+        whoami: () => {
+            print('Moses Kolleh Sesay — geologist by training, sustainability analyst by conviction.');
+            print('currently: Amsterdam, NL (52.3676° N, 4.9041° E). previously: see \'journey\'.');
+        },
+        journey: () => {
+            [['2013–2019', 'Freetown, SL', '8.4657° N, 13.2317° W', 'BSc Geology · 164 water points'],
+             ['2019–2021', 'Changsha, CN', '28.2282° N, 112.9388° E', 'MSc Industrial Engineering'],
+             ['2023', 'Bonn, DE', '50.7374° N, 7.0982° E', 'UNDRR · 54 hazard systems'],
+             ['2021–2024', 'Wageningen, NL', '51.9692° N, 5.6654° E', 'MSc Env. Sciences · 10,226 sub-basins'],
+             ['2025–now', 'Amsterdam, NL', '52.3676° N, 4.9041° E', 'Sustainable AI research']
+            ].forEach(s => print(`  ${s[0].padEnd(10)} ${s[1].padEnd(16)} ${s[2].padEnd(24)} ${s[3]}`));
+            print('run \'map\' to fly the route.');
+        },
+        projects: () => {
+            ['Sustainable Generative AI — Digital Society School × Ministry of Finance',
+             'Coastal Water Pollution — 10,226 sub-basins, futures for Africa\'s coasts',
+             'Flood-Resilient Wuppertal — don\'t let the Schwebebahn become a boat',
+             'UN Disaster Risk Reduction — Sendai Framework data, Bonn',
+             'Soft Path Water Management — beyond cement, steel and pipes',
+             'Groundwater Potential Mapping — geophysics with a 70% strike rate'
+            ].forEach((p, i) => print(`  [${i + 1}] ${p}`));
+            print('dossiers open in section 04 — PROJECTS.');
+        },
+        co2: () => {
+            const badge = document.getElementById('carbonBadgeText');
+            print(badge ? badge.textContent : 'the scale is still warming up — scroll to the footer.');
+            print('methodology: Resource Timing API × Sustainable Web Design model. every gram counted.');
+        },
+        drill: (args, done) => {
+            const steps = [
+                'spudding in…',
+                '── 12 m  laterite, red-brown, moist',
+                '── 26 m  saprolite, weathered gabbro',
+                '── 38 m  fractured gabbro — conductivity rising',
+                'STRIKE 💧 water at 38 m. static level −6 m, yield looks good.',
+                '(odds are 7/10 when you read the resistivity curve first — see the Groundwater dossier.)'
+            ];
+            if (calm()) { steps.forEach(s => print(s)); done(); return; }
+            let i = 0;
+            const tick = () => {
+                print(steps[i]);
+                i++;
+                if (i < steps.length) setTimeout(tick, 420);
+                else done();
+            };
+            tick();
+            return true; // async
+        },
+        cv: () => {
+            print('fetching Moses_Kolleh_Sesay_CV.pdf …');
+            const a = document.createElement('a');
+            a.href = 'assets/Moses_Kolleh_Sesay_CV.pdf';
+            a.download = '';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        },
+        map: () => {
+            close();
+            const j = document.getElementById('journey');
+            if (j) j.scrollIntoView({ behavior: calm() ? 'auto' : 'smooth' });
+        },
+        eco: () => {
+            const b = document.getElementById('ecoModeToggle');
+            if (b) b.click();
+            print('low-energy mode: ' + (document.body.classList.contains('eco-mode') ? 'on' : 'off'));
+        },
+        theme: () => {
+            const b = document.querySelector('.theme-toggle');
+            if (b) b.click();
+            print('theme: ' + (document.body.classList.contains('light-mode') ? 'light' : 'dark'));
+        },
+        kushe: () => {
+            print('Kushe! Aw di bodi?');
+            print('(Krio — "hello, how are you?". greetings from Freetown.)');
+        },
+        clear: () => { screen.innerHTML = ''; },
+        exit: () => close()
+    };
+
+    const runCommand = (raw) => {
+        const cmd = raw.trim().toLowerCase();
+        print('moses@sustaintheworld:~$ ' + raw, 'ft-echo');
+        if (!cmd) return;
+        history.push(raw);
+        histIdx = history.length;
+        const [name, ...args] = cmd.split(/\s+/);
+        const fn = COMMANDS[name];
+        if (!fn) { print(`command not found: ${name} — try 'help'`, 'ft-err'); return; }
+        input.disabled = true;
+        const done = () => { input.disabled = false; input.focus(); };
+        if (fn(args, done) !== true) done();
+    };
+
+    const build = () => {
+        overlay = document.createElement('div');
+        overlay.className = 'field-terminal';
+        overlay.setAttribute('role', 'dialog');
+        overlay.setAttribute('aria-modal', 'true');
+        overlay.setAttribute('aria-label', 'Field terminal');
+        overlay.innerHTML = `
+            <div class="ft-panel">
+                <div class="ft-bar">
+                    <span class="mono-label">field terminal — sustaintheworld</span>
+                    <button class="ft-close" aria-label="Close terminal">×</button>
+                </div>
+                <div class="ft-screen" aria-live="polite"></div>
+                <form class="ft-line">
+                    <label class="ft-prompt" for="ftInput">moses@sustaintheworld:~$</label>
+                    <input id="ftInput" class="ft-input" type="text" autocomplete="off" spellcheck="false" autocapitalize="off">
+                </form>
+            </div>`;
+        document.body.appendChild(overlay);
+        screen = overlay.querySelector('.ft-screen');
+        input = overlay.querySelector('.ft-input');
+        overlay.querySelector('.ft-close').addEventListener('click', close);
+        overlay.addEventListener('pointerdown', (e) => { if (e.target === overlay) close(); });
+        overlay.querySelector('.ft-line').addEventListener('submit', (e) => {
+            e.preventDefault();
+            runCommand(input.value);
+            input.value = '';
+        });
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowUp' && history.length) {
+                histIdx = Math.max(0, histIdx - 1);
+                input.value = history[histIdx] || '';
+                e.preventDefault();
+            } else if (e.key === 'ArrowDown' && history.length) {
+                histIdx = Math.min(history.length, histIdx + 1);
+                input.value = history[histIdx] || '';
+                e.preventDefault();
+            }
+        });
+        print('SUSTAINTHEWORLD field terminal');
+        print('from bedrock to cloud. type \'help\' to see what\'s down here.');
+        print('');
+    };
+
+    const open = () => {
+        if (!overlay) build();
+        lastFocus = document.activeElement;
+        overlay.classList.add('open');
+        input.focus();
+    };
+    function close() {
+        if (!overlay) return;
+        overlay.classList.remove('open');
+        if (lastFocus && lastFocus.focus) lastFocus.focus();
+    }
+    const isOpen = () => overlay && overlay.classList.contains('open');
+
+    if (toggleBtn) toggleBtn.addEventListener('click', () => (isOpen() ? close() : open()));
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && isOpen()) { close(); return; }
+        if (e.key !== '`' || e.ctrlKey || e.metaKey || e.altKey) return;
+        const t = e.target;
+        const typing = t && t !== input && (
+            t.tagName === 'TEXTAREA' || t.isContentEditable ||
+            (t.tagName === 'INPUT' && !/^(range|checkbox|radio|button|submit)$/.test(t.type))
+        );
+        if (typing) return;
+        e.preventDefault();
+        isOpen() ? close() : open();
+    });
+})();
+
+// ===================================
+// YOU ARE HERE — visitor mark on the journey map
+// Guessed from the browser's timezone. Nothing leaves the browser.
+// ===================================
+(() => {
+    // city, lon, lat for common IANA timezones (coarse on purpose)
+    const TZ = {
+        'Europe/Amsterdam': ['Amsterdam', 4.9, 52.37], 'Europe/London': ['London', -0.13, 51.51],
+        'Europe/Dublin': ['Dublin', -6.26, 53.35], 'Europe/Paris': ['Paris', 2.35, 48.86],
+        'Europe/Brussels': ['Brussels', 4.35, 50.85], 'Europe/Berlin': ['Berlin', 13.41, 52.52],
+        'Europe/Madrid': ['Madrid', -3.7, 40.42], 'Europe/Lisbon': ['Lisbon', -9.14, 38.72],
+        'Europe/Rome': ['Rome', 12.5, 41.9], 'Europe/Zurich': ['Zurich', 8.54, 47.38],
+        'Europe/Vienna': ['Vienna', 16.37, 48.21], 'Europe/Prague': ['Prague', 14.44, 50.08],
+        'Europe/Warsaw': ['Warsaw', 21.01, 52.23], 'Europe/Stockholm': ['Stockholm', 18.07, 59.33],
+        'Europe/Oslo': ['Oslo', 10.75, 59.91], 'Europe/Copenhagen': ['Copenhagen', 12.57, 55.69],
+        'Europe/Helsinki': ['Helsinki', 24.94, 60.17], 'Europe/Athens': ['Athens', 23.73, 37.98],
+        'Europe/Istanbul': ['Istanbul', 28.98, 41.01], 'Europe/Kyiv': ['Kyiv', 30.52, 50.45],
+        'Europe/Bucharest': ['Bucharest', 26.1, 44.43], 'Europe/Budapest': ['Budapest', 19.04, 47.5],
+        'Europe/Moscow': ['Moscow', 37.62, 55.76],
+        'Africa/Freetown': ['Freetown', -13.23, 8.47], 'Africa/Abidjan': ['Abidjan', -4.02, 5.35],
+        'Africa/Accra': ['Accra', -0.19, 5.6], 'Africa/Lagos': ['Lagos', 3.38, 6.52],
+        'Africa/Dakar': ['Dakar', -17.45, 14.72], 'Africa/Casablanca': ['Casablanca', -7.59, 33.57],
+        'Africa/Algiers': ['Algiers', 3.06, 36.75], 'Africa/Tunis': ['Tunis', 10.17, 36.81],
+        'Africa/Cairo': ['Cairo', 31.24, 30.04], 'Africa/Nairobi': ['Nairobi', 36.82, -1.29],
+        'Africa/Addis_Ababa': ['Addis Ababa', 38.75, 9.02], 'Africa/Kampala': ['Kampala', 32.58, 0.35],
+        'Africa/Kinshasa': ['Kinshasa', 15.27, -4.44], 'Africa/Johannesburg': ['Johannesburg', 28.05, -26.2],
+        'Africa/Harare': ['Harare', 31.05, -17.83], 'Africa/Lusaka': ['Lusaka', 28.32, -15.39],
+        'Africa/Monrovia': ['Monrovia', -10.8, 6.3], 'Africa/Bamako': ['Bamako', -8.0, 12.65],
+        'Africa/Conakry': ['Conakry', -13.68, 9.54],
+        'Asia/Shanghai': ['Shanghai', 121.47, 31.23], 'Asia/Hong_Kong': ['Hong Kong', 114.17, 22.32],
+        'Asia/Singapore': ['Singapore', 103.85, 1.29], 'Asia/Tokyo': ['Tokyo', 139.69, 35.69],
+        'Asia/Seoul': ['Seoul', 126.98, 37.57], 'Asia/Taipei': ['Taipei', 121.57, 25.03],
+        'Asia/Bangkok': ['Bangkok', 100.5, 13.76], 'Asia/Jakarta': ['Jakarta', 106.85, -6.21],
+        'Asia/Manila': ['Manila', 120.98, 14.6], 'Asia/Kolkata': ['Mumbai/Delhi', 77.21, 28.61],
+        'Asia/Karachi': ['Karachi', 67.01, 24.86], 'Asia/Dhaka': ['Dhaka', 90.41, 23.81],
+        'Asia/Dubai': ['Dubai', 55.27, 25.2], 'Asia/Riyadh': ['Riyadh', 46.72, 24.69],
+        'Asia/Qatar': ['Doha', 51.53, 25.29], 'Asia/Tehran': ['Tehran', 51.39, 35.69],
+        'Asia/Jerusalem': ['Jerusalem', 35.21, 31.77], 'Asia/Beirut': ['Beirut', 35.5, 33.89],
+        'Asia/Almaty': ['Almaty', 76.89, 43.24], 'Asia/Tashkent': ['Tashkent', 69.24, 41.31],
+        'America/New_York': ['New York', -74.01, 40.71], 'America/Toronto': ['Toronto', -79.38, 43.65],
+        'America/Chicago': ['Chicago', -87.63, 41.88], 'America/Denver': ['Denver', -104.99, 39.74],
+        'America/Los_Angeles': ['Los Angeles', -118.24, 34.05], 'America/Vancouver': ['Vancouver', -123.12, 49.28],
+        'America/Mexico_City': ['Mexico City', -99.13, 19.43], 'America/Bogota': ['Bogotá', -74.07, 4.71],
+        'America/Lima': ['Lima', -77.04, -12.05], 'America/Santiago': ['Santiago', -70.67, -33.45],
+        'America/Sao_Paulo': ['São Paulo', -46.63, -23.55], 'America/Argentina/Buenos_Aires': ['Buenos Aires', -58.38, -34.6],
+        'America/Caracas': ['Caracas', -66.9, 10.49], 'America/Port_of_Spain': ['Port of Spain', -61.52, 10.65],
+        'Australia/Sydney': ['Sydney', 151.21, -33.87], 'Australia/Melbourne': ['Melbourne', 144.96, -37.81],
+        'Australia/Perth': ['Perth', 115.86, -31.95], 'Pacific/Auckland': ['Auckland', 174.76, -36.85]
+    };
+
+    const FREETOWN = [-13.2317, 8.4657];
+    const haversine = (lon1, lat1, lon2, lat2) => {
+        const R = 6371, toR = Math.PI / 180;
+        const dLat = (lat2 - lat1) * toR, dLon = (lon2 - lon1) * toR;
+        const a = Math.sin(dLat / 2) ** 2 +
+            Math.cos(lat1 * toR) * Math.cos(lat2 * toR) * Math.sin(dLon / 2) ** 2;
+        return Math.round(2 * R * Math.asin(Math.sqrt(a)));
+    };
+
+    // Natural Earth I raw projection (matches d3-geo's geoNaturalEarth1)
+    const neRaw = (l, p) => {
+        const p2 = p * p, p4 = p2 * p2;
+        return [
+            l * (0.8707 - 0.131979 * p2 + p4 * (-0.013791 + p4 * (0.003971 * p2 - 0.001529 * p4))),
+            p * (1.007226 + p2 * (0.015085 + p4 * (-0.044475 + 0.028874 * p2 - 0.005916 * p4)))
+        ];
+    };
+
+    document.addEventListener('journeymap:ready', (e) => {
+        const { svg, mapBox } = e.detail;
+        let zone = '';
+        try { zone = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (err) { return; }
+        const hit = TZ[zone];
+        if (!hit) return;
+        const [city, lon, lat] = hit;
+        const km = haversine(lon, lat, FREETOWN[0], FREETOWN[1]);
+        const kmTxt = km.toLocaleString('en-US');
+
+        const readout = document.createElement('p');
+        readout.className = 'journey-you-readout mono-label';
+        readout.title = 'Guessed from your clock\'s timezone — nothing leaves your browser.';
+        mapBox.appendChild(readout);
+
+        const d = svg.dataset;
+        const crop = (d.crop || '').split(' ').map(Number);
+        const inCrop = crop.length === 4 &&
+            lon >= crop[0] && lon <= crop[2] && lat >= crop[1] && lat <= crop[3];
+        if (!inCrop || !d.projK) {
+            readout.textContent = `you: ~${city}, off this map's edge · ${kmTxt} km from Freetown`;
+            return;
+        }
+        readout.textContent = `you: ~${city} · ${kmTxt} km from Freetown`;
+
+        let l = lon + +d.projRot;
+        if (l > 180) l -= 360;
+        if (l < -180) l += 360;
+        const [a, b] = neRaw(l * Math.PI / 180, lat * Math.PI / 180);
+        const x = +d.projTx + d.projK * a;
+        const y = +d.projTy - d.projK * b;
+
+        const NS = 'http://www.w3.org/2000/svg';
+        const g = document.createElementNS(NS, 'g');
+        g.setAttribute('class', 'map-you');
+        const dot = document.createElementNS(NS, 'circle');
+        dot.setAttribute('class', 'map-you-dot');
+        dot.setAttribute('cx', x.toFixed(1));
+        dot.setAttribute('cy', y.toFixed(1));
+        dot.setAttribute('r', '3.2');
+        const label = document.createElementNS(NS, 'text');
+        label.setAttribute('class', 'map-you-label');
+        label.setAttribute('x', (x + 14).toFixed(1));
+        label.setAttribute('y', (y - 6).toFixed(1));
+        label.setAttribute('text-anchor', 'start');
+        label.setAttribute('data-cx', x.toFixed(1));
+        label.setAttribute('data-cy', y.toFixed(1));
+        label.setAttribute('data-dx', '14');
+        label.setAttribute('data-dy', '-6');
+        label.textContent = 'you?';
+        g.appendChild(dot);
+        g.appendChild(label);
+        const scene = svg.querySelector('#mapScene') || svg;
+        scene.appendChild(g);
     });
 })();

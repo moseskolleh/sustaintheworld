@@ -102,7 +102,13 @@ const siteLabels = {
     wuppertal:  { dx: -12, dy: 4,   anchor: 'end' }
 };
 
-let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" class="journey-map-svg" role="img" aria-label="Map tracing the journey from Freetown to Changsha, Bonn, Wageningen and Amsterdam, with fieldwork in Wuppertal">
+// Projection constants for runtime use (script.js places the visitor's
+// "you are here" mark with the same Natural Earth math).
+const k = projection.scale().toFixed(2);
+const [ptx, pty] = projection.translate().map(v => +v.toFixed(2));
+const rot = -(WEST + EAST) / 2;
+
+let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" class="journey-map-svg" role="img" aria-label="Map tracing the journey from Freetown to Changsha, Bonn, Wageningen and Amsterdam, with fieldwork in Wuppertal" data-proj-k="${k}" data-proj-tx="${ptx}" data-proj-ty="${pty}" data-proj-rot="${rot}" data-crop="${WEST} ${SOUTH} ${EAST} ${NORTH}">
 <g id="mapScene">
 <path class="map-graticule" d="${graticulePath}"/>
 <path class="map-land" d="${landPath}"/>

@@ -58,6 +58,13 @@
     <!-- Scroll progress -->
     <div class="scroll-progress" id="scrollProgress"></div>
 
+    <!-- Scroll drill — the page as a borehole (pure CSS scroll-driven animation) -->
+    <div class="scroll-drill" aria-hidden="true">
+        <span class="scroll-drill-rod"></span>
+        <span class="scroll-drill-bit"></span>
+        <span class="scroll-drill-drop">&#128167;</span>
+    </div>
+
     <!-- Preloader -->
     <div class="preloader" id="preloader">
         <div class="preloader-inner">
@@ -633,6 +640,20 @@
                                     <figcaption>Fieldwork on foot — tracing flood-prone streets through Wuppertal's centre.</figcaption>
                                 </figure>
                             </div>
+                            <div class="dossier-widget flood-sim" id="floodSim">
+                                <h4><i class="fas fa-water"></i> Don't let it become a boat</h4>
+                                <p class="dossier-widget-intro">The Schwebebahn hangs a few metres above the Wupper. Raise the river and watch the
+                                margins shrink — this is the problem the municipality handed us.</p>
+                                <div class="flood-stage" id="floodStage"></div>
+                                <div class="flood-controls">
+                                    <label class="mono-label" for="floodSlider">River level: <span id="floodLevelLabel">normal</span></label>
+                                    <input type="range" id="floodSlider" min="0" max="3" step="1" value="0" aria-describedby="floodNote">
+                                    <div class="flood-ticks mono-label" aria-hidden="true">
+                                        <span>Normal</span><span>+1 m</span><span>+2 m</span><span>July 2021</span>
+                                    </div>
+                                </div>
+                                <p class="flood-note mono-label" id="floodNote" aria-live="polite">A calm day — the Wupper runs its channel, well below the suspended track.</p>
+                            </div>
                         </div>
                     </div>
                 </article>
@@ -829,6 +850,19 @@
                                     <img src="assets/img/groundwater-mapping-4.webp" alt="The drilling crew in hard hats in front of the rig" loading="lazy">
                                     <figcaption>The drilling crew — the people who turn a resistivity curve into a working water point.</figcaption>
                                 </figure>
+                            </div>
+                            <div class="dossier-widget borehole-game" id="boreholeGame">
+                                <h4><i class="fas fa-crosshairs"></i> Try it yourself: site the borehole</h4>
+                                <p class="dossier-widget-intro">This is a resistivity profile like the ones we walked across the Freetown Complex.
+                                Low resistivity — the dips in the curve — can mean water-bearing fractures. Or clay. Move the rig, pick your spot, drill.</p>
+                                <div class="borehole-stage" id="boreholeStage" tabindex="0" role="application"
+                                     aria-label="Borehole siting game. Use left and right arrow keys to move the rig, Enter to drill."></div>
+                                <div class="borehole-hud">
+                                    <button class="btn btn-primary btn-small" id="drillBtn" type="button"><i class="fas fa-arrow-down"></i> Drill here</button>
+                                    <button class="btn btn-secondary btn-small" id="drillResetBtn" type="button">Survey a new site</button>
+                                    <span class="borehole-score mono-label" id="drillScore"></span>
+                                </div>
+                                <p class="borehole-result mono-label" id="drillResult" aria-live="polite">Drag the rig (or focus the profile and use ← → keys), then drill.</p>
                             </div>
                         </div>
                     </div>
@@ -1213,11 +1247,15 @@
                     <a href="https://sustainablewebdesign.org/estimating-digital-emissions/" target="_blank" rel="noopener">Sustainable Web Design model</a>
                     (&asymp;0.36&nbsp;g CO&#8322;e per MB transferred, global average grid). Comparison point: the median web page ships &asymp;2.5&nbsp;MB
                     (<a href="https://httparchive.org/reports/page-weight" target="_blank" rel="noopener">HTTP Archive</a>).
-                    Before this redesign, this page shipped ~25&nbsp;MB of images; it now ships a fraction of that — the site practises the sustainable-computing research it presents.</p>
+                    Before this redesign, this page shipped ~25&nbsp;MB of images; it now ships a fraction of that — the site practises the sustainable-computing research it presents.
+                    Want the logical extreme? The <a href="field-report.html">text-only field report</a> is the whole portfolio in 8&nbsp;KB.</p>
                 </div>
+                <p class="footer-fieldreport mono-label"><a href="field-report.html">prefer plain text? read the 8 KB field report — &asymp;0.003 g CO&#8322;e</a></p>
                 <button class="eco-mode-toggle" id="ecoModeToggle" aria-pressed="false">
                     <i class="fas fa-leaf"></i> <span id="ecoModeLabel">Low-energy mode: off</span>
                 </button>
+                <button class="terminal-toggle mono-label" id="terminalToggle" type="button" aria-haspopup="dialog"
+                        title="Or press ` anywhere on the page">&gt;_ field terminal</button>
             </div>
         </div>
     </footer>
