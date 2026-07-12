@@ -810,6 +810,7 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
     let zones = [];          // {center, half, kind: 'water'|'clay'}
     let rigX = 400;
     let drilling = false;
+    let drillRun = 0;        // invalidates in-flight drill animations on reset
     let attempts = 0, strikes = 0;
     let svg, curveEl, rigEl, holesEl, revealEl;
 
@@ -926,6 +927,7 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
         if (drilling) return;
         drilling = true;
         drillBtn.disabled = true;
+        const run = ++drillRun;
         const x = rigX, sy = surfaceY(x);
         const hole = el('line', { x1: x, y1: sy, x2: x, y2: sy, class: 'bh-hole' }, holesEl);
         result.textContent = 'Drilling…';
@@ -936,6 +938,7 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
         }
         const t0 = performance.now();
         const step = (t) => {
+            if (run !== drillRun) return; // site was reset mid-drill
             const p = Math.min(1, (t - t0) / 900);
             hole.setAttribute('y2', (sy + (HOLE_BOTTOM - sy) * p).toFixed(1));
             if (p < 1) requestAnimationFrame(step);
@@ -945,6 +948,9 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
     };
 
     const reset = () => {
+        drillRun++; // abandon any drill still in progress
+        drilling = false;
+        drillBtn.disabled = false;
         newZones();
         drawScene();
         result.textContent = 'New site surveyed. Read the curve, place the rig, drill.';
