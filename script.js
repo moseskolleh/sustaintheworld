@@ -246,16 +246,16 @@ if (statsSection && 'IntersectionObserver' in window) {
     const readout = document.getElementById('journeyMapReadout');
     if (!frame || !mapBox || typeof fetch !== 'function') return;
 
-    // Projected coordinates of each stop inside the SVG's 1000x500 viewBox
+    // Projected coordinates of each stop inside the SVG's 1000x726 viewBox
     // (see scripts/generate-journey-map.js). Order matches the journey cards.
     const STOPS = [
-        { x: 464.8, y: 223.8, zoom: 1.9, readout: '8.4657° N, 13.2317° W — Freetown' },
-        { x: 790.3, y: 162.5, zoom: 1.9, readout: '28.2282° N, 112.9388° E — Changsha' },
-        { x: 516.5, y: 93.3,  zoom: 3.4, readout: '50.7374° N, 7.0982° E — Bonn' },
-        { x: 513.1, y: 89.6,  zoom: 4.4, readout: '51.9692° N, 5.6654° E — Wageningen' },
-        { x: 511.3, y: 88.5,  zoom: 4.4, readout: '52.3676° N, 4.9041° E — Amsterdam' }
+        { x: 120.1, y: 399.4, zoom: 2.4, readout: '8.4657° N, 13.2317° W — Freetown' },
+        { x: 901.6, y: 254.1, zoom: 2.4, readout: '28.2282° N, 112.9388° E — Changsha' },
+        { x: 279.7, y: 90.1,  zoom: 5.0, readout: '50.7374° N, 7.0982° E — Bonn' },
+        { x: 273.5, y: 81.4,  zoom: 7.5, readout: '51.9692° N, 5.6654° E — Wageningen' },
+        { x: 269.9, y: 78.6,  zoom: 7.5, readout: '52.3676° N, 4.9041° E — Amsterdam' }
     ];
-    const VB_W = 1000, VB_H = 500;
+    const VB_W = 1000, VB_H = 726;
     let svg = null;
     let activeIndex = -1;
 
@@ -272,14 +272,29 @@ if (statsSection && 'IntersectionObserver' in window) {
         const ty = Math.min(0, Math.max(h - s * h, h / 2 - s * py));
         svg.style.transform = `translate(${tx.toFixed(1)}px, ${ty.toFixed(1)}px) scale(${s})`;
 
-        // markers, labels and strokes live in map units — counter-scale
-        // them (partially: sqrt keeps a hint of growth) so zooming doesn't
-        // turn them into blobs
+        // Markers, labels and strokes live in map units — counter-scale them
+        // so zooming doesn't turn them into blobs. Strokes/fonts shrink as
+        // 1/sqrt(s) (a hint of growth); dots shrink harder (s^-0.7) so the
+        // Rhine-delta cluster stays separable at high zoom; label offsets
+        // shrink as 1/s so labels keep a constant on-screen distance.
         const comp = 1 / Math.sqrt(s);
+        const dotComp = Math.pow(s, -0.7);
+        const offComp = 2 / s;
         svg.style.setProperty('--zoom-comp', comp.toFixed(3));
-        svg.querySelectorAll('.map-stop-dot').forEach(el => el.setAttribute('r', (3.2 * comp).toFixed(2)));
-        svg.querySelectorAll('.map-stop-halo').forEach(el => el.setAttribute('r', (10 * comp).toFixed(2)));
-        svg.querySelectorAll('.map-stop-label').forEach(el => el.style.fontSize = (11 * comp).toFixed(2) + 'px');
+        svg.querySelectorAll('.map-stop-dot').forEach(el => el.setAttribute('r', (3.2 * dotComp).toFixed(2)));
+        svg.querySelectorAll('.map-stop-halo').forEach(el => el.setAttribute('r', (10 * dotComp).toFixed(2)));
+        svg.querySelectorAll('.map-stop-ring').forEach(el => el.setAttribute('r', (6.5 * dotComp).toFixed(2)));
+        svg.querySelectorAll('.map-site-mark').forEach(el => {
+            el.setAttribute('transform', `translate(${el.dataset.x} ${el.dataset.y}) scale(${(dotComp * 1.4).toFixed(3)})`);
+        });
+        svg.querySelectorAll('.map-stop-label, .map-site-label').forEach(el => {
+            const base = el.classList.contains('map-site-label') ? 9.5 : 11;
+            el.style.fontSize = (base * comp).toFixed(2) + 'px';
+            if (el.dataset.cx) {
+                el.setAttribute('x', (+el.dataset.cx + el.dataset.dx * offComp).toFixed(1));
+                el.setAttribute('y', (+el.dataset.cy + el.dataset.dy * offComp).toFixed(1));
+            }
+        });
     };
 
     const setActive = (index) => {
@@ -295,6 +310,10 @@ if (statsSection && 'IntersectionObserver' in window) {
                 const arc = svg.querySelector('#mapArc' + i);
                 if (arc) arc.classList.toggle('drawn', i < index);
             }
+        });
+        // fieldwork sites appear once the journey reaches their era
+        svg.querySelectorAll('.map-site').forEach(site => {
+            site.classList.toggle('active', index >= +site.dataset.activate);
         });
         document.querySelectorAll('.journey-stop').forEach((card, i) => {
             card.classList.toggle('map-active', i === index);

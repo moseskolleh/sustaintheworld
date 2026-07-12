@@ -11,7 +11,7 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 
 ## Features
 
-- **Living journey map**: a hand-built SVG world map (Natural Earth data, zero runtime dependencies) that flies from Freetown to Changsha, Bonn, Wageningen and Amsterdam as you scroll the journey — regenerate it with `node scripts/generate-journey-map.js`
+- **Living journey map**: a hand-built SVG map of the journey region — West Africa to East Asia, so every stop gets real resolution instead of a world map that's half empty ocean (Natural Earth 50 m coastlines, simplified hardest away from the Rhine delta where the map zooms deepest, zero runtime dependencies). It flies from Freetown to Changsha, Bonn, Wageningen and Amsterdam as you scroll, and fieldwork sites like Wuppertal join the map when the story reaches them. Regenerate with `npm install d3-geo topojson-client topojson-simplify world-atlas && node scripts/generate-journey-map.js`, then sync the printed stop pixels into `script.js`
 - **Carbon-aware by construction**: all images ship as optimized WebP (~25 MB → under 2 MB for the whole site), and a live footer badge weighs each visit in the browser (Resource Timing API × Sustainable Web Design model). A low-energy mode pauses all animation and honours `prefers-reduced-motion`
 - **Borehole core-log experience timeline**: career history logged the way a geologist logs a core — depth is time, every layer is a chapter
 - **"AI, Weighed" live widget**: a homepage slice of the EcoPrompt Coach research — model × workload × grid → energy, carbon, water, in units people can feel
