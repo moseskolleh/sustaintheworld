@@ -2767,3 +2767,385 @@ body.eco-mode .caret {
         transform: translateX(6px);
     }
 }
+
+/* ===================================
+   DOSSIER WIDGETS (interactive blocks inside project details)
+   =================================== */
+.dossier-widget {
+    grid-column: 1 / -1;
+    margin-top: 10px;
+    padding: 24px 24px 18px;
+    border: 1px dashed var(--line-color);
+    border-radius: var(--border-radius);
+    background: var(--card-bg-alt);
+}
+
+.dossier-widget h4 {
+    font-size: 0.85rem;
+    font-family: var(--font-mono);
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--primary-green);
+}
+
+.dossier-widget h4 i {
+    margin-right: 8px;
+}
+
+.dossier-widget-intro {
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+    margin: 10px 0 16px;
+    max-width: 68ch;
+}
+
+/* --- Site the borehole --- */
+.borehole-stage {
+    border: 1px solid var(--line-soft);
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: crosshair;
+    touch-action: none;
+}
+
+.borehole-stage:focus-visible {
+    outline: 2px solid var(--primary-green);
+    outline-offset: 2px;
+}
+
+.borehole-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.bh-label {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    fill: var(--text-secondary);
+}
+
+.bh-label-dim {
+    opacity: 0.55;
+    font-size: 11px;
+}
+
+.bh-curve {
+    fill: none;
+    stroke: var(--primary-green);
+    stroke-width: 1.8;
+}
+
+.bh-ground {
+    fill: rgba(124, 252, 0, 0.05);
+}
+
+body.light-mode .bh-ground {
+    fill: rgba(34, 139, 34, 0.08);
+}
+
+.bh-surface {
+    fill: none;
+    stroke: var(--text-secondary);
+    stroke-width: 1.4;
+}
+
+.bh-strata {
+    stroke: var(--line-soft);
+    stroke-dasharray: 6 8;
+}
+
+.bh-rig-base {
+    fill: var(--text-secondary);
+}
+
+.bh-rig-mast {
+    fill: none;
+    stroke: var(--text-primary);
+    stroke-width: 2.4;
+    stroke-linecap: round;
+}
+
+.bh-hole {
+    stroke: var(--text-secondary);
+    stroke-width: 2.6;
+    opacity: 0.7;
+}
+
+.bh-water-col {
+    stroke: #3f9be0;
+    stroke-width: 2.6;
+}
+
+.bh-reveal-water {
+    fill: rgba(63, 155, 224, 0.30);
+}
+
+.bh-reveal-clay {
+    fill: rgba(191, 142, 84, 0.30);
+}
+
+.bh-gush {
+    fill: none;
+    stroke: #3f9be0;
+    stroke-width: 2;
+    stroke-linecap: round;
+}
+
+.bh-gush-anim {
+    animation: bhGush 0.9s ease-out;
+}
+
+@keyframes bhGush {
+    0%   { opacity: 0; transform: scale(0.4); transform-origin: center; transform-box: fill-box; }
+    60%  { opacity: 1; }
+    100% { opacity: 1; }
+}
+
+.borehole-hud {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px;
+    margin-top: 14px;
+}
+
+.borehole-score {
+    color: var(--primary-green);
+}
+
+.borehole-result {
+    margin-top: 10px;
+    color: var(--text-secondary);
+    min-height: 1.4em;
+}
+
+/* --- Don't let it become a boat --- */
+.flood-stage {
+    border: 1px solid var(--line-soft);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.flood-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.fl-bank {
+    fill: rgba(124, 252, 0, 0.07);
+}
+
+body.light-mode .fl-bank {
+    fill: rgba(34, 139, 34, 0.10);
+}
+
+.fl-building {
+    fill: rgba(124, 252, 0, 0.10);
+    stroke: var(--line-soft);
+}
+
+body.light-mode .fl-building {
+    fill: rgba(34, 139, 34, 0.14);
+}
+
+.fl-window {
+    fill: var(--card-bg-alt);
+}
+
+.fl-pylon {
+    fill: none;
+    stroke: var(--text-secondary);
+    stroke-width: 5;
+    stroke-linecap: round;
+}
+
+.fl-beam {
+    fill: var(--text-secondary);
+}
+
+.fl-car {
+    fill: var(--primary-green);
+    opacity: 0.85;
+}
+
+.fl-car-window {
+    fill: var(--darker-bg);
+    opacity: 0.8;
+}
+
+.fl-water {
+    fill: rgba(63, 155, 224, 0.55);
+}
+
+.fl-refline {
+    stroke: #3f9be0;
+    stroke-width: 1;
+    stroke-dasharray: 5 6;
+    opacity: 0.7;
+}
+
+.fl-label {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    fill: #3f9be0;
+}
+
+.flood-controls {
+    margin-top: 16px;
+}
+
+.flood-controls label {
+    display: block;
+    margin-bottom: 6px;
+}
+
+.flood-controls #floodLevelLabel {
+    color: var(--primary-green);
+}
+
+.flood-controls input[type="range"] {
+    width: 100%;
+    accent-color: var(--primary-green);
+}
+
+.flood-ticks {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    opacity: 0.7;
+    margin-top: 2px;
+}
+
+.flood-note {
+    margin-top: 12px;
+    color: var(--text-secondary);
+    min-height: 2.6em;
+}
+
+/* ===================================
+   FIELD TERMINAL
+   =================================== */
+.terminal-toggle {
+    margin-top: 14px;
+    background: none;
+    border: 1px solid var(--line-soft);
+    border-radius: 6px;
+    color: var(--text-secondary);
+    padding: 7px 14px;
+    cursor: pointer;
+    transition: border-color 0.3s ease, color 0.3s ease;
+}
+
+.terminal-toggle:hover {
+    border-color: var(--primary-green);
+    color: var(--primary-green);
+}
+
+.field-terminal {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.72);
+    padding: 20px;
+}
+
+.field-terminal.open {
+    display: flex;
+}
+
+/* the terminal is a terminal — dark in both themes */
+.ft-panel {
+    width: min(720px, 100%);
+    background: #050805;
+    border: 1px solid rgba(124, 252, 0, 0.35);
+    border-radius: 10px;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.ft-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 14px;
+    border-bottom: 1px solid rgba(124, 252, 0, 0.2);
+    color: rgba(124, 252, 0, 0.75);
+}
+
+.ft-bar .mono-label {
+    color: rgba(124, 252, 0, 0.75);
+}
+
+.ft-close {
+    background: none;
+    border: none;
+    color: rgba(124, 252, 0, 0.75);
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 2px 8px;
+}
+
+.ft-close:hover {
+    color: #7CFC00;
+}
+
+.ft-screen {
+    height: min(46vh, 380px);
+    overflow-y: auto;
+    padding: 14px 16px;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    line-height: 1.55;
+    color: #9fe870;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.ft-row.ft-echo {
+    color: #e6ffe6;
+}
+
+.ft-row.ft-err {
+    color: #ff9d66;
+}
+
+.ft-line {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 10px 16px 12px;
+    border-top: 1px solid rgba(124, 252, 0, 0.2);
+}
+
+.ft-prompt {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    color: #7CFC00;
+    white-space: nowrap;
+}
+
+.ft-input {
+    flex: 1;
+    background: none;
+    border: none;
+    outline: none;
+    color: #e6ffe6;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    caret-color: #7CFC00;
+}
+
+@media (max-width: 640px) {
+    .ft-prompt { display: none; }
+    .ft-screen { font-size: 0.76rem; }
+    .dossier-widget { padding: 18px 14px 14px; }
+}
