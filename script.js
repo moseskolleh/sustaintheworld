@@ -281,14 +281,15 @@ if (statsSection && 'IntersectionObserver' in window) {
         const dotComp = Math.pow(s, -0.7);
         const offComp = 2 / s;
         svg.style.setProperty('--zoom-comp', comp.toFixed(3));
-        svg.querySelectorAll('.map-stop-dot').forEach(el => el.setAttribute('r', (3.2 * dotComp).toFixed(2)));
+        svg.querySelectorAll('.map-stop-dot, .map-you-dot').forEach(el => el.setAttribute('r', (3.2 * dotComp).toFixed(2)));
         svg.querySelectorAll('.map-stop-halo').forEach(el => el.setAttribute('r', (10 * dotComp).toFixed(2)));
         svg.querySelectorAll('.map-stop-ring').forEach(el => el.setAttribute('r', (6.5 * dotComp).toFixed(2)));
         svg.querySelectorAll('.map-site-mark').forEach(el => {
             el.setAttribute('transform', `translate(${el.dataset.x} ${el.dataset.y}) scale(${(dotComp * 1.4).toFixed(3)})`);
         });
-        svg.querySelectorAll('.map-stop-label, .map-site-label').forEach(el => {
-            const base = el.classList.contains('map-site-label') ? 9.5 : 11;
+        svg.querySelectorAll('.map-stop-label, .map-site-label, .map-you-label').forEach(el => {
+            const base = el.classList.contains('map-site-label') ? 9.5 :
+                el.classList.contains('map-you-label') ? 9 : 11;
             el.style.fontSize = (base * comp).toFixed(2) + 'px';
             if (el.dataset.cx) {
                 el.setAttribute('x', (+el.dataset.cx + el.dataset.dx * offComp).toFixed(1));
@@ -327,6 +328,9 @@ if (statsSection && 'IntersectionObserver' in window) {
         .then(markup => {
             frame.innerHTML = markup;
             svg = frame.querySelector('svg');
+            // let enhancements (e.g. the visitor mark) attach before the
+            // first fly-to so their markers get counter-scaled with the rest
+            document.dispatchEvent(new CustomEvent('journeymap:ready', { detail: { svg, mapBox } }));
             setActive(0);
 
             const stops = document.querySelectorAll('.journey-stop');
@@ -1273,5 +1277,130 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
         if (typing) return;
         e.preventDefault();
         isOpen() ? close() : open();
+    });
+})();
+
+// ===================================
+// YOU ARE HERE — visitor mark on the journey map
+// Guessed from the browser's timezone. Nothing leaves the browser.
+// ===================================
+(() => {
+    // city, lon, lat for common IANA timezones (coarse on purpose)
+    const TZ = {
+        'Europe/Amsterdam': ['Amsterdam', 4.9, 52.37], 'Europe/London': ['London', -0.13, 51.51],
+        'Europe/Dublin': ['Dublin', -6.26, 53.35], 'Europe/Paris': ['Paris', 2.35, 48.86],
+        'Europe/Brussels': ['Brussels', 4.35, 50.85], 'Europe/Berlin': ['Berlin', 13.41, 52.52],
+        'Europe/Madrid': ['Madrid', -3.7, 40.42], 'Europe/Lisbon': ['Lisbon', -9.14, 38.72],
+        'Europe/Rome': ['Rome', 12.5, 41.9], 'Europe/Zurich': ['Zurich', 8.54, 47.38],
+        'Europe/Vienna': ['Vienna', 16.37, 48.21], 'Europe/Prague': ['Prague', 14.44, 50.08],
+        'Europe/Warsaw': ['Warsaw', 21.01, 52.23], 'Europe/Stockholm': ['Stockholm', 18.07, 59.33],
+        'Europe/Oslo': ['Oslo', 10.75, 59.91], 'Europe/Copenhagen': ['Copenhagen', 12.57, 55.69],
+        'Europe/Helsinki': ['Helsinki', 24.94, 60.17], 'Europe/Athens': ['Athens', 23.73, 37.98],
+        'Europe/Istanbul': ['Istanbul', 28.98, 41.01], 'Europe/Kyiv': ['Kyiv', 30.52, 50.45],
+        'Europe/Bucharest': ['Bucharest', 26.1, 44.43], 'Europe/Budapest': ['Budapest', 19.04, 47.5],
+        'Europe/Moscow': ['Moscow', 37.62, 55.76],
+        'Africa/Freetown': ['Freetown', -13.23, 8.47], 'Africa/Abidjan': ['Abidjan', -4.02, 5.35],
+        'Africa/Accra': ['Accra', -0.19, 5.6], 'Africa/Lagos': ['Lagos', 3.38, 6.52],
+        'Africa/Dakar': ['Dakar', -17.45, 14.72], 'Africa/Casablanca': ['Casablanca', -7.59, 33.57],
+        'Africa/Algiers': ['Algiers', 3.06, 36.75], 'Africa/Tunis': ['Tunis', 10.17, 36.81],
+        'Africa/Cairo': ['Cairo', 31.24, 30.04], 'Africa/Nairobi': ['Nairobi', 36.82, -1.29],
+        'Africa/Addis_Ababa': ['Addis Ababa', 38.75, 9.02], 'Africa/Kampala': ['Kampala', 32.58, 0.35],
+        'Africa/Kinshasa': ['Kinshasa', 15.27, -4.44], 'Africa/Johannesburg': ['Johannesburg', 28.05, -26.2],
+        'Africa/Harare': ['Harare', 31.05, -17.83], 'Africa/Lusaka': ['Lusaka', 28.32, -15.39],
+        'Africa/Monrovia': ['Monrovia', -10.8, 6.3], 'Africa/Bamako': ['Bamako', -8.0, 12.65],
+        'Africa/Conakry': ['Conakry', -13.68, 9.54],
+        'Asia/Shanghai': ['Shanghai', 121.47, 31.23], 'Asia/Hong_Kong': ['Hong Kong', 114.17, 22.32],
+        'Asia/Singapore': ['Singapore', 103.85, 1.29], 'Asia/Tokyo': ['Tokyo', 139.69, 35.69],
+        'Asia/Seoul': ['Seoul', 126.98, 37.57], 'Asia/Taipei': ['Taipei', 121.57, 25.03],
+        'Asia/Bangkok': ['Bangkok', 100.5, 13.76], 'Asia/Jakarta': ['Jakarta', 106.85, -6.21],
+        'Asia/Manila': ['Manila', 120.98, 14.6], 'Asia/Kolkata': ['Mumbai/Delhi', 77.21, 28.61],
+        'Asia/Karachi': ['Karachi', 67.01, 24.86], 'Asia/Dhaka': ['Dhaka', 90.41, 23.81],
+        'Asia/Dubai': ['Dubai', 55.27, 25.2], 'Asia/Riyadh': ['Riyadh', 46.72, 24.69],
+        'Asia/Qatar': ['Doha', 51.53, 25.29], 'Asia/Tehran': ['Tehran', 51.39, 35.69],
+        'Asia/Jerusalem': ['Jerusalem', 35.21, 31.77], 'Asia/Beirut': ['Beirut', 35.5, 33.89],
+        'Asia/Almaty': ['Almaty', 76.89, 43.24], 'Asia/Tashkent': ['Tashkent', 69.24, 41.31],
+        'America/New_York': ['New York', -74.01, 40.71], 'America/Toronto': ['Toronto', -79.38, 43.65],
+        'America/Chicago': ['Chicago', -87.63, 41.88], 'America/Denver': ['Denver', -104.99, 39.74],
+        'America/Los_Angeles': ['Los Angeles', -118.24, 34.05], 'America/Vancouver': ['Vancouver', -123.12, 49.28],
+        'America/Mexico_City': ['Mexico City', -99.13, 19.43], 'America/Bogota': ['Bogotá', -74.07, 4.71],
+        'America/Lima': ['Lima', -77.04, -12.05], 'America/Santiago': ['Santiago', -70.67, -33.45],
+        'America/Sao_Paulo': ['São Paulo', -46.63, -23.55], 'America/Argentina/Buenos_Aires': ['Buenos Aires', -58.38, -34.6],
+        'America/Caracas': ['Caracas', -66.9, 10.49], 'America/Port_of_Spain': ['Port of Spain', -61.52, 10.65],
+        'Australia/Sydney': ['Sydney', 151.21, -33.87], 'Australia/Melbourne': ['Melbourne', 144.96, -37.81],
+        'Australia/Perth': ['Perth', 115.86, -31.95], 'Pacific/Auckland': ['Auckland', 174.76, -36.85]
+    };
+
+    const FREETOWN = [-13.2317, 8.4657];
+    const haversine = (lon1, lat1, lon2, lat2) => {
+        const R = 6371, toR = Math.PI / 180;
+        const dLat = (lat2 - lat1) * toR, dLon = (lon2 - lon1) * toR;
+        const a = Math.sin(dLat / 2) ** 2 +
+            Math.cos(lat1 * toR) * Math.cos(lat2 * toR) * Math.sin(dLon / 2) ** 2;
+        return Math.round(2 * R * Math.asin(Math.sqrt(a)));
+    };
+
+    // Natural Earth I raw projection (matches d3-geo's geoNaturalEarth1)
+    const neRaw = (l, p) => {
+        const p2 = p * p, p4 = p2 * p2;
+        return [
+            l * (0.8707 - 0.131979 * p2 + p4 * (-0.013791 + p4 * (0.003971 * p2 - 0.001529 * p4))),
+            p * (1.007226 + p2 * (0.015085 + p4 * (-0.044475 + 0.028874 * p2 - 0.005916 * p4)))
+        ];
+    };
+
+    document.addEventListener('journeymap:ready', (e) => {
+        const { svg, mapBox } = e.detail;
+        let zone = '';
+        try { zone = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (err) { return; }
+        const hit = TZ[zone];
+        if (!hit) return;
+        const [city, lon, lat] = hit;
+        const km = haversine(lon, lat, FREETOWN[0], FREETOWN[1]);
+        const kmTxt = km.toLocaleString('en-US');
+
+        const readout = document.createElement('p');
+        readout.className = 'journey-you-readout mono-label';
+        readout.title = 'Guessed from your clock\'s timezone — nothing leaves your browser.';
+        mapBox.appendChild(readout);
+
+        const d = svg.dataset;
+        const crop = (d.crop || '').split(' ').map(Number);
+        const inCrop = crop.length === 4 &&
+            lon >= crop[0] && lon <= crop[2] && lat >= crop[1] && lat <= crop[3];
+        if (!inCrop || !d.projK) {
+            readout.textContent = `you: ~${city}, off this map's edge · ${kmTxt} km from Freetown`;
+            return;
+        }
+        readout.textContent = `you: ~${city} · ${kmTxt} km from Freetown`;
+
+        let l = lon + +d.projRot;
+        if (l > 180) l -= 360;
+        if (l < -180) l += 360;
+        const [a, b] = neRaw(l * Math.PI / 180, lat * Math.PI / 180);
+        const x = +d.projTx + d.projK * a;
+        const y = +d.projTy - d.projK * b;
+
+        const NS = 'http://www.w3.org/2000/svg';
+        const g = document.createElementNS(NS, 'g');
+        g.setAttribute('class', 'map-you');
+        const dot = document.createElementNS(NS, 'circle');
+        dot.setAttribute('class', 'map-you-dot');
+        dot.setAttribute('cx', x.toFixed(1));
+        dot.setAttribute('cy', y.toFixed(1));
+        dot.setAttribute('r', '3.2');
+        const label = document.createElementNS(NS, 'text');
+        label.setAttribute('class', 'map-you-label');
+        label.setAttribute('x', (x + 14).toFixed(1));
+        label.setAttribute('y', (y - 6).toFixed(1));
+        label.setAttribute('text-anchor', 'start');
+        label.setAttribute('data-cx', x.toFixed(1));
+        label.setAttribute('data-cy', y.toFixed(1));
+        label.setAttribute('data-dx', '14');
+        label.setAttribute('data-dy', '-6');
+        label.textContent = 'you?';
+        g.appendChild(dot);
+        g.appendChild(label);
+        const scene = svg.querySelector('#mapScene') || svg;
+        scene.appendChild(g);
     });
 })();

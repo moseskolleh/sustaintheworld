@@ -58,6 +58,13 @@
     <!-- Scroll progress -->
     <div class="scroll-progress" id="scrollProgress"></div>
 
+    <!-- Scroll drill — the page as a borehole (pure CSS scroll-driven animation) -->
+    <div class="scroll-drill" aria-hidden="true">
+        <span class="scroll-drill-rod"></span>
+        <span class="scroll-drill-bit"></span>
+        <span class="scroll-drill-drop">&#128167;</span>
+    </div>
+
     <!-- Preloader -->
     <div class="preloader" id="preloader">
         <div class="preloader-inner">
@@ -1240,8 +1247,10 @@
                     <a href="https://sustainablewebdesign.org/estimating-digital-emissions/" target="_blank" rel="noopener">Sustainable Web Design model</a>
                     (&asymp;0.36&nbsp;g CO&#8322;e per MB transferred, global average grid). Comparison point: the median web page ships &asymp;2.5&nbsp;MB
                     (<a href="https://httparchive.org/reports/page-weight" target="_blank" rel="noopener">HTTP Archive</a>).
-                    Before this redesign, this page shipped ~25&nbsp;MB of images; it now ships a fraction of that — the site practises the sustainable-computing research it presents.</p>
+                    Before this redesign, this page shipped ~25&nbsp;MB of images; it now ships a fraction of that — the site practises the sustainable-computing research it presents.
+                    Want the logical extreme? The <a href="field-report.html">text-only field report</a> is the whole portfolio in 8&nbsp;KB.</p>
                 </div>
+                <p class="footer-fieldreport mono-label"><a href="field-report.html">prefer plain text? read the 8 KB field report — &asymp;0.003 g CO&#8322;e</a></p>
                 <button class="eco-mode-toggle" id="ecoModeToggle" aria-pressed="false">
                     <i class="fas fa-leaf"></i> <span id="ecoModeLabel">Low-energy mode: off</span>
                 </button>
