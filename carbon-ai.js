@@ -141,8 +141,9 @@ function suggest(params) {
         });
     }
 
-    // 5. PUE high.
-    if (params.pue > 1.4) {
+    // 5. PUE high. >= so the enterprise preset (pue: 1.4) fires the tip
+    // instead of sitting exactly on the threshold and looking silent.
+    if (params.pue >= 1.4) {
         tips.push({
             icon: 'fa-temperature-low',
             text: `PUE ${params.pue} is on the high side. Modern hyperscalers run 1.10–1.20; older facilities pull 1.5+.`

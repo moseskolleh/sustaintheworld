@@ -85,6 +85,57 @@ function assert(cond, msg) {
     );
 }
 
+// --- Bug 3: PUE tip must fire at the enterprise-preset value (1.4) ---
+// carbon-ai.js's suggest() gated on `pue > 1.4`, so the enterprise preset
+// (which sets pue: 1.4 exactly) never surfaced the warning it was designed
+// to trigger. `>=` closes the discontinuity.
+{
+    const carbon = require('../carbon-ai.js');
+    const base = {
+        modelKey: 'gpt-4o',
+        regionKey: 'us-avg',
+        wueKey: 'avg',
+        inputTokens: 800,
+        outputTokens: 1200,
+        queriesPerDay: 100000,
+        pue: 1.4
+    };
+    const tips = carbon.suggest(base);
+    const hasPueTip = tips.some((t) => /PUE/.test(t.text));
+    assert(hasPueTip, 'Bug3: PUE tip fires at the enterprise preset value (pue = 1.4)');
+}
+
+// --- Bug 4: theme applied before first paint (no dark-mode FOUC in light mode) ---
+// script.js sets body.light-mode near the end of <body>, so a returning
+// light-mode visitor briefly renders in dark. An inline <script> early in
+// <body> must apply the class before the DOM paints.
+{
+    const raw = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+    const bodyOpen = raw.indexOf('<body');
+    const bodyEnd = raw.indexOf('>', bodyOpen) + 1;
+    const firstNonScript = raw.indexOf('<div', bodyEnd);
+    const preContent = raw.slice(bodyEnd, firstNonScript);
+    const hasEarlyThemeScript =
+        /<script[^>]*>[\s\S]*?localStorage[\s\S]*?theme[\s\S]*?light-mode[\s\S]*?<\/script>/i.test(preContent);
+    assert(
+        hasEarlyThemeScript,
+        'Bug4: inline theme script runs before any renderable body content (avoids FOUC)'
+    );
+}
+
+// --- Bug 5: contact-form success alert must not falsely claim delivery ---
+// With mode: 'no-cors', fetch resolves opaquely for any server reply
+// (200, 500, revoked deployment). The old alert claimed "submitted
+// successfully" unconditionally — misleading on real failure. The new
+// wording says "sent" and gives an email fallback.
+{
+    const scriptSrc = fs.readFileSync(path.join(__dirname, '..', 'script.js'), 'utf8');
+    const noFalseClaim = !/submitted successfully/i.test(scriptSrc);
+    assert(noFalseClaim, 'Bug5: contact-form alert does not claim "submitted successfully"');
+    const hasFallback = /email me directly/i.test(scriptSrc);
+    assert(hasFallback, 'Bug5: contact-form alert surfaces the direct-email fallback');
+}
+
 if (failures > 0) {
     console.log(`\n${failures} assertion(s) failed`);
     process.exit(1);
