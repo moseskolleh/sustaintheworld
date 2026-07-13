@@ -36,9 +36,10 @@
             <h1>EcoPrompt <span class="ca-accent">Coach</span></h1>
             <p>
                 Web companion to <a href="https://github.com/moseskolleh/promptcoach" target="_blank" rel="noopener">github.com/moseskolleh/promptcoach</a> —
-                the Chrome-extension prototype I built at the Digital Society School to help users
-                visualise the <strong>energy, water, and carbon cost</strong> of every LLM query and
-                receive sustainability-aware optimisation tips.
+                the product I started at the Digital Society School, now rebuilt as v2 on the 2025/2026
+                evidence base (Jegham et al. v6; Google's, OpenAI's, and Mistral's per-prompt disclosures),
+                helping users visualise the <strong>energy, water, and carbon cost</strong> of every LLM query
+                and act on sustainability-aware optimisation tips.
             </p>
         </header>
 
@@ -156,16 +157,19 @@
                 batching, KV-cache reuse, and quantisation.
             </p>
             <ul>
-                <li>Per-token energy and water benchmarks: Jegham, Abedin, Ali et al. 2025, <em>"How Hungry is AI? Benchmarking Energy, Water, and Carbon Footprint of LLM Inference"</em>.</li>
-                <li>Supporting work: Patterson et al. 2021; Luccioni, Viguier &amp; Ligozat 2023 ("Power Hungry Processing"); de Vries 2023, <em>Joule</em>.</li>
-                <li>Grid carbon intensity: Ember Climate <em>Yearly Electricity Data 2023</em>, IEA <em>Electricity 2024</em>.</li>
-                <li>Provider PUE/WUE disclosures: Google 2024 (PUE 1.10, WUE ~1.1 L/kWh), Microsoft 2024, AWS 2023.</li>
-                <li>Equivalents: EEA 2022 (gasoline ~170 gCO₂e/km), Berners-Lee <em>How Bad Are Bananas?</em>, US EPA / US Forest Service.</li>
+                <li>Per-token energy and water benchmarks: Jegham et al. 2025, <em>"How Hungry is AI?"</em> (arXiv:2505.09598, v6 Nov 2025 — 30 models).</li>
+                <li>Provider-reported anchors: Google 2025 (arXiv:2508.15734 — 0.24 Wh / 0.26 mL / 0.03 gCO₂e per median Gemini prompt); OpenAI 2025 (~0.34 Wh per average ChatGPT query); Mistral AI lifecycle analysis 2025 (1.14 gCO₂e per 400-token response).</li>
+                <li>Production studies: Oviedo et al., <em>Joule</em> 2026 (median 0.34 Wh for frontier models in production); Epoch AI 2025 (~0.3 Wh typical GPT-4o query); Adamska et al. 2025, <em>Green Prompting</em> (response length is the dominant energy driver, r ≈ 0.9).</li>
+                <li>Grid carbon intensity: Ember 2024, IEA <em>Electricity 2025</em> (world avg 445 gCO₂/kWh; US 384).</li>
+                <li>Provider PUE/WUE disclosures: Google 2025 (PUE 1.09, WUE 1.15 L/kWh ISO Cat 2), Microsoft FY2024 (0.30 L/kWh), AWS 2024 (0.15 L/kWh).</li>
+                <li>Equivalents: EEA (gasoline ~170 gCO₂e/km), Berners-Lee <em>How Bad Are Bananas?</em>, US EPA / US Forest Service.</li>
             </ul>
             <div class="ca-disclaimer">
                 <strong>Caveat:</strong> covers <em>inference only</em>. Training is amortised across millions of
-                queries and is not modelled here. Embodied carbon of GPUs is excluded. Use as a relative
-                comparator, not an absolute audit. The full prototype lives at
+                queries and is not modelled here; embodied carbon of GPUs is excluded on this page. Use as a
+                relative comparator, not an absolute audit. The full v2 product — per-token energy model with
+                uncertainty bands, relatable everyday equivalents, Chrome extension, web app, and the complete
+                methodology with 2025/2026 citations — lives at
                 <a href="https://github.com/moseskolleh/promptcoach" target="_blank" rel="noopener">github.com/moseskolleh/promptcoach</a>.
             </div>
         </section>
