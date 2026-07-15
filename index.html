@@ -55,6 +55,12 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
+    <script>
+        // Apply saved theme before first paint so returning light-mode visitors
+        // don't see a dark flash of unstyled content. Mirrored (idempotently)
+        // by the theme block in script.js.
+        try { if (localStorage.getItem('theme') === 'light') document.body.classList.add('light-mode'); } catch (e) {}
+    </script>
     <!-- Scroll progress -->
     <div class="scroll-progress" id="scrollProgress"></div>
 

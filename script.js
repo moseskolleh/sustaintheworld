@@ -519,14 +519,19 @@ if (contactForm) {
         };
 
         try {
+            // no-cors is required for Google Apps Script cross-origin POSTs,
+            // but it makes the response opaque — the browser can't tell 200
+            // from 5xx. So we only report "sent", not "confirmed", and give
+            // the reader a direct-email fallback in case delivery silently
+            // failed (quota, revoked deployment, MailApp throw).
             await fetch(GOOGLE_APPS_SCRIPT_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData),
-                mode: 'no-cors' // Required for Google Apps Script
+                mode: 'no-cors'
             });
 
-            alert('✅ Thank you for your message! Your response has been submitted successfully. I will get back to you soon.');
+            alert('✅ Thanks — your message has been sent. I\'ll get back to you soon. If you don\'t hear back within a few days, please email me directly at moseskollehsesay@gmail.com.');
             contactForm.reset();
         } catch (error) {
             console.error('Error submitting form:', error);
