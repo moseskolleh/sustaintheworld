@@ -315,6 +315,8 @@ body.light-mode .navbar {
     gap: 5px;
     cursor: pointer;
     padding: 8px;
+    background: none;
+    border: none;
 }
 
 .nav-toggle span {
@@ -1323,6 +1325,12 @@ body.light-mode .hero-photo-caption {
     transform: translateY(-3px);
 }
 
+.gallery-item:focus-visible {
+    outline: 2px solid var(--primary-green);
+    outline-offset: 2px;
+    border-color: var(--primary-green);
+}
+
 .gallery-item img {
     display: block;
     width: 100%;
@@ -1368,13 +1376,16 @@ body.light-mode .hero-photo-caption {
     justify-content: center;
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.3s ease, visibility 0.3s ease;
+    /* delay hiding until the fade-out ends; on open, visibility flips
+       instantly so the dialog can receive focus right away */
+    transition: opacity 0.3s ease, visibility 0s linear 0.3s;
     padding: 40px;
 }
 
 .lightbox.active {
     opacity: 1;
     visibility: visible;
+    transition: opacity 0.3s ease, visibility 0s;
 }
 
 .lightbox-figure {
@@ -1407,7 +1418,9 @@ body.light-mode .hero-photo-caption {
     font-size: 2.4rem;
     cursor: pointer;
     line-height: 1;
-    transition: var(--transition);
+    /* not var(--transition): an `all` transition would also animate the
+       inherited visibility flip and delay keyboard focus on open */
+    transition: color 0.3s ease, transform 0.3s ease;
 }
 
 .lightbox-close:hover {
@@ -1783,6 +1796,42 @@ body.light-mode .hero-photo-caption {
 .btn-submit:disabled {
     opacity: 0.7;
     cursor: wait;
+}
+
+/* Honeypot field: visually removed, out of tab order, invisible to humans */
+.form-group-hp {
+    position: absolute !important;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+.form-status {
+    margin-top: 18px;
+    padding: 12px 16px;
+    border: 1px solid var(--line-soft);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.form-status.success {
+    color: var(--primary-green);
+    border-color: var(--primary-green);
+    background: rgba(124, 252, 0, 0.08);
+}
+
+.form-status.error {
+    color: #ff6b6b;
+    border-color: #ff6b6b;
+    background: rgba(255, 107, 107, 0.08);
+}
+
+body.light-mode .form-status.error {
+    color: #b03030;
+    border-color: #b03030;
+    background: rgba(176, 48, 48, 0.06);
 }
 
 /* ===================================

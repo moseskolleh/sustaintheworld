@@ -1,5 +1,5 @@
-// Focused repro for two bugs in script.js.
-// Run with: npm i --no-save jsdom && node tests/bugs.test.js
+// Regression tests for script.js + index.html.
+// Run with: npm install && npm test
 
 const fs = require('fs');
 const path = require('path');
@@ -82,6 +82,35 @@ function assert(cond, msg) {
     assert(
         icon && icon.classList.contains('fa-sun'),
         'Bug2: icon should be fa-sun when loaded in light mode (was: ' + (icon && icon.className) + ')'
+    );
+}
+
+// --- Accessibility & contact-form guarantees ---
+{
+    const { window } = run('dark');
+    const doc = window.document;
+
+    const toggle = doc.getElementById('navToggle');
+    assert(!!toggle && toggle.tagName === 'BUTTON', 'A11y: nav toggle is a real <button>');
+    assert(toggle && toggle.getAttribute('aria-expanded') === 'false', 'A11y: nav toggle starts collapsed');
+    if (toggle) {
+        toggle.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }));
+        assert(toggle.getAttribute('aria-expanded') === 'true', 'A11y: nav toggle aria-expanded follows open state');
+    }
+
+    const item = doc.querySelector('.gallery-item');
+    assert(
+        !!item && item.getAttribute('tabindex') === '0' && item.getAttribute('role') === 'button',
+        'A11y: gallery items are keyboard-focusable buttons'
+    );
+
+    assert(!!doc.getElementById('website'), 'Form: honeypot field is present');
+    assert(!!doc.getElementById('formStatus'), 'Form: inline status element is present');
+
+    const skip = doc.querySelector('.skip-link');
+    assert(
+        !!skip && skip.getAttribute('href') === '#main' && !!doc.getElementById('main'),
+        'A11y: static skip link targets #main'
     );
 }
 

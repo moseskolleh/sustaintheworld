@@ -141,22 +141,33 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         const target = document.querySelector(href);
         if (target) {
             target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            if (navMenu) navMenu.classList.remove('active');
-            if (navToggle) navToggle.classList.remove('active');
+            setMenuOpen(false);
         }
     });
 });
 
+function setMenuOpen(open) {
+    if (!navToggle || !navMenu) return;
+    navMenu.classList.toggle('active', open);
+    navToggle.classList.toggle('active', open);
+    navToggle.setAttribute('aria-expanded', String(open));
+}
+
 if (navToggle && navMenu) {
     navToggle.addEventListener('click', () => {
-        navMenu.classList.toggle('active');
-        navToggle.classList.toggle('active');
+        setMenuOpen(!navMenu.classList.contains('active'));
     });
 
     document.addEventListener('click', (e) => {
         if (!navToggle.contains(e.target) && !navMenu.contains(e.target)) {
-            navMenu.classList.remove('active');
-            navToggle.classList.remove('active');
+            setMenuOpen(false);
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && navMenu.classList.contains('active')) {
+            setMenuOpen(false);
+            navToggle.focus();
         }
     });
 }
@@ -440,31 +451,53 @@ window.addEventListener('resize', () => {
     const lightboxClose = document.getElementById('lightboxClose');
     if (!lightbox || !lightboxImage) return;
 
+    let lastFocus = null;
+
     const open = (src, alt, caption) => {
+        lastFocus = document.activeElement;
         lightboxImage.src = src;
         lightboxImage.alt = alt || '';
         if (lightboxCaption) lightboxCaption.textContent = caption || '';
         lightbox.classList.add('active');
         lightbox.setAttribute('aria-hidden', 'false');
         document.body.style.overflow = 'hidden';
+        if (lightboxClose) lightboxClose.focus();
     };
 
     const close = () => {
         lightbox.classList.remove('active');
         lightbox.setAttribute('aria-hidden', 'true');
         document.body.style.overflow = 'auto';
+        if (lastFocus && typeof lastFocus.focus === 'function') lastFocus.focus();
+        lastFocus = null;
     };
 
     document.querySelectorAll('.gallery-item').forEach(item => {
-        item.addEventListener('click', () => {
-            const img = item.querySelector('img');
-            if (img) open(img.src, img.alt, item.getAttribute('data-caption'));
+        const img = item.querySelector('img');
+        if (!img) return;
+        item.setAttribute('tabindex', '0');
+        item.setAttribute('role', 'button');
+        item.setAttribute('aria-label', 'View larger: ' + (img.alt || 'photo'));
+        const openItem = () => open(img.src, img.alt, item.getAttribute('data-caption'));
+        item.addEventListener('click', openItem);
+        item.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                openItem();
+            }
         });
     });
 
     if (lightboxClose) lightboxClose.addEventListener('click', close);
     lightbox.addEventListener('click', (e) => {
         if (e.target === lightbox) close();
+    });
+    // The close button is the dialog's only focusable control — keep Tab on it
+    lightbox.addEventListener('keydown', (e) => {
+        if (e.key === 'Tab' && lightboxClose) {
+            e.preventDefault();
+            lightboxClose.focus();
+        }
     });
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && lightbox.classList.contains('active')) close();
@@ -495,42 +528,56 @@ const contactForm = document.getElementById('contactForm');
 const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzgyqRUmu0d2UFjb0WxbYyoDbO8F9jVnlvIQnNAfMU0v8JFpH5KAefy4z9BNoQqd68/exec';
 
 if (contactForm) {
+    const formStatus = document.getElementById('formStatus');
+
+    const showStatus = (kind, text) => {
+        if (!formStatus) { alert(text); return; }
+        formStatus.hidden = false;
+        formStatus.textContent = text;
+        formStatus.classList.remove('success', 'error');
+        formStatus.classList.add(kind);
+    };
+
     contactForm.addEventListener('submit', async (e) => {
         e.preventDefault();
 
-        const name = document.getElementById('name').value;
-        const email = document.getElementById('email').value;
-        const subject = document.getElementById('subject').value;
-        const message = document.getElementById('message').value;
+        const honeypot = document.getElementById('website');
+        const formData = {
+            name: document.getElementById('name').value.trim(),
+            email: document.getElementById('email').value.trim(),
+            subject: document.getElementById('subject').value.trim(),
+            message: document.getElementById('message').value.trim(),
+            website: honeypot ? honeypot.value : '',
+            submitted_at: new Date().toISOString(),
+            source: 'Portfolio Website'
+        };
 
         const submitBtn = contactForm.querySelector('.btn-submit');
         const originalBtnContent = submitBtn.innerHTML;
 
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<span>Sending...</span><i class="fas fa-spinner fa-spin"></i>';
-
-        const formData = {
-            name: name,
-            email: email,
-            subject: subject,
-            message: message,
-            submitted_at: new Date().toISOString(),
-            source: 'Portfolio Website'
-        };
+        if (formStatus) formStatus.hidden = true;
 
         try {
-            await fetch(GOOGLE_APPS_SCRIPT_URL, {
+            // A plain-string body keeps this a "simple" request — no CORS
+            // preflight, which Apps Script cannot answer — while the followed
+            // redirect still lets us read the JSON status the script returns.
+            const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData),
-                mode: 'no-cors' // Required for Google Apps Script
+                body: JSON.stringify(formData)
             });
+            if (!response.ok) throw new Error('HTTP ' + response.status);
+            const result = await response.json();
+            if (result.status !== 'success') {
+                throw new Error(result.message || 'Submission rejected');
+            }
 
-            alert('✅ Thank you for your message! Your response has been submitted successfully. I will get back to you soon.');
+            showStatus('success', 'Thank you for your message! It has been sent — I will get back to you soon.');
             contactForm.reset();
         } catch (error) {
             console.error('Error submitting form:', error);
-            alert('❌ There was an error submitting your message. Please try again or contact me directly at moseskollehsesay@gmail.com');
+            showStatus('error', 'Something went wrong and your message was not sent. Please try again in a moment, or email me directly at moseskollehsesay@gmail.com.');
         } finally {
             submitBtn.disabled = false;
             submitBtn.innerHTML = originalBtnContent;
@@ -566,17 +613,6 @@ if (currentTheme === 'light') {
     document.body.classList.add('light-mode');
 }
 createThemeToggle();
-
-// ===================================
-// ACCESSIBILITY: SKIP TO CONTENT
-// ===================================
-(() => {
-    const skipLink = document.createElement('a');
-    skipLink.href = '#about';
-    skipLink.textContent = 'Skip to content';
-    skipLink.className = 'skip-link';
-    document.body.insertBefore(skipLink, document.body.firstChild);
-})();
 
 // ===================================
 // KEYBOARD NAVIGATION
@@ -1237,6 +1273,23 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
         input = overlay.querySelector('.ft-input');
         overlay.querySelector('.ft-close').addEventListener('click', close);
         overlay.addEventListener('pointerdown', (e) => { if (e.target === overlay) close(); });
+        // aria-modal promises focus stays inside — trap Tab between the
+        // dialog's two focusable controls (close button and prompt input)
+        overlay.addEventListener('keydown', (e) => {
+            if (e.key !== 'Tab') return;
+            const focusables = [overlay.querySelector('.ft-close'), input]
+                .filter(el => el && !el.disabled);
+            if (!focusables.length) return;
+            const first = focusables[0];
+            const last = focusables[focusables.length - 1];
+            if (e.shiftKey && document.activeElement === first) {
+                e.preventDefault();
+                last.focus();
+            } else if (!e.shiftKey && document.activeElement === last) {
+                e.preventDefault();
+                first.focus();
+            }
+        });
         overlay.querySelector('.ft-line').addEventListener('submit', (e) => {
             e.preventDefault();
             runCommand(input.value);
