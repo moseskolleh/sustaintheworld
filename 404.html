@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 — Dry Hole | Moses Kolleh Sesay</title>
+    <meta name="robots" content="noindex">
+    <link rel="icon" type="image/svg+xml" href="/sustaintheworld/assets/favicon.svg">
+    <meta name="theme-color" content="#0a0a0a">
+    <!-- Self-contained on purpose: a 404 should cost almost nothing to serve.
+         Links use the GitHub Pages project base path; update them if the site
+         moves to a custom domain. -->
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #0a0a0a;
+            color: #ffffff;
+            font-family: 'Space Grotesk', 'Segoe UI', system-ui, sans-serif;
+            padding: 24px;
+        }
+        .wrap {
+            display: flex;
+            gap: 48px;
+            align-items: center;
+            max-width: 720px;
+        }
+        .mono {
+            font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-size: 0.8rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #7CFC00;
+        }
+        h1 {
+            font-size: clamp(1.6rem, 4vw, 2.4rem);
+            margin: 14px 0 16px;
+            line-height: 1.2;
+        }
+        p {
+            color: #b0b0b0;
+            line-height: 1.7;
+            margin-bottom: 24px;
+        }
+        .links { display: flex; flex-wrap: wrap; gap: 12px; }
+        .links a {
+            font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-size: 0.85rem;
+            color: #7CFC00;
+            text-decoration: none;
+            border: 1px solid rgba(124, 252, 0, 0.4);
+            border-radius: 6px;
+            padding: 10px 16px;
+            transition: background 0.2s ease, color 0.2s ease;
+        }
+        .links a:hover, .links a:focus-visible {
+            background: #7CFC00;
+            color: #0a0a0a;
+            outline: none;
+        }
+        .log { flex-shrink: 0; }
+        @media (max-width: 560px) {
+            .wrap { flex-direction: column; gap: 28px; text-align: center; }
+            .links { justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+    <main class="wrap">
+        <!-- A core log of the page you didn't find -->
+        <svg class="log" width="125" height="260" viewBox="0 0 125 260" role="img"
+             aria-label="Borehole core log ending in dry rock">
+            <text x="45" y="14" text-anchor="middle" fill="#7CFC00"
+                  font-family="monospace" font-size="10">BH-404</text>
+            <line x1="10" y1="24" x2="80" y2="24" stroke="#333" stroke-width="1"/>
+            <rect x="30" y="24" width="30" height="52" fill="#2e2119"/>
+            <rect x="30" y="76" width="30" height="58" fill="#26251c"/>
+            <rect x="30" y="134" width="30" height="102" fill="#1c1c1c"/>
+            <line x1="45" y1="24" x2="45" y2="236" stroke="#7CFC00" stroke-width="2"
+                  stroke-dasharray="6 5" opacity="0.7"/>
+            <text x="66" y="55" fill="#666" font-family="monospace" font-size="8">laterite</text>
+            <text x="66" y="108" fill="#666" font-family="monospace" font-size="8">saprolite</text>
+            <text x="66" y="188" fill="#666" font-family="monospace" font-size="8">gabbro</text>
+            <text x="45" y="252" text-anchor="middle" fill="#666"
+                  font-family="monospace" font-size="8">no water. no page.</text>
+        </svg>
+        <div>
+            <p class="mono">error 404 — dry hole</p>
+            <h1>This address came up dry.</h1>
+            <p>The drill went all the way down and found hard gabbro, no water-bearing
+               fracture, and no page. The survey says whatever you were looking for
+               isn't at this URL — the resistivity curve points somewhere else.</p>
+            <nav class="links" aria-label="Places to drill instead">
+                <a href="/sustaintheworld/">&larr; back to the surface</a>
+                <a href="/sustaintheworld/#projects">the project dossiers</a>
+                <a href="/sustaintheworld/field-report.html">8&nbsp;KB field report</a>
+            </nav>
+        </div>
+    </main>
+</body>
+</html>

@@ -202,6 +202,29 @@ print(response.json())
 
 ---
 
+## ♻️ Updating an Existing Deployment
+
+Editing `Code.gs` (or pasting a new version into the Apps Script editor) does
+**not** change the live endpoint by itself. To ship changes:
+
+1. In the Apps Script editor, click **Deploy → Manage deployments**
+2. Select the active deployment, click the ✏️ **Edit** icon
+3. Under **Version**, choose **New version**, then click **Deploy**
+
+The web app URL stays the same, so no site changes are needed.
+
+The current script also includes basic abuse protection, which the website's
+form relies on:
+- **Honeypot**: submissions with a non-empty `website` field are silently
+  dropped (bots fill it; the hidden field on the site stays empty for humans)
+- **Rate limiting**: at most one submission per 15 seconds and 20 per hour
+- **Validation**: name/message required, email format checked, field lengths capped
+- Notification emails go to the owner only, with the sender in `replyTo`
+  (never CC — a public endpoint that CCs arbitrary addresses can be abused
+  to send mail from your account)
+
+---
+
 ## 📞 Support
 
 If you encounter issues:

@@ -43,75 +43,84 @@ function doGet(e) {
   );
 }
 
+var OWNER_EMAIL = "moseskollehsesay@gmail.com";
+
+// Basic abuse protection: the endpoint is public, so cap how fast and how
+// often it will accept submissions (per deployment, via the script cache).
+var MIN_SECONDS_BETWEEN_SUBMISSIONS = 15;
+var MAX_SUBMISSIONS_PER_HOUR = 20;
+
+function jsonResponse(status, message) {
+  return ContentService.createTextOutput(JSON.stringify({
+    'status': status,
+    'message': message
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+function isRateLimited() {
+  var cache = CacheService.getScriptCache();
+  if (cache.get('contact-throttle')) return true;
+
+  var hourCount = parseInt(cache.get('contact-hour-count'), 10) || 0;
+  if (hourCount >= MAX_SUBMISSIONS_PER_HOUR) return true;
+
+  cache.put('contact-throttle', '1', MIN_SECONDS_BETWEEN_SUBMISSIONS);
+  cache.put('contact-hour-count', String(hourCount + 1), 3600);
+  return false;
+}
+
 /**
  * Handles POST requests - Captures form data and saves to Google Sheet
  */
 function doPost(e) {
   try {
-    // Get the sheet with headers
-    var sheet = getSheetWithHeaders();
-
     // Parse the incoming data
     var data = JSON.parse(e.postData.contents);
 
-    // Prepare row data
-    var rowData = [
-      new Date(), // Timestamp
-      data.name || '',
-      data.email || '',
-      data.subject || '',
-      data.message || ''
-    ];
+    // Honeypot: real visitors never see this field. If it's filled, a bot
+    // did it — claim success so it moves on, but record and send nothing.
+    if (data.website) {
+      return jsonResponse('success', 'Response recorded successfully!');
+    }
 
-    // Append the data to the sheet
-    sheet.appendRow(rowData);
+    var name = String(data.name || '').trim().slice(0, 200);
+    var email = String(data.email || '').trim().slice(0, 200);
+    var subject = String(data.subject || '').trim().slice(0, 300);
+    var message = String(data.message || '').trim().slice(0, 5000);
 
-    // Auto-resize columns for better readability
+    if (!name || !message) {
+      return jsonResponse('error', 'Name and message are required.');
+    }
+    var emailLooksValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    if (!emailLooksValid) {
+      return jsonResponse('error', 'Please provide a valid email address.');
+    }
+    if (isRateLimited()) {
+      return jsonResponse('error', 'Too many submissions right now — please try again in a minute.');
+    }
+
+    // Get the sheet with headers and append the submission
+    var sheet = getSheetWithHeaders();
+    sheet.appendRow([new Date(), name, email, subject, message]);
     sheet.autoResizeColumns(1, 5);
-
-    // Send email notification
-    var name = data.name || 'Anonymous';
-    var email = data.email || '';
-    var subject = data.subject || 'No Subject';
-    var message = data.message || '';
-    var timestamp = new Date();
 
     var emailSubject = "New Submission from " + name;
     var emailBody = "Here are the details of the new response:\n\n" +
                     "Name: " + name + "\n" +
                     "Email: " + email + "\n" +
-                    "Subject: " + subject + "\n" +
+                    "Subject: " + (subject || 'No Subject') + "\n" +
                     "Message: " + message + "\n\n" +
-                    "Timestamp: " + timestamp;
+                    "Timestamp: " + new Date();
 
-    // Check if an email was actually provided before trying to CC
-    if (email && email.includes("@")) {
-      MailApp.sendEmail(
-        "moseskollehsesay@gmail.com", // Send to owner
-        emailSubject,
-        emailBody,
-        {
-          cc: email,           // CC the sender
-          replyTo: email       // Allows you to hit "Reply" to email them back directly
-        }
-      );
-    } else {
-      // Fallback: If no valid email was given, just email yourself
-      MailApp.sendEmail("moseskollehsesay@gmail.com", emailSubject, emailBody);
-    }
+    // Notify the owner only. The submitter's address goes in replyTo so a
+    // plain "Reply" reaches them — never CC it, or the public endpoint
+    // becomes a way to send mail to arbitrary addresses from this account.
+    MailApp.sendEmail(OWNER_EMAIL, emailSubject, emailBody, { replyTo: email });
 
-    // Return success response
-    return ContentService.createTextOutput(JSON.stringify({
-      'status': 'success',
-      'message': 'Response recorded successfully!'
-    })).setMimeType(ContentService.MimeType.JSON);
+    return jsonResponse('success', 'Response recorded successfully!');
 
   } catch (error) {
-    // Return error response
-    return ContentService.createTextOutput(JSON.stringify({
-      'status': 'error',
-      'message': error.toString()
-    })).setMimeType(ContentService.MimeType.JSON);
+    return jsonResponse('error', error.toString());
   }
 }
 

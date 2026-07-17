@@ -55,6 +55,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
     <!-- Scroll progress -->
     <div class="scroll-progress" id="scrollProgress"></div>
 
@@ -86,11 +88,11 @@
                 </svg>
                 <span class="logo-text">MK<span class="logo-accent">S</span></span>
             </a>
-            <div class="nav-toggle" id="navToggle" aria-label="Toggle menu">
+            <button type="button" class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="navMenu">
                 <span></span>
                 <span></span>
                 <span></span>
-            </div>
+            </button>
             <ul class="nav-menu" id="navMenu">
                 <li><a href="#journey" class="nav-link"><span class="nav-num">01</span>Journey</a></li>
                 <li><a href="#about" class="nav-link"><span class="nav-num">02</span>About</a></li>
@@ -160,7 +162,7 @@
         </a>
     </header>
 
-    <main>
+    <main id="main">
     <!-- Journey -->
     <section id="journey" class="journey">
         <div class="container">
@@ -238,7 +240,7 @@
             <div class="about-grid">
                 <div class="about-portrait reveal">
                     <div class="portrait-frame">
-                        <img src="assets/img/profile.webp" alt="Moses Kolleh Sesay — Sustainability & Climate Analyst" loading="lazy" width="640" height="640">
+                        <img src="assets/img/profile.webp" alt="Moses Kolleh Sesay — Sustainability & Climate Analyst" loading="lazy" width="640" height="640" decoding="async">
                         <div class="portrait-ring" aria-hidden="true"></div>
                     </div>
                     <div class="portrait-meta">
@@ -444,7 +446,7 @@
                 <article class="project-card reveal" data-project="sustainable-ai">
                     <a href="#" class="project-summary view-details-btn" aria-expanded="false">
                         <div class="project-thumb">
-                            <img src="assets/img/sustainable-ai-3.webp" alt="Moses demonstrating the sustainable AI prototype at the Digital Society School" loading="lazy">
+                            <img src="assets/img/sustainable-ai-3.webp" alt="Moses demonstrating the sustainable AI prototype at the Digital Society School" loading="lazy" width="900" height="675" decoding="async">
                         </div>
                         <div class="project-head">
                             <div class="project-meta">
@@ -488,23 +490,23 @@
                             </div>
                             <div class="project-gallery">
                                 <figure class="gallery-item" data-caption="Gathering public input on AI and energy at the Hogeschool van Amsterdam — testing assumptions with real people, sticky notes and all.">
-                                    <img src="assets/img/sustainable-ai-2.webp" alt="Moses at a public research stand at the Hogeschool van Amsterdam" loading="lazy">
+                                    <img src="assets/img/sustainable-ai-2.webp" alt="Moses at a public research stand at the Hogeschool van Amsterdam" loading="lazy" width="900" height="675" decoding="async">
                                     <figcaption>Public research stand at the Hogeschool van Amsterdam — testing assumptions with real people, sticky notes and all.</figcaption>
                                 </figure>
                                 <figure class="gallery-item" data-caption="Demonstrating an early decision-support prototype at the Digital Society School, Amsterdam.">
-                                    <img src="assets/img/sustainable-ai-3.webp" alt="Moses demonstrating an early prototype on a large screen" loading="lazy">
+                                    <img src="assets/img/sustainable-ai-3.webp" alt="Moses demonstrating an early prototype on a large screen" loading="lazy" width="900" height="675" decoding="async">
                                     <figcaption>Demonstrating an early decision-support prototype at the Digital Society School.</figcaption>
                                 </figure>
                                 <figure class="gallery-item" data-caption="'Dear future, I'm ready' — the research team at the Digital Society School, Amsterdam.">
-                                    <img src="assets/img/sustainable-ai-4.webp" alt="The research team in front of the Digital Society School's 'Dear future, I'm ready' wall" loading="lazy">
+                                    <img src="assets/img/sustainable-ai-4.webp" alt="The research team in front of the Digital Society School's 'Dear future, I'm ready' wall" loading="lazy" width="900" height="675" decoding="async">
                                     <figcaption>"Dear future, I'm ready" — the research team at the Digital Society School.</figcaption>
                                 </figure>
                                 <figure class="gallery-item" data-caption="The framework distilled to five design principles — from 'make the invisible visible' to a clear go/no-go checkpoint.">
-                                    <img src="assets/img/sustainable-ai-6.webp" alt="Five printed cards showing the framework's design principles on wooden stands" loading="lazy">
+                                    <img src="assets/img/sustainable-ai-6.webp" alt="Five printed cards showing the framework's design principles on wooden stands" loading="lazy" width="900" height="675" decoding="async">
                                     <figcaption>The framework distilled to five design principles — from "make the invisible visible" to a clear go/no-go checkpoint.</figcaption>
                                 </figure>
                                 <figure class="gallery-item gallery-item-wide" data-caption="Demo day — putting the decision-support toolkit into visitors' hands at the Digital Society School.">
-                                    <img src="assets/img/sustainable-ai-5.webp" alt="The team behind a demo table with toolkit cards, booklets and screens" loading="lazy">
+                                    <img src="assets/img/sustainable-ai-5.webp" alt="The team behind a demo table with toolkit cards, booklets and screens" loading="lazy" width="900" height="675" decoding="async">
                                     <figcaption>Demo day — putting the decision-support toolkit into visitors' hands.</figcaption>
                                 </figure>
                             </div>
@@ -516,7 +518,7 @@
                 <article class="project-card reveal" data-project="coastal">
                     <a href="#" class="project-summary view-details-btn" aria-expanded="false">
                         <div class="project-thumb">
-                            <img src="assets/img/coastal-pollution-1.webp" alt="Moses presenting the 'Dirty Delta' storyline at Wageningen University" loading="lazy">
+                            <img src="assets/img/coastal-pollution-1.webp" alt="Moses presenting the 'Dirty Delta' storyline at Wageningen University" loading="lazy" width="900" height="675" decoding="async">
                         </div>
                         <div class="project-head">
                             <div class="project-meta">
@@ -558,15 +560,15 @@
                             </div>
                             <div class="project-gallery">
                                 <figure class="gallery-item gallery-item-wide" data-caption="Presenting the pessimistic 'Dirty Delta' storyline — a future scenario for African coastal waters — to my research group at Wageningen University.">
-                                    <img src="assets/img/coastal-pollution-1.webp" alt="Moses presenting the Dirty Delta storyline on a screen" loading="lazy">
+                                    <img src="assets/img/coastal-pollution-1.webp" alt="Moses presenting the Dirty Delta storyline on a screen" loading="lazy" width="900" height="675" decoding="async">
                                     <figcaption>Presenting the pessimistic "Dirty Delta" storyline to my research group at Wageningen University.</figcaption>
                                 </figure>
                                 <figure class="gallery-item" data-caption="The 'Dirty Delta' session from the room — scenario maps of Africa's coasts on screen, the research group around the table.">
-                                    <img src="assets/img/coastal-pollution-2.webp" alt="Wide view of the seminar room during the Dirty Delta presentation" loading="lazy">
+                                    <img src="assets/img/coastal-pollution-2.webp" alt="Wide view of the seminar room during the Dirty Delta presentation" loading="lazy" width="900" height="506" decoding="async">
                                     <figcaption>The same session from the room — scenario maps on screen, research group around the table.</figcaption>
                                 </figure>
                                 <figure class="gallery-item" data-caption="Home base for the thesis years — the Wageningen University campus.">
-                                    <img src="assets/img/coastal-pollution-3.webp" alt="Moses on the Wageningen University campus" loading="lazy">
+                                    <img src="assets/img/coastal-pollution-3.webp" alt="Moses on the Wageningen University campus" loading="lazy" width="900" height="1200" decoding="async">
                                     <figcaption>Home base for the thesis years — the Wageningen campus.</figcaption>
                                 </figure>
                             </div>
@@ -578,7 +580,7 @@
                 <article class="project-card reveal" data-project="wuppertal">
                     <a href="#" class="project-summary view-details-btn" aria-expanded="false">
                         <div class="project-thumb">
-                            <img src="assets/img/wuppertal-resilience-1.webp" alt="The consultancy team riding the Wuppertal Schwebebahn" loading="lazy">
+                            <img src="assets/img/wuppertal-resilience-1.webp" alt="The consultancy team riding the Wuppertal Schwebebahn" loading="lazy" width="900" height="675" decoding="async">
                         </div>
                         <div class="project-head">
                             <div class="project-meta">
@@ -620,23 +622,23 @@
                             </div>
                             <div class="project-gallery">
                                 <figure class="gallery-item" data-caption="Riding the famous Schwebebahn with my interdisciplinary consultancy team during fieldwork in Wuppertal — the very railway our project set out to protect.">
-                                    <img src="assets/img/wuppertal-resilience-1.webp" alt="The consultancy team inside a Schwebebahn cabin" loading="lazy">
+                                    <img src="assets/img/wuppertal-resilience-1.webp" alt="The consultancy team inside a Schwebebahn cabin" loading="lazy" width="900" height="675" decoding="async">
                                     <figcaption>Riding the Schwebebahn with the team — the very railway our project set out to protect.</figcaption>
                                 </figure>
                                 <figure class="gallery-item" data-caption="Mapping the drivers of flood vulnerability — land use, housing inequality, social cohesion — during a stakeholder analysis workshop.">
-                                    <img src="assets/img/wuppertal-resilience-2.webp" alt="Workshop sheet with sticky notes mapping flood vulnerability drivers" loading="lazy">
+                                    <img src="assets/img/wuppertal-resilience-2.webp" alt="Workshop sheet with sticky notes mapping flood vulnerability drivers" loading="lazy" width="900" height="1200" decoding="async">
                                     <figcaption>Mapping the drivers of flood vulnerability during a stakeholder analysis workshop.</figcaption>
                                 </figure>
                                 <figure class="gallery-item gallery-item-tall" data-caption="The Schwebebahn gliding above the Wupper — the century-old suspension railway our project set out to keep dry.">
-                                    <img src="assets/img/wuppertal-resilience-3.webp" alt="A Schwebebahn train suspended above the Wupper river" loading="lazy">
+                                    <img src="assets/img/wuppertal-resilience-3.webp" alt="A Schwebebahn train suspended above the Wupper river" loading="lazy" width="900" height="1200" decoding="async">
                                     <figcaption>The Schwebebahn above the Wupper — the century-old railway our project set out to keep dry.</figcaption>
                                 </figure>
                                 <figure class="gallery-item" data-caption="Talking flood scenarios above the Wupper — the river that flooded catastrophically in July 2021 runs right below the rails.">
-                                    <img src="assets/img/wuppertal-resilience-4.webp" alt="Moses in a Schwebebahn cabin with the Wupper river visible below" loading="lazy">
+                                    <img src="assets/img/wuppertal-resilience-4.webp" alt="Moses in a Schwebebahn cabin with the Wupper river visible below" loading="lazy" width="900" height="675" decoding="async">
                                     <figcaption>Talking flood scenarios above the Wupper — the river runs right below the rails.</figcaption>
                                 </figure>
                                 <figure class="gallery-item gallery-item-wide" data-caption="Fieldwork on foot — tracing flood-prone streets through Wuppertal's centre with the team.">
-                                    <img src="assets/img/wuppertal-resilience-5.webp" alt="The team walking through Wuppertal's city centre during fieldwork" loading="lazy">
+                                    <img src="assets/img/wuppertal-resilience-5.webp" alt="The team walking through Wuppertal's city centre during fieldwork" loading="lazy" width="900" height="675" decoding="async">
                                     <figcaption>Fieldwork on foot — tracing flood-prone streets through Wuppertal's centre.</figcaption>
                                 </figure>
                             </div>
@@ -662,7 +664,7 @@
                 <article class="project-card reveal" data-project="un-disaster">
                     <a href="#" class="project-summary view-details-btn" aria-expanded="false">
                         <div class="project-thumb">
-                            <img src="assets/img/undrr-bonn.webp" alt="The UN Campus tower in Bonn, Germany" loading="lazy">
+                            <img src="assets/img/undrr-bonn.webp" alt="The UN Campus tower in Bonn, Germany" loading="lazy" width="900" height="1200" decoding="async">
                         </div>
                         <div class="project-head">
                             <div class="project-meta">
@@ -703,15 +705,15 @@
                             </div>
                             <div class="project-gallery">
                                 <figure class="gallery-item gallery-item-tall" data-caption="The UN Campus in Bonn, Germany — my base for five months working with the UN Office for Disaster Risk Reduction.">
-                                    <img src="assets/img/undrr-bonn.webp" alt="The UN Campus tower with the UN flag, Bonn" loading="lazy">
+                                    <img src="assets/img/undrr-bonn.webp" alt="The UN Campus tower with the UN flag, Bonn" loading="lazy" width="900" height="1200" decoding="async">
                                     <figcaption>The UN Campus in Bonn — my base for five months with UNDRR.</figcaption>
                                 </figure>
                                 <figure class="gallery-item" data-caption="At the desk in the UN Campus — auditing Caribbean disaster-loss records for the Sendai Framework Monitor.">
-                                    <img src="assets/img/undrr-bonn-2.webp" alt="Moses at his desk in the UN Campus with two monitors showing disaster data" loading="lazy">
+                                    <img src="assets/img/undrr-bonn-2.webp" alt="Moses at his desk in the UN Campus with two monitors showing disaster data" loading="lazy" width="900" height="675" decoding="async">
                                     <figcaption>At the desk — auditing Caribbean disaster-loss records for the Sendai Framework Monitor.</figcaption>
                                 </figure>
                                 <figure class="gallery-item" data-caption="Bonn from the UN Campus tower — the former government quarter, now Germany's UN city.">
-                                    <img src="assets/img/undrr-bonn-3.webp" alt="View over Bonn from the UN Campus tower" loading="lazy">
+                                    <img src="assets/img/undrr-bonn-3.webp" alt="View over Bonn from the UN Campus tower" loading="lazy" width="900" height="675" decoding="async">
                                     <figcaption>Bonn from the UN Campus tower.</figcaption>
                                 </figure>
                             </div>
@@ -723,7 +725,7 @@
                 <article class="project-card reveal" data-project="water-management">
                     <a href="#" class="project-summary view-details-btn" aria-expanded="false">
                         <div class="project-thumb">
-                            <img src="assets/img/soft-path-3.webp" alt="Moses defending his master's thesis at Hunan University" loading="lazy">
+                            <img src="assets/img/soft-path-3.webp" alt="Moses defending his master's thesis at Hunan University" loading="lazy" width="900" height="675" decoding="async">
                         </div>
                         <div class="project-head">
                             <div class="project-meta">
@@ -765,23 +767,23 @@
                             </div>
                             <div class="project-gallery">
                                 <figure class="gallery-item gallery-item-wide" data-caption="Defending the thesis — 'Approach for soft path water management: thinking beyond cement, steel and pipes' — at Hunan University, May 2021.">
-                                    <img src="assets/img/soft-path-3.webp" alt="Moses presenting his master's defense at Hunan University" loading="lazy">
+                                    <img src="assets/img/soft-path-3.webp" alt="Moses presenting his master's defense at Hunan University" loading="lazy" width="900" height="675" decoding="async">
                                     <figcaption>Defending the thesis at Hunan University, May 2021.</figcaption>
                                 </figure>
                                 <figure class="gallery-item" data-caption="Graduation day at Hunan University — the close of two years in China on a full MOFCOM scholarship.">
-                                    <img src="assets/img/soft-path-2.webp" alt="Moses in graduation gown at Hunan University" loading="lazy">
+                                    <img src="assets/img/soft-path-2.webp" alt="Moses in graduation gown at Hunan University" loading="lazy" width="900" height="1200" decoding="async">
                                     <figcaption>Graduation day at Hunan University.</figcaption>
                                 </figure>
                                 <figure class="gallery-item" data-caption="At the table — representing graduate researchers at Hunan University.">
-                                    <img src="assets/img/soft-path-4.webp" alt="Moses seated at a conference table with his name plate" loading="lazy">
+                                    <img src="assets/img/soft-path-4.webp" alt="Moses seated at a conference table with his name plate" loading="lazy" width="900" height="1200" decoding="async">
                                     <figcaption>At the table — representing graduate researchers at Hunan University.</figcaption>
                                 </figure>
                                 <figure class="gallery-item" data-caption="Graduation day with the international cohort at Hunan University.">
-                                    <img src="assets/img/soft-path-5.webp" alt="Graduates in blue gowns at Hunan University" loading="lazy">
+                                    <img src="assets/img/soft-path-5.webp" alt="Graduates in blue gowns at Hunan University" loading="lazy" width="900" height="675" decoding="async">
                                     <figcaption>Graduation day with the international cohort at Hunan University.</figcaption>
                                 </figure>
                                 <figure class="gallery-item" data-caption="An industrial-equipment expo during the Hunan years — the engineering half of the dual-master's story.">
-                                    <img src="assets/img/soft-path-6.webp" alt="Moses with a colleague at an industrial equipment expo in China" loading="lazy">
+                                    <img src="assets/img/soft-path-6.webp" alt="Moses with a colleague at an industrial equipment expo in China" loading="lazy" width="900" height="1200" decoding="async">
                                     <figcaption>An industrial-equipment expo during the Hunan years — the engineering half of the story.</figcaption>
                                 </figure>
                             </div>
@@ -793,7 +795,7 @@
                 <article class="project-card reveal" data-project="groundwater">
                     <a href="#" class="project-summary view-details-btn" aria-expanded="false">
                         <div class="project-thumb">
-                            <img src="assets/img/groundwater-mapping-1.webp" alt="A successful borehole striking water in rural Sierra Leone" loading="lazy">
+                            <img src="assets/img/groundwater-mapping-1.webp" alt="A successful borehole striking water in rural Sierra Leone" loading="lazy" width="900" height="675" decoding="async">
                         </div>
                         <div class="project-head">
                             <div class="project-meta">
@@ -835,19 +837,19 @@
                             </div>
                             <div class="project-gallery">
                                 <figure class="gallery-item" data-caption="Striking water — a successful borehole comes to life in rural Sierra Leone. Moments like this are why the mapping matters.">
-                                    <img src="assets/img/groundwater-mapping-1.webp" alt="Water gushing from a freshly drilled borehole" loading="lazy">
+                                    <img src="assets/img/groundwater-mapping-1.webp" alt="Water gushing from a freshly drilled borehole" loading="lazy" width="900" height="675" decoding="async">
                                     <figcaption>Striking water — a successful borehole comes to life in rural Sierra Leone.</figcaption>
                                 </figure>
                                 <figure class="gallery-item" data-caption="On site with the drilling crew — geophysics turned into clean water.">
-                                    <img src="assets/img/groundwater-mapping-2.webp" alt="Moses on site with the drilling crew" loading="lazy">
+                                    <img src="assets/img/groundwater-mapping-2.webp" alt="Moses on site with the drilling crew" loading="lazy" width="900" height="1200" decoding="async">
                                     <figcaption>On site with the drilling crew — geophysics turned into clean water.</figcaption>
                                 </figure>
                                 <figure class="gallery-item" data-caption="Electrical-resistivity survey in progress — cable reels and electrodes deciding where the drill bit goes.">
-                                    <img src="assets/img/groundwater-mapping-3.webp" alt="Survey crew with resistivity cable reels and instruments in a field" loading="lazy">
+                                    <img src="assets/img/groundwater-mapping-3.webp" alt="Survey crew with resistivity cable reels and instruments in a field" loading="lazy" width="900" height="675" decoding="async">
                                     <figcaption>Electrical-resistivity survey in progress — deciding where the drill bit goes.</figcaption>
                                 </figure>
                                 <figure class="gallery-item" data-caption="The drilling crew — the people who turn a resistivity curve into a working water point.">
-                                    <img src="assets/img/groundwater-mapping-4.webp" alt="The drilling crew in hard hats in front of the rig" loading="lazy">
+                                    <img src="assets/img/groundwater-mapping-4.webp" alt="The drilling crew in hard hats in front of the rig" loading="lazy" width="900" height="675" decoding="async">
                                     <figcaption>The drilling crew — the people who turn a resistivity curve into a working water point.</figcaption>
                                 </figure>
                             </div>
@@ -1217,10 +1219,16 @@
                             <textarea id="message" name="message" rows="5" placeholder=" " required></textarea>
                             <label for="message">Message</label>
                         </div>
+                        <!-- Honeypot: humans never see this field; bots that fill it are dropped server-side -->
+                        <div class="form-group form-group-hp" aria-hidden="true">
+                            <label for="website">Leave this field empty</label>
+                            <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
+                        </div>
                         <button type="submit" class="btn btn-primary btn-submit">
                             <span>Send Message</span>
                             <i class="fas fa-paper-plane"></i>
                         </button>
+                        <p class="form-status" id="formStatus" role="status" hidden></p>
                     </form>
                 </div>
             </div>
