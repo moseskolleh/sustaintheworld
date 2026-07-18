@@ -5,6 +5,17 @@
     const preloader = document.getElementById('preloader');
     if (!preloader) return;
 
+    const wipe = () => preloader.remove();
+    const reduce = typeof window.matchMedia === 'function' &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // Reduced-motion visitors, and anyone who has already seen the intro this
+    // session, skip it entirely — no fake loading bar in front of static HTML.
+    let seen = false;
+    try { seen = sessionStorage.getItem('mks-intro-seen'); } catch (e) { /* private mode */ }
+    if (reduce || seen) { wipe(); return; }
+    try { sessionStorage.setItem('mks-intro-seen', '1'); } catch (e) { /* ignore */ }
+
     const coordsEl = document.getElementById('preloaderCoords');
     const journey = [
         '8.4657° N, 13.2317° W',   // Freetown
@@ -22,16 +33,17 @@
     const hide = () => {
         clearInterval(ticker);
         preloader.style.opacity = '0';
-        setTimeout(() => preloader.remove(), 500);
+        setTimeout(wipe, 400);
     };
 
-    if (document.readyState === 'complete') {
-        setTimeout(hide, 600);
+    // Reveal as soon as the DOM is parsed — don't wait on every image to load.
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', hide);
     } else {
-        window.addEventListener('load', () => setTimeout(hide, 600));
-        // Safety net: never trap the visitor behind the preloader
-        setTimeout(hide, 4000);
+        hide();
     }
+    // Safety net: never trap the visitor behind the preloader.
+    setTimeout(hide, 2500);
 })();
 
 // ===================================
@@ -78,52 +90,12 @@ if (document.readyState === 'complete') {
 }
 
 // ===================================
-// TYPEWRITER ROLES
+// HERO SUBTITLE
 // ===================================
-(() => {
-    const el = document.getElementById('typewriter');
-    if (!el) return;
-
-    const roles = [
-        'Sustainability & Climate Analyst',
-        'Geologist by training',
-        'Water systems specialist',
-        'ESG & climate-risk analyst',
-        'Sustainable AI researcher'
-    ];
-    let roleIndex = 0;
-    let charIndex = roles[0].length;
-    let deleting = true;
-
-    const tick = () => {
-        if (document.body.classList.contains('eco-mode')) {
-            setTimeout(tick, 4000);
-            return;
-        }
-        const current = roles[roleIndex];
-
-        if (deleting) {
-            charIndex--;
-            el.textContent = current.slice(0, charIndex);
-            if (charIndex === 0) {
-                deleting = false;
-                roleIndex = (roleIndex + 1) % roles.length;
-            }
-            setTimeout(tick, 32);
-        } else {
-            charIndex++;
-            el.textContent = roles[roleIndex].slice(0, charIndex);
-            if (charIndex === roles[roleIndex].length) {
-                deleting = true;
-                setTimeout(tick, 2600);
-            } else {
-                setTimeout(tick, 65);
-            }
-        }
-    };
-
-    setTimeout(tick, 2600);
-})();
+// The role label is intentionally static. A stable, always-legible identity
+// protects the critical first impression — the old typewriter could be caught
+// mid-deletion on first paint — and keeps first-viewport motion reserved for
+// the signature scroll-driven moments (journey map, core log, borehole).
 
 // ===================================
 // SMOOTH SCROLLING & NAVIGATION
@@ -1462,4 +1434,37 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
         const scene = svg.querySelector('#mapScene') || svg;
         scene.appendChild(g);
     });
+})();
+
+// ===================================
+// CONVERSION ANALYTICS (privacy-first, provider-agnostic)
+// ===================================
+// A tiny dispatcher that fires named events on the key conversion actions
+// (contact, email, CV download) into whichever cookieless analytics provider
+// is enabled in index.html's <head>. It is a no-op until you turn one on, so it
+// never transmits anything on its own and needs no cookie-consent banner.
+(() => {
+    const track = (name) => {
+        if (!name) return;
+        try {
+            if (typeof window.plausible === 'function') {
+                window.plausible(name);
+            } else if (typeof window.gtag === 'function') {
+                window.gtag('event', name);
+            } else if (Array.isArray(window.dataLayer)) {
+                window.dataLayer.push({ event: name });
+            }
+        } catch (e) { /* analytics must never break the page */ }
+    };
+    window.trackEvent = track;
+
+    // Delegated: anything carrying data-analytics reports itself on click.
+    document.addEventListener('click', (e) => {
+        const el = e.target.closest('[data-analytics]');
+        if (el) track(el.getAttribute('data-analytics'));
+    });
+
+    // A contact-form submission is the primary conversion goal.
+    const form = document.getElementById('contactForm');
+    if (form) form.addEventListener('submit', () => track('contact-form-submit'));
 })();
