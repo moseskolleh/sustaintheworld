@@ -11,6 +11,11 @@
     --text-secondary: #b0b0b0;
     --accent-color: #7CFC00;
     --hover-color: #9FFF4D;
+    /* Feature accents — theme-aware so they keep contrast in light mode */
+    --accent-amber: #f2b705;
+    --accent-blue: #2ea3e0;
+    --accent-salmon: #e07a5f;
+    --accent-emerald: #3ad07a;
     --line-color: rgba(124, 252, 0, 0.18);
     --line-soft: rgba(124, 252, 0, 0.08);
     --transition: all 0.3s ease;
@@ -34,6 +39,11 @@ body.light-mode {
     --text-secondary: #54584f;
     --accent-color: #1a7a1a;
     --hover-color: #146414;
+    /* Darker accent variants that clear 4.5:1 on the light background */
+    --accent-amber: #8a6100;
+    --accent-blue: #1c6fa6;
+    --accent-salmon: #b0442c;
+    --accent-emerald: #157f43;
     --line-color: rgba(34, 139, 34, 0.25);
     --line-soft: rgba(34, 139, 34, 0.1);
     --box-shadow: 0 8px 30px rgba(34, 139, 34, 0.1);
@@ -598,7 +608,7 @@ body.light-mode .navbar {
 .receipt-row span:last-child { white-space: nowrap; }
 .receipt-center { text-align: center; }
 .receipt-strong { font-weight: 700; }
-.receipt-dim { color: #8a8577; font-size: 11px; }
+.receipt-dim { color: #6b665a; font-size: 11px; }
 .receipt-divider { border-top: 1px dashed #b7b1a1; margin: 8px 0; }
 .receipt-barcode { letter-spacing: 1px; margin-top: 6px; }
 .receipt-download { margin-top: 16px; }
@@ -620,6 +630,11 @@ body.light-mode .navbar {
 .ydi-svg { width: 100%; height: auto; display: block; }
 
 .ydi-hit { cursor: crosshair; touch-action: none; pointer-events: all; }
+.ydi-hit:focus { outline: none; }
+.ydi-svg.ydi-kbd { outline: 2px solid var(--primary-green); outline-offset: 3px; border-radius: 4px; }
+.ydi-cursor { fill: none; stroke: var(--accent-amber); stroke-width: 2.5; opacity: 0; pointer-events: none; }
+.ydi-svg.ydi-kbd .ydi-cursor { opacity: 1; }
+.ydi-svg.revealed .ydi-cursor { opacity: 0; }
 
 .ydi-grid { stroke: var(--line-soft); stroke-width: 1; }
 .ydi-divider { stroke: var(--line-color); stroke-width: 1; stroke-dasharray: 3 4; }
@@ -638,8 +653,8 @@ body.light-mode .navbar {
 .ydi-known-line { fill: none; stroke: var(--text-secondary); stroke-width: 2.5; }
 .ydi-known-dot { fill: var(--text-primary); }
 
-.ydi-guess-line { fill: none; stroke: #f2b705; stroke-width: 2.5; stroke-dasharray: 5 5; }
-.ydi-guess-dot { fill: #f2b705; }
+.ydi-guess-line { fill: none; stroke: var(--accent-amber); stroke-width: 2.5; stroke-dasharray: 5 5; }
+.ydi-guess-dot { fill: var(--accent-amber); }
 
 .ydi-real-line { fill: none; stroke: var(--primary-green); stroke-width: 2.5; opacity: 0; transition: opacity 0.5s ease; }
 .ydi-svg.revealed .ydi-real-line { opacity: 1; }
@@ -711,8 +726,8 @@ body.light-mode .navbar {
 }
 
 .strike-cell.water {
-    background: #2ea3e0;
-    border-color: #2ea3e0;
+    background: var(--accent-blue);
+    border-color: var(--accent-blue);
     box-shadow: 0 0 6px rgba(46, 163, 224, 0.45);
 }
 
@@ -732,7 +747,7 @@ body.light-mode .navbar {
     max-width: 440px;
     margin: 6px 0 12px;
 }
-.strike-control input[type="range"] { flex: 1; accent-color: #2ea3e0; cursor: pointer; }
+.strike-control input[type="range"] { flex: 1; accent-color: var(--accent-blue); cursor: pointer; }
 .strike-control label { flex-shrink: 0; }
 .strike-out { color: var(--primary-green); font-family: var(--font-mono); min-width: 3.5ch; }
 
@@ -774,13 +789,13 @@ body.light-mode .navbar {
 
 .anatomy-ribbon { opacity: 0.5; }
 .anatomy-ribbon.r0 { fill: var(--primary-green); }
-.anatomy-ribbon.r1 { fill: #f2b705; }
-.anatomy-ribbon.r2 { fill: #2ea3e0; }
+.anatomy-ribbon.r1 { fill: var(--accent-amber); }
+.anatomy-ribbon.r2 { fill: var(--accent-blue); }
 
 .anatomy-t-title { font-family: var(--font-display); font-weight: 600; font-size: 13px; fill: var(--text-primary); }
 .anatomy-t-title.r0 { fill: var(--primary-green); }
-.anatomy-t-title.r1 { fill: #d99a00; }
-.anatomy-t-title.r2 { fill: #2ea3e0; }
+.anatomy-t-title.r1 { fill: var(--accent-amber); }
+.anatomy-t-title.r2 { fill: var(--accent-blue); }
 .anatomy-t-val { font-family: var(--font-mono); font-size: 14px; fill: var(--text-primary); }
 .anatomy-t-esrs { font-family: var(--font-mono); font-size: 10.5px; fill: var(--text-secondary); letter-spacing: 0.03em; }
 
@@ -837,12 +852,12 @@ body.light-mode .navbar {
 }
 .assay-grade p { color: var(--text-primary); }
 .assay-grade-tag { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; letter-spacing: 0.02em; }
-.assay-grade-high { border-left-color: #3ad07a; }
-.assay-grade-high .assay-grade-tag { color: #3ad07a; }
-.assay-grade-workable { border-left-color: #f2b705; }
-.assay-grade-workable .assay-grade-tag { color: #f2b705; }
-.assay-grade-marginal { border-left-color: #e07a5f; }
-.assay-grade-marginal .assay-grade-tag { color: #e07a5f; }
+.assay-grade-high { border-left-color: var(--accent-emerald); }
+.assay-grade-high .assay-grade-tag { color: var(--accent-emerald); }
+.assay-grade-workable { border-left-color: var(--accent-amber); }
+.assay-grade-workable .assay-grade-tag { color: var(--accent-amber); }
+.assay-grade-marginal { border-left-color: var(--accent-salmon); }
+.assay-grade-marginal .assay-grade-tag { color: var(--accent-salmon); }
 
 .assay-map-h, .assay-gaps-h { margin-bottom: 10px; color: var(--text-secondary); }
 .assay-row {

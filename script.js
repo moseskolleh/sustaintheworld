@@ -1492,7 +1492,7 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
           syn: ['csrd', 'esrs', 'sustainability report', 'non-financial report', 'disclosure', 'gri', 'sasb', 'ifrs s1', 'ifrs s2', 'tcfd', 'tnfd', 'cdp', 'sbti', 'reporting standard'],
           ev: ['Framed sustainable-AI work against CSRD/ESRS disclosure logic', 'Fluent across IFRS S1&S2, SASB, GRI, TCFD, TNFD, CDP, SBTi'] },
         { label: 'GHG accounting & carbon footprinting',
-          syn: ['ghg', 'greenhouse gas', 'scope 1', 'scope 2', 'scope 3', 'carbon account', 'carbon footprint', 'emissions inventory', 'ghg protocol', 'life cycle', 'lca'],
+          syn: ['ghg', 'greenhouse gas', 'scope 1', 'scope 2', 'scope 3', 'carbon accounting', 'carbon footprint', 'emissions inventory', 'ghg protocol', 'life cycle', 'lca'],
           ev: ['GHG accounting across Scope 1–3', 'Mapped generative-AI footprint from Scope 2 electricity to Scope 3 hardware and cooling water', 'Life Cycle Assessment'] },
         { label: 'Climate risk, adaptation & disaster resilience',
           syn: ['climate risk', 'climate adaptation', 'resilience', 'physical risk', 'transition risk', 'disaster risk', 'hazard', 'vulnerability', 'sendai'],
@@ -1501,10 +1501,10 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
           syn: ['water', 'wash', 'hydrogeology', 'groundwater', 'aquifer', 'borehole', 'water resource', 'drinking water', 'hydrology', 'sanitation'],
           ev: ['Delivered 164 water points across Sierra Leone', '70% aquifer strike rate using electrical-resistivity surveys', 'Groundwater potential mapping of the Freetown Complex'] },
         { label: 'GIS & geospatial analysis',
-          syn: ['gis', 'qgis', 'arcgis', 'geospatial', 'spatial analysis', 'remote sensing', 'cartograph'],
+          syn: ['gis', 'qgis', 'arcgis', 'geospatial', 'spatial analysis', 'remote sensing', 'cartography', 'mapping'],
           ev: ['QGIS mapping that struck water 7 in 10', 'Produced groundwater-potential maps that guided drilling'] },
         { label: 'Data analysis & visualization',
-          syn: ['python', 'data analysis', 'data analytics', 'pandas', 'sql', 'statistic', 'tableau', 'power bi', 'data visual', 'r programming'],
+          syn: ['python', 'data analysis', 'data analytics', 'pandas', 'sql', 'statistic', 'tableau', 'power bi', 'data visualization', 'data visualisation', 'r programming'],
           ev: ['Python for river-export pollution analysis', 'Tableau & Power BI', 'Google Advanced Data Analytics certificate'] },
         { label: 'Sustainable AI & AI governance',
           syn: ['sustainable ai', 'ai governance', 'responsible ai', 'ai ethics', 'green ai', 'ai sustainability', 'generative ai', 'llm', 'machine learning'],
@@ -1513,10 +1513,10 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
           syn: ['pollution', 'water quality', 'contamination', 'nutrient', 'nitrogen', 'effluent', 'catchment', 'watershed', 'eutrophication'],
           ev: ['MARINA-Multi pollution modeling across 10,226 sub-basins', 'River-export pollution analysis'] },
         { label: 'Stakeholder engagement & facilitation',
-          syn: ['stakeholder', 'facilitation', 'workshop', 'engagement', 'cross-functional', 'interdisciplinary', 'capacity building', 'collaborat'],
+          syn: ['stakeholder', 'facilitation', 'workshop', 'engagement', 'cross-functional', 'interdisciplinary', 'capacity building', 'collaboration', 'collaborative'],
           ev: ['Interdisciplinary consultancy for the Municipality of Wuppertal', 'Led drilling crews and community water projects'] },
         { label: 'International & cross-cultural work',
-          syn: ['international', 'multicultural', 'cross-cultural', 'multilingual', 'global south', 'developing countr', 'emerging market', 'fieldwork'],
+          syn: ['international', 'multicultural', 'cross-cultural', 'multilingual', 'global south', 'developing country', 'developing countries', 'emerging market', 'fieldwork'],
           ev: ['Worked across three continents — Sierra Leone, China, Germany & the Netherlands', 'MOFCOM scholarship in China'] },
         { label: 'Applied research & methodology',
           syn: ['research', 'thesis', 'peer-review', 'methodology', 'literature review', 'academic research', 'msc'],
@@ -1527,7 +1527,7 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
     const GAPS = [
         { syn: ['10+ years', '10 years', '12 years', '15 years', '20 years', 'senior director', 'head of sustainability', 'vice president', 'principal consultant', 'director of'],
           note: 'Seniority: early-career — strongest as a fast-growing analyst/specialist, not a 10+-year lead.' },
-        { syn: ['financial model', 'valuation', 'cfa', 'equity research', 'fp&a', 'p&l ownership'],
+        { syn: ['financial model', 'financial modeling', 'financial modelling', 'valuation', 'cfa', 'equity research', 'fp&a', 'p&l ownership'],
           note: 'Financial modeling isn’t the core strength — the numbers here are environmental, not financial.' },
         { syn: ['sphera', 'persefoni', 'workiva', 'enablon', 'novisto', 'watershed platform'],
           note: 'Hasn’t used that specific enterprise platform — but the underlying GHG/ESRS logic transfers directly.' },
@@ -1547,6 +1547,7 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
         result.hidden = false;
         if (text.trim().length < 20) {
             result.innerHTML = '<p class="assay-empty">Paste a few lines of the job description and I’ll grade the fit.</p>';
+            if (clearBtn) clearBtn.hidden = true;
             return;
         }
         const matched = STRENGTHS.filter(t => hit(text, t.syn));
@@ -1626,9 +1627,12 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
     sel.value = DATA.MODELS['gpt-4o'] ? 'gpt-4o' : DATA.HOMEPAGE_MODELS[0];
 
     const compute = (key) => {
-        const wh = DATA.MODELS[key].energyPer1kTokens_Wh * (TOKENS / 1000) * PUE;
+        const infWh = DATA.MODELS[key].energyPer1kTokens_Wh * (TOKENS / 1000); // inference energy
+        const wh = infWh * PUE;                                                // facility energy (grid + cooling overhead)
         const kwh = wh / 1000;
-        return { scope2: kwh * GRID.intensity, scope3: wh * EMBODIED_G_PER_WH, water: kwh * WUE * 1000 };
+        // Embodied hardware scales with the chips' compute, not facility overhead,
+        // so Scope 3 uses pre-PUE inference energy (matching the coefficient's basis).
+        return { scope2: kwh * GRID.intensity, scope3: infWh * EMBODIED_G_PER_WH, water: kwh * WUE * 1000 };
     };
     const fmt = (n) => (n === 0 ? '0' : n >= 1 ? n.toFixed(2) : n >= 0.001 ? n.toFixed(3) : '<0.001');
 
@@ -1705,6 +1709,9 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
         const dry = N - rate;
         const moreThanBlind = rate - 30;
         if (out) out.textContent = rate + '%';
+        // Announce a meaningful value on the slider itself instead of spamming a
+        // live region on every 1% step.
+        slider.setAttribute('aria-valuetext', `${rate}% strike rate — ${rate} of 100 boreholes strike water`);
         let msg = `<strong>${rate} of 100</strong> boreholes strike water — <strong>${dry}</strong> come up dry.`;
         if (rate <= 32) {
             msg += ' Blind drilling in hard rock: about 7 in 10 are dry holes a community paid for.';
@@ -1751,7 +1758,7 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
     const W = 640, H = 380;
     const M = { l: 58, r: 18, t: 26, b: 86 };
     const plotW = W - M.l - M.r, plotH = H - M.t - M.b;
-    const yMax = 1.3;
+    const yMax = 1.6;
     const xAt = (i) => M.l + (i / (n - 1)) * plotW;
     const yAt = (wh) => M.t + (1 - Math.min(wh, yMax) / yMax) * plotH;
     const whAtY = (y) => Math.max(0, Math.min(yMax, (1 - (y - M.t) / plotH) * yMax));
@@ -1761,7 +1768,7 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
     let interacted = false;
 
     // --- static layer: gridlines + y labels ---
-    [0, 0.5, 1.0].forEach(v => {
+    [0, 0.5, 1.0, 1.5].forEach(v => {
         const y = yAt(v);
         svg.appendChild(mk('line', { x1: M.l, y1: y, x2: W - M.r, y2: y, class: 'ydi-grid' }));
         const t = mk('text', { x: M.l - 10, y: y + 4, class: 'ydi-axis-label', 'text-anchor': 'end' });
@@ -1815,10 +1822,17 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
     };
     drawGuess();
 
-    // --- interaction ---
+    // --- interaction (pointer + keyboard) ---
+    let cursor = KNOWN;
+    const cursorRing = mk('circle', { class: 'ydi-cursor', r: 9, cx: xAt(cursor), cy: yAt(guess[cursor]) });
+    svg.appendChild(cursorRing);
     const hit = mk('rect', { x: M.l, y: M.t, width: plotW, height: plotH, class: 'ydi-hit', fill: 'transparent' });
+    hit.setAttribute('tabindex', '0');
+    hit.setAttribute('role', 'application');
+    hit.setAttribute('aria-label', 'Draw your prediction: left/right arrows move between models, up/down arrows raise or lower the guessed energy, Enter reveals the real curve. The Reveal button and the data table below are equivalent.');
     svg.appendChild(hit);
 
+    const markInteracted = () => { if (!interacted) { interacted = true; if (hintEl) hintEl.style.opacity = '0'; } };
     const toLocal = (evt) => {
         const rect = svg.getBoundingClientRect();
         return { x: (evt.clientX - rect.left) / rect.width * W, y: (evt.clientY - rect.top) / rect.height * H };
@@ -1828,8 +1842,9 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
         let i = Math.round((p.x - M.l) / plotW * (n - 1));
         i = Math.max(KNOWN, Math.min(n - 1, i));
         guess[i] = whAtY(p.y);
+        cursor = i;
         drawGuess();
-        if (!interacted) { interacted = true; if (hintEl) hintEl.style.opacity = '0'; }
+        markInteracted();
     };
     let dragging = false;
     hit.addEventListener('pointerdown', (e) => {
@@ -1840,6 +1855,30 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
     });
     hit.addEventListener('pointermove', (e) => { if (dragging) { paint(toLocal(e)); e.preventDefault(); } });
     window.addEventListener('pointerup', () => { dragging = false; });
+    window.addEventListener('pointercancel', () => { dragging = false; });
+
+    const moveCursor = () => {
+        cursorRing.setAttribute('cx', xAt(cursor));
+        cursorRing.setAttribute('cy', yAt(guess[cursor]));
+        hit.setAttribute('aria-valuetext', `${models[cursor].short}: your guess ${guess[cursor].toFixed(2)} Wh per answer`);
+    };
+    hit.addEventListener('focus', () => { svg.classList.add('ydi-kbd'); moveCursor(); });
+    hit.addEventListener('blur', () => { svg.classList.remove('ydi-kbd'); });
+    hit.addEventListener('keydown', (e) => {
+        if (revealed) return;
+        const step = yMax / 24;
+        const k = e.key;
+        if (k === 'ArrowLeft') cursor = Math.max(KNOWN, cursor - 1);
+        else if (k === 'ArrowRight') cursor = Math.min(n - 1, cursor + 1);
+        else if (k === 'ArrowUp') guess[cursor] = Math.min(yMax, guess[cursor] + step);
+        else if (k === 'ArrowDown') guess[cursor] = Math.max(0, guess[cursor] - step);
+        else if (k === 'Enter' || k === ' ') { doReveal(); e.preventDefault(); return; }
+        else return;
+        e.preventDefault();
+        markInteracted();
+        drawGuess();
+        moveCursor();
+    });
 
     // --- reveal ---
     const doReveal = () => {
@@ -1856,14 +1895,16 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
         if (resetBtn) resetBtn.hidden = false;
         revealBtn.hidden = true;
 
-        const gWh = guess[n - 1];
+        const gWh = Math.max(guess[n - 1], 0);
         const rWh = models[n - 1].wh;
         const tiny = models[0].wh;
         const factorFrontier = Math.round(rWh / tiny);
         let msg;
-        if (gWh > 0 && rWh / gWh >= 1.3) {
+        if (gWh < 0.02) {
+            msg = `You put the biggest model near zero — it's actually ${rWh.toFixed(2)} Wh, a dramatic underestimate of the frontier.`;
+        } else if (rWh / gWh >= 1.3) {
             msg = `You put the biggest model at ~${gWh.toFixed(2)} Wh. It's actually ${rWh.toFixed(2)} Wh — you underestimated the frontier by ${(rWh / gWh).toFixed(1)}×.`;
-        } else if (gWh > 0 && gWh / rWh >= 1.3) {
+        } else if (gWh / rWh >= 1.3) {
             msg = `You had the frontier at ~${gWh.toFixed(2)} Wh; it's actually ${rWh.toFixed(2)} Wh — an overestimate of ${(gWh / rWh).toFixed(1)}×.`;
         } else {
             msg = `Close — you had the frontier near ${gWh.toFixed(2)} Wh; it's ${rWh.toFixed(2)} Wh.`;
@@ -2029,7 +2070,7 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
         ctx.textBaseline = 'middle';
         let y = padY + lh / 2;
         lines.forEach(ln => {
-            ctx.fillStyle = ln.dim ? '#8a8577' : '#1a1a1a';
+            ctx.fillStyle = ln.dim ? '#6b665a' : '#1a1a1a';
             ctx.font = `${ln.b ? '700' : '400'} 13px 'IBM Plex Mono', ui-monospace, monospace`;
             if (ln.t === 'd') {
                 ctx.strokeStyle = '#b7b1a1';
