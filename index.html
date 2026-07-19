@@ -51,9 +51,14 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <!-- Preload the hero (LCP) image so first paint doesn't wait to discover it in CSS -->
+    <link rel="preload" as="image" href="assets/img/groundwater-mapping-1-hero.webp" fetchpriority="high">
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Icon font is non-critical: load it without blocking first paint -->
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
 
     <!-- Cookieless analytics (no consent banner needed). Pick ONE and uncomment.
          Custom events (contact / CV / email clicks) are wired up in script.js and
@@ -1045,6 +1050,20 @@
         </div>
     </section>
 
+    <!-- Mid-scroll conversion band -->
+    <div class="cta-band reveal">
+        <div class="container cta-band-inner">
+            <div class="cta-band-copy">
+                <span class="mono-label">Seen enough?</span>
+                <p>If your team is working on climate, water, or the footprint of AI, let's talk.</p>
+            </div>
+            <div class="cta-band-actions">
+                <a href="#contact" class="btn btn-primary" data-analytics="contact-band">Get in touch <i class="fas fa-arrow-right"></i></a>
+                <a href="assets/Moses_Kolleh_Sesay_CV.pdf" class="btn btn-secondary" download data-analytics="cv-download-band"><i class="fas fa-file-arrow-down"></i> Download CV</a>
+            </div>
+        </div>
+    </div>
+
     <!-- Education -->
     <section id="education" class="education">
         <div class="container">
@@ -1271,11 +1290,12 @@
                     <button class="carbon-badge-info" id="carbonInfoBtn" aria-label="How this is calculated" aria-expanded="false">?</button>
                 </div>
                 <div class="carbon-method" id="carbonMethod" hidden>
-                    <p>Measured live in your browser: every byte this page transferred (via the Resource Timing API), converted with the
+                    <p>Measured live in your browser via the Resource Timing API: each asset's transferred size, or its compressed size when served from cache &mdash; so a repeat visit is never flattered into looking lighter than it is. Converted with the
                     <a href="https://sustainablewebdesign.org/estimating-digital-emissions/" target="_blank" rel="noopener">Sustainable Web Design model</a>
-                    (&asymp;0.36&nbsp;g CO&#8322;e per MB transferred, global average grid). Comparison point: the median web page ships &asymp;2.5&nbsp;MB
+                    (&asymp;0.36&nbsp;g CO&#8322;e per MB, global average grid). Comparison point: the median web page ships &asymp;2.5&nbsp;MB
                     (<a href="https://httparchive.org/reports/page-weight" target="_blank" rel="noopener">HTTP Archive</a>).
-                    Before this redesign, this page shipped ~25&nbsp;MB of images; it now ships a fraction of that — the site practises the sustainable-computing research it presents.
+                    A leading &ldquo;+&rdquo; means a third-party file served without timing headers couldn&rsquo;t be measured, so the true figure is a touch higher &mdash; never lower.
+                    Before this redesign, this page shipped ~25&nbsp;MB of images; it now ships a fraction of that &mdash; the site practises the sustainable-computing research it presents.
                     Want the logical extreme? The <a href="field-report.html">text-only field report</a> is the whole portfolio in 8&nbsp;KB.</p>
                 </div>
                 <p class="footer-fieldreport mono-label"><a href="field-report.html">prefer plain text? read the 8 KB field report — &asymp;0.003 g CO&#8322;e</a></p>
@@ -1302,6 +1322,7 @@
         <i class="fas fa-arrow-up"></i>
     </button>
 
+    <script src="ai-carbon-data.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

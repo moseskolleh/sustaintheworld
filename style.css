@@ -517,6 +517,37 @@ body.light-mode .navbar {
     flex-shrink: 0;
 }
 
+/* Mid-scroll conversion band — catches warm visitors before the very end */
+.cta-band {
+    background: var(--card-bg-alt);
+    border-top: 1px solid var(--line-color);
+    border-bottom: 1px solid var(--line-color);
+    padding: 44px 0;
+}
+
+.cta-band-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 28px;
+    flex-wrap: wrap;
+}
+
+.cta-band-copy p {
+    font-family: var(--font-display);
+    font-size: clamp(1.1rem, 2vw, 1.45rem);
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-top: 6px;
+    max-width: 34ch;
+}
+
+.cta-band-actions {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
 .hero-cta {
     display: flex;
     gap: 16px;
@@ -1302,7 +1333,16 @@ body.light-mode .hero-photo-caption {
 .project-details {
     max-height: 0;
     overflow: hidden;
-    transition: max-height 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Collapsed: kept out of the tab order and the screen-reader tree so
+       keyboard users don't land on the hidden galleries and mini-games inside.
+       visibility flips to hidden only after the height finishes animating. */
+    visibility: hidden;
+    transition: max-height 0.6s cubic-bezier(0.4, 0, 0.2, 1), visibility 0s linear 0.6s;
+}
+
+.project-card.expanded .project-details {
+    visibility: visible;
+    transition: max-height 0.6s cubic-bezier(0.4, 0, 0.2, 1), visibility 0s;
 }
 
 .project-details-inner {
