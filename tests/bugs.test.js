@@ -76,12 +76,13 @@ function assert(cond, msg) {
     const { window } = run('light');
     const toggle = window.document.querySelector('.theme-toggle');
     assert(!!toggle, 'Bug2 setup: theme toggle exists');
-    const icon = toggle && toggle.querySelector('i');
+    const use = toggle && toggle.querySelector('use');
+    const href = use && (use.getAttribute('href') || use.getAttribute('xlink:href'));
     const isLight = window.document.body.classList.contains('light-mode');
     assert(isLight, 'Bug2 setup: body is in light-mode from localStorage');
     assert(
-        icon && icon.classList.contains('fa-sun'),
-        'Bug2: icon should be fa-sun when loaded in light mode (was: ' + (icon && icon.className) + ')'
+        href === '#i-sun',
+        'Bug2: icon should be the sun symbol when loaded in light mode (was: ' + href + ')'
     );
 }
 
