@@ -907,6 +907,26 @@
                 <h2 class="section-title">AI, <span class="highlight">Weighed</span></h2>
                 <p class="section-description">A live slice of my current research. Pick a model and a workload — see what one AI answer costs the planet, in units you can actually feel.</p>
             </div>
+
+            <!-- You Draw It: predict AI's energy curve, then reveal the truth -->
+            <div class="ydi reveal" id="ydi">
+                <div class="ydi-head">
+                    <span class="mono-label">First — a guess</span>
+                    <h3 class="ydi-title">How much does one AI answer cost as models get bigger?</h3>
+                    <p class="ydi-lede">The three smallest models are plotted for you. <strong>Drag across the chart</strong> to predict the rest — from mid-size models up to a frontier reasoning model — then reveal what the research actually measured.</p>
+                </div>
+                <div class="ydi-chart">
+                    <svg class="ydi-svg" id="ydiSvg" viewBox="0 0 640 380" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Interactive prediction chart of AI energy use per answer as models scale from a tiny 1-billion-parameter model up to a frontier reasoning model. Use the Reveal button and the data table below for a non-visual summary."></svg>
+                    <span class="ydi-hint" id="ydiHint" aria-hidden="true">drag to draw your guess</span>
+                </div>
+                <div class="ydi-controls">
+                    <button class="btn btn-primary btn-small" id="ydiReveal" type="button" data-analytics="ydi-reveal">Reveal the real curve</button>
+                    <button class="btn btn-secondary btn-small" id="ydiReset" type="button" hidden>Draw again</button>
+                </div>
+                <p class="ydi-verdict" id="ydiVerdict" role="status" aria-live="polite" hidden></p>
+                <div class="ydi-data" id="ydiTable"></div>
+            </div>
+
             <div class="eco-widget reveal">
                 <div class="eco-widget-controls">
                     <div class="eco-field">

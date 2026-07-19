@@ -603,6 +603,96 @@ body.light-mode .navbar {
 .receipt-barcode { letter-spacing: 1px; margin-top: 6px; }
 .receipt-download { margin-top: 16px; }
 
+/* You Draw It — predict AI's energy curve, then reveal the truth */
+.ydi { margin-bottom: 44px; }
+.ydi-head { margin-bottom: 16px; }
+.ydi-title { font-size: clamp(1.2rem, 2.4vw, 1.7rem); margin: 6px 0 8px; }
+.ydi-lede { color: var(--text-secondary); max-width: 62ch; }
+
+.ydi-chart {
+    position: relative;
+    background: var(--card-bg);
+    border: 1px solid var(--line-color);
+    border-radius: var(--border-radius);
+    padding: 18px 14px 8px;
+}
+
+.ydi-svg { width: 100%; height: auto; display: block; }
+
+.ydi-hit { cursor: crosshair; touch-action: none; pointer-events: all; }
+
+.ydi-grid { stroke: var(--line-soft); stroke-width: 1; }
+.ydi-divider { stroke: var(--line-color); stroke-width: 1; stroke-dasharray: 3 4; }
+
+.ydi-axis-label, .ydi-axis-title, .ydi-xlabel, .ydi-region-label {
+    fill: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: 11px;
+}
+.ydi-axis-title { font-size: 10px; opacity: 0.8; }
+.ydi-xlabel { font-size: 10px; }
+.ydi-xlabel.known { opacity: 0.45; }
+.ydi-region-label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.7; }
+.ydi-region-label.predict { fill: var(--primary-green); opacity: 1; }
+
+.ydi-known-line { fill: none; stroke: var(--text-secondary); stroke-width: 2.5; }
+.ydi-known-dot { fill: var(--text-primary); }
+
+.ydi-guess-line { fill: none; stroke: #f2b705; stroke-width: 2.5; stroke-dasharray: 5 5; }
+.ydi-guess-dot { fill: #f2b705; }
+
+.ydi-real-line { fill: none; stroke: var(--primary-green); stroke-width: 2.5; opacity: 0; transition: opacity 0.5s ease; }
+.ydi-svg.revealed .ydi-real-line { opacity: 1; }
+.ydi-real-dot { fill: var(--primary-green); }
+.ydi-svg.revealed .ydi-guess-line { opacity: 0.5; }
+
+.ydi-hint {
+    position: absolute;
+    top: 42%;
+    left: 60%;
+    transform: translate(-50%, -50%);
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--primary-green);
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 6px 12px;
+    border-radius: 999px;
+}
+
+.ydi-controls { display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+/* [hidden] alone loses to .btn's display; scope a stronger rule so toggling works */
+.ydi-controls .btn[hidden] { display: none; }
+
+.ydi-verdict {
+    margin-top: 16px;
+    padding: 14px 18px;
+    border-left: 3px solid var(--primary-green);
+    background: var(--line-soft);
+    color: var(--text-primary);
+    font-size: 1.02rem;
+    line-height: 1.6;
+    border-radius: 0 8px 8px 0;
+}
+
+.ydi-data {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    margin: -1px;
+    border: 0;
+    padding: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ydi-real-line { transition: none; }
+}
+
 .hero-cta {
     display: flex;
     gap: 16px;
