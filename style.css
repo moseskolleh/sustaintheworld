@@ -548,6 +548,61 @@ body.light-mode .navbar {
     flex-wrap: wrap;
 }
 
+/* The Receipt — the page prints its own itemised carbon bill */
+.receipt-btn {
+    display: inline-block;
+    margin-top: 16px;
+    background: none;
+    border: 1px dashed var(--line-color);
+    color: var(--text-secondary);
+    padding: 8px 16px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: var(--transition);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+}
+
+.receipt-btn:hover {
+    border-color: var(--primary-green);
+    color: var(--primary-green);
+}
+
+.receipt-panel {
+    margin: 18px auto 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.receipt {
+    font-family: var(--font-mono);
+    background: #f5f3ea;
+    color: #1a1a1a;
+    width: 320px;
+    max-width: 100%;
+    padding: 22px 24px;
+    border-radius: 4px;
+    box-shadow: 0 12px 34px rgba(0, 0, 0, 0.4);
+    font-size: 12.5px;
+    line-height: 1.75;
+    text-align: left;
+}
+
+.receipt-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.receipt-row span:last-child { white-space: nowrap; }
+.receipt-center { text-align: center; }
+.receipt-strong { font-weight: 700; }
+.receipt-dim { color: #8a8577; font-size: 11px; }
+.receipt-divider { border-top: 1px dashed #b7b1a1; margin: 8px 0; }
+.receipt-barcode { letter-spacing: 1px; margin-top: 6px; }
+.receipt-download { margin-top: 16px; }
+
 .hero-cta {
     display: flex;
     gap: 16px;

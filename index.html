@@ -1298,6 +1298,15 @@
                     Before this redesign, this page shipped ~25&nbsp;MB of images; it now ships a fraction of that &mdash; the site practises the sustainable-computing research it presents.
                     Want the logical extreme? The <a href="field-report.html">text-only field report</a> is the whole portfolio in 8&nbsp;KB.</p>
                 </div>
+
+                <!-- The Receipt: this page prints its own itemised carbon bill -->
+                <button class="receipt-btn mono-label" id="receiptBtn" type="button" aria-expanded="false" aria-controls="receiptPanel" data-analytics="receipt-open">&#129534; print this page&rsquo;s carbon receipt</button>
+                <div class="receipt-panel" id="receiptPanel" hidden>
+                    <div class="receipt" id="receiptBody" role="figure" aria-label="Itemised carbon receipt for this page load"></div>
+                    <button class="receipt-download btn btn-secondary btn-small" id="receiptDownload" type="button" data-analytics="receipt-download"><i class="fas fa-download"></i> Save as PNG</button>
+                    <canvas id="receiptCanvas" width="720" height="10" aria-hidden="true" hidden></canvas>
+                </div>
+
                 <p class="footer-fieldreport mono-label"><a href="field-report.html">prefer plain text? read the 8 KB field report — &asymp;0.003 g CO&#8322;e</a></p>
                 <button class="eco-mode-toggle" id="ecoModeToggle" aria-pressed="false">
                     <i class="fas fa-leaf"></i> <span id="ecoModeLabel">Low-energy mode: off</span>

@@ -1471,6 +1471,189 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
 })();
 
 // ===================================
+// THE RECEIPT — this page prints its own itemised carbon bill
+// Reads the same Resource Timing data as the footer badge, groups it by asset
+// class, and renders a thermal-receipt you can save as a PNG. Pure vanilla:
+// the PNG is drawn on a <canvas>, no library, no gigabyte of anything.
+// ===================================
+(() => {
+    const btn = document.getElementById('receiptBtn');
+    const panel = document.getElementById('receiptPanel');
+    const body = document.getElementById('receiptBody');
+    const dlBtn = document.getElementById('receiptDownload');
+    const canvas = document.getElementById('receiptCanvas');
+    if (!btn || !panel || !body) return;
+
+    const G_CO2_PER_MB = 0.36;
+    const MEDIAN_MB = 2.5;
+    const pageOrigin = location.origin;
+
+    const bytesOf = (r) => {
+        if (r.transferSize && r.transferSize > 0) return r.transferSize;
+        if (r.encodedBodySize && r.encodedBodySize > 0) return r.encodedBodySize;
+        return 0;
+    };
+
+    const classify = (r) => {
+        const t = r.initiatorType;
+        const n = (r.name || '').toLowerCase();
+        if (/\.(woff2?|ttf|otf|eot)(\?|$)/.test(n)) return 'Fonts';
+        if (t === 'img' || /\.(webp|png|jpe?g|gif|svg|avif)(\?|$)/.test(n)) return 'Images';
+        if (t === 'script' || /\.js(\?|$)/.test(n)) return 'Scripts';
+        if (t === 'link' || t === 'css' || /\.css(\?|$)/.test(n)) return 'Styles';
+        return 'Other';
+    };
+
+    const ORDER = ['HTML', 'Styles', 'Scripts', 'Fonts', 'Images', 'Other'];
+
+    const gather = () => {
+        const g = { HTML: 0, Styles: 0, Scripts: 0, Fonts: 0, Images: 0, Other: 0 };
+        let unmeasured = 0;
+        try {
+            const nav = performance.getEntriesByType('navigation')[0];
+            if (nav) g.HTML += bytesOf(nav);
+            performance.getEntriesByType('resource').forEach(r => {
+                const b = bytesOf(r);
+                if (b === 0) {
+                    if (r.name && r.name.indexOf(pageOrigin) !== 0) unmeasured++;
+                    return;
+                }
+                g[classify(r)] += b;
+            });
+        } catch (e) { /* older browsers: receipt stays empty */ }
+        return { g, unmeasured };
+    };
+
+    const fmtSize = (b) => (b >= 1048576 ? (b / 1048576).toFixed(2) + ' MB' : Math.round(b / 1024) + ' KB');
+    const fmtG = (grams) => (grams >= 1 ? grams.toFixed(2) : grams.toFixed(3)) + ' g';
+
+    const buildLines = () => {
+        const { g, unmeasured } = gather();
+        let total = 0;
+        ORDER.forEach(k => { total += g[k]; });
+        const totalMb = total / 1048576;
+        const totalG = totalMb * G_CO2_PER_MB;
+        const dt = new Date();
+        const pad = (n) => String(n).padStart(2, '0');
+        const stamp = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}  ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+
+        const lines = [];
+        lines.push({ t: 'c', s: 'MKS · SUSTAINTHEWORLD', b: true });
+        lines.push({ t: 'c', s: 'page-load carbon receipt' });
+        lines.push({ t: 'c', s: stamp, dim: true });
+        lines.push({ t: 'd' });
+        ORDER.forEach(k => {
+            if (g[k] > 0) {
+                const grams = (g[k] / 1048576) * G_CO2_PER_MB;
+                lines.push({ t: 'r', l: k, r: `${fmtSize(g[k])}   ${fmtG(grams)}` });
+            }
+        });
+        lines.push({ t: 'd' });
+        lines.push({ t: 'r', l: 'TOTAL', r: `${fmtSize(total)}   ${fmtG(totalG)}`, b: true });
+        lines.push({ t: 'c', s: 'CO₂e · global avg grid', dim: true });
+        lines.push({ t: 'd' });
+        lines.push({ t: 'r', l: 'Median web page', r: `${MEDIAN_MB.toFixed(2)} MB` });
+        if (totalMb < MEDIAN_MB) {
+            lines.push({ t: 'c', s: `— you're ${Math.round((1 - totalMb / MEDIAN_MB) * 100)}% lighter —` });
+        }
+        lines.push({ t: 'r', l: 'Text-only report', r: '8 KB' });
+        if (unmeasured) {
+            lines.push({ t: 'c', s: `* ${unmeasured} third-party file${unmeasured > 1 ? 's' : ''} not counted`, dim: true });
+        }
+        lines.push({ t: 'd' });
+        lines.push({ t: 'c', s: 'browsed lightly — thank you' });
+        lines.push({ t: 'c', s: '||‖|‖||‖|||‖|‖||‖|||', mono: true });
+        return lines;
+    };
+
+    const renderDOM = (lines) => {
+        body.innerHTML = '';
+        lines.forEach(ln => {
+            let el;
+            if (ln.t === 'd') {
+                el = document.createElement('div');
+                el.className = 'receipt-divider';
+            } else if (ln.t === 'c') {
+                el = document.createElement('div');
+                el.className = 'receipt-center' + (ln.b ? ' receipt-strong' : '') + (ln.dim ? ' receipt-dim' : '') + (ln.mono ? ' receipt-barcode' : '');
+                el.textContent = ln.s;
+            } else {
+                el = document.createElement('div');
+                el.className = 'receipt-row' + (ln.b ? ' receipt-strong' : '');
+                const l = document.createElement('span'); l.textContent = ln.l;
+                const r = document.createElement('span'); r.textContent = ln.r;
+                el.appendChild(l); el.appendChild(r);
+            }
+            body.appendChild(el);
+        });
+    };
+
+    const drawCanvas = (lines) => {
+        if (!canvas || !canvas.getContext) return;
+        const scale = 2, W = 340, padX = 22, padY = 22, lh = 22;
+        const H = padY * 2 + lines.length * lh;
+        canvas.width = W * scale;
+        canvas.height = H * scale;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        ctx.scale(scale, scale);
+        ctx.fillStyle = '#f5f3ea';
+        ctx.fillRect(0, 0, W, H);
+        ctx.textBaseline = 'middle';
+        let y = padY + lh / 2;
+        lines.forEach(ln => {
+            ctx.fillStyle = ln.dim ? '#8a8577' : '#1a1a1a';
+            ctx.font = `${ln.b ? '700' : '400'} 13px 'IBM Plex Mono', ui-monospace, monospace`;
+            if (ln.t === 'd') {
+                ctx.strokeStyle = '#b7b1a1';
+                ctx.setLineDash([2, 3]);
+                ctx.beginPath(); ctx.moveTo(padX, y); ctx.lineTo(W - padX, y); ctx.stroke();
+                ctx.setLineDash([]);
+            } else if (ln.t === 'c') {
+                ctx.textAlign = 'center';
+                ctx.fillText(ln.s, W / 2, y);
+            } else {
+                ctx.textAlign = 'left';
+                ctx.fillText(ln.l, padX, y);
+                ctx.textAlign = 'right';
+                ctx.fillText(ln.r, W - padX, y);
+            }
+            y += lh;
+        });
+    };
+
+    let built = false;
+    const build = () => {
+        const lines = buildLines();
+        renderDOM(lines);
+        drawCanvas(lines);
+        built = true;
+    };
+
+    btn.addEventListener('click', () => {
+        const open = panel.hasAttribute('hidden');
+        if (open) build();
+        panel.toggleAttribute('hidden', !open);
+        btn.setAttribute('aria-expanded', String(open));
+        if (open) panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+
+    if (dlBtn && canvas) {
+        dlBtn.addEventListener('click', () => {
+            if (!built) build();
+            try {
+                const a = document.createElement('a');
+                a.href = canvas.toDataURL('image/png');
+                a.download = 'sustaintheworld-carbon-receipt.png';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+            } catch (e) { /* canvas is same-origin, so this won't taint — ignore */ }
+        });
+    }
+})();
+
+// ===================================
 // CONVERSION ANALYTICS (privacy-first, provider-agnostic)
 // ===================================
 // A tiny dispatcher that fires named events on the key conversion actions
