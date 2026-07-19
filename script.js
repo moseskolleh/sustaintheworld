@@ -568,7 +568,7 @@ if (contactForm) {
         const originalBtnContent = submitBtn.innerHTML;
 
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<span>Sending...</span><i class="fas fa-spinner fa-spin"></i>';
+        submitBtn.innerHTML = '<span>Sending...</span><svg class="icon icon-spin" aria-hidden="true"><use href="#i-spinner"></use></svg>';
         if (formStatus) formStatus.hidden = true;
 
         try {
@@ -603,7 +603,7 @@ if (contactForm) {
 const createThemeToggle = () => {
     const toggle = document.createElement('button');
     const startsLight = document.body.classList.contains('light-mode');
-    toggle.innerHTML = `<i class="fas fa-${startsLight ? 'sun' : 'moon'}"></i>`;
+    toggle.innerHTML = `<svg class="icon" aria-hidden="true" focusable="false"><use href="#i-${startsLight ? 'sun' : 'moon'}"></use></svg>`;
     toggle.className = 'theme-toggle';
     toggle.setAttribute('aria-label', 'Toggle light/dark mode');
 
@@ -611,10 +611,9 @@ const createThemeToggle = () => {
 
     toggle.addEventListener('click', () => {
         document.body.classList.toggle('light-mode');
-        const icon = toggle.querySelector('i');
         const isLightMode = document.body.classList.contains('light-mode');
-
-        icon.className = isLightMode ? 'fas fa-sun' : 'fas fa-moon';
+        const use = toggle.querySelector('use');
+        if (use) use.setAttribute('href', `#i-${isLightMode ? 'sun' : 'moon'}`);
         localStorage.setItem('theme', isLightMode ? 'light' : 'dark');
     });
 };
@@ -1668,7 +1667,7 @@ window.mksShare = (() => {
         if (cls === 'high' || cls === 'workable') {
             const subject = encodeURIComponent(`Fit for your role — ${matched.length} matching areas`);
             const body = encodeURIComponent(`Hi Moses,\n\nI ran your in-browser fit-check against a role and it flagged ${matched.length} matching areas${gaps.length ? ` (and ${gaps.length} gap${gaps.length > 1 ? 's' : ''})` : ''}. I'd like to talk.\n\n`);
-            html += `<div class="assay-cta-wrap"><a class="btn btn-primary btn-small" href="mailto:moseskollehsesay@gmail.com?subject=${subject}&body=${body}" data-analytics="assay-contact"><i class="fas fa-paper-plane"></i> This looks like a fit — get in touch</a></div>`;
+            html += `<div class="assay-cta-wrap"><a class="btn btn-primary btn-small" href="mailto:moseskollehsesay@gmail.com?subject=${subject}&body=${body}" data-analytics="assay-contact"><svg class="icon" aria-hidden="true"><use href="#i-paper-plane"></use></svg> This looks like a fit — get in touch</a></div>`;
         }
         // Plain-text version a recruiter can copy into notes or an email.
         let plain = `Moses Kolleh Sesay — fit assessment: ${grade}\n${blurb}\n`;
@@ -1676,7 +1675,7 @@ window.mksShare = (() => {
         if (gaps.length) { plain += `\nHonest gaps:\n`; gaps.forEach(g => { plain += `• ${g.note}\n`; }); }
         plain += `\n— ${window.mksShare ? window.mksShare.site : 'moseskolleh.github.io/sustaintheworld'}`;
         lastAssayText = plain;
-        html += `<div class="assay-copy-wrap"><button type="button" class="btn btn-secondary btn-small assay-copy" data-analytics="assay-copy"><i class="fas fa-copy"></i> Copy this result</button></div>`;
+        html += `<div class="assay-copy-wrap"><button type="button" class="btn btn-secondary btn-small assay-copy" data-analytics="assay-copy"><svg class="icon" aria-hidden="true"><use href="#i-copy"></use></svg> Copy this result</button></div>`;
         html += '<p class="assay-note">Deterministic keyword match against a hand-written evidence set — no AI, no data sent anywhere. A starting point for a conversation, not a verdict.</p>';
         result.innerHTML = html;
         if (clearBtn) clearBtn.hidden = false;

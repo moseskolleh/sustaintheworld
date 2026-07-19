@@ -75,6 +75,19 @@ img {
     height: auto;
 }
 
+/* Inline SVG icons (replaced the Font Awesome CDN) */
+.icon {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    fill: currentColor;
+    vertical-align: -0.125em;
+    flex-shrink: 0;
+}
+.icon-spin { animation: iconspin 0.8s linear infinite; }
+@keyframes iconspin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .icon-spin { animation: none; } }
+
 ::selection {
     background: var(--primary-green);
     color: var(--darker-bg);

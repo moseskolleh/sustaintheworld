@@ -257,12 +257,12 @@ if (typeof document !== 'undefined') {
             list.innerHTML = '';
             const tips = suggest(params);
             if (tips.length === 0) {
-                list.innerHTML = '<li class="tip-clean"><i class="fas fa-check-circle"></i> Looks lean — small model, clean grid, tight prompt.</li>';
+                list.innerHTML = '<li class="tip-clean"><svg class="icon" aria-hidden="true"><use href="#i-check-circle"></use></svg> Looks lean — small model, clean grid, tight prompt.</li>';
                 return;
             }
             tips.forEach(t => {
                 const li = document.createElement('li');
-                li.innerHTML = `<i class="fas ${t.icon}"></i><span>${t.text}</span>`;
+                li.innerHTML = `<svg class="icon" aria-hidden="true"><use href="#i-${t.icon.replace('fa-', '')}"></use></svg><span>${t.text}</span>`;
                 list.appendChild(li);
             });
         }
