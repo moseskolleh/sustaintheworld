@@ -636,6 +636,15 @@ body.light-mode .navbar {
 .ydi-svg.ydi-kbd .ydi-cursor { opacity: 1; }
 .ydi-svg.revealed .ydi-cursor { opacity: 0; }
 
+.ydi-dot-pulse { animation: ydiDotPulse 1.5s ease-in-out infinite; }
+@keyframes ydiDotPulse { 0%, 100% { r: 5; } 50% { r: 8.5; } }
+.ydi-hint-nudge { animation: ydiNudge 0.4s ease-in-out 2; }
+@keyframes ydiNudge { 0%, 100% { transform: translate(-50%, -50%); } 50% { transform: translate(-50%, -50%) scale(1.12); } }
+.ydi-shape { display: block; font-weight: 700; color: var(--primary-green); margin-bottom: 4px; }
+@media (prefers-reduced-motion: reduce) {
+    .ydi-dot-pulse, .ydi-hint-nudge { animation: none; }
+}
+
 .ydi-grid { stroke: var(--line-soft); stroke-width: 1; }
 .ydi-divider { stroke: var(--line-color); stroke-width: 1; stroke-dasharray: 3 4; }
 
@@ -751,6 +760,18 @@ body.light-mode .navbar {
 .strike-control label { flex-shrink: 0; }
 .strike-out { color: var(--primary-green); font-family: var(--font-mono); min-width: 3.5ch; }
 
+.strike-anchors {
+    display: flex;
+    justify-content: space-between;
+    max-width: 440px;
+    margin: -4px 0 10px;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--text-secondary);
+    letter-spacing: 0.03em;
+}
+.strike-anchor-win { color: var(--accent-blue); }
+
 .strike-foot {
     font-size: 0.74rem;
     line-height: 1.5;
@@ -780,7 +801,19 @@ body.light-mode .navbar {
     font-size: 0.85rem;
     cursor: pointer;
 }
-.anatomy-scenario { opacity: 0.7; }
+.anatomy-scenario { opacity: 0.7; max-width: 64ch; }
+.anatomy-scale { display: inline-flex; border: 1px solid var(--line-color); border-radius: 999px; overflow: hidden; }
+.anatomy-scale-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    padding: 7px 13px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+.anatomy-scale-btn.is-active { background: var(--primary-green); color: var(--darker-bg); }
 
 .anatomy-svg { width: 100%; height: auto; display: block; max-width: 760px; margin: 6px 0; }
 .anatomy-source { fill: var(--card-bg-alt); stroke: var(--line-color); }
@@ -836,6 +869,38 @@ body.light-mode .navbar {
 .assay-actions .btn[hidden] { display: none; }
 .assay-privacy { opacity: 0.7; display: inline-flex; align-items: center; gap: 6px; }
 .assay-privacy i { color: var(--primary-green); }
+
+.assay-samples { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+.assay-sample {
+    background: none;
+    border: 1px dashed var(--line-color);
+    color: var(--text-secondary);
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    cursor: pointer;
+    transition: var(--transition);
+}
+.assay-sample:hover { border-color: var(--primary-green); color: var(--primary-green); }
+.assay-cta-wrap { margin-top: 18px; }
+
+/* Shared "try it" marker so the interactive features read as one playable set */
+.try-tag {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 2px 9px;
+    border: 1px solid var(--line-color);
+    border-radius: 999px;
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--primary-green);
+    vertical-align: middle;
+    white-space: nowrap;
+}
 
 .assay-result { margin-top: 20px; }
 .assay-empty { color: var(--text-secondary); }
