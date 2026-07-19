@@ -5,6 +5,17 @@
     const preloader = document.getElementById('preloader');
     if (!preloader) return;
 
+    const wipe = () => preloader.remove();
+    const reduce = typeof window.matchMedia === 'function' &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // Reduced-motion visitors, and anyone who has already seen the intro this
+    // session, skip it entirely — no fake loading bar in front of static HTML.
+    let seen = false;
+    try { seen = sessionStorage.getItem('mks-intro-seen'); } catch (e) { /* private mode */ }
+    if (reduce || seen) { wipe(); return; }
+    try { sessionStorage.setItem('mks-intro-seen', '1'); } catch (e) { /* ignore */ }
+
     const coordsEl = document.getElementById('preloaderCoords');
     const journey = [
         '8.4657° N, 13.2317° W',   // Freetown
@@ -22,16 +33,17 @@
     const hide = () => {
         clearInterval(ticker);
         preloader.style.opacity = '0';
-        setTimeout(() => preloader.remove(), 500);
+        setTimeout(wipe, 400);
     };
 
-    if (document.readyState === 'complete') {
-        setTimeout(hide, 600);
+    // Reveal as soon as the DOM is parsed — don't wait on every image to load.
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', hide);
     } else {
-        window.addEventListener('load', () => setTimeout(hide, 600));
-        // Safety net: never trap the visitor behind the preloader
-        setTimeout(hide, 4000);
+        hide();
     }
+    // Safety net: never trap the visitor behind the preloader.
+    setTimeout(hide, 2500);
 })();
 
 // ===================================
@@ -78,52 +90,12 @@ if (document.readyState === 'complete') {
 }
 
 // ===================================
-// TYPEWRITER ROLES
+// HERO SUBTITLE
 // ===================================
-(() => {
-    const el = document.getElementById('typewriter');
-    if (!el) return;
-
-    const roles = [
-        'Sustainability & Climate Analyst',
-        'Geologist by training',
-        'Water systems specialist',
-        'ESG & climate-risk analyst',
-        'Sustainable AI researcher'
-    ];
-    let roleIndex = 0;
-    let charIndex = roles[0].length;
-    let deleting = true;
-
-    const tick = () => {
-        if (document.body.classList.contains('eco-mode')) {
-            setTimeout(tick, 4000);
-            return;
-        }
-        const current = roles[roleIndex];
-
-        if (deleting) {
-            charIndex--;
-            el.textContent = current.slice(0, charIndex);
-            if (charIndex === 0) {
-                deleting = false;
-                roleIndex = (roleIndex + 1) % roles.length;
-            }
-            setTimeout(tick, 32);
-        } else {
-            charIndex++;
-            el.textContent = roles[roleIndex].slice(0, charIndex);
-            if (charIndex === roles[roleIndex].length) {
-                deleting = true;
-                setTimeout(tick, 2600);
-            } else {
-                setTimeout(tick, 65);
-            }
-        }
-    };
-
-    setTimeout(tick, 2600);
-})();
+// The role label is intentionally static. A stable, always-legible identity
+// protects the critical first impression — the old typewriter could be caught
+// mid-deletion on first paint — and keeps first-viewport motion reserved for
+// the signature scroll-driven moments (journey map, core log, borehole).
 
 // ===================================
 // SMOOTH SCROLLING & NAVIGATION
@@ -393,10 +365,25 @@ if (statsSection && 'IntersectionObserver' in window) {
 // ===================================
 // EXPANDABLE PROJECT DOSSIERS
 // ===================================
-document.querySelectorAll('.project-card').forEach(card => {
+document.querySelectorAll('.project-card').forEach((card, i) => {
     const toggle = card.querySelector('.project-summary');
     const details = card.querySelector('.project-details');
     if (!toggle || !details) return;
+
+    // Disclosure semantics + keep collapsed content non-interactive. `inert`
+    // (with the CSS visibility:hidden fallback) takes the hidden galleries and
+    // mini-games out of the tab order and the accessibility tree until opened.
+    if (!details.id) details.id = `project-details-${i + 1}`;
+    toggle.setAttribute('aria-controls', details.id);
+    details.inert = true;
+
+    const collapse = (c) => {
+        const d = c.querySelector('.project-details');
+        const t = c.querySelector('.project-summary');
+        c.classList.remove('expanded');
+        if (d) { d.style.maxHeight = '0px'; d.inert = true; }
+        if (t) t.setAttribute('aria-expanded', 'false');
+    };
 
     toggle.addEventListener('click', (e) => {
         // Let real links inside the summary (e.g. demo buttons) work normally
@@ -407,21 +394,14 @@ document.querySelectorAll('.project-card').forEach(card => {
 
         // Collapse any other open dossier so the reader keeps their bearings
         document.querySelectorAll('.project-card.expanded').forEach(open => {
-            if (open !== card) {
-                open.classList.remove('expanded');
-                const openDetails = open.querySelector('.project-details');
-                const openToggle = open.querySelector('.project-summary');
-                if (openDetails) openDetails.style.maxHeight = '0px';
-                if (openToggle) openToggle.setAttribute('aria-expanded', 'false');
-            }
+            if (open !== card) collapse(open);
         });
 
         if (isExpanded) {
-            card.classList.remove('expanded');
-            details.style.maxHeight = '0px';
-            toggle.setAttribute('aria-expanded', 'false');
+            collapse(card);
         } else {
             card.classList.add('expanded');
+            details.inert = false;
             details.style.maxHeight = details.scrollHeight + 'px';
             toggle.setAttribute('aria-expanded', 'true');
             // Once images inside load, the content can grow — re-measure
@@ -663,34 +643,28 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
 
 // ===================================
 // ECOPROMPT WIDGET — AI, weighed
-// Data kept in sync with carbon-ai.js (Jegham et al. 2025; Ember 2023).
+// All numbers come from the shared source of truth (ai-carbon-data.js), the
+// same one the full EcoPrompt Coach tool uses — so they can never disagree.
 // ===================================
 (() => {
     const modelSel = document.getElementById('ecoModel');
     const presetSel = document.getElementById('ecoPreset');
     const gridSel = document.getElementById('ecoGrid');
-    if (!modelSel || !presetSel || !gridSel) return;
+    const DATA = (typeof window !== 'undefined') ? window.AICarbonData : null;
+    if (!modelSel || !presetSel || !gridSel || !DATA) return;
 
-    const MODELS = [
-        { key: 'gpt-4o',           label: 'GPT-4o',            whPer1k: 0.50 },
-        { key: 'gpt-4o-mini',      label: 'GPT-4o mini',       whPer1k: 0.08 },
-        { key: 'claude-37-sonnet', label: 'Claude 3.7 Sonnet', whPer1k: 0.40 },
-        { key: 'gemini-20-flash',  label: 'Gemini 2.0 Flash',  whPer1k: 0.15 },
-        { key: 'llama-33-70b',     label: 'Llama 3.3 70B',     whPer1k: 0.30 },
-        { key: 'llama-32-1b',      label: 'Llama 3.2 1B',      whPer1k: 0.005 },
-        { key: 'deepseek-r1',      label: 'DeepSeek-R1',       whPer1k: 1.20 }
-    ];
-    const GRIDS = [
-        { key: 'no',     label: 'Norway — 30 gCO₂e/kWh',          intensity: 30 },
-        { key: 'fr',     label: 'France — 56 gCO₂e/kWh',          intensity: 56 },
-        { key: 'nl',     label: 'Netherlands — 268 gCO₂e/kWh',    intensity: 268 },
-        { key: 'us-avg', label: 'US average — 367 gCO₂e/kWh',     intensity: 367 },
-        { key: 'cn',     label: 'China — 538 gCO₂e/kWh',          intensity: 538 },
-        { key: 'in',     label: 'India — 713 gCO₂e/kWh',          intensity: 713 }
-    ];
+    // Compact homepage view, derived from the shared data.
+    const MODELS = DATA.HOMEPAGE_MODELS.map(k => ({
+        key: k, label: DATA.MODELS[k].label, whPer1k: DATA.MODELS[k].energyPer1kTokens_Wh
+    }));
+    const GRIDS = DATA.HOMEPAGE_REGIONS.map(k => ({
+        key: k,
+        label: `${DATA.REGIONS[k].label} — ${DATA.REGIONS[k].intensity} gCO₂e/kWh`,
+        intensity: DATA.REGIONS[k].intensity
+    }));
     const PRESET_TOKENS = { short: 400, chat: 1000, doc: 5000, reasoning: 9000 };
-    const PUE = 1.2;            // data-centre overhead
-    const WUE = 1.8;            // L per kWh, industry-typical cooling
+    const PUE = DATA.PUE;                              // data-centre overhead
+    const WUE = DATA.WUE_PROFILES.avg.wue_L_per_kWh;   // L per kWh, typical cooling
 
     MODELS.forEach((m, i) => modelSel.add(new Option(m.label, i)));
     GRIDS.forEach((g, i) => gridSel.add(new Option(g.label, i)));
@@ -763,18 +737,35 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
 
     const MEDIAN_PAGE_MB = 2.5;      // HTTP Archive median page weight
     const G_CO2_PER_MB = 0.36;       // Sustainable Web Design model, global grid
+    const pageOrigin = location.origin;
+
+    // Weight of one resource. transferSize is the real wire cost, but it reads 0
+    // for anything served from cache — so a naive sum collapses on a repeat
+    // visit and the page looks falsely lighter. Fall back to encodedBodySize
+    // (the compressed asset size), the honest weight whether or not this visit
+    // re-downloaded it. Cross-origin assets with no Timing-Allow-Origin header
+    // report 0 for both and are genuinely unmeasurable — we flag those instead
+    // of pretending they weigh nothing.
+    const bytesOf = (r) => {
+        if (r.transferSize && r.transferSize > 0) return r.transferSize;
+        if (r.encodedBodySize && r.encodedBodySize > 0) return r.encodedBodySize;
+        return 0;
+    };
 
     const weigh = () => {
         let bytes = 0;
+        let unmeasured = 0;
         try {
             const nav = performance.getEntriesByType('navigation')[0];
-            if (nav) bytes += nav.transferSize || 0;
+            if (nav) bytes += bytesOf(nav);
             performance.getEntriesByType('resource').forEach(r => {
-                bytes += r.transferSize || 0;
+                const b = bytesOf(r);
+                bytes += b;
+                if (b === 0 && r.name && r.name.indexOf(pageOrigin) !== 0) unmeasured++;
             });
         } catch (e) { /* older browsers: leave the badge quiet */ }
         if (!bytes) {
-            badgeText.textContent = 'Built to stay under 1 MB per visit';
+            badgeText.textContent = 'Built to stay light — under ~1 MB per visit';
             return;
         }
         const mb = bytes / (1024 * 1024);
@@ -783,14 +774,29 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
         if (mb < MEDIAN_PAGE_MB) {
             comparison = ` — ${Math.round((1 - mb / MEDIAN_PAGE_MB) * 100)}% lighter than the median web page`;
         }
+        // A leading "≈" and, when third-party files are uncounted, a "+" keep the
+        // claim honest: the true figure is this or a little more, never less.
+        const plus = unmeasured ? '+ ' : '';
         badgeText.textContent =
-            `This visit transferred ${mb.toFixed(2)} MB ≈ ${g.toFixed(2)} g CO₂e${comparison}`;
+            `This page weighs ${plus}${mb.toFixed(2)} MB ≈ ${plus}${g.toFixed(2)} g CO₂e${comparison}`;
     };
 
-    if (document.readyState === 'complete') {
-        setTimeout(weigh, 1200);
-    } else {
-        window.addEventListener('load', () => setTimeout(weigh, 1200));
+    weigh();
+    // Images lazy-load on scroll, so recompute as new resources arrive.
+    if ('PerformanceObserver' in window) {
+        try {
+            new PerformanceObserver(() => weigh()).observe({ type: 'resource', buffered: true });
+        } catch (e) { /* type unsupported: the initial weigh() still stands */ }
+    }
+    // Final pass once the footer badge is actually in view — by then everything
+    // above it has loaded.
+    if ('IntersectionObserver' in window) {
+        const badge = document.getElementById('carbonBadge');
+        if (badge) {
+            new IntersectionObserver((entries) => {
+                if (entries.some(en => en.isIntersecting)) weigh();
+            }, { rootMargin: '0px 0px 200px 0px' }).observe(badge);
+        }
     }
 
     if (infoBtn && method) {
@@ -1462,4 +1468,37 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
         const scene = svg.querySelector('#mapScene') || svg;
         scene.appendChild(g);
     });
+})();
+
+// ===================================
+// CONVERSION ANALYTICS (privacy-first, provider-agnostic)
+// ===================================
+// A tiny dispatcher that fires named events on the key conversion actions
+// (contact, email, CV download) into whichever cookieless analytics provider
+// is enabled in index.html's <head>. It is a no-op until you turn one on, so it
+// never transmits anything on its own and needs no cookie-consent banner.
+(() => {
+    const track = (name) => {
+        if (!name) return;
+        try {
+            if (typeof window.plausible === 'function') {
+                window.plausible(name);
+            } else if (typeof window.gtag === 'function') {
+                window.gtag('event', name);
+            } else if (Array.isArray(window.dataLayer)) {
+                window.dataLayer.push({ event: name });
+            }
+        } catch (e) { /* analytics must never break the page */ }
+    };
+    window.trackEvent = track;
+
+    // Delegated: anything carrying data-analytics reports itself on click.
+    document.addEventListener('click', (e) => {
+        const el = e.target.closest('[data-analytics]');
+        if (el) track(el.getAttribute('data-analytics'));
+    });
+
+    // A contact-form submission is the primary conversion goal.
+    const form = document.getElementById('contactForm');
+    if (form) form.addEventListener('submit', () => track('contact-form-submit'));
 })();
