@@ -2008,6 +2008,9 @@ window.mksShare = (() => {
     drawGuess();
     // Pulse the first predict dot so people know the curve is grabbable.
     if (guessDots[KNOWN]) guessDots[KNOWN].classList.add('ydi-dot-pulse');
+    // Device-aware hint: touch users tap or drag; pointer users drag.
+    const coarse = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
+    if (hintEl && coarse) hintEl.textContent = 'tap or drag across to draw';
 
     // --- interaction (pointer + keyboard) ---
     let cursor = KNOWN;
