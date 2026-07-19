@@ -1193,7 +1193,7 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
                 'STRIKE 💧 water at 38 m. static level −6 m, yield looks good.',
                 '(odds are 7/10 when you read the resistivity curve first — see the Groundwater dossier.)'
             ];
-            if (calm()) { steps.forEach(s => print(s)); done(); return; }
+            if (calm()) { steps.forEach(s => print(s)); return; }
             let i = 0;
             const tick = () => {
                 print(steps[i]);
