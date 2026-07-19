@@ -890,6 +890,18 @@
                                 </div>
                                 <p class="borehole-result mono-label" id="drillResult" aria-live="polite">Drag the rig (or focus the profile and use ← → keys), then drill.</p>
                             </div>
+                            <div class="dossier-widget strike" id="strikeWidget">
+                                <h4><i class="fas fa-tint"></i> Seven in ten: what reading the ground is worth</h4>
+                                <p class="dossier-widget-intro">Every borehole is a bet a community pays for. Drag the strike rate from blind drilling in hard rock up to what reading the resistivity curve first delivers — and watch the dry holes turn to water.</p>
+                                <div class="strike-waffle" id="strikeWaffle" aria-hidden="true"></div>
+                                <p class="strike-counter" id="strikeCounter" role="status" aria-live="polite"></p>
+                                <div class="strike-control">
+                                    <label class="mono-label" for="strikeSlider">Strike rate</label>
+                                    <input type="range" id="strikeSlider" min="30" max="70" value="30" step="1">
+                                    <output class="strike-out" id="strikeOut" for="strikeSlider">30%</output>
+                                </div>
+                                <p class="strike-foot">Baseline &asymp; blind drilling in the Freetown hard-rock complex; 70% is my field-proven rate reading electrical resistivity first — part of the 164 water points I helped deliver.</p>
+                            </div>
                         </div>
                     </div>
                 </article>

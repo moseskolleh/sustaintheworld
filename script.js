@@ -1471,6 +1471,53 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
 })();
 
 // ===================================
+// SEVEN IN TEN — the 70% strike rate as a felt human delta
+// A 100-dot waffle of boreholes; the slider moves the strike rate from blind
+// drilling in hard rock up to the field-proven 70%, flipping dry holes to water.
+// ===================================
+(() => {
+    const waffle = document.getElementById('strikeWaffle');
+    const slider = document.getElementById('strikeSlider');
+    const counter = document.getElementById('strikeCounter');
+    const out = document.getElementById('strikeOut');
+    if (!waffle || !slider || !counter) return;
+
+    const N = 100;
+    // Deterministic scatter: 37 is coprime with 100, so (k*37)%100 is a fixed
+    // permutation of every cell — the same rate always paints the same picture,
+    // no Math.random, no fake variation.
+    const order = Array.from({ length: N }, (_, k) => (k * 37) % N);
+
+    const cells = [];
+    for (let i = 0; i < N; i++) {
+        const c = document.createElement('span');
+        c.className = 'strike-cell';
+        waffle.appendChild(c);
+        cells.push(c);
+    }
+
+    const render = (rate) => {
+        const water = new Set(order.slice(0, rate));
+        for (let i = 0; i < N; i++) cells[i].classList.toggle('water', water.has(i));
+        const dry = N - rate;
+        const moreThanBlind = rate - 30;
+        if (out) out.textContent = rate + '%';
+        let msg = `<strong>${rate} of 100</strong> boreholes strike water — <strong>${dry}</strong> come up dry.`;
+        if (rate <= 32) {
+            msg += ' Blind drilling in hard rock: about 7 in 10 are dry holes a community paid for.';
+        } else if (rate >= 68) {
+            msg += ` Reading the resistivity curve first: <strong>7 in 10 strike water</strong> — ${moreThanBlind} more communities served per 100 boreholes, same rigs, same budget.`;
+        } else {
+            msg += ` That's <strong>${moreThanBlind} more</strong> communities with water than blind drilling — same rigs, same budget.`;
+        }
+        counter.innerHTML = msg;
+    };
+
+    slider.addEventListener('input', () => render(+slider.value));
+    render(+slider.value);
+})();
+
+// ===================================
 // YOU DRAW IT — predict AI's hidden energy curve, then reveal the truth
 // The NYT "you draw it" mechanic, powered by the shared AI carbon data.
 // ===================================
