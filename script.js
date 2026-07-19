@@ -103,20 +103,52 @@ if (document.readyState === 'complete') {
 const navToggle = document.getElementById('navToggle');
 const navMenu = document.getElementById('navMenu');
 
+// Expand a collapsed dossier or the receipt panel that contains a deep-link
+// target, so shared links like /#strikeWidget or /#receiptPanel actually reveal
+// the feature instead of landing on a closed accordion.
+function revealTarget(target) {
+    if (!target || !target.closest) return false;
+    let expanded = false;
+    const card = target.closest('.project-card');
+    if (card && !card.classList.contains('expanded')) {
+        const summary = card.querySelector('.project-summary');
+        if (summary) { summary.click(); expanded = true; }
+    }
+    const panel = target.id === 'receiptPanel' ? target : target.closest('#receiptPanel');
+    if (panel && panel.hasAttribute('hidden')) {
+        const rb = document.getElementById('receiptBtn');
+        if (rb) { rb.click(); expanded = true; }
+    }
+    return expanded;
+}
+
 document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     anchor.addEventListener('click', function (e) {
         const href = this.getAttribute('href');
         // Bare "#" hrefs (e.g. project expand toggles) are not real targets;
         // querySelector('#') would throw SyntaxError, so bail out.
         if (!href || href === '#') return;
-        e.preventDefault();
         const target = document.querySelector(href);
-        if (target) {
-            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            setMenuOpen(false);
-        }
+        if (!target) return;
+        e.preventDefault();
+        const didExpand = revealTarget(target);
+        const scroll = () => target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (didExpand) setTimeout(scroll, 180); else scroll();
+        setMenuOpen(false);
     });
 });
+
+// Direct hits (a shared link, back/forward) also open the collapsed feature.
+function handleHashReveal() {
+    if (!location.hash || location.hash === '#') return;
+    let target;
+    try { target = document.querySelector(location.hash); } catch (e) { return; }
+    if (!target) return;
+    const didExpand = revealTarget(target);
+    setTimeout(() => target.scrollIntoView({ behavior: 'auto', block: 'start' }), didExpand ? 240 : 0);
+}
+window.addEventListener('hashchange', handleHashReveal);
+if (location.hash) window.addEventListener('load', () => setTimeout(handleHashReveal, 320));
 
 function setMenuOpen(open) {
     if (!navToggle || !navMenu) return;
@@ -1578,6 +1610,11 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
         if (gaps.length) {
             html += '<div class="assay-gaps"><div class="mono-label assay-gaps-h">Honest gaps</div><ul>' + gaps.map(g => `<li>${escHtml(g.note)}</li>`).join('') + '</ul></div>';
         }
+        if (cls === 'high' || cls === 'workable') {
+            const subject = encodeURIComponent(`Fit for your role — ${matched.length} matching areas`);
+            const body = encodeURIComponent(`Hi Moses,\n\nI ran your in-browser fit-check against a role and it flagged ${matched.length} matching areas${gaps.length ? ` (and ${gaps.length} gap${gaps.length > 1 ? 's' : ''})` : ''}. I'd like to talk.\n\n`);
+            html += `<div class="assay-cta-wrap"><a class="btn btn-primary btn-small" href="mailto:moseskollehsesay@gmail.com?subject=${subject}&body=${body}" data-analytics="assay-contact"><i class="fas fa-paper-plane"></i> This looks like a fit — get in touch</a></div>`;
+        }
         html += '<p class="assay-note">Deterministic keyword match against a hand-written evidence set — no AI, no data sent anywhere. A starting point for a conversation, not a verdict.</p>';
         result.innerHTML = html;
         if (clearBtn) clearBtn.hidden = false;
@@ -1594,6 +1631,20 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
             input.focus();
         });
     }
+
+    // Instant demo: sample roles inject a realistic JD and grade it.
+    const SAMPLES = {
+        esg: 'ESG Analyst — support CSRD and ESRS reporting, build our GHG inventory across Scope 1, 2 and 3, run sustainability data analysis, and engage stakeholders across the business. Familiarity with GRI, TCFD and SBTi a plus.',
+        climate: 'Climate Risk Consultant — assess physical and transition climate risk, build resilience and adaptation plans, analyse hazard and vulnerability data, and facilitate stakeholder workshops. GIS and scenario analysis welcome.',
+        water: 'WASH Programme Officer — manage borehole drilling and groundwater projects, run hydrogeology surveys, produce GIS maps, and coordinate community water delivery in developing countries.'
+    };
+    document.querySelectorAll('.assay-sample').forEach(b => {
+        b.addEventListener('click', () => {
+            input.value = SAMPLES[b.getAttribute('data-sample')] || '';
+            assay();
+            result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        });
+    });
 })();
 
 // ===================================
@@ -1614,25 +1665,32 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
         return e;
     };
 
+    const gridSel = document.getElementById('anatomyGrid');
     const TOKENS = 1000;                              // everyday-chat workload
-    const GRID = DATA.REGIONS['nl'];                  // Netherlands grid
     const PUE = DATA.PUE;
     const WUE = DATA.WUE_PROFILES.avg.wue_L_per_kWh;
     // The roughest term: embodied hardware carbon amortised per query, as
     // gCO2e per Wh of inference. Grid-independent (manufacturing is already
     // spent), so on a clean grid it can exceed operational Scope 2.
     const EMBODIED_G_PER_WH = 0.05;
+    const ANSWERS_PER_YEAR = 20 * 220;               // 20 prompts/day × 220 working days
+    let scale = 'answer';
 
     DATA.HOMEPAGE_MODELS.forEach(k => sel.add(new Option(DATA.MODELS[k].label, k)));
     sel.value = DATA.MODELS['gpt-4o'] ? 'gpt-4o' : DATA.HOMEPAGE_MODELS[0];
+    if (gridSel) {
+        DATA.HOMEPAGE_REGIONS.forEach(k => gridSel.add(new Option(`${DATA.REGIONS[k].label} — ${DATA.REGIONS[k].intensity} gCO₂e/kWh`, k)));
+        gridSel.value = 'nl';
+    }
+    const gridNow = () => (gridSel && DATA.REGIONS[gridSel.value]) || DATA.REGIONS['nl'];
 
-    const compute = (key) => {
+    const compute = (key, grid) => {
         const infWh = DATA.MODELS[key].energyPer1kTokens_Wh * (TOKENS / 1000); // inference energy
         const wh = infWh * PUE;                                                // facility energy (grid + cooling overhead)
         const kwh = wh / 1000;
         // Embodied hardware scales with the chips' compute, not facility overhead,
         // so Scope 3 uses pre-PUE inference energy (matching the coefficient's basis).
-        return { scope2: kwh * GRID.intensity, scope3: infWh * EMBODIED_G_PER_WH, water: kwh * WUE * 1000 };
+        return { scope2: kwh * grid.intensity, scope3: infWh * EMBODIED_G_PER_WH, water: kwh * WUE * 1000 };
     };
     const fmt = (n) => (n === 0 ? '0' : n >= 1 ? n.toFixed(2) : n >= 0.001 ? n.toFixed(3) : '<0.001');
 
@@ -1661,20 +1719,38 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
     });
 
     const update = () => {
-        const d = compute(sel.value);
+        const grid = gridNow();
+        const d = compute(sel.value, grid);
         const carbonMax = Math.max(d.scope2, d.scope3, 0.0001);
         const widths = [8 + (d.scope2 / carbonMax) * 40, 8 + (d.scope3 / carbonMax) * 40, 26];
         rows.forEach((ry, i) => ribbons[i].setAttribute('d', ribbon(sx, cy, tx, ry, widths[i])));
-        vals[0].textContent = `${fmt(d.scope2)} g CO₂e`;
-        vals[1].textContent = `${fmt(d.scope3)} g CO₂e`;
-        vals[2].textContent = `${fmt(d.water)} mL water`;
+        const yr = scale === 'year';
+        const m = yr ? ANSWERS_PER_YEAR : 1;
+        const cDiv = yr ? 1000 : 1;                   // g -> kg, mL -> L
+        const cu = yr ? 'kg' : 'g', wu = yr ? 'L' : 'mL';
+        vals[0].textContent = `${fmt(d.scope2 * m / cDiv)} ${cu} CO₂e`;
+        vals[1].textContent = `${fmt(d.scope3 * m / cDiv)} ${cu} CO₂e`;
+        vals[2].textContent = `${fmt(d.water * m / cDiv)} ${wu} water`;
         if (summary) {
-            summary.innerHTML = `<strong>${DATA.MODELS[sel.value].label}</strong>, one everyday answer on the Netherlands grid: <strong>${fmt(d.scope2)} g</strong> Scope 2, <strong>${fmt(d.scope3)} g</strong> Scope 3, <strong>${fmt(d.water)} mL</strong> cooling water — one answer, three ESRS lines.`;
+            const basis = yr ? `at ~${ANSWERS_PER_YEAR.toLocaleString()} answers/analyst-year (20/day × 220 days)` : 'one everyday answer';
+            summary.innerHTML = `<strong>${DATA.MODELS[sel.value].label}</strong>, ${basis} on the <strong>${grid.label}</strong> grid: <strong>${fmt(d.scope2 * m / cDiv)} ${cu}</strong> Scope 2, <strong>${fmt(d.scope3 * m / cDiv)} ${cu}</strong> Scope 3, <strong>${fmt(d.water * m / cDiv)} ${wu}</strong> cooling water — three ESRS lines.`;
         }
     };
 
     update();
     sel.addEventListener('change', update);
+    if (gridSel) gridSel.addEventListener('change', update);
+    document.querySelectorAll('.anatomy-scale-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            scale = btn.getAttribute('data-scale');
+            document.querySelectorAll('.anatomy-scale-btn').forEach(b => {
+                const on = b === btn;
+                b.classList.toggle('is-active', on);
+                b.setAttribute('aria-pressed', String(on));
+            });
+            update();
+        });
+    });
 })();
 
 // ===================================
@@ -1724,6 +1800,12 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
     };
 
     slider.addEventListener('input', () => render(+slider.value));
+    // Soft snap to the two meaningful anchors on release.
+    slider.addEventListener('change', () => {
+        const v = +slider.value;
+        if (Math.abs(v - 30) <= 3) { slider.value = 30; render(30); }
+        else if (Math.abs(v - 70) <= 3) { slider.value = 70; render(70); }
+    });
     render(+slider.value);
 })();
 
@@ -1821,6 +1903,8 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
         for (let i = KNOWN; i < n; i++) guessDots[i].setAttribute('cy', yAt(guess[i]));
     };
     drawGuess();
+    // Pulse the first predict dot so people know the curve is grabbable.
+    if (guessDots[KNOWN]) guessDots[KNOWN].classList.add('ydi-dot-pulse');
 
     // --- interaction (pointer + keyboard) ---
     let cursor = KNOWN;
@@ -1832,7 +1916,12 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
     hit.setAttribute('aria-label', 'Draw your prediction: left/right arrows move between models, up/down arrows raise or lower the guessed energy, Enter reveals the real curve. The Reveal button and the data table below are equivalent.');
     svg.appendChild(hit);
 
-    const markInteracted = () => { if (!interacted) { interacted = true; if (hintEl) hintEl.style.opacity = '0'; } };
+    const markInteracted = () => {
+        if (interacted) return;
+        interacted = true;
+        if (hintEl) hintEl.style.opacity = '0';
+        if (guessDots[KNOWN]) guessDots[KNOWN].classList.remove('ydi-dot-pulse');
+    };
     const toLocal = (evt) => {
         const rect = svg.getBoundingClientRect();
         return { x: (evt.clientX - rect.left) / rect.width * W, y: (evt.clientY - rect.top) / rect.height * H };
@@ -1881,8 +1970,18 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
     });
 
     // --- reveal ---
+    const nudge = () => {
+        if (hintEl) {
+            hintEl.style.opacity = '';
+            hintEl.classList.add('ydi-hint-nudge');
+            setTimeout(() => hintEl.classList.remove('ydi-hint-nudge'), 1200);
+        }
+        if (guessDots[KNOWN]) guessDots[KNOWN].classList.add('ydi-dot-pulse');
+    };
+
     const doReveal = () => {
         if (revealed) return;
+        if (!interacted) { nudge(); return; }   // draw first — don't grade a guess never made
         revealed = true;
         realLine.setAttribute('points', models.map((m, i) => `${xAt(i)},${yAt(m.wh)}`).join(' '));
         svg.classList.add('revealed');
@@ -1910,7 +2009,16 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
             msg = `Close — you had the frontier near ${gWh.toFixed(2)} Wh; it's ${rWh.toFixed(2)} Wh.`;
         }
         msg += ` A 1B model answers for ${tiny.toFixed(3)} Wh — the frontier reasoning model burns roughly ${factorFrontier}× more for the same 1,000-token answer. That gap is exactly what the tools people prompt with never show them.`;
-        if (verdictEl) { verdictEl.textContent = msg; verdictEl.hidden = false; }
+        // Shape grade: did they capture the frontier spike, not just a magnitude?
+        let guessPeak = KNOWN;
+        for (let i = KNOWN + 1; i < n; i++) if (guess[i] > guess[guessPeak]) guessPeak = i;
+        const spread = guess[n - 1] - guess[KNOWN];
+        let shape;
+        if (guessPeak === n - 1 && rWh / Math.max(gWh, 0.001) < 1.6) shape = 'You nailed the shape — you saw the frontier spike.';
+        else if (guessPeak === n - 1) shape = 'You saw the spike, but under-scaled how steep it gets.';
+        else if (spread < 0.1) shape = 'You drew it nearly flat — the real curve hides a cliff at the frontier.';
+        else shape = 'You underestimated the frontier — the reasoning model is the outlier.';
+        if (verdictEl) { verdictEl.innerHTML = `<span class="ydi-shape">${shape}</span> ${msg}`; verdictEl.hidden = false; }
     };
     revealBtn.addEventListener('click', doReveal);
 
@@ -1928,6 +2036,7 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
             revealBtn.hidden = false;
             interacted = false;
             if (hintEl) hintEl.style.opacity = '';
+            if (guessDots[KNOWN]) guessDots[KNOWN].classList.add('ydi-dot-pulse');
         });
     }
 
@@ -1955,6 +2064,8 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
     const G_CO2_PER_MB = 0.36;
     const MEDIAN_MB = 2.5;
     const pageOrigin = location.origin;
+    const urlText = (location.hostname + location.pathname).replace(/\/+$/, '') || 'moseskolleh.github.io/sustaintheworld';
+    let lastReceiptG = 0;
 
     const bytesOf = (r) => {
         if (r.transferSize && r.transferSize > 0) return r.transferSize;
@@ -2001,6 +2112,7 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
         ORDER.forEach(k => { total += g[k]; });
         const totalMb = total / 1048576;
         const totalG = totalMb * G_CO2_PER_MB;
+        lastReceiptG = totalG;
         const dt = new Date();
         const pad = (n) => String(n).padStart(2, '0');
         const stamp = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}  ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
@@ -2029,7 +2141,11 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
             lines.push({ t: 'c', s: `* ${unmeasured} third-party file${unmeasured > 1 ? 's' : ''} not counted`, dim: true });
         }
         lines.push({ t: 'd' });
-        lines.push({ t: 'c', s: 'browsed lightly — thank you' });
+        lines.push({ t: 'c', s: 'browsed lightly — say hello' });
+        lines.push({ t: 'd' });
+        lines.push({ t: 'c', s: 'MOSES KOLLEH SESAY', b: true });
+        lines.push({ t: 'c', s: urlText, dim: true });
+        lines.push({ t: 'c', s: 'climate · ESG · sustainable AI' });
         lines.push({ t: 'c', s: '||‖|‖||‖|||‖|‖||‖|||', mono: true });
         return lines;
     };
@@ -2112,7 +2228,7 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
             try {
                 const a = document.createElement('a');
                 a.href = canvas.toDataURL('image/png');
-                a.download = 'sustaintheworld-carbon-receipt.png';
+                a.download = 'carbon-receipt-' + lastReceiptG.toFixed(3).replace('.', '_') + 'g.png';
                 document.body.appendChild(a);
                 a.click();
                 a.remove();

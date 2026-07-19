@@ -891,15 +891,17 @@
                                 <p class="borehole-result mono-label" id="drillResult" aria-live="polite">Drag the rig (or focus the profile and use ← → keys), then drill.</p>
                             </div>
                             <div class="dossier-widget strike" id="strikeWidget">
-                                <h4><i class="fas fa-tint"></i> Seven in ten: what reading the ground is worth</h4>
+                                <h4><i class="fas fa-tint"></i> Seven in ten: what reading the ground is worth <span class="try-tag">try it</span></h4>
                                 <p class="dossier-widget-intro">Every borehole is a bet a community pays for. Drag the strike rate from blind drilling in hard rock up to what reading the resistivity curve first delivers — and watch the dry holes turn to water.</p>
                                 <div class="strike-waffle" id="strikeWaffle" aria-hidden="true"></div>
                                 <p class="strike-counter" id="strikeCounter"></p>
                                 <div class="strike-control">
                                     <label class="mono-label" for="strikeSlider">Strike rate</label>
-                                    <input type="range" id="strikeSlider" min="30" max="70" value="30" step="1">
-                                    <output class="strike-out" id="strikeOut" for="strikeSlider">30%</output>
+                                    <input type="range" id="strikeSlider" min="30" max="70" value="70" step="1" list="strikeTicks">
+                                    <output class="strike-out" id="strikeOut" for="strikeSlider">70%</output>
                                 </div>
+                                <datalist id="strikeTicks"><option value="30"></option><option value="70"></option></datalist>
+                                <div class="strike-anchors" aria-hidden="true"><span>Blind drilling · 30%</span><span class="strike-anchor-win">Reading the curve · 70%</span></div>
                                 <p class="strike-foot">Baseline &asymp; blind drilling in the Freetown hard-rock complex; 70% is my field-proven rate reading electrical resistivity first — part of the 164 water points I helped deliver.</p>
                             </div>
                         </div>
@@ -923,7 +925,7 @@
             <!-- You Draw It: predict AI's energy curve, then reveal the truth -->
             <div class="ydi reveal" id="ydi">
                 <div class="ydi-head">
-                    <span class="mono-label">First — a guess</span>
+                    <span class="mono-label">First — a guess</span><span class="try-tag">try it</span>
                     <h3 class="ydi-title">How much does one AI answer cost as models get bigger?</h3>
                     <p class="ydi-lede">The three smallest models are plotted for you. <strong>Drag across the chart</strong> to predict the rest — from mid-size models up to a frontier reasoning model — then reveal what the research actually measured.</p>
                 </div>
@@ -979,15 +981,21 @@
             <!-- Anatomy of a Prompt: one answer -> Scope 2 / Scope 3 / water -> ESRS lines -->
             <div class="anatomy reveal" id="anatomy">
                 <div class="anatomy-head">
-                    <span class="mono-label">The accounting view</span>
+                    <span class="mono-label">The accounting view</span><span class="try-tag">try it</span>
                     <h3 class="anatomy-title">Anatomy of a prompt — where one answer lands on a CSRD report</h3>
                     <p class="anatomy-lede">The totals above are only half the story. A sustainability report doesn't want one number — it wants the right number on the right disclosure line. Here's how a single answer splits across the ESRS.</p>
                 </div>
                 <div class="anatomy-control">
                     <label class="mono-label" for="anatomyModel">Model</label>
                     <select id="anatomyModel"></select>
-                    <span class="anatomy-scenario mono-label">· everyday chat (1k tokens) · Netherlands grid</span>
+                    <label class="mono-label" for="anatomyGrid">Grid</label>
+                    <select id="anatomyGrid"></select>
+                    <div class="anatomy-scale" role="group" aria-label="Reporting scale">
+                        <button type="button" class="anatomy-scale-btn is-active" data-scale="answer" aria-pressed="true">per answer</button>
+                        <button type="button" class="anatomy-scale-btn" data-scale="year" aria-pressed="false">per analyst-year</button>
+                    </div>
                 </div>
+                <p class="anatomy-scenario mono-label">Everyday chat · ~1k tokens · drag the grid from the Netherlands to Norway and watch Scope 2 cross under Scope 3</p>
                 <svg class="anatomy-svg" id="anatomySvg" viewBox="0 0 720 320" role="img" aria-label="Flow diagram splitting one AI answer into Scope 2 grid electricity, Scope 3 embodied hardware, and data-centre cooling water, each mapped to its ESRS disclosure line. A text summary follows."></svg>
                 <p class="anatomy-summary" id="anatomySummary" role="status" aria-live="polite"></p>
                 <p class="anatomy-foot">Scope 2 follows the grid; on a clean grid the hardware's embodied carbon (Scope 3) can outweigh it. Embodied carbon per query is the roughest term here — an order-of-magnitude amortisation, shown to prove the line exists, not to pin it down. Water maps to ESRS E3. Energy, grid and water come from the same shared model behind &ldquo;AI, Weighed&rdquo;.</p>
@@ -1260,7 +1268,7 @@
             <!-- The Assay: paste a JD, get a client-side fit grade + evidence map -->
             <div class="assay reveal" id="assay">
                 <div class="assay-head">
-                    <span class="mono-label">Before you decide</span>
+                    <span class="mono-label">Before you decide</span><span class="try-tag">try it</span>
                     <h3 class="assay-title">Does my record fit your role?</h3>
                     <p class="assay-lede">Paste a job description below. This grades the fit and maps each requirement to the evidence that backs it &mdash; <strong>entirely in your browser</strong>. The text never leaves this page, and no AI model is downloaded to do it. Doing this in a few kilobytes instead of a gigabyte model is, more or less, the whole point of my work.</p>
                 </div>
@@ -1271,6 +1279,12 @@
                         <button class="btn btn-primary btn-small" id="assayRun" type="button" data-analytics="assay-run">Assay this role</button>
                         <button class="btn btn-secondary btn-small" id="assayClear" type="button" hidden>Clear</button>
                         <span class="assay-privacy mono-label"><i class="fas fa-lock"></i> in-browser · nothing sent</span>
+                    </div>
+                    <div class="assay-samples">
+                        <span class="mono-label">no JD handy? try a sample:</span>
+                        <button type="button" class="assay-sample" data-sample="esg" data-analytics="assay-sample">ESG analyst</button>
+                        <button type="button" class="assay-sample" data-sample="climate" data-analytics="assay-sample">Climate-risk consultant</button>
+                        <button type="button" class="assay-sample" data-sample="water" data-analytics="assay-sample">WASH / water</button>
                     </div>
                 </div>
                 <div class="assay-result" id="assayResult" role="region" aria-label="Fit assessment" aria-live="polite" hidden></div>
