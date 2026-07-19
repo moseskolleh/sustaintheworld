@@ -114,6 +114,36 @@ function assert(cond, msg) {
     );
 }
 
+// --- Bug 3: terminal 'drill' command in eco-mode must not double-fire done() ---
+// Before the fix, the calm-mode branch invoked done() inline AND returned
+// undefined, so runCommand (which calls done() unless fn returns true) fired
+// the input.focus()/input.disabled=false side-effects a second time.
+{
+    const { window } = run('dark');
+    const doc = window.document;
+    doc.body.classList.add('eco-mode');
+
+    const termToggle = doc.getElementById('terminalToggle');
+    assert(!!termToggle, 'Bug3 setup: footer terminal toggle exists');
+    termToggle.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }));
+
+    const ftInput = doc.getElementById('ftInput');
+    assert(!!ftInput, 'Bug3 setup: terminal input mounted after toggle');
+
+    // Count focus() calls AFTER the initial open() so we measure only the drill dispatch.
+    let focusCount = 0;
+    if (ftInput) ftInput.focus = () => { focusCount++; };
+
+    ftInput.value = 'drill';
+    const form = ftInput.closest('form');
+    form.dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+
+    assert(
+        focusCount === 1,
+        `Bug3: calm-mode drill should invoke done() exactly once (focus count was ${focusCount})`
+    );
+}
+
 if (failures > 0) {
     console.log(`\n${failures} assertion(s) failed`);
     process.exit(1);
