@@ -975,6 +975,23 @@
                 </div>
                 <p class="eco-footnote">Order-of-magnitude estimates, inference only — per-token benchmarks from Jegham et&nbsp;al. 2025, grid intensities from Ember 2023. Full methodology and sources in the coach.</p>
             </div>
+
+            <!-- Anatomy of a Prompt: one answer -> Scope 2 / Scope 3 / water -> ESRS lines -->
+            <div class="anatomy reveal" id="anatomy">
+                <div class="anatomy-head">
+                    <span class="mono-label">The accounting view</span>
+                    <h3 class="anatomy-title">Anatomy of a prompt — where one answer lands on a CSRD report</h3>
+                    <p class="anatomy-lede">The totals above are only half the story. A sustainability report doesn't want one number — it wants the right number on the right disclosure line. Here's how a single answer splits across the ESRS.</p>
+                </div>
+                <div class="anatomy-control">
+                    <label class="mono-label" for="anatomyModel">Model</label>
+                    <select id="anatomyModel"></select>
+                    <span class="anatomy-scenario mono-label">· everyday chat (1k tokens) · Netherlands grid</span>
+                </div>
+                <svg class="anatomy-svg" id="anatomySvg" viewBox="0 0 720 320" role="img" aria-label="Flow diagram splitting one AI answer into Scope 2 grid electricity, Scope 3 embodied hardware, and data-centre cooling water, each mapped to its ESRS disclosure line. A text summary follows."></svg>
+                <p class="anatomy-summary" id="anatomySummary" role="status" aria-live="polite"></p>
+                <p class="anatomy-foot">Scope 2 follows the grid; on a clean grid the hardware's embodied carbon (Scope 3) can outweigh it. Embodied carbon per query is the roughest term here — an order-of-magnitude amortisation, shown to prove the line exists, not to pin it down. Water maps to ESRS E3. Energy, grid and water come from the same shared model behind &ldquo;AI, Weighed&rdquo;.</p>
+            </div>
         </div>
     </section>
 
@@ -1239,6 +1256,26 @@
                 <h2 class="section-title">Get in <span class="highlight">Touch</span></h2>
                 <p class="section-description"><strong class="contact-open"><span class="blink-dot"></span> Open to roles &amp; consulting</strong> in sustainability, climate risk and ESG &mdash; Amsterdam / EU, remote-friendly. Working on something at the intersection of climate, water or AI? Let's talk &mdash; I usually reply within a couple of days.</p>
             </div>
+
+            <!-- The Assay: paste a JD, get a client-side fit grade + evidence map -->
+            <div class="assay reveal" id="assay">
+                <div class="assay-head">
+                    <span class="mono-label">Before you decide</span>
+                    <h3 class="assay-title">Does my record fit your role?</h3>
+                    <p class="assay-lede">Paste a job description below. This grades the fit and maps each requirement to the evidence that backs it &mdash; <strong>entirely in your browser</strong>. The text never leaves this page, and no AI model is downloaded to do it. Doing this in a few kilobytes instead of a gigabyte model is, more or less, the whole point of my work.</p>
+                </div>
+                <div class="assay-io">
+                    <label class="mono-label" for="assayInput">Job description</label>
+                    <textarea id="assayInput" rows="7" placeholder="Paste the role's description or key requirements here…"></textarea>
+                    <div class="assay-actions">
+                        <button class="btn btn-primary btn-small" id="assayRun" type="button" data-analytics="assay-run">Assay this role</button>
+                        <button class="btn btn-secondary btn-small" id="assayClear" type="button" hidden>Clear</button>
+                        <span class="assay-privacy mono-label"><i class="fas fa-lock"></i> in-browser · nothing sent</span>
+                    </div>
+                </div>
+                <div class="assay-result" id="assayResult" role="region" aria-live="polite" hidden></div>
+            </div>
+
             <div class="contact-content">
                 <div class="contact-info reveal">
                     <a class="contact-card" href="mailto:moseskollehsesay@gmail.com" data-analytics="email">

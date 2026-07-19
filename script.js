@@ -1471,6 +1471,209 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
 })();
 
 // ===================================
+// THE ASSAY — paste a JD, get a client-side fit grade + evidence map.
+// Deterministic keyword/ontology matching over a hand-written evidence set.
+// No AI, no model download, nothing leaves the browser — that restraint is
+// the argument. Every evidence line is real, drawn from this site.
+// ===================================
+(() => {
+    const input = document.getElementById('assayInput');
+    const runBtn = document.getElementById('assayRun');
+    const clearBtn = document.getElementById('assayClear');
+    const result = document.getElementById('assayResult');
+    if (!input || !runBtn || !result) return;
+
+    // Capability areas backed by real, delivered work on this site.
+    const STRENGTHS = [
+        { label: 'ESG analysis & integration',
+          syn: ['esg', 'environmental social', 'environmental, social', 'sustainability analyst', 'sustainability strategy', 'materiality', 'double materiality'],
+          ev: ['ESG & climate-risk analyses decision-makers can act on', 'Certified ESG Specialist'] },
+        { label: 'Sustainability reporting (CSRD/ESRS & frameworks)',
+          syn: ['csrd', 'esrs', 'sustainability report', 'non-financial report', 'disclosure', 'gri', 'sasb', 'ifrs s1', 'ifrs s2', 'tcfd', 'tnfd', 'cdp', 'sbti', 'reporting standard'],
+          ev: ['Framed sustainable-AI work against CSRD/ESRS disclosure logic', 'Fluent across IFRS S1&S2, SASB, GRI, TCFD, TNFD, CDP, SBTi'] },
+        { label: 'GHG accounting & carbon footprinting',
+          syn: ['ghg', 'greenhouse gas', 'scope 1', 'scope 2', 'scope 3', 'carbon account', 'carbon footprint', 'emissions inventory', 'ghg protocol', 'life cycle', 'lca'],
+          ev: ['GHG accounting across Scope 1–3', 'Mapped generative-AI footprint from Scope 2 electricity to Scope 3 hardware and cooling water', 'Life Cycle Assessment'] },
+        { label: 'Climate risk, adaptation & disaster resilience',
+          syn: ['climate risk', 'climate adaptation', 'resilience', 'physical risk', 'transition risk', 'disaster risk', 'hazard', 'vulnerability', 'sendai'],
+          ev: ['UNDRR: documented 54 global hazard information systems for the Sendai Framework', 'Wuppertal flood-risk & climate-adaptation consultancy', 'Authored the Trinidad & Tobago national risk factsheet'] },
+        { label: 'Water resources, hydrogeology & WASH',
+          syn: ['water', 'wash', 'hydrogeology', 'groundwater', 'aquifer', 'borehole', 'water resource', 'drinking water', 'hydrology', 'sanitation'],
+          ev: ['Delivered 164 water points across Sierra Leone', '70% aquifer strike rate using electrical-resistivity surveys', 'Groundwater potential mapping of the Freetown Complex'] },
+        { label: 'GIS & geospatial analysis',
+          syn: ['gis', 'qgis', 'arcgis', 'geospatial', 'spatial analysis', 'remote sensing', 'cartograph'],
+          ev: ['QGIS mapping that struck water 7 in 10', 'Produced groundwater-potential maps that guided drilling'] },
+        { label: 'Data analysis & visualization',
+          syn: ['python', 'data analysis', 'data analytics', 'pandas', 'sql', 'statistic', 'tableau', 'power bi', 'data visual', 'r programming'],
+          ev: ['Python for river-export pollution analysis', 'Tableau & Power BI', 'Google Advanced Data Analytics certificate'] },
+        { label: 'Sustainable AI & AI governance',
+          syn: ['sustainable ai', 'ai governance', 'responsible ai', 'ai ethics', 'green ai', 'ai sustainability', 'generative ai', 'llm', 'machine learning'],
+          ev: ['Sustainable-AI framework & prototype for the Dutch Ministry of Finance (Digital Society School)', 'Built EcoPrompt Coach — energy, water & carbon of LLM queries'] },
+        { label: 'Water quality & environmental modeling',
+          syn: ['pollution', 'water quality', 'contamination', 'nutrient', 'nitrogen', 'effluent', 'catchment', 'watershed', 'eutrophication'],
+          ev: ['MARINA-Multi pollution modeling across 10,226 sub-basins', 'River-export pollution analysis'] },
+        { label: 'Stakeholder engagement & facilitation',
+          syn: ['stakeholder', 'facilitation', 'workshop', 'engagement', 'cross-functional', 'interdisciplinary', 'capacity building', 'collaborat'],
+          ev: ['Interdisciplinary consultancy for the Municipality of Wuppertal', 'Led drilling crews and community water projects'] },
+        { label: 'International & cross-cultural work',
+          syn: ['international', 'multicultural', 'cross-cultural', 'multilingual', 'global south', 'developing countr', 'emerging market', 'fieldwork'],
+          ev: ['Worked across three continents — Sierra Leone, China, Germany & the Netherlands', 'MOFCOM scholarship in China'] },
+        { label: 'Applied research & methodology',
+          syn: ['research', 'thesis', 'peer-review', 'methodology', 'literature review', 'academic research', 'msc'],
+          ev: ['Dual master’s: Environmental Sciences (Wageningen) and Industrial Engineering (Hunan)', 'Design-research at the Digital Society School'] }
+    ];
+
+    // Honest growth edges — flagged if the JD asks for them.
+    const GAPS = [
+        { syn: ['10+ years', '10 years', '12 years', '15 years', '20 years', 'senior director', 'head of sustainability', 'vice president', 'principal consultant', 'director of'],
+          note: 'Seniority: early-career — strongest as a fast-growing analyst/specialist, not a 10+-year lead.' },
+        { syn: ['financial model', 'valuation', 'cfa', 'equity research', 'fp&a', 'p&l ownership'],
+          note: 'Financial modeling isn’t the core strength — the numbers here are environmental, not financial.' },
+        { syn: ['sphera', 'persefoni', 'workiva', 'enablon', 'novisto', 'watershed platform'],
+          note: 'Hasn’t used that specific enterprise platform — but the underlying GHG/ESRS logic transfers directly.' },
+        { syn: ['phd required', 'ph.d. required', 'doctorate required', 'phd in', 'ph.d in'],
+          note: 'Holds two master’s degrees rather than a PhD.' },
+        { syn: ['attorney', 'law degree', 'legal counsel', 'regulatory lawyer', 'bar admission'],
+          note: 'Not a legal specialist — fluent in disclosure regulation, but not a lawyer.' }
+    ];
+
+    const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // Allow a trailing plural so "stakeholders" matches "stakeholder", etc.
+    const hit = (text, syns) => syns.some(s => new RegExp('\\b' + esc(s) + '(?:s|es)?\\b', 'i').test(text));
+    const escHtml = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    const assay = () => {
+        const text = (input.value || '').toLowerCase();
+        result.hidden = false;
+        if (text.trim().length < 20) {
+            result.innerHTML = '<p class="assay-empty">Paste a few lines of the job description and I’ll grade the fit.</p>';
+            return;
+        }
+        const matched = STRENGTHS.filter(t => hit(text, t.syn));
+        const gaps = GAPS.filter(g => hit(text, g.syn));
+        const strong = matched.length;
+
+        let grade, cls, blurb;
+        if (strong === 0) {
+            grade = 'Different field'; cls = 'marginal';
+            blurb = 'Nothing here maps to my environmental, data or sustainability evidence — most likely a different field. Happy to be told I’m wrong.';
+        } else if (strong >= 3 && gaps.length <= 1) {
+            grade = 'High-grade match'; cls = 'high';
+            blurb = `This sits squarely in my wheelhouse — ${strong} of your requirement areas map to concrete, delivered work.`;
+        } else if (strong >= 2) {
+            grade = 'Workable match'; cls = 'workable';
+            blurb = `A solid overlap — ${strong} requirement areas map to real evidence${gaps.length ? `, with ${gaps.length} honest gap${gaps.length > 1 ? 's' : ''} flagged below` : ''}.`;
+        } else {
+            grade = 'Marginal match'; cls = 'marginal';
+            blurb = `One clear point of overlap${gaps.length ? ', plus some gaps' : ''} — worth a conversation if the rest is learnable on the job.`;
+        }
+
+        let html = `<div class="assay-grade assay-grade-${cls}"><span class="assay-grade-tag">${grade}</span><p>${blurb}</p></div>`;
+        if (matched.length) {
+            html += '<div class="assay-map"><div class="mono-label assay-map-h">What you asked for → what backs it</div>';
+            html += matched.map(t => `<div class="assay-row"><div class="assay-req">${escHtml(t.label)}</div><div class="assay-ev">${t.ev.map(e => `<span>${escHtml(e)}</span>`).join('')}</div></div>`).join('');
+            html += '</div>';
+        }
+        if (gaps.length) {
+            html += '<div class="assay-gaps"><div class="mono-label assay-gaps-h">Honest gaps</div><ul>' + gaps.map(g => `<li>${escHtml(g.note)}</li>`).join('') + '</ul></div>';
+        }
+        html += '<p class="assay-note">Deterministic keyword match against a hand-written evidence set — no AI, no data sent anywhere. A starting point for a conversation, not a verdict.</p>';
+        result.innerHTML = html;
+        if (clearBtn) clearBtn.hidden = false;
+        if (typeof window.trackEvent === 'function') window.trackEvent('assay-' + cls);
+    };
+
+    runBtn.addEventListener('click', assay);
+    if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+            input.value = '';
+            result.hidden = true;
+            result.innerHTML = '';
+            clearBtn.hidden = true;
+            input.focus();
+        });
+    }
+})();
+
+// ===================================
+// ANATOMY OF A PROMPT — one answer, split into Scope 2 / Scope 3 / water,
+// each mapped to its ESRS disclosure line. Hand-drawn SVG flow, no library.
+// ===================================
+(() => {
+    const svg = document.getElementById('anatomySvg');
+    const sel = document.getElementById('anatomyModel');
+    const summary = document.getElementById('anatomySummary');
+    const DATA = (typeof window !== 'undefined') ? window.AICarbonData : null;
+    if (!svg || !sel || !DATA) return;
+
+    const NS = 'http://www.w3.org/2000/svg';
+    const mk = (name, attrs) => {
+        const e = document.createElementNS(NS, name);
+        for (const k in attrs) e.setAttribute(k, attrs[k]);
+        return e;
+    };
+
+    const TOKENS = 1000;                              // everyday-chat workload
+    const GRID = DATA.REGIONS['nl'];                  // Netherlands grid
+    const PUE = DATA.PUE;
+    const WUE = DATA.WUE_PROFILES.avg.wue_L_per_kWh;
+    // The roughest term: embodied hardware carbon amortised per query, as
+    // gCO2e per Wh of inference. Grid-independent (manufacturing is already
+    // spent), so on a clean grid it can exceed operational Scope 2.
+    const EMBODIED_G_PER_WH = 0.05;
+
+    DATA.HOMEPAGE_MODELS.forEach(k => sel.add(new Option(DATA.MODELS[k].label, k)));
+    sel.value = DATA.MODELS['gpt-4o'] ? 'gpt-4o' : DATA.HOMEPAGE_MODELS[0];
+
+    const compute = (key) => {
+        const wh = DATA.MODELS[key].energyPer1kTokens_Wh * (TOKENS / 1000) * PUE;
+        const kwh = wh / 1000;
+        return { scope2: kwh * GRID.intensity, scope3: wh * EMBODIED_G_PER_WH, water: kwh * WUE * 1000 };
+    };
+    const fmt = (n) => (n === 0 ? '0' : n >= 1 ? n.toFixed(2) : n >= 0.001 ? n.toFixed(3) : '<0.001');
+
+    const cy = 160, sx = 180, tx = 430, rows = [70, 160, 250];
+    const ribbon = (x1, y1, x2, y2, w) => {
+        const mx = (x1 + x2) / 2, t = w / 2;
+        return `M ${x1} ${y1 - t} C ${mx} ${y1 - t}, ${mx} ${y2 - t}, ${x2} ${y2 - t} L ${x2} ${y2 + t} C ${mx} ${y2 + t}, ${mx} ${y1 + t}, ${x1} ${y1 + t} Z`;
+    };
+
+    const cards = [
+        { t: 'Grid electricity · Scope 2', esrs: 'ESRS E1-6 · Scope 2 emissions', cls: 'r0' },
+        { t: 'Embodied hardware · Scope 3', esrs: 'ESRS E1-6 · Scope 3 (capital goods)', cls: 'r1' },
+        { t: 'Cooling water', esrs: 'ESRS E3-4 · Water consumption', cls: 'r2' }
+    ];
+
+    // static build
+    svg.appendChild(mk('rect', { x: 20, y: cy - 38, width: 160, height: 76, rx: 10, class: 'anatomy-source' }));
+    const st = mk('text', { x: 100, y: cy - 4, 'text-anchor': 'middle', class: 'anatomy-source-t' }); st.textContent = 'One AI answer'; svg.appendChild(st);
+    const ss = mk('text', { x: 100, y: cy + 15, 'text-anchor': 'middle', class: 'anatomy-source-sub' }); ss.textContent = '~1,000 tokens'; svg.appendChild(ss);
+    const ribbons = rows.map((ry, i) => { const p = mk('path', { class: 'anatomy-ribbon ' + cards[i].cls }); svg.appendChild(p); return p; });
+    const vals = rows.map((ry, i) => {
+        const title = mk('text', { x: tx + 10, y: ry - 14, class: 'anatomy-t-title ' + cards[i].cls }); title.textContent = cards[i].t; svg.appendChild(title);
+        const val = mk('text', { x: tx + 10, y: ry + 8, class: 'anatomy-t-val' }); svg.appendChild(val);
+        const esrs = mk('text', { x: tx + 10, y: ry + 28, class: 'anatomy-t-esrs' }); esrs.textContent = cards[i].esrs; svg.appendChild(esrs);
+        return val;
+    });
+
+    const update = () => {
+        const d = compute(sel.value);
+        const carbonMax = Math.max(d.scope2, d.scope3, 0.0001);
+        const widths = [8 + (d.scope2 / carbonMax) * 40, 8 + (d.scope3 / carbonMax) * 40, 26];
+        rows.forEach((ry, i) => ribbons[i].setAttribute('d', ribbon(sx, cy, tx, ry, widths[i])));
+        vals[0].textContent = `${fmt(d.scope2)} g CO₂e`;
+        vals[1].textContent = `${fmt(d.scope3)} g CO₂e`;
+        vals[2].textContent = `${fmt(d.water)} mL water`;
+        if (summary) {
+            summary.innerHTML = `<strong>${DATA.MODELS[sel.value].label}</strong>, one everyday answer on the Netherlands grid: <strong>${fmt(d.scope2)} g</strong> Scope 2, <strong>${fmt(d.scope3)} g</strong> Scope 3, <strong>${fmt(d.water)} mL</strong> cooling water — one answer, three ESRS lines.`;
+        }
+    };
+
+    update();
+    sel.addEventListener('change', update);
+})();
+
+// ===================================
 // SEVEN IN TEN — the 70% strike rate as a felt human delta
 // A 100-dot waffle of boreholes; the slider moves the strike rate from blind
 // drilling in hard rock up to the field-proven 70%, flipping dry holes to water.
