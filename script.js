@@ -1503,6 +1503,60 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
 })();
 
 // ===================================
+// SHARE HELPERS — let every interactive result leave with the visitor.
+// Web Share where available (mobile), graceful fallbacks: images fall back to a
+// download, text falls back to the clipboard. Every payload links home.
+// ===================================
+window.mksShare = (() => {
+    const SITE = (location.hostname + location.pathname).replace(/\/+$/, '') || 'moseskolleh.github.io/sustaintheworld';
+    const flash = (btn, msg) => {
+        if (!btn) return;
+        if (!btn.dataset.label) btn.dataset.label = btn.textContent;
+        btn.textContent = msg;
+        setTimeout(() => { btn.textContent = btn.dataset.label; }, 1700);
+    };
+    return {
+        site: SITE,
+        async image(canvas, filename, text) {
+            try {
+                if (navigator.share && navigator.canShare) {
+                    const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+                    if (blob) {
+                        const file = new File([blob], filename, { type: 'image/png' });
+                        if (navigator.canShare({ files: [file] })) {
+                            try { await navigator.share({ files: [file], text: text || '' }); return; }
+                            catch (e) { if (e && e.name === 'AbortError') return; }
+                        }
+                    }
+                }
+            } catch (e) { /* fall through to download */ }
+            try {
+                const a = document.createElement('a');
+                a.href = canvas.toDataURL('image/png');
+                a.download = filename;
+                document.body.appendChild(a); a.click(); a.remove();
+            } catch (e) { /* ignore */ }
+        },
+        async copy(str, btn) {
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(str);
+                    flash(btn, 'Copied ✓');
+                    return;
+                }
+            } catch (e) { /* fall through to legacy path */ }
+            try {
+                const ta = document.createElement('textarea');
+                ta.value = str; ta.style.position = 'fixed'; ta.style.opacity = '0';
+                document.body.appendChild(ta); ta.focus(); ta.select();
+                document.execCommand('copy'); ta.remove();
+                flash(btn, 'Copied ✓');
+            } catch (e) { flash(btn, 'Copy failed'); }
+        }
+    };
+})();
+
+// ===================================
 // THE ASSAY — paste a JD, get a client-side fit grade + evidence map.
 // Deterministic keyword/ontology matching over a hand-written evidence set.
 // No AI, no model download, nothing leaves the browser — that restraint is
@@ -1514,6 +1568,7 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
     const clearBtn = document.getElementById('assayClear');
     const result = document.getElementById('assayResult');
     if (!input || !runBtn || !result) return;
+    let lastAssayText = '';
 
     // Capability areas backed by real, delivered work on this site.
     const STRENGTHS = [
@@ -1615,6 +1670,13 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
             const body = encodeURIComponent(`Hi Moses,\n\nI ran your in-browser fit-check against a role and it flagged ${matched.length} matching areas${gaps.length ? ` (and ${gaps.length} gap${gaps.length > 1 ? 's' : ''})` : ''}. I'd like to talk.\n\n`);
             html += `<div class="assay-cta-wrap"><a class="btn btn-primary btn-small" href="mailto:moseskollehsesay@gmail.com?subject=${subject}&body=${body}" data-analytics="assay-contact"><i class="fas fa-paper-plane"></i> This looks like a fit — get in touch</a></div>`;
         }
+        // Plain-text version a recruiter can copy into notes or an email.
+        let plain = `Moses Kolleh Sesay — fit assessment: ${grade}\n${blurb}\n`;
+        matched.forEach(t => { plain += `\n• ${t.label}\n`; t.ev.forEach(e => { plain += `   - ${e}\n`; }); });
+        if (gaps.length) { plain += `\nHonest gaps:\n`; gaps.forEach(g => { plain += `• ${g.note}\n`; }); }
+        plain += `\n— ${window.mksShare ? window.mksShare.site : 'moseskolleh.github.io/sustaintheworld'}`;
+        lastAssayText = plain;
+        html += `<div class="assay-copy-wrap"><button type="button" class="btn btn-secondary btn-small assay-copy" data-analytics="assay-copy"><i class="fas fa-copy"></i> Copy this result</button></div>`;
         html += '<p class="assay-note">Deterministic keyword match against a hand-written evidence set — no AI, no data sent anywhere. A starting point for a conversation, not a verdict.</p>';
         result.innerHTML = html;
         if (clearBtn) clearBtn.hidden = false;
@@ -1622,6 +1684,10 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
     };
 
     runBtn.addEventListener('click', assay);
+    result.addEventListener('click', (e) => {
+        const b = e.target.closest('.assay-copy');
+        if (b && window.mksShare) window.mksShare.copy(lastAssayText, b);
+    });
     if (clearBtn) {
         clearBtn.addEventListener('click', () => {
             input.value = '';
@@ -1740,6 +1806,11 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
     update();
     sel.addEventListener('change', update);
     if (gridSel) gridSel.addEventListener('change', update);
+    const copyBtn = document.getElementById('anatomyCopy');
+    if (copyBtn) copyBtn.addEventListener('click', () => {
+        const txt = (summary ? summary.textContent : '') + `\n— Moses Kolleh Sesay · ${window.mksShare ? window.mksShare.site : ''}`;
+        if (window.mksShare) window.mksShare.copy(txt, copyBtn);
+    });
     document.querySelectorAll('.anatomy-scale-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             scale = btn.getAttribute('data-scale');
@@ -1799,7 +1870,8 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
         counter.innerHTML = msg;
     };
 
-    slider.addEventListener('input', () => render(+slider.value));
+    let userInteracted = false;
+    slider.addEventListener('input', () => { userInteracted = true; render(+slider.value); });
     // Soft snap to the two meaningful anchors on release.
     slider.addEventListener('change', () => {
         const v = +slider.value;
@@ -1807,6 +1879,31 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
         else if (Math.abs(v - 70) <= 3) { slider.value = 70; render(70); }
     });
     render(+slider.value);
+
+    // Auto-demo: on first scroll-into-view, sweep 30 -> 70 so every visitor sees
+    // the dry holes turn to water and the slider rests on the win. The cell
+    // transitions give the staggered fill. Reduced-motion / eco-mode stay at 70.
+    const reduce = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!reduce && 'IntersectionObserver' in window) {
+        let played = false;
+        const io = new IntersectionObserver((entries) => {
+            if (entries.some(e => e.isIntersecting) && !played && !userInteracted && !document.body.classList.contains('eco-mode')) {
+                played = true;
+                io.disconnect();
+                slider.value = 30; render(30);
+                let v = 30;
+                const step = () => {
+                    if (userInteracted) return;
+                    v += 2;
+                    if (v >= 70) { slider.value = 70; render(70); return; }
+                    slider.value = v; render(v);
+                    setTimeout(step, 45);
+                };
+                setTimeout(step, 400);
+            }
+        }, { threshold: 0.35 });
+        io.observe(document.getElementById('strikeWidget') || waffle);
+    }
 })();
 
 // ===================================
@@ -1820,8 +1917,12 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
     const verdictEl = document.getElementById('ydiVerdict');
     const hintEl = document.getElementById('ydiHint');
     const tableEl = document.getElementById('ydiTable');
+    const shareBtn = document.getElementById('ydiShare');
+    const cardCanvas = document.getElementById('ydiCardCanvas');
+    const legendEl = document.getElementById('ydiLegend');
     const DATA = (typeof window !== 'undefined') ? window.AICarbonData : null;
     if (!svg || !revealBtn || !DATA) return;
+    let cardData = null;
 
     const NS = 'http://www.w3.org/2000/svg';
     const mk = (name, attrs) => {
@@ -1881,7 +1982,9 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
     svg.appendChild(mk('polyline', { points: knownPts, class: 'ydi-known-line' }));
     models.slice(0, KNOWN).forEach((m, i) => svg.appendChild(mk('circle', { cx: xAt(i), cy: yAt(m.wh), r: 4, class: 'ydi-known-dot' })));
 
-    // real line (revealed later)
+    // "typical intuition" line + the measured line (both revealed later)
+    const intuitLine = mk('polyline', { points: '', class: 'ydi-intuit-line' });
+    svg.appendChild(intuitLine);
     const realLine = mk('polyline', { points: '', class: 'ydi-real-line' });
     svg.appendChild(realLine);
     const realDots = [];
@@ -1983,8 +2086,18 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
         if (revealed) return;
         if (!interacted) { nudge(); return; }   // draw first — don't grade a guess never made
         revealed = true;
+        const reduce = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         realLine.setAttribute('points', models.map((m, i) => `${xAt(i)},${yAt(m.wh)}`).join(' '));
         svg.classList.add('revealed');
+        // Draw the measured line in, left to right.
+        if (!reduce && realLine.getTotalLength) {
+            const len = realLine.getTotalLength();
+            realLine.style.strokeDasharray = String(len);
+            realLine.style.strokeDashoffset = String(len);
+            realLine.getBoundingClientRect(); // force reflow before transitioning
+            realLine.style.transition = 'stroke-dashoffset 0.85s ease';
+            realLine.style.strokeDashoffset = '0';
+        }
         models.forEach((m, i) => {
             const c = mk('circle', { cx: xAt(i), cy: yAt(m.wh), r: 4, class: 'ydi-real-dot' });
             svg.appendChild(c);
@@ -2019,14 +2132,85 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
         else if (spread < 0.1) shape = 'You drew it nearly flat — the real curve hides a cliff at the frontier.';
         else shape = 'You underestimated the frontier — the reasoning model is the outlier.';
         if (verdictEl) { verdictEl.innerHTML = `<span class="ydi-shape">${shape}</span> ${msg}`; verdictEl.hidden = false; }
+        cardData = { shape: shape, factor: factorFrontier };
+        // Third line: what people typically expect — a near-linear ramp that
+        // misses the reasoning spike, reframing the miss as the industry's.
+        const intuitEnd = 0.55;
+        intuitLine.setAttribute('points', models.map((m, i) => `${xAt(i)},${yAt(tiny + (i / (n - 1)) * (intuitEnd - tiny))}`).join(' '));
+        // Callout on the frontier spike.
+        const callout = mk('text', { x: xAt(n - 1) - 8, y: yAt(rWh) - 12, class: 'ydi-callout', 'text-anchor': 'end' });
+        callout.textContent = `R1 · ~${factorFrontier}× a 1B model`;
+        svg.appendChild(callout);
+        realDots.push(callout);
+        if (legendEl) legendEl.hidden = false;
+        if (shareBtn) shareBtn.hidden = false;
     };
     revealBtn.addEventListener('click', doReveal);
+
+    // Shareable result card (dark, on-brand) — reuses the canvas-PNG pattern.
+    const wrapText = (ctx, text, maxWidth) => {
+        const words = text.split(' ');
+        const out = [];
+        let line = '';
+        words.forEach(w => {
+            const test = line ? line + ' ' + w : w;
+            if (ctx.measureText(test).width > maxWidth && line) { out.push(line); line = w; }
+            else line = test;
+        });
+        if (line) out.push(line);
+        return out;
+    };
+    const drawCard = () => {
+        if (!cardCanvas || !cardCanvas.getContext || !cardData) return;
+        const scale = 2, W = 460, padX = 32, cw = W - padX * 2;
+        let ctx = cardCanvas.getContext('2d');
+        if (!ctx) return;
+        ctx.font = "600 19px 'Space Grotesk', system-ui, sans-serif";
+        const shapeLines = wrapText(ctx, cardData.shape, cw);
+        ctx.font = "400 16px 'Inter', system-ui, sans-serif";
+        const factorText = `The frontier reasoning model burns about ${cardData.factor}× more energy per answer than a 1-billion-parameter model.`;
+        const factorLines = wrapText(ctx, factorText, cw);
+        const headerH = 78;
+        const H = headerH + 26 + shapeLines.length * 26 + 14 + factorLines.length * 23 + 66;
+        cardCanvas.width = W * scale; cardCanvas.height = H * scale;
+        ctx = cardCanvas.getContext('2d');
+        ctx.scale(scale, scale);
+        ctx.fillStyle = '#0b1705'; ctx.fillRect(0, 0, W, H);
+        ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+        ctx.fillStyle = '#7CFC00'; ctx.font = "700 24px 'Space Grotesk', system-ui, sans-serif";
+        ctx.fillText("AI's Hidden Curve", padX, 40);
+        ctx.fillStyle = '#9fdf7a'; ctx.font = "400 13px 'IBM Plex Mono', monospace";
+        ctx.fillText('I guessed what one AI answer really costs', padX, 62);
+        let y = headerH + 22;
+        ctx.fillStyle = '#eaffe0'; ctx.font = "600 19px 'Space Grotesk', system-ui, sans-serif";
+        shapeLines.forEach(l => { ctx.fillText(l, padX, y); y += 26; });
+        y += 12;
+        ctx.fillStyle = '#cfe8c0'; ctx.font = "400 16px 'Inter', system-ui, sans-serif";
+        factorLines.forEach(l => { ctx.fillText(l, padX, y); y += 23; });
+        y += 24;
+        ctx.fillStyle = '#7CFC00'; ctx.font = "600 15px 'Space Grotesk', system-ui, sans-serif";
+        ctx.fillText('Moses Kolleh Sesay', padX, y);
+        ctx.fillStyle = '#88a878'; ctx.font = "400 12px 'IBM Plex Mono', monospace";
+        ctx.fillText(window.mksShare ? window.mksShare.site : 'moseskolleh.github.io/sustaintheworld', padX, y + 18);
+    };
+    if (shareBtn && cardCanvas) {
+        shareBtn.addEventListener('click', () => {
+            drawCard();
+            const text = `${cardData ? cardData.shape : ''} I tried to guess what one AI answer costs. ${window.mksShare ? window.mksShare.site : ''}`;
+            if (window.mksShare) window.mksShare.image(cardCanvas, 'ai-hidden-curve.png', text);
+        });
+    }
 
     if (resetBtn) {
         resetBtn.addEventListener('click', () => {
             revealed = false;
             svg.classList.remove('revealed');
             realLine.setAttribute('points', '');
+            realLine.style.strokeDasharray = '';
+            realLine.style.strokeDashoffset = '';
+            realLine.style.transition = '';
+            intuitLine.setAttribute('points', '');
+            if (legendEl) legendEl.hidden = true;
             realDots.forEach(d => d.remove());
             realDots.length = 0;
             for (let i = KNOWN; i < n; i++) guess[i] = models[KNOWN - 1].wh;
@@ -2034,6 +2218,7 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
             if (verdictEl) { verdictEl.hidden = true; verdictEl.textContent = ''; }
             resetBtn.hidden = true;
             revealBtn.hidden = false;
+            if (shareBtn) shareBtn.hidden = true;
             interacted = false;
             if (hintEl) hintEl.style.opacity = '';
             if (guessDots[KNOWN]) guessDots[KNOWN].classList.add('ydi-dot-pulse');
@@ -2225,14 +2410,9 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
     if (dlBtn && canvas) {
         dlBtn.addEventListener('click', () => {
             if (!built) build();
-            try {
-                const a = document.createElement('a');
-                a.href = canvas.toDataURL('image/png');
-                a.download = 'carbon-receipt-' + lastReceiptG.toFixed(3).replace('.', '_') + 'g.png';
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
-            } catch (e) { /* canvas is same-origin, so this won't taint — ignore */ }
+            const fn = 'carbon-receipt-' + lastReceiptG.toFixed(3).replace('.', '_') + 'g.png';
+            const msg = `This whole climate portfolio cost ${lastReceiptG.toFixed(2)} g CO₂e to view — ${window.mksShare.site}`;
+            if (window.mksShare) window.mksShare.image(canvas, fn, msg);
         });
     }
 })();
