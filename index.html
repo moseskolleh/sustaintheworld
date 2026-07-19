@@ -187,6 +187,16 @@
     </header>
 
     <main id="main">
+    <!-- Play index: signpost to the interactive features (some live in collapsed dossiers) -->
+    <nav class="play-index reveal" aria-label="Interactive features on this page">
+        <span class="play-index-label mono-label">Five things here respond to you &mdash;</span>
+        <a href="#ydi">draw the AI energy curve</a>
+        <a href="#boreholeGame">drill a borehole</a>
+        <a href="#receiptPanel">print the page's carbon receipt</a>
+        <a href="#assay">grade your job description</a>
+        <a href="#anatomy">weigh one prompt</a>
+    </nav>
+
     <!-- Journey -->
     <section id="journey" class="journey">
         <div class="container">
@@ -933,10 +943,17 @@
                     <svg class="ydi-svg" id="ydiSvg" viewBox="0 0 640 380" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Interactive prediction chart of AI energy use per answer as models scale from a tiny 1-billion-parameter model up to a frontier reasoning model. Use the Reveal button and the data table below for a non-visual summary."></svg>
                     <span class="ydi-hint" id="ydiHint" aria-hidden="true">drag to draw your guess</span>
                 </div>
+                <div class="ydi-legend" id="ydiLegend" hidden aria-hidden="true">
+                    <span class="ydi-leg ydi-leg-guess">your guess</span>
+                    <span class="ydi-leg ydi-leg-real">measured</span>
+                    <span class="ydi-leg ydi-leg-intuit">what people expect</span>
+                </div>
                 <div class="ydi-controls">
                     <button class="btn btn-primary btn-small" id="ydiReveal" type="button" data-analytics="ydi-reveal">Reveal the real curve</button>
+                    <button class="btn btn-secondary btn-small" id="ydiShare" type="button" hidden data-analytics="ydi-share"><i class="fas fa-share-nodes"></i> Share result</button>
                     <button class="btn btn-secondary btn-small" id="ydiReset" type="button" hidden>Draw again</button>
                 </div>
+                <canvas id="ydiCardCanvas" width="720" height="10" aria-hidden="true" hidden></canvas>
                 <p class="ydi-verdict" id="ydiVerdict" role="status" aria-live="polite" hidden></p>
                 <div class="ydi-data" id="ydiTable"></div>
             </div>
@@ -998,6 +1015,7 @@
                 <p class="anatomy-scenario mono-label">Everyday chat · ~1k tokens · drag the grid from the Netherlands to Norway and watch Scope 2 cross under Scope 3</p>
                 <svg class="anatomy-svg" id="anatomySvg" viewBox="0 0 720 320" role="img" aria-label="Flow diagram splitting one AI answer into Scope 2 grid electricity, Scope 3 embodied hardware, and data-centre cooling water, each mapped to its ESRS disclosure line. A text summary follows."></svg>
                 <p class="anatomy-summary" id="anatomySummary" role="status" aria-live="polite"></p>
+                <button type="button" class="anatomy-copy btn btn-secondary btn-small" id="anatomyCopy" data-analytics="anatomy-copy"><i class="fas fa-copy"></i> Copy figure</button>
                 <p class="anatomy-foot">Scope 2 follows the grid; on a clean grid the hardware's embodied carbon (Scope 3) can outweigh it. Embodied carbon per query is the roughest term here — an order-of-magnitude amortisation, shown to prove the line exists, not to pin it down. Water maps to ESRS E3. Energy, grid and water come from the same shared model behind &ldquo;AI, Weighed&rdquo;.</p>
             </div>
         </div>
@@ -1386,7 +1404,7 @@
                 <button class="receipt-btn mono-label" id="receiptBtn" type="button" aria-expanded="false" aria-controls="receiptPanel" data-analytics="receipt-open">&#129534; print this page&rsquo;s carbon receipt</button>
                 <div class="receipt-panel" id="receiptPanel" hidden>
                     <div class="receipt" id="receiptBody" role="figure" aria-label="Itemised carbon receipt for this page load"></div>
-                    <button class="receipt-download btn btn-secondary btn-small" id="receiptDownload" type="button" data-analytics="receipt-download"><i class="fas fa-download"></i> Save as PNG</button>
+                    <button class="receipt-download btn btn-secondary btn-small" id="receiptDownload" type="button" data-analytics="receipt-download"><i class="fas fa-share-nodes"></i> Share / save PNG</button>
                     <canvas id="receiptCanvas" width="720" height="10" aria-hidden="true" hidden></canvas>
                 </div>
 

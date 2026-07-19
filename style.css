@@ -641,6 +641,18 @@ body.light-mode .navbar {
 .ydi-hint-nudge { animation: ydiNudge 0.4s ease-in-out 2; }
 @keyframes ydiNudge { 0%, 100% { transform: translate(-50%, -50%); } 50% { transform: translate(-50%, -50%) scale(1.12); } }
 .ydi-shape { display: block; font-weight: 700; color: var(--primary-green); margin-bottom: 4px; }
+
+.ydi-intuit-line { fill: none; stroke: var(--text-secondary); stroke-width: 1.5; stroke-dasharray: 2 4; opacity: 0; }
+.ydi-svg.revealed .ydi-intuit-line { opacity: 0.55; }
+.ydi-callout { fill: var(--primary-green); font-family: var(--font-mono); font-size: 11px; font-weight: 600; }
+
+.ydi-legend { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 12px; font-family: var(--font-mono); font-size: 0.72rem; }
+.ydi-leg { display: inline-flex; align-items: center; gap: 6px; }
+.ydi-leg::before { content: ''; width: 16px; height: 3px; border-radius: 2px; background: currentColor; }
+.ydi-leg-guess { color: var(--accent-amber); }
+.ydi-leg-real { color: var(--primary-green); }
+.ydi-leg-intuit { color: var(--text-secondary); }
+
 @media (prefers-reduced-motion: reduce) {
     .ydi-dot-pulse, .ydi-hint-nudge { animation: none; }
 }
@@ -884,6 +896,32 @@ body.light-mode .navbar {
 }
 .assay-sample:hover { border-color: var(--primary-green); color: var(--primary-green); }
 .assay-cta-wrap { margin-top: 18px; }
+.assay-copy-wrap { margin-top: 14px; }
+.anatomy-copy { margin-top: 12px; }
+
+/* Play index — signposts the interactive features (some hidden in dossiers) */
+.play-index {
+    background: var(--card-bg-alt);
+    border-bottom: 1px solid var(--line-color);
+    padding: 15px 24px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 18px;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    text-align: center;
+}
+.play-index-label { color: var(--primary-green); }
+.play-index a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    border-bottom: 1px dashed var(--line-color);
+    padding-bottom: 1px;
+    transition: var(--transition);
+}
+.play-index a:hover { color: var(--primary-green); border-bottom-color: var(--primary-green); }
 
 /* Shared "try it" marker so the interactive features read as one playable set */
 .try-tag {
