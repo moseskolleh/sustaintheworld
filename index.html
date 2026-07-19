@@ -890,6 +890,18 @@
                                 </div>
                                 <p class="borehole-result mono-label" id="drillResult" aria-live="polite">Drag the rig (or focus the profile and use ← → keys), then drill.</p>
                             </div>
+                            <div class="dossier-widget strike" id="strikeWidget">
+                                <h4><i class="fas fa-tint"></i> Seven in ten: what reading the ground is worth</h4>
+                                <p class="dossier-widget-intro">Every borehole is a bet a community pays for. Drag the strike rate from blind drilling in hard rock up to what reading the resistivity curve first delivers — and watch the dry holes turn to water.</p>
+                                <div class="strike-waffle" id="strikeWaffle" aria-hidden="true"></div>
+                                <p class="strike-counter" id="strikeCounter" role="status" aria-live="polite"></p>
+                                <div class="strike-control">
+                                    <label class="mono-label" for="strikeSlider">Strike rate</label>
+                                    <input type="range" id="strikeSlider" min="30" max="70" value="30" step="1">
+                                    <output class="strike-out" id="strikeOut" for="strikeSlider">30%</output>
+                                </div>
+                                <p class="strike-foot">Baseline &asymp; blind drilling in the Freetown hard-rock complex; 70% is my field-proven rate reading electrical resistivity first — part of the 164 water points I helped deliver.</p>
+                            </div>
                         </div>
                     </div>
                 </article>
@@ -907,6 +919,26 @@
                 <h2 class="section-title">AI, <span class="highlight">Weighed</span></h2>
                 <p class="section-description">A live slice of my current research. Pick a model and a workload — see what one AI answer costs the planet, in units you can actually feel.</p>
             </div>
+
+            <!-- You Draw It: predict AI's energy curve, then reveal the truth -->
+            <div class="ydi reveal" id="ydi">
+                <div class="ydi-head">
+                    <span class="mono-label">First — a guess</span>
+                    <h3 class="ydi-title">How much does one AI answer cost as models get bigger?</h3>
+                    <p class="ydi-lede">The three smallest models are plotted for you. <strong>Drag across the chart</strong> to predict the rest — from mid-size models up to a frontier reasoning model — then reveal what the research actually measured.</p>
+                </div>
+                <div class="ydi-chart">
+                    <svg class="ydi-svg" id="ydiSvg" viewBox="0 0 640 380" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Interactive prediction chart of AI energy use per answer as models scale from a tiny 1-billion-parameter model up to a frontier reasoning model. Use the Reveal button and the data table below for a non-visual summary."></svg>
+                    <span class="ydi-hint" id="ydiHint" aria-hidden="true">drag to draw your guess</span>
+                </div>
+                <div class="ydi-controls">
+                    <button class="btn btn-primary btn-small" id="ydiReveal" type="button" data-analytics="ydi-reveal">Reveal the real curve</button>
+                    <button class="btn btn-secondary btn-small" id="ydiReset" type="button" hidden>Draw again</button>
+                </div>
+                <p class="ydi-verdict" id="ydiVerdict" role="status" aria-live="polite" hidden></p>
+                <div class="ydi-data" id="ydiTable"></div>
+            </div>
+
             <div class="eco-widget reveal">
                 <div class="eco-widget-controls">
                     <div class="eco-field">
@@ -1298,6 +1330,15 @@
                     Before this redesign, this page shipped ~25&nbsp;MB of images; it now ships a fraction of that &mdash; the site practises the sustainable-computing research it presents.
                     Want the logical extreme? The <a href="field-report.html">text-only field report</a> is the whole portfolio in 8&nbsp;KB.</p>
                 </div>
+
+                <!-- The Receipt: this page prints its own itemised carbon bill -->
+                <button class="receipt-btn mono-label" id="receiptBtn" type="button" aria-expanded="false" aria-controls="receiptPanel" data-analytics="receipt-open">&#129534; print this page&rsquo;s carbon receipt</button>
+                <div class="receipt-panel" id="receiptPanel" hidden>
+                    <div class="receipt" id="receiptBody" role="figure" aria-label="Itemised carbon receipt for this page load"></div>
+                    <button class="receipt-download btn btn-secondary btn-small" id="receiptDownload" type="button" data-analytics="receipt-download"><i class="fas fa-download"></i> Save as PNG</button>
+                    <canvas id="receiptCanvas" width="720" height="10" aria-hidden="true" hidden></canvas>
+                </div>
+
                 <p class="footer-fieldreport mono-label"><a href="field-report.html">prefer plain text? read the 8 KB field report — &asymp;0.003 g CO&#8322;e</a></p>
                 <button class="eco-mode-toggle" id="ecoModeToggle" aria-pressed="false">
                     <i class="fas fa-leaf"></i> <span id="ecoModeLabel">Low-energy mode: off</span>

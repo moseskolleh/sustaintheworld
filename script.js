@@ -1471,6 +1471,413 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
 })();
 
 // ===================================
+// SEVEN IN TEN — the 70% strike rate as a felt human delta
+// A 100-dot waffle of boreholes; the slider moves the strike rate from blind
+// drilling in hard rock up to the field-proven 70%, flipping dry holes to water.
+// ===================================
+(() => {
+    const waffle = document.getElementById('strikeWaffle');
+    const slider = document.getElementById('strikeSlider');
+    const counter = document.getElementById('strikeCounter');
+    const out = document.getElementById('strikeOut');
+    if (!waffle || !slider || !counter) return;
+
+    const N = 100;
+    // Deterministic scatter: 37 is coprime with 100, so (k*37)%100 is a fixed
+    // permutation of every cell — the same rate always paints the same picture,
+    // no Math.random, no fake variation.
+    const order = Array.from({ length: N }, (_, k) => (k * 37) % N);
+
+    const cells = [];
+    for (let i = 0; i < N; i++) {
+        const c = document.createElement('span');
+        c.className = 'strike-cell';
+        waffle.appendChild(c);
+        cells.push(c);
+    }
+
+    const render = (rate) => {
+        const water = new Set(order.slice(0, rate));
+        for (let i = 0; i < N; i++) cells[i].classList.toggle('water', water.has(i));
+        const dry = N - rate;
+        const moreThanBlind = rate - 30;
+        if (out) out.textContent = rate + '%';
+        let msg = `<strong>${rate} of 100</strong> boreholes strike water — <strong>${dry}</strong> come up dry.`;
+        if (rate <= 32) {
+            msg += ' Blind drilling in hard rock: about 7 in 10 are dry holes a community paid for.';
+        } else if (rate >= 68) {
+            msg += ` Reading the resistivity curve first: <strong>7 in 10 strike water</strong> — ${moreThanBlind} more communities served per 100 boreholes, same rigs, same budget.`;
+        } else {
+            msg += ` That's <strong>${moreThanBlind} more</strong> communities with water than blind drilling — same rigs, same budget.`;
+        }
+        counter.innerHTML = msg;
+    };
+
+    slider.addEventListener('input', () => render(+slider.value));
+    render(+slider.value);
+})();
+
+// ===================================
+// YOU DRAW IT — predict AI's hidden energy curve, then reveal the truth
+// The NYT "you draw it" mechanic, powered by the shared AI carbon data.
+// ===================================
+(() => {
+    const svg = document.getElementById('ydiSvg');
+    const revealBtn = document.getElementById('ydiReveal');
+    const resetBtn = document.getElementById('ydiReset');
+    const verdictEl = document.getElementById('ydiVerdict');
+    const hintEl = document.getElementById('ydiHint');
+    const tableEl = document.getElementById('ydiTable');
+    const DATA = (typeof window !== 'undefined') ? window.AICarbonData : null;
+    if (!svg || !revealBtn || !DATA) return;
+
+    const NS = 'http://www.w3.org/2000/svg';
+    const mk = (name, attrs) => {
+        const e = document.createElementNS(NS, name);
+        for (const k in attrs) e.setAttribute(k, attrs[k]);
+        return e;
+    };
+
+    const KEYS = ['llama-32-1b', 'gpt-4-1-nano', 'gpt-4o-mini', 'gemini-15-flash', 'gemini-20-flash', 'llama-33-70b', 'claude-37-sonnet', 'gpt-4o', 'gemini-15-pro', 'deepseek-r1'];
+    const SHORT = { 'llama-32-1b': '1B', 'gpt-4-1-nano': 'nano', 'gpt-4o-mini': '4o-mini', 'gemini-15-flash': '1.5 Flash', 'gemini-20-flash': '2.0 Flash', 'llama-33-70b': '70B', 'claude-37-sonnet': 'Sonnet', 'gpt-4o': 'GPT-4o', 'gemini-15-pro': '1.5 Pro', 'deepseek-r1': 'R1' };
+    const models = KEYS.filter(k => DATA.MODELS[k]).map(k => ({ key: k, label: DATA.MODELS[k].label, short: SHORT[k] || DATA.MODELS[k].label, wh: DATA.MODELS[k].energyPer1kTokens_Wh }));
+    const n = models.length;
+    if (n < 5) return;
+    const KNOWN = 3;
+
+    const W = 640, H = 380;
+    const M = { l: 58, r: 18, t: 26, b: 86 };
+    const plotW = W - M.l - M.r, plotH = H - M.t - M.b;
+    const yMax = 1.3;
+    const xAt = (i) => M.l + (i / (n - 1)) * plotW;
+    const yAt = (wh) => M.t + (1 - Math.min(wh, yMax) / yMax) * plotH;
+    const whAtY = (y) => Math.max(0, Math.min(yMax, (1 - (y - M.t) / plotH) * yMax));
+
+    const guess = models.map((m, i) => (i < KNOWN ? m.wh : models[KNOWN - 1].wh));
+    let revealed = false;
+    let interacted = false;
+
+    // --- static layer: gridlines + y labels ---
+    [0, 0.5, 1.0].forEach(v => {
+        const y = yAt(v);
+        svg.appendChild(mk('line', { x1: M.l, y1: y, x2: W - M.r, y2: y, class: 'ydi-grid' }));
+        const t = mk('text', { x: M.l - 10, y: y + 4, class: 'ydi-axis-label', 'text-anchor': 'end' });
+        t.textContent = v.toFixed(1);
+        svg.appendChild(t);
+    });
+    const yTitle = mk('text', { x: M.l - 46, y: M.t - 10, class: 'ydi-axis-title', 'text-anchor': 'start' });
+    yTitle.textContent = 'Wh / answer';
+    svg.appendChild(yTitle);
+
+    // x labels
+    models.forEach((m, i) => {
+        const x = xAt(i);
+        const t = mk('text', { x: x, y: H - M.b + 20, class: 'ydi-xlabel' + (i < KNOWN ? ' known' : ''), 'text-anchor': 'end', transform: `rotate(-40 ${x} ${H - M.b + 20})` });
+        t.textContent = m.short;
+        svg.appendChild(t);
+    });
+
+    // divider + region labels
+    const dividerX = (xAt(KNOWN - 1) + xAt(KNOWN)) / 2;
+    svg.appendChild(mk('line', { x1: dividerX, y1: M.t, x2: dividerX, y2: M.t + plotH, class: 'ydi-divider' }));
+    const pLabel = mk('text', { x: xAt(n - 1), y: M.t - 10, class: 'ydi-region-label predict', 'text-anchor': 'end' });
+    pLabel.textContent = 'you predict →';
+    svg.appendChild(pLabel);
+
+    // known line + dots
+    const knownPts = models.slice(0, KNOWN).map((m, i) => `${xAt(i)},${yAt(m.wh)}`).join(' ');
+    svg.appendChild(mk('polyline', { points: knownPts, class: 'ydi-known-line' }));
+    models.slice(0, KNOWN).forEach((m, i) => svg.appendChild(mk('circle', { cx: xAt(i), cy: yAt(m.wh), r: 4, class: 'ydi-known-dot' })));
+
+    // real line (revealed later)
+    const realLine = mk('polyline', { points: '', class: 'ydi-real-line' });
+    svg.appendChild(realLine);
+    const realDots = [];
+
+    // guess line + draggable dots
+    const guessLine = mk('polyline', { points: '', class: 'ydi-guess-line' });
+    svg.appendChild(guessLine);
+    const guessDots = models.map((m, i) => {
+        if (i < KNOWN) return null;
+        const c = mk('circle', { cx: xAt(i), cy: yAt(guess[i]), r: 5, class: 'ydi-guess-dot' });
+        svg.appendChild(c);
+        return c;
+    });
+
+    const drawGuess = () => {
+        const pts = [`${xAt(KNOWN - 1)},${yAt(models[KNOWN - 1].wh)}`];
+        for (let i = KNOWN; i < n; i++) pts.push(`${xAt(i)},${yAt(guess[i])}`);
+        guessLine.setAttribute('points', pts.join(' '));
+        for (let i = KNOWN; i < n; i++) guessDots[i].setAttribute('cy', yAt(guess[i]));
+    };
+    drawGuess();
+
+    // --- interaction ---
+    const hit = mk('rect', { x: M.l, y: M.t, width: plotW, height: plotH, class: 'ydi-hit', fill: 'transparent' });
+    svg.appendChild(hit);
+
+    const toLocal = (evt) => {
+        const rect = svg.getBoundingClientRect();
+        return { x: (evt.clientX - rect.left) / rect.width * W, y: (evt.clientY - rect.top) / rect.height * H };
+    };
+    const paint = (p) => {
+        if (revealed) return;
+        let i = Math.round((p.x - M.l) / plotW * (n - 1));
+        i = Math.max(KNOWN, Math.min(n - 1, i));
+        guess[i] = whAtY(p.y);
+        drawGuess();
+        if (!interacted) { interacted = true; if (hintEl) hintEl.style.opacity = '0'; }
+    };
+    let dragging = false;
+    hit.addEventListener('pointerdown', (e) => {
+        dragging = true;
+        if (hit.setPointerCapture) { try { hit.setPointerCapture(e.pointerId); } catch (x) { /* ignore */ } }
+        paint(toLocal(e));
+        e.preventDefault();
+    });
+    hit.addEventListener('pointermove', (e) => { if (dragging) { paint(toLocal(e)); e.preventDefault(); } });
+    window.addEventListener('pointerup', () => { dragging = false; });
+
+    // --- reveal ---
+    const doReveal = () => {
+        if (revealed) return;
+        revealed = true;
+        realLine.setAttribute('points', models.map((m, i) => `${xAt(i)},${yAt(m.wh)}`).join(' '));
+        svg.classList.add('revealed');
+        models.forEach((m, i) => {
+            const c = mk('circle', { cx: xAt(i), cy: yAt(m.wh), r: 4, class: 'ydi-real-dot' });
+            svg.appendChild(c);
+            realDots.push(c);
+        });
+        if (hintEl) hintEl.style.opacity = '0';
+        if (resetBtn) resetBtn.hidden = false;
+        revealBtn.hidden = true;
+
+        const gWh = guess[n - 1];
+        const rWh = models[n - 1].wh;
+        const tiny = models[0].wh;
+        const factorFrontier = Math.round(rWh / tiny);
+        let msg;
+        if (gWh > 0 && rWh / gWh >= 1.3) {
+            msg = `You put the biggest model at ~${gWh.toFixed(2)} Wh. It's actually ${rWh.toFixed(2)} Wh — you underestimated the frontier by ${(rWh / gWh).toFixed(1)}×.`;
+        } else if (gWh > 0 && gWh / rWh >= 1.3) {
+            msg = `You had the frontier at ~${gWh.toFixed(2)} Wh; it's actually ${rWh.toFixed(2)} Wh — an overestimate of ${(gWh / rWh).toFixed(1)}×.`;
+        } else {
+            msg = `Close — you had the frontier near ${gWh.toFixed(2)} Wh; it's ${rWh.toFixed(2)} Wh.`;
+        }
+        msg += ` A 1B model answers for ${tiny.toFixed(3)} Wh — the frontier reasoning model burns roughly ${factorFrontier}× more for the same 1,000-token answer. That gap is exactly what the tools people prompt with never show them.`;
+        if (verdictEl) { verdictEl.textContent = msg; verdictEl.hidden = false; }
+    };
+    revealBtn.addEventListener('click', doReveal);
+
+    if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+            revealed = false;
+            svg.classList.remove('revealed');
+            realLine.setAttribute('points', '');
+            realDots.forEach(d => d.remove());
+            realDots.length = 0;
+            for (let i = KNOWN; i < n; i++) guess[i] = models[KNOWN - 1].wh;
+            drawGuess();
+            if (verdictEl) { verdictEl.hidden = true; verdictEl.textContent = ''; }
+            resetBtn.hidden = true;
+            revealBtn.hidden = false;
+            interacted = false;
+            if (hintEl) hintEl.style.opacity = '';
+        });
+    }
+
+    // --- accessible, non-visual data table ---
+    if (tableEl) {
+        const rows = models.map(m => `<tr><td>${m.label}</td><td>${m.wh} Wh</td></tr>`).join('');
+        tableEl.innerHTML = `<table><caption>Measured energy per 1,000-token answer by model (order-of-magnitude estimates)</caption><thead><tr><th>Model</th><th>Wh per answer</th></tr></thead><tbody>${rows}</tbody></table>`;
+    }
+})();
+
+// ===================================
+// THE RECEIPT — this page prints its own itemised carbon bill
+// Reads the same Resource Timing data as the footer badge, groups it by asset
+// class, and renders a thermal-receipt you can save as a PNG. Pure vanilla:
+// the PNG is drawn on a <canvas>, no library, no gigabyte of anything.
+// ===================================
+(() => {
+    const btn = document.getElementById('receiptBtn');
+    const panel = document.getElementById('receiptPanel');
+    const body = document.getElementById('receiptBody');
+    const dlBtn = document.getElementById('receiptDownload');
+    const canvas = document.getElementById('receiptCanvas');
+    if (!btn || !panel || !body) return;
+
+    const G_CO2_PER_MB = 0.36;
+    const MEDIAN_MB = 2.5;
+    const pageOrigin = location.origin;
+
+    const bytesOf = (r) => {
+        if (r.transferSize && r.transferSize > 0) return r.transferSize;
+        if (r.encodedBodySize && r.encodedBodySize > 0) return r.encodedBodySize;
+        return 0;
+    };
+
+    const classify = (r) => {
+        const t = r.initiatorType;
+        const n = (r.name || '').toLowerCase();
+        if (/\.(woff2?|ttf|otf|eot)(\?|$)/.test(n)) return 'Fonts';
+        if (t === 'img' || /\.(webp|png|jpe?g|gif|svg|avif)(\?|$)/.test(n)) return 'Images';
+        if (t === 'script' || /\.js(\?|$)/.test(n)) return 'Scripts';
+        if (t === 'link' || t === 'css' || /\.css(\?|$)/.test(n)) return 'Styles';
+        return 'Other';
+    };
+
+    const ORDER = ['HTML', 'Styles', 'Scripts', 'Fonts', 'Images', 'Other'];
+
+    const gather = () => {
+        const g = { HTML: 0, Styles: 0, Scripts: 0, Fonts: 0, Images: 0, Other: 0 };
+        let unmeasured = 0;
+        try {
+            const nav = performance.getEntriesByType('navigation')[0];
+            if (nav) g.HTML += bytesOf(nav);
+            performance.getEntriesByType('resource').forEach(r => {
+                const b = bytesOf(r);
+                if (b === 0) {
+                    if (r.name && r.name.indexOf(pageOrigin) !== 0) unmeasured++;
+                    return;
+                }
+                g[classify(r)] += b;
+            });
+        } catch (e) { /* older browsers: receipt stays empty */ }
+        return { g, unmeasured };
+    };
+
+    const fmtSize = (b) => (b >= 1048576 ? (b / 1048576).toFixed(2) + ' MB' : Math.round(b / 1024) + ' KB');
+    const fmtG = (grams) => (grams >= 1 ? grams.toFixed(2) : grams.toFixed(3)) + ' g';
+
+    const buildLines = () => {
+        const { g, unmeasured } = gather();
+        let total = 0;
+        ORDER.forEach(k => { total += g[k]; });
+        const totalMb = total / 1048576;
+        const totalG = totalMb * G_CO2_PER_MB;
+        const dt = new Date();
+        const pad = (n) => String(n).padStart(2, '0');
+        const stamp = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}  ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+
+        const lines = [];
+        lines.push({ t: 'c', s: 'MKS · SUSTAINTHEWORLD', b: true });
+        lines.push({ t: 'c', s: 'page-load carbon receipt' });
+        lines.push({ t: 'c', s: stamp, dim: true });
+        lines.push({ t: 'd' });
+        ORDER.forEach(k => {
+            if (g[k] > 0) {
+                const grams = (g[k] / 1048576) * G_CO2_PER_MB;
+                lines.push({ t: 'r', l: k, r: `${fmtSize(g[k])}   ${fmtG(grams)}` });
+            }
+        });
+        lines.push({ t: 'd' });
+        lines.push({ t: 'r', l: 'TOTAL', r: `${fmtSize(total)}   ${fmtG(totalG)}`, b: true });
+        lines.push({ t: 'c', s: 'CO₂e · global avg grid', dim: true });
+        lines.push({ t: 'd' });
+        lines.push({ t: 'r', l: 'Median web page', r: `${MEDIAN_MB.toFixed(2)} MB` });
+        if (totalMb < MEDIAN_MB) {
+            lines.push({ t: 'c', s: `— you're ${Math.round((1 - totalMb / MEDIAN_MB) * 100)}% lighter —` });
+        }
+        lines.push({ t: 'r', l: 'Text-only report', r: '8 KB' });
+        if (unmeasured) {
+            lines.push({ t: 'c', s: `* ${unmeasured} third-party file${unmeasured > 1 ? 's' : ''} not counted`, dim: true });
+        }
+        lines.push({ t: 'd' });
+        lines.push({ t: 'c', s: 'browsed lightly — thank you' });
+        lines.push({ t: 'c', s: '||‖|‖||‖|||‖|‖||‖|||', mono: true });
+        return lines;
+    };
+
+    const renderDOM = (lines) => {
+        body.innerHTML = '';
+        lines.forEach(ln => {
+            let el;
+            if (ln.t === 'd') {
+                el = document.createElement('div');
+                el.className = 'receipt-divider';
+            } else if (ln.t === 'c') {
+                el = document.createElement('div');
+                el.className = 'receipt-center' + (ln.b ? ' receipt-strong' : '') + (ln.dim ? ' receipt-dim' : '') + (ln.mono ? ' receipt-barcode' : '');
+                el.textContent = ln.s;
+            } else {
+                el = document.createElement('div');
+                el.className = 'receipt-row' + (ln.b ? ' receipt-strong' : '');
+                const l = document.createElement('span'); l.textContent = ln.l;
+                const r = document.createElement('span'); r.textContent = ln.r;
+                el.appendChild(l); el.appendChild(r);
+            }
+            body.appendChild(el);
+        });
+    };
+
+    const drawCanvas = (lines) => {
+        if (!canvas || !canvas.getContext) return;
+        const scale = 2, W = 340, padX = 22, padY = 22, lh = 22;
+        const H = padY * 2 + lines.length * lh;
+        canvas.width = W * scale;
+        canvas.height = H * scale;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        ctx.scale(scale, scale);
+        ctx.fillStyle = '#f5f3ea';
+        ctx.fillRect(0, 0, W, H);
+        ctx.textBaseline = 'middle';
+        let y = padY + lh / 2;
+        lines.forEach(ln => {
+            ctx.fillStyle = ln.dim ? '#8a8577' : '#1a1a1a';
+            ctx.font = `${ln.b ? '700' : '400'} 13px 'IBM Plex Mono', ui-monospace, monospace`;
+            if (ln.t === 'd') {
+                ctx.strokeStyle = '#b7b1a1';
+                ctx.setLineDash([2, 3]);
+                ctx.beginPath(); ctx.moveTo(padX, y); ctx.lineTo(W - padX, y); ctx.stroke();
+                ctx.setLineDash([]);
+            } else if (ln.t === 'c') {
+                ctx.textAlign = 'center';
+                ctx.fillText(ln.s, W / 2, y);
+            } else {
+                ctx.textAlign = 'left';
+                ctx.fillText(ln.l, padX, y);
+                ctx.textAlign = 'right';
+                ctx.fillText(ln.r, W - padX, y);
+            }
+            y += lh;
+        });
+    };
+
+    let built = false;
+    const build = () => {
+        const lines = buildLines();
+        renderDOM(lines);
+        drawCanvas(lines);
+        built = true;
+    };
+
+    btn.addEventListener('click', () => {
+        const open = panel.hasAttribute('hidden');
+        if (open) build();
+        panel.toggleAttribute('hidden', !open);
+        btn.setAttribute('aria-expanded', String(open));
+        if (open) panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+
+    if (dlBtn && canvas) {
+        dlBtn.addEventListener('click', () => {
+            if (!built) build();
+            try {
+                const a = document.createElement('a');
+                a.href = canvas.toDataURL('image/png');
+                a.download = 'sustaintheworld-carbon-receipt.png';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+            } catch (e) { /* canvas is same-origin, so this won't taint — ignore */ }
+        });
+    }
+})();
+
+// ===================================
 // CONVERSION ANALYTICS (privacy-first, provider-agnostic)
 // ===================================
 // A tiny dispatcher that fires named events on the key conversion actions

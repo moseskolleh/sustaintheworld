@@ -548,6 +548,206 @@ body.light-mode .navbar {
     flex-wrap: wrap;
 }
 
+/* The Receipt — the page prints its own itemised carbon bill */
+.receipt-btn {
+    display: inline-block;
+    margin-top: 16px;
+    background: none;
+    border: 1px dashed var(--line-color);
+    color: var(--text-secondary);
+    padding: 8px 16px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: var(--transition);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+}
+
+.receipt-btn:hover {
+    border-color: var(--primary-green);
+    color: var(--primary-green);
+}
+
+.receipt-panel {
+    margin: 18px auto 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.receipt {
+    font-family: var(--font-mono);
+    background: #f5f3ea;
+    color: #1a1a1a;
+    width: 320px;
+    max-width: 100%;
+    padding: 22px 24px;
+    border-radius: 4px;
+    box-shadow: 0 12px 34px rgba(0, 0, 0, 0.4);
+    font-size: 12.5px;
+    line-height: 1.75;
+    text-align: left;
+}
+
+.receipt-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.receipt-row span:last-child { white-space: nowrap; }
+.receipt-center { text-align: center; }
+.receipt-strong { font-weight: 700; }
+.receipt-dim { color: #8a8577; font-size: 11px; }
+.receipt-divider { border-top: 1px dashed #b7b1a1; margin: 8px 0; }
+.receipt-barcode { letter-spacing: 1px; margin-top: 6px; }
+.receipt-download { margin-top: 16px; }
+
+/* You Draw It — predict AI's energy curve, then reveal the truth */
+.ydi { margin-bottom: 44px; }
+.ydi-head { margin-bottom: 16px; }
+.ydi-title { font-size: clamp(1.2rem, 2.4vw, 1.7rem); margin: 6px 0 8px; }
+.ydi-lede { color: var(--text-secondary); max-width: 62ch; }
+
+.ydi-chart {
+    position: relative;
+    background: var(--card-bg);
+    border: 1px solid var(--line-color);
+    border-radius: var(--border-radius);
+    padding: 18px 14px 8px;
+}
+
+.ydi-svg { width: 100%; height: auto; display: block; }
+
+.ydi-hit { cursor: crosshair; touch-action: none; pointer-events: all; }
+
+.ydi-grid { stroke: var(--line-soft); stroke-width: 1; }
+.ydi-divider { stroke: var(--line-color); stroke-width: 1; stroke-dasharray: 3 4; }
+
+.ydi-axis-label, .ydi-axis-title, .ydi-xlabel, .ydi-region-label {
+    fill: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: 11px;
+}
+.ydi-axis-title { font-size: 10px; opacity: 0.8; }
+.ydi-xlabel { font-size: 10px; }
+.ydi-xlabel.known { opacity: 0.45; }
+.ydi-region-label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.7; }
+.ydi-region-label.predict { fill: var(--primary-green); opacity: 1; }
+
+.ydi-known-line { fill: none; stroke: var(--text-secondary); stroke-width: 2.5; }
+.ydi-known-dot { fill: var(--text-primary); }
+
+.ydi-guess-line { fill: none; stroke: #f2b705; stroke-width: 2.5; stroke-dasharray: 5 5; }
+.ydi-guess-dot { fill: #f2b705; }
+
+.ydi-real-line { fill: none; stroke: var(--primary-green); stroke-width: 2.5; opacity: 0; transition: opacity 0.5s ease; }
+.ydi-svg.revealed .ydi-real-line { opacity: 1; }
+.ydi-real-dot { fill: var(--primary-green); }
+.ydi-svg.revealed .ydi-guess-line { opacity: 0.5; }
+
+.ydi-hint {
+    position: absolute;
+    top: 42%;
+    left: 60%;
+    transform: translate(-50%, -50%);
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--primary-green);
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 6px 12px;
+    border-radius: 999px;
+}
+
+.ydi-controls { display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+/* [hidden] alone loses to .btn's display; scope a stronger rule so toggling works */
+.ydi-controls .btn[hidden] { display: none; }
+
+.ydi-verdict {
+    margin-top: 16px;
+    padding: 14px 18px;
+    border-left: 3px solid var(--primary-green);
+    background: var(--line-soft);
+    color: var(--text-primary);
+    font-size: 1.02rem;
+    line-height: 1.6;
+    border-radius: 0 8px 8px 0;
+}
+
+.ydi-data {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    margin: -1px;
+    border: 0;
+    padding: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ydi-real-line { transition: none; }
+}
+
+/* Seven in Ten — the 70% strike rate as a felt human delta */
+.strike-waffle {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 5px;
+    max-width: 360px;
+    margin: 10px 0 16px;
+}
+
+.strike-cell {
+    aspect-ratio: 1;
+    border-radius: 3px;
+    background: var(--card-bg-alt);
+    border: 1px solid var(--line-soft);
+    transition: background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.strike-cell.water {
+    background: #2ea3e0;
+    border-color: #2ea3e0;
+    box-shadow: 0 0 6px rgba(46, 163, 224, 0.45);
+}
+
+.strike-counter {
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    line-height: 1.55;
+    max-width: 52ch;
+    margin-bottom: 10px;
+}
+.strike-counter strong { color: var(--primary-green); }
+
+.strike-control {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    max-width: 440px;
+    margin: 6px 0 12px;
+}
+.strike-control input[type="range"] { flex: 1; accent-color: #2ea3e0; cursor: pointer; }
+.strike-control label { flex-shrink: 0; }
+.strike-out { color: var(--primary-green); font-family: var(--font-mono); min-width: 3.5ch; }
+
+.strike-foot {
+    font-size: 0.74rem;
+    line-height: 1.5;
+    color: var(--text-secondary);
+    opacity: 0.85;
+    max-width: 60ch;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .strike-cell { transition: none; }
+}
+
 .hero-cta {
     display: flex;
     gap: 16px;
