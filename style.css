@@ -748,6 +748,46 @@ body.light-mode .navbar {
     .strike-cell { transition: none; }
 }
 
+/* Anatomy of a Prompt — one answer split across the ESRS disclosure lines */
+.anatomy { margin-top: 44px; padding-top: 32px; border-top: 1px solid var(--line-color); }
+.anatomy-head { margin-bottom: 14px; }
+.anatomy-title { font-size: clamp(1.15rem, 2.2vw, 1.55rem); margin: 6px 0 8px; }
+.anatomy-lede { color: var(--text-secondary); max-width: 64ch; }
+
+.anatomy-control { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.anatomy-control select {
+    background: var(--card-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--line-color);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+.anatomy-scenario { opacity: 0.7; }
+
+.anatomy-svg { width: 100%; height: auto; display: block; max-width: 760px; margin: 6px 0; }
+.anatomy-source { fill: var(--card-bg-alt); stroke: var(--line-color); }
+.anatomy-source-t { fill: var(--text-primary); font-family: var(--font-display); font-weight: 600; font-size: 15px; }
+.anatomy-source-sub { fill: var(--text-secondary); font-family: var(--font-mono); font-size: 11px; }
+
+.anatomy-ribbon { opacity: 0.5; }
+.anatomy-ribbon.r0 { fill: var(--primary-green); }
+.anatomy-ribbon.r1 { fill: #f2b705; }
+.anatomy-ribbon.r2 { fill: #2ea3e0; }
+
+.anatomy-t-title { font-family: var(--font-display); font-weight: 600; font-size: 13px; fill: var(--text-primary); }
+.anatomy-t-title.r0 { fill: var(--primary-green); }
+.anatomy-t-title.r1 { fill: #d99a00; }
+.anatomy-t-title.r2 { fill: #2ea3e0; }
+.anatomy-t-val { font-family: var(--font-mono); font-size: 14px; fill: var(--text-primary); }
+.anatomy-t-esrs { font-family: var(--font-mono); font-size: 10.5px; fill: var(--text-secondary); letter-spacing: 0.03em; }
+
+.anatomy-summary { margin-top: 6px; color: var(--text-primary); font-size: 0.95rem; line-height: 1.55; max-width: 64ch; }
+.anatomy-summary strong { color: var(--primary-green); }
+.anatomy-foot { margin-top: 10px; font-size: 0.74rem; line-height: 1.5; color: var(--text-secondary); opacity: 0.85; max-width: 66ch; }
+
 .hero-cta {
     display: flex;
     gap: 16px;

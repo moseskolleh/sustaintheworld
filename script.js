@@ -1471,6 +1471,84 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
 })();
 
 // ===================================
+// ANATOMY OF A PROMPT — one answer, split into Scope 2 / Scope 3 / water,
+// each mapped to its ESRS disclosure line. Hand-drawn SVG flow, no library.
+// ===================================
+(() => {
+    const svg = document.getElementById('anatomySvg');
+    const sel = document.getElementById('anatomyModel');
+    const summary = document.getElementById('anatomySummary');
+    const DATA = (typeof window !== 'undefined') ? window.AICarbonData : null;
+    if (!svg || !sel || !DATA) return;
+
+    const NS = 'http://www.w3.org/2000/svg';
+    const mk = (name, attrs) => {
+        const e = document.createElementNS(NS, name);
+        for (const k in attrs) e.setAttribute(k, attrs[k]);
+        return e;
+    };
+
+    const TOKENS = 1000;                              // everyday-chat workload
+    const GRID = DATA.REGIONS['nl'];                  // Netherlands grid
+    const PUE = DATA.PUE;
+    const WUE = DATA.WUE_PROFILES.avg.wue_L_per_kWh;
+    // The roughest term: embodied hardware carbon amortised per query, as
+    // gCO2e per Wh of inference. Grid-independent (manufacturing is already
+    // spent), so on a clean grid it can exceed operational Scope 2.
+    const EMBODIED_G_PER_WH = 0.05;
+
+    DATA.HOMEPAGE_MODELS.forEach(k => sel.add(new Option(DATA.MODELS[k].label, k)));
+    sel.value = DATA.MODELS['gpt-4o'] ? 'gpt-4o' : DATA.HOMEPAGE_MODELS[0];
+
+    const compute = (key) => {
+        const wh = DATA.MODELS[key].energyPer1kTokens_Wh * (TOKENS / 1000) * PUE;
+        const kwh = wh / 1000;
+        return { scope2: kwh * GRID.intensity, scope3: wh * EMBODIED_G_PER_WH, water: kwh * WUE * 1000 };
+    };
+    const fmt = (n) => (n === 0 ? '0' : n >= 1 ? n.toFixed(2) : n >= 0.001 ? n.toFixed(3) : '<0.001');
+
+    const cy = 160, sx = 180, tx = 430, rows = [70, 160, 250];
+    const ribbon = (x1, y1, x2, y2, w) => {
+        const mx = (x1 + x2) / 2, t = w / 2;
+        return `M ${x1} ${y1 - t} C ${mx} ${y1 - t}, ${mx} ${y2 - t}, ${x2} ${y2 - t} L ${x2} ${y2 + t} C ${mx} ${y2 + t}, ${mx} ${y1 + t}, ${x1} ${y1 + t} Z`;
+    };
+
+    const cards = [
+        { t: 'Grid electricity · Scope 2', esrs: 'ESRS E1-6 · Scope 2 emissions', cls: 'r0' },
+        { t: 'Embodied hardware · Scope 3', esrs: 'ESRS E1-6 · Scope 3 (capital goods)', cls: 'r1' },
+        { t: 'Cooling water', esrs: 'ESRS E3-4 · Water consumption', cls: 'r2' }
+    ];
+
+    // static build
+    svg.appendChild(mk('rect', { x: 20, y: cy - 38, width: 160, height: 76, rx: 10, class: 'anatomy-source' }));
+    const st = mk('text', { x: 100, y: cy - 4, 'text-anchor': 'middle', class: 'anatomy-source-t' }); st.textContent = 'One AI answer'; svg.appendChild(st);
+    const ss = mk('text', { x: 100, y: cy + 15, 'text-anchor': 'middle', class: 'anatomy-source-sub' }); ss.textContent = '~1,000 tokens'; svg.appendChild(ss);
+    const ribbons = rows.map((ry, i) => { const p = mk('path', { class: 'anatomy-ribbon ' + cards[i].cls }); svg.appendChild(p); return p; });
+    const vals = rows.map((ry, i) => {
+        const title = mk('text', { x: tx + 10, y: ry - 14, class: 'anatomy-t-title ' + cards[i].cls }); title.textContent = cards[i].t; svg.appendChild(title);
+        const val = mk('text', { x: tx + 10, y: ry + 8, class: 'anatomy-t-val' }); svg.appendChild(val);
+        const esrs = mk('text', { x: tx + 10, y: ry + 28, class: 'anatomy-t-esrs' }); esrs.textContent = cards[i].esrs; svg.appendChild(esrs);
+        return val;
+    });
+
+    const update = () => {
+        const d = compute(sel.value);
+        const carbonMax = Math.max(d.scope2, d.scope3, 0.0001);
+        const widths = [8 + (d.scope2 / carbonMax) * 40, 8 + (d.scope3 / carbonMax) * 40, 26];
+        rows.forEach((ry, i) => ribbons[i].setAttribute('d', ribbon(sx, cy, tx, ry, widths[i])));
+        vals[0].textContent = `${fmt(d.scope2)} g CO₂e`;
+        vals[1].textContent = `${fmt(d.scope3)} g CO₂e`;
+        vals[2].textContent = `${fmt(d.water)} mL water`;
+        if (summary) {
+            summary.innerHTML = `<strong>${DATA.MODELS[sel.value].label}</strong>, one everyday answer on the Netherlands grid: <strong>${fmt(d.scope2)} g</strong> Scope 2, <strong>${fmt(d.scope3)} g</strong> Scope 3, <strong>${fmt(d.water)} mL</strong> cooling water — one answer, three ESRS lines.`;
+        }
+    };
+
+    update();
+    sel.addEventListener('change', update);
+})();
+
+// ===================================
 // SEVEN IN TEN — the 70% strike rate as a felt human delta
 // A 100-dot waffle of boreholes; the slider moves the strike rate from blind
 // drilling in hard rock up to the field-proven 70%, flipping dry holes to water.
