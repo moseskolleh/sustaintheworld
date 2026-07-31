@@ -64,6 +64,46 @@ Claude, restart it.
 Ask for a few candidates reading the same line, then listen to
 `.voice-auditions/` and pick one. Note its `reference_id`.
 
+### Step 3b — pick a voice
+
+Two routes. **Cloning your own** (step 4) is the one the scripts were written
+for: they are first person, they open with a Krio greeting, and they say "I grew
+up where water scarcity isn't a statistic." A stock voice delivering those lines
+as you is a different proposition, and some visitors will notice.
+
+If you want a library voice anyway, audition candidates on your own copy rather
+than on whatever demo line a voice page happens to play:
+
+```bash
+npm run voice -- --audition <id1>,<id2>,<id3>
+```
+
+That renders the opening of the hero script in each voice into
+`.voice-auditions/` — around 150 bytes per voice, so roughly 450 credits to
+compare three. Listen, then put the winner in `.env` as `FISH_AUDIO_VOICE_ID`
+and run `npm run voice`.
+
+Use `--audition-text "…"` to try a different line. A good test line is one with
+a proper noun, a number and a technical term, since that is where voices trip:
+
+```bash
+npm run voice -- --audition <id1>,<id2> \
+  --audition-text "Q.G.I.S. and Arc.G.I.S. — for groundwater maps that struck water seven times out of ten."
+```
+
+**Finding IDs.** Browse [fish.audio/voice-library/male](https://fish.audio/voice-library/male/)
+and open a voice; the model id is the last path segment of its URL, and that is
+what goes in `reference_id`. For this site the tone that fits is documentary
+narration — measured, warm, unhurried. The library's high-energy
+creator-style voices read badly against field notes about boreholes and flood
+risk. Categories worth starting from are
+[documentary](https://fish.audio/voice-library/documentary/),
+[professional](https://fish.audio/voice-library/professional/) and
+[announcer](https://fish.audio/voice-library/announcer/).
+
+Whatever you pick, listen to a full section before rendering all ten. A voice
+that sounds fine for one sentence can grate over 60 seconds.
+
 ### Step 4 — clone your voice and render
 
 Record 30–60 seconds of yourself talking normally. No music, no background

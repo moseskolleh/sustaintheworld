@@ -11,6 +11,7 @@
 // rendered .mp3 files, which the page plays with a plain <audio> element.
 //
 //     cp .env.example .env                       # paste the key in
+//     npm run voice -- --audition id1,id2,id3    # compare candidate voices on real copy
 //     npm run voice -- --clone path/to/you.mp3   # clone your voice, then render everything
 //     npm run voice                              # re-render only what changed
 //     npm run voice -- --force                   # re-render everything
@@ -94,6 +95,8 @@ const DRY_RUN = hasFlag('--dry-run');
 const ONLY = (flagValue('--only') || '').split(',').map(s => s.trim()).filter(Boolean);
 const CLONE_FROM = flagValue('--clone');
 const CLONE_TITLE = flagValue('--clone-title') || 'Moses Kolleh Sesay — portfolio narration';
+const AUDITION = (flagValue('--audition') || '').split(',').map(s => s.trim()).filter(Boolean);
+const AUDITION_TEXT = flagValue('--audition-text');
 
 const hash = text => crypto.createHash('sha256')
     .update(`${text}::${MODEL}::${VOICE_ID}::${BITRATE}::${FORMAT}::${MAX_BYTES}`)
@@ -331,6 +334,64 @@ async function synthesiseScript(text, apiKey) {
 }
 
 // ------------------------------------------------------------------
+// Auditioning. Renders the same line in several candidate voices so they
+// can be compared on the copy they will actually read, rather than on
+// whatever demo sentence a voice library happens to ship.
+//
+//     npm run voice -- --audition id1,id2,id3
+//
+// Output goes to .voice-auditions/ (gitignored), never to assets/audio,
+// so an audition can never be mistaken for the narration that ships.
+// ------------------------------------------------------------------
+const AUDITION_DIR = path.join(ROOT, '.voice-auditions');
+
+// The opening of the hero script: first person, a Krio greeting, a proper
+// name and a job title. If a voice is going to stumble, it stumbles here.
+const DEFAULT_AUDITION_TEXT =
+    "Kushe. I'm Moses Kolleh Sesay — a sustainability and climate analyst based in Amsterdam. " +
+    "Geologist by training, sustainability analyst by conviction.";
+
+async function runAudition(apiKey) {
+    const text = AUDITION_TEXT || DEFAULT_AUDITION_TEXT;
+    const bytes = utf8Len(text);
+
+    console.log(`\n  auditioning ${AUDITION.length} voice(s) on ${bytes} bytes each`);
+    console.log(`  "${text.slice(0, 72)}${text.length > 72 ? '…' : ''}"`);
+    console.log(`  ~${(bytes * AUDITION.length).toLocaleString()} credits total\n`);
+
+    if (DRY_RUN) {
+        AUDITION.forEach(id => console.log(`  → ${id}  (would render)`));
+        console.log('');
+        return 0;
+    }
+
+    fs.mkdirSync(AUDITION_DIR, { recursive: true });
+    const saved = VOICE_ID;
+    let failed = 0;
+
+    for (const id of AUDITION) {
+        process.stdout.write(`  → ${id.padEnd(34)} `);
+        VOICE_ID = id;                        // synthesise() reads this
+        try {
+            const { audio } = await synthesiseScript(text, apiKey);
+            const out = path.join(AUDITION_DIR, `${id}.${FORMAT}`);
+            fs.writeFileSync(out, audio);
+            console.log(`${kb(audio.length)}  → ${path.relative(ROOT, out)}`);
+        } catch (err) {
+            console.log('FAILED');
+            console.error(`       ${err.message}\n`);
+            failed++;
+        }
+    }
+
+    VOICE_ID = saved;
+    console.log(`\n  listen to ${path.relative(ROOT, AUDITION_DIR)}/ and pick one, then:`);
+    console.log('    add FISH_AUDIO_VOICE_ID=<the winner> to .env');
+    console.log('    npm run voice\n');
+    return failed;
+}
+
+// ------------------------------------------------------------------
 // Main
 // ------------------------------------------------------------------
 async function main() {
@@ -345,6 +406,12 @@ async function main() {
         console.error('  cp .env.example .env      # then paste your key into it');
         console.error('  …or: export FISH_AUDIO_API_KEY=your_key_here\n');
         process.exit(1);
+    }
+
+    // Auditioning is a side errand: it renders nothing that ships and writes
+    // no manifest, so it returns before any of the build logic below.
+    if (AUDITION.length) {
+        process.exit(await runAudition(apiKey) ? 1 : 0);
     }
 
     fs.mkdirSync(OUT_DIR, { recursive: true });
