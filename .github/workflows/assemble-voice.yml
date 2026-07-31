@@ -1,0 +1,34 @@
+name: Assemble voice narration
+
+# Stitches the pre-rendered Fish Audio chunks listed in
+# scripts/voice-chunks.json into assets/audio/*.mp3 plus the manifest,
+# and commits the result back to the branch it was dispatched on.
+# Runs here because the runners have ffmpeg and open egress to the
+# Fish Audio CDN. Manual trigger only — narration is a deliberate act.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  assemble:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node scripts/assemble-voice.js
+      - name: Commit the narration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/audio
+          if git diff --cached --quiet; then
+            echo "nothing to commit"
+          else
+            git commit -m "Add recorded narration (assembled from Fish Audio chunks)"
+            git push
+          fi
