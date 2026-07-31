@@ -5,7 +5,8 @@
   "description": "Portfolio website for Moses Kolleh Sesay — static site, no build step",
   "license": "MIT",
   "scripts": {
-    "test": "node tests/bugs.test.js"
+    "test": "node tests/bugs.test.js",
+    "voice": "node scripts/generate-voice.js"
   },
   "devDependencies": {
     "jsdom": "^26.1.0"

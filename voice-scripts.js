@@ -1,0 +1,197 @@
+// ===================================================================
+// VOICE SCRIPTS — single source of truth for the spoken page
+// Shared by the in-browser player (script.js) and the build-time
+// Fish Audio generator (scripts/generate-voice.js), so the synthesised
+// voice and the recorded voice can never drift apart.
+//
+// These are NOT the page copy. Reading the DOM aloud produces garbage:
+// stat counters mid-animation, SVG labels, and acronym soup spelled out
+// letter by letter. Every script below is written for the ear —
+// short sentences, expanded acronyms, no bullet lists — and must stay
+// factually identical to the section it narrates.
+//
+// After editing any `text` here, re-run:  npm run voice
+// ===================================================================
+(function (root, factory) {
+    const data = factory();
+    root.VoiceScripts = data;
+    if (typeof module !== 'undefined' && module.exports) module.exports = data;
+})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+    // `id` doubles as the audio filename: assets/audio/<id>.mp3
+    // `label` is the accessible name of the play button for that section.
+    const SCRIPTS = [
+        {
+            id: 'hero',
+            label: 'the introduction',
+            text: `Kushe. I'm Moses Kolleh Sesay — a sustainability and climate analyst based in Amsterdam. ` +
+                  `Geologist by training, sustainability analyst by conviction. ` +
+                  `I've drilled for water in Sierra Leone, modelled river pollution for the world's coasts, ` +
+                  `supported the United Nations' disaster-risk work, and now I'm teaching AI to tread lightly on the planet. ` +
+                  `A hundred and sixty-four water points delivered. Fifty-four hazard systems documented. ` +
+                  `Three continents, two master's degrees, one thread running through all of it. ` +
+                  `You can read this page, or you can let me walk you through it. Either way — welcome.`
+        },
+        {
+            id: 'journey',
+            label: 'the journey',
+            text: `Four countries, three continents, one thread: water, climate, and the data that connects them. ` +
+                  `It starts in Freetown, Sierra Leone. Between twenty-thirteen and twenty-nineteen I graduated top of my class in geology, ` +
+                  `then took it straight to the field — leading drilling crews that delivered a hundred and sixty-four water points across the country. ` +
+                  `Then Changsha, China, on a full Chinese Government scholarship, for a master's in industrial engineering. ` +
+                  `My thesis asked how we might manage water beyond cement, steel and pipes. ` +
+                  `Then Bonn, Germany, and climate adaptation work at the U.N. Office for Disaster Risk Reduction, ` +
+                  `where I documented fifty-four global hazard information systems. ` +
+                  `Then Wageningen, in the Netherlands, for a master's in environmental sciences. ` +
+                  `And now Amsterdam, where the thread runs into sustainable A.I. ` +
+                  `Scroll, and the map flies the route with you.`
+        },
+        {
+            id: 'about',
+            label: 'the about section',
+            text: `I grew up where water scarcity isn't a statistic — it's a morning routine. ` +
+                  `That's why everything I do starts from the same question: ` +
+                  `how do we make environmental decisions that actually hold up in the real world? ` +
+                  `I hold two master's degrees — environmental sciences from Wageningen, and industrial engineering from Hunan. ` +
+                  `That puts me at the intersection of field experience and analytical rigour. ` +
+                  `I've managed water projects that reached more than ten thousand people, ` +
+                  `reviewed disaster-loss data for the United Nations, ` +
+                  `and built climate-risk and E.S.G. analyses that decision-makers can actually act on. ` +
+                  `Today my focus is sustainable A.I. — making sure the tools we use to solve the climate crisis ` +
+                  `don't quietly become part of it.`
+        },
+        {
+            id: 'experience',
+            label: 'the experience log',
+            text: `I've logged my career the way a geologist logs a borehole: depth is time, and every layer is a chapter. ` +
+                  `At the surface — today — I'm a researcher in sustainable artificial intelligence ` +
+                  `at the Digital Society School, part of the Amsterdam University of Applied Sciences, ` +
+                  `working in partnership with the Dutch Ministry of Finance. ` +
+                  `I'm building a framework and a working prototype that weigh the benefits of generative A.I. against its environmental costs — ` +
+                  `mapping the electricity, the hardware, and the data-centre water behind A.I. workloads, ` +
+                  `and setting that against European sustainability disclosure logic. ` +
+                  `Below that layer sit the earlier chapters: the United Nations in Bonn, the research in Wageningen, ` +
+                  `and underneath it all, the drilling rigs in Sierra Leone. ` +
+                  `Drill down through the core log to read any layer in full.`
+        },
+        {
+            id: 'projects',
+            label: 'the project dossiers',
+            text: `Six field dossiers. Open any one for the full story, photos included. ` +
+                  `One: a sustainable A.I. framework for the Dutch Ministry of Finance — because generative A.I. is becoming government infrastructure, ` +
+                  `and every prompt has a footprint. ` +
+                  `Two: coastal water pollution — futures for Africa's coasts, modelled across ten thousand two hundred and twenty-six sub-basins. ` +
+                  `Three: flood resilience in Wuppertal, Germany. Or, as I think of it: don't let the Schwebebahn become a boat. ` +
+                  `Four: disaster risk reduction with the United Nations in Bonn, working with Sendai Framework data. ` +
+                  `Five: soft path water management — going beyond cement, steel and pipes. ` +
+                  `And six: groundwater potential mapping, where reading the geophysics first took our strike rate to seven holes in ten. ` +
+                  `Two of these dossiers you can play with — site a borehole, or flood a river. Go and break them.`
+        },
+        {
+            id: 'ecoprompt',
+            label: 'the A.I. carbon widget',
+            text: `This is a live slice of my current research. ` +
+                  `Pick a model and a workload, and see what a single A.I. answer costs the planet — ` +
+                  `in energy, in carbon, and in water, in units you can actually feel. ` +
+                  `But before the numbers: have a guess. ` +
+                  `The three smallest models are already plotted for you. Drag across the chart to predict the rest, ` +
+                  `from mid-size models up to a frontier reasoning model — then reveal what the research actually measured. ` +
+                  `Most people guess a straight line. It isn't one. ` +
+                  `That gap between what people expect and what the research measured is, more or less, my entire job.`
+        },
+        {
+            id: 'skills',
+            label: 'the skills section',
+            text: `No made-up percentages here. Every tool comes with the receipt of where it earned its place. ` +
+                  `Python — for the global river-export pollution analysis behind my master's thesis. ` +
+                  `Q.G.I.S. and Arc.G.I.S. — for groundwater maps that struck water seven times out of ten. ` +
+                  `S.Q.L. — from real business cases in my data analytics training. ` +
+                  `Tableau and Power B.I. — for climate-risk and E.S.G. reporting dashboards. ` +
+                  `Machine learning, from the Google Advanced Data Analytics certificate. ` +
+                  `And JavaScript — which built the live widget sitting further up this very page. ` +
+                  `Alongside those: E.S.G. analysis, greenhouse gas accounting across scopes one to three, ` +
+                  `life cycle assessment, climate risk assessment, and water resource management. ` +
+                  `If a skill is listed, there's a project behind it. Click through and check.`
+        },
+        {
+            id: 'education',
+            label: 'the education section',
+            text: `Three degrees, on three continents. ` +
+                  `A master's in environmental sciences from Wageningen University in the Netherlands, from twenty twenty-one to twenty twenty-four, ` +
+                  `specialising in human-environment interaction and water systems under global change. ` +
+                  `My thesis examined the socioeconomic drivers of river export of pollutants worldwide. ` +
+                  `I studied there as a Wageningen African Scholarship Programme scholar. ` +
+                  `Before that, a master's in industrial engineering from Hunan University in Changsha, China, ` +
+                  `on a full Chinese Government scholarship, with a thesis on soft path water management using Freetown as the case study. ` +
+                  `And underneath both, where it began: a bachelor's with honours in geology from the University of Sierra Leone. ` +
+                  `First class honours, top of the class, with a dissertation on groundwater potential mapping. ` +
+                  `Since then: certified as an E.S.G. specialist, and through the Google data analytics programmes.`
+        },
+        {
+            id: 'notes',
+            label: 'the field notes',
+            text: `Short dispatches from the intersection of mud, models and megawatts. ` +
+                  `The first one is about what a hundred and sixty-four water points taught me about data. ` +
+                  `In the Freetown Complex, a wrong guess isn't a bad cell in a spreadsheet — it's a dry hole a community paid for. ` +
+                  `Geophysics taught me that data only matters when someone stakes something on it. ` +
+                  `The resistivity surveys behind our groundwater maps pushed the strike rate to seventy percent, ` +
+                  `in rock where drilling is otherwise a gamble. And every strike carried the same lesson: ` +
+                  `collect the data before the drill bit, not after. ` +
+                  `I carry that into every E.S.G. analysis and every A.I. framework I build now. ` +
+                  `The question is never "what does the data say?" ` +
+                  `It's "who is about to spend money, or drink water, based on what I claim it says?"`
+        },
+        {
+            id: 'contact',
+            label: 'the contact section',
+            text: `I'm open to roles and consulting in sustainability, climate risk and E.S.G. — ` +
+                  `based in Amsterdam, anywhere in the E.U., and remote-friendly. ` +
+                  `If you're working on something at the intersection of climate, water or A.I., let's talk. ` +
+                  `I usually reply within a couple of days. ` +
+                  `And before you decide — there's a tool just below this. ` +
+                  `Paste in a job description, and it grades how well my record fits the role, ` +
+                  `mapping each requirement to the evidence that backs it. ` +
+                  `It runs entirely in your browser. The text never leaves this page, ` +
+                  `and no A.I. model is downloaded to do it. ` +
+                  `Doing that in a few kilobytes instead of a gigabyte-sized model is, more or less, the whole point of my work.`
+        }
+    ];
+
+    // ---------------------------------------------------------------
+    // Sentence splitting, shared by the player (for utterances and captions)
+    // and available to the generator.
+    //
+    // Splitting naively on "." mangles these scripts, which are full of
+    // spelled-out initialisms — A.I., E.S.G., Q.G.I.S., Arc.G.I.S. Those are
+    // parked behind a sentinel before the split and restored after, so
+    // "sustainable A.I. — making sure…" stays a single sentence.
+    //
+    // The sentinel is deliberately non-numeric: the scripts are also full of
+    // real numbers (164 water points) that must survive the round trip
+    // untouched. tests/bugs.test.js asserts exactly that.
+    // ---------------------------------------------------------------
+    const INITIALISM = /[A-Za-z]+(?:\.[A-Za-z])+\./g;
+
+    function splitSentences(text) {
+        const parked = [];
+        const masked = String(text).replace(INITIALISM, (m) => {
+            parked.push(m);
+            return `@@${parked.length - 1}@@`;
+        });
+        const restore = s => s.replace(/@@(\d+)@@/g, (_, i) => parked[Number(i)]);
+        const raw = masked.match(/[^.!?…]+[.!?…]+["'”’—]?\s*/g) || [masked];
+
+        // Fold very short fragments into the previous sentence — a two-word
+        // utterance reads as a stutter and costs an extra engine round-trip.
+        const out = [];
+        raw.map(s => restore(s).trim()).filter(Boolean).forEach(s => {
+            if (out.length && s.length < 40) out[out.length - 1] += ' ' + s;
+            else out.push(s);
+        });
+        return out.length ? out : [String(text)];
+    }
+
+    const byId = {};
+    SCRIPTS.forEach(s => { byId[s.id] = s; });
+
+    return { SCRIPTS, byId, splitSentences };
+});

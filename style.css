@@ -3917,3 +3917,325 @@ body.light-mode .journey-you-readout {
         display: none;
     }
 }
+
+/* ===================================================================
+   FIELD DISPATCH — the spoken page
+   A listen control per section, plus a docked player. Everything below
+   is driven by the theme tokens, so light mode needs no overrides.
+   =================================================================== */
+
+/* Used by the listen buttons to give screen readers the full target
+   ("listen to the journey") while the visible label stays one word. */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* --- the per-section control ------------------------------------- */
+.listen-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 18px;
+    flex-wrap: wrap;
+}
+
+/* Must out-specify the rule above: the script hides these when the browser
+   has no voice and no recording to fall back on, and a bare [hidden] loses
+   to any class-level display. */
+.listen-wrap[hidden] {
+    display: none;
+}
+
+.hero-cta + .listen-wrap {
+    margin-top: -40px;   /* .hero-cta carries 60px of bottom margin */
+    margin-bottom: 40px;
+}
+
+.listen-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 7px 15px;
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--line-color);
+    border-radius: 999px;
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    transition: var(--transition);
+}
+
+.listen-btn .icon {
+    width: 11px;
+    height: 11px;
+    fill: currentColor;
+    flex-shrink: 0;
+}
+
+.listen-btn:hover,
+.listen-btn:focus-visible {
+    color: var(--accent-color);
+    border-color: var(--accent-color);
+    background: var(--line-soft);
+}
+
+.listen-btn.is-playing {
+    color: var(--accent-color);
+    border-color: var(--accent-color);
+    background: var(--line-soft);
+}
+
+/* The pulse is the only moving part, and it is the one that says
+   "this is speaking right now" — so it goes quiet with everything else. */
+.listen-btn.is-playing .icon {
+    animation: listenPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes listenPulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.35; }
+}
+
+.listen-cost {
+    font-size: 0.66rem;
+    opacity: 0.62;
+    letter-spacing: 0.05em;
+}
+
+/* --- the docked player -------------------------------------------- */
+.dispatch-bar {
+    position: fixed;
+    left: 50%;
+    bottom: 18px;
+    transform: translateX(-50%);
+    z-index: 900;
+    width: min(560px, calc(100vw - 32px));
+    background: var(--card-bg);
+    border: 1px solid var(--line-color);
+    border-radius: var(--border-radius);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+    padding: 14px 16px 12px;
+    backdrop-filter: blur(6px);
+}
+
+body.light-mode .dispatch-bar {
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.16);
+}
+
+.dispatch-bar[hidden] { display: none; }
+
+.dispatch-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.dispatch-play,
+.dispatch-rate,
+.dispatch-close {
+    background: transparent;
+    border: 1px solid var(--line-color);
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-radius: 999px;
+    transition: var(--transition);
+    flex-shrink: 0;
+}
+
+.dispatch-play {
+    width: 38px;
+    height: 38px;
+    display: grid;
+    place-items: center;
+    color: var(--accent-color);
+}
+
+.dispatch-play .icon {
+    width: 13px;
+    height: 13px;
+    fill: currentColor;
+}
+
+.dispatch-rate {
+    padding: 5px 10px;
+    font-size: 0.68rem;
+    min-width: 44px;
+}
+
+.dispatch-close {
+    width: 28px;
+    height: 28px;
+    font-size: 1.1rem;
+    line-height: 1;
+    display: grid;
+    place-items: center;
+}
+
+.dispatch-play:hover,
+.dispatch-rate:hover,
+.dispatch-close:hover,
+.dispatch-play:focus-visible,
+.dispatch-rate:focus-visible,
+.dispatch-close:focus-visible {
+    color: var(--accent-color);
+    border-color: var(--accent-color);
+    background: var(--line-soft);
+}
+
+.dispatch-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.dispatch-title {
+    display: block;
+    font-size: 0.64rem;
+    color: var(--accent-color);
+    margin-bottom: 3px;
+}
+
+/* Two lines of caption, then clip — the bar must not grow as it reads. */
+.dispatch-caption {
+    margin: 0;
+    font-size: 0.82rem;
+    line-height: 1.4;
+    color: var(--text-primary);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.dispatch-progress {
+    height: 2px;
+    background: var(--line-soft);
+    border-radius: 2px;
+    margin: 11px 0 9px;
+    overflow: hidden;
+}
+
+.dispatch-progress span {
+    display: block;
+    height: 100%;
+    width: 0;
+    background: var(--accent-color);
+    transition: width 0.25s linear;
+}
+
+.dispatch-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.dispatch-voices {
+    display: inline-flex;
+    gap: 4px;
+    border: 1px solid var(--line-color);
+    border-radius: 999px;
+    padding: 3px;
+}
+
+.dispatch-voices button {
+    background: transparent;
+    border: 0;
+    border-radius: 999px;
+    padding: 4px 11px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: 0.64rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    transition: var(--transition);
+}
+
+.dispatch-voices button[hidden] { display: none; }
+
+.dispatch-voices button[aria-pressed="true"] {
+    background: var(--accent-color);
+    color: var(--darker-bg);
+}
+
+body.light-mode .dispatch-voices button[aria-pressed="true"] {
+    color: #ffffff;
+}
+
+.dispatch-voices button:hover:not([aria-pressed="true"]),
+.dispatch-voices button:focus-visible:not([aria-pressed="true"]) {
+    color: var(--accent-color);
+}
+
+.dispatch-weight {
+    font-size: 0.64rem;
+    opacity: 0.7;
+    white-space: nowrap;
+}
+
+/* --- restraint ----------------------------------------------------- */
+/* Low-energy mode and reduced-motion visitors keep the voice — speech is
+   not motion, and the synthesised voice is the lightest thing on the page.
+   What stops is the decoration around it. */
+body.eco-mode .listen-btn.is-playing .icon {
+    animation: none;
+}
+
+body.eco-mode .dispatch-bar {
+    backdrop-filter: none;
+}
+
+body.eco-mode .dispatch-progress span {
+    transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .listen-btn.is-playing .icon { animation: none; }
+    .dispatch-progress span { transition: none; }
+}
+
+/* The player is centred and 560px wide, so it only reaches under the
+   floating corner buttons once the viewport drops below roughly 760px. */
+@media (max-width: 760px) {
+    body.dispatch-open .scroll-top { bottom: 178px; }
+    body.dispatch-open .theme-toggle { bottom: 243px; }
+}
+
+/* --- narrow screens ------------------------------------------------ */
+@media (max-width: 600px) {
+    .dispatch-bar {
+        left: 8px;
+        right: 8px;
+        bottom: 8px;
+        width: auto;
+        transform: none;
+        padding: 12px 12px 10px;
+    }
+
+    .dispatch-foot {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 7px;
+    }
+
+    .listen-wrap {
+        gap: 9px;
+    }
+
+    .hero-cta + .listen-wrap {
+        margin-top: -44px;
+        margin-bottom: 36px;
+    }
+}

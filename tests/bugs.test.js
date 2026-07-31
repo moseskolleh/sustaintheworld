@@ -7,6 +7,7 @@ const { JSDOM } = require('jsdom');
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 const js = fs.readFileSync(path.join(__dirname, '..', 'script.js'), 'utf8');
+const voiceJs = fs.readFileSync(path.join(__dirname, '..', 'voice-scripts.js'), 'utf8');
 
 function run(theme) {
     const dom = new JSDOM(html, { runScripts: 'outside-only', pretendToBeVisual: true, url: 'https://example.com/' });
@@ -38,7 +39,9 @@ function run(theme) {
     };
     window.requestAnimationFrame = (fn) => setTimeout(fn, 0);
 
-    // Execute the site script in the window context
+    // Execute the site scripts in the window context, in page order —
+    // script.js reads window.VoiceScripts, so this one has to land first.
+    window.eval(voiceJs);
     window.eval(js);
 
     return { window, errors };
@@ -143,6 +146,87 @@ function assert(cond, msg) {
         focusCount === 1,
         `Bug3: calm-mode drill should invoke done() exactly once (focus count was ${focusCount})`
     );
+}
+
+// --- Bug 4: narration sentence-splitting must not corrupt the scripts ---
+// The splitter parks initialisms (A.I., E.S.G., Arc.G.I.S.) behind a sentinel
+// so a sentence break is never taken mid-acronym, then restores them. An
+// earlier version used a bare-digit sentinel, which chewed through the real
+// numbers in the copy ("164 water points"). Both halves are asserted here.
+{
+    const { SCRIPTS, splitSentences } = require('../voice-scripts.js');
+
+    assert(SCRIPTS.length > 0, 'Bug4 setup: voice scripts are defined');
+
+    let lossy = [];
+    let fragmented = [];
+    SCRIPTS.forEach((script) => {
+        const parts = splitSentences(script.text);
+        const norm = (s) => s.replace(/\s+/g, ' ').trim();
+        if (norm(parts.join(' ')) !== norm(script.text)) lossy.push(script.id);
+        // A sentence starting lowercase means the break landed mid-thought —
+        // the tell for a split taken inside an abbreviation.
+        parts.forEach((p) => { if (/^[a-z]/.test(p)) fragmented.push(`${script.id}:"${p.slice(0, 30)}"`); });
+    });
+
+    assert(lossy.length === 0, `Bug4: every script must round-trip through splitSentences (lossy: ${lossy.join(', ') || 'none'})`);
+    assert(fragmented.length === 0, `Bug4: no sentence should start mid-word (${fragmented.slice(0, 3).join(', ') || 'none'})`);
+
+    const journey = splitSentences(SCRIPTS.find((s) => s.id === 'journey').text).join(' ');
+    assert(journey.includes('a hundred and sixty-four'), 'Bug4: spelled-out numbers survive the sentinel round-trip');
+
+    const skills = splitSentences(SCRIPTS.find((s) => s.id === 'skills').text);
+    assert(
+        skills.some((p) => p.includes('Q.G.I.S. and Arc.G.I.S.')),
+        'Bug4: initialisms stay intact across a sentence boundary'
+    );
+}
+
+// --- Bug 5: every narration script must have somewhere to mount ---
+// A script whose id does not match a section leaves its listen button
+// silently unrendered, which is invisible until someone goes looking for it.
+{
+    const { window } = run('dark');
+    const doc = window.document;
+    const { SCRIPTS } = require('../voice-scripts.js');
+
+    const orphans = SCRIPTS.filter((s) => {
+        if (s.id === 'hero') return !doc.querySelector('.hero-cta');
+        const section = doc.getElementById(s.id);
+        return !(section && section.querySelector('.section-header'));
+    }).map((s) => s.id);
+
+    assert(orphans.length === 0, `Bug5: every voice script has a mount point (orphans: ${orphans.join(', ') || 'none'})`);
+
+    const buttons = doc.querySelectorAll('.listen-btn');
+    assert(
+        buttons.length === SCRIPTS.length,
+        `Bug5: one listen button per script (expected ${SCRIPTS.length}, found ${buttons.length})`
+    );
+
+    // The sprite must carry the icons the buttons and player reference.
+    ['i-play', 'i-pause'].forEach((id) => {
+        assert(!!doc.getElementById(id), `Bug5: sprite defines #${id}`);
+    });
+}
+
+// --- Bug 6: narration must never start on its own ---
+// Autoplaying audio is the failure mode this feature has to avoid, and it
+// would also violate the page's low-energy contract.
+{
+    const { window } = run('dark');
+    const doc = window.document;
+
+    const bar = doc.getElementById('dispatchBar');
+    assert(!!bar, 'Bug6 setup: the dispatch bar is mounted');
+    assert(bar.hidden === true, 'Bug6: the player stays hidden until asked for');
+
+    const playing = doc.querySelectorAll('.listen-btn.is-playing');
+    assert(playing.length === 0, 'Bug6: no section is narrating on load');
+
+    const pressed = Array.from(doc.querySelectorAll('.listen-btn'))
+        .filter((b) => b.getAttribute('aria-pressed') !== 'false');
+    assert(pressed.length === 0, 'Bug6: every listen button reports aria-pressed="false" on load');
 }
 
 if (failures > 0) {

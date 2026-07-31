@@ -14,7 +14,8 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 - **Living journey map**: a hand-built SVG map of the journey region — West Africa to East Asia, so every stop gets real resolution instead of a world map that's half empty ocean (Natural Earth 50 m coastlines, simplified hardest away from the Rhine delta where the map zooms deepest, zero runtime dependencies). It flies from Freetown to Changsha, Bonn, Wageningen and Amsterdam as you scroll, and fieldwork sites like Wuppertal join the map when the story reaches them. Regenerate with `npm install d3-geo topojson-client topojson-simplify world-atlas && node scripts/generate-journey-map.js`, then sync the printed stop pixels into `script.js`
 - **"Site the borehole" mini-game**: a playable resistivity profile in the Groundwater dossier — read the curve, place the rig, drill. Water-bearing fracture, clay pocket or dry hole; the score converges on the point: blind drilling hits ~30%, reading the curve hit 70%
 - **"Don't let it become a boat" flood scene**: an interactive Wupper cross-section in the Wuppertal dossier — slide the river from a calm day to July 2021 and watch the margin under the Schwebebahn's hanging cars shrink
-- **Field terminal**: press <code>`</code> anywhere (or the footer button) for a hidden green-on-black terminal — try `journey`, `drill`, `co2`, `kushe`, `help`
+- **Field terminal**: press <code>`</code> anywhere (or the footer button) for a hidden green-on-black terminal — try `journey`, `drill`, `co2`, `voice`, `kushe`, `help`
+- **The spoken page**: a `listen` control on every section, and the choice of voice is itself the argument. The browser's own speech engine downloads **zero bytes** — the button says `0.00 g` and means it. A recorded voice (rendered ahead of time via Fish Audio) is the second option, fetched only on click and labelled with exactly what it weighs. Same words, two costs, visitor's call. Nothing ever autoplays. See [Narration](#narration-the-spoken-page)
 - **Carbon-aware by construction**: all images ship as optimized WebP (~25 MB → under 2 MB for the whole site), and a live footer badge weighs each visit in the browser (Resource Timing API × Sustainable Web Design model). A low-energy mode pauses all animation and honours `prefers-reduced-motion`
 - **Borehole core-log experience timeline**: career history logged the way a geologist logs a core — depth is time, every layer is a chapter
 - **"AI, Weighed" live widget**: a homepage slice of the EcoPrompt Coach research — model × workload × grid → energy, carbon, water, in units people can feel
@@ -122,6 +123,56 @@ To deploy or update:
 
 3. **Access your live site**
    - Your site will be available at: `https://[username].github.io/sustaintheworld/`
+
+## Narration (the spoken page)
+
+Every section carries a `listen` control. There are two voices behind it, and
+which one a visitor picks is part of the point the site is making.
+
+| | browser voice | recorded voice |
+|---|---|---|
+| engine | `window.speechSynthesis` | pre-rendered MP3 (Fish Audio) |
+| downloaded | **nothing** | ~40 KB/section, on click only |
+| label shown | `0.00 g · 0 KB` | the track's real grams and KB |
+| needs a build step | no | yes — `npm run voice` |
+
+The browser path costs nothing because the voice is already installed on the
+listener's device. Only **offline** voices are used: Chrome's default network
+voices stream audio from Google's servers, which would quietly make the
+`0.00 g` claim false. When a browser has no offline voice, the label says so
+instead of printing a number the page can't stand behind.
+
+**The site works with no audio files at all.** Until `assets/audio/voice-manifest.json`
+exists, the controls use the browser voice and the recorded option stays hidden.
+If a browser has neither a voice nor a recording, the controls remove themselves
+rather than sit there dead. Nothing autoplays, in any mode.
+
+### Editing what it says
+
+Scripts live in [`voice-scripts.js`](voice-scripts.js) — **not** scraped from the
+page. Reading the DOM aloud produces garbage: stat counters mid-animation, SVG
+labels, and "S-B-T-i, C-D-P, T-C-F-D" spelled letter by letter. Each script is
+written for the ear and must stay factually identical to the section it narrates.
+
+`npm test` asserts that sentence-splitting never corrupts a script — the
+initialisms (`A.I.`, `Arc.G.I.S.`) and the real numbers ("164 water points")
+both have to survive intact.
+
+### Rendering the recorded voice
+
+```bash
+cp .env.example .env          # paste your Fish Audio key in — .env is gitignored
+npm run voice                 # only re-renders scripts whose text changed
+npm run voice -- --dry-run    # show the plan, spend nothing
+npm run voice -- --only hero  # re-render one section
+```
+
+Then commit the generated `assets/audio/*.mp3` and `voice-manifest.json`. The
+key is read from the environment at build time and never reaches the browser.
+
+To narrate in your own voice, clone it on Fish Audio, then put the resulting
+model id in `FISH_AUDIO_VOICE_ID`. Without it you get the API's default voice,
+which works but isn't the point.
 
 ## Customization Guide
 
