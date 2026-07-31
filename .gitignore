@@ -10,3 +10,8 @@ node_modules/
 # Output of `npm run voice:check`, which renders against the local mock
 # server in WAV. Throwaway and large — the real narration ships as .mp3.
 assets/audio/*.wav
+
+# Voice auditions written by the fish-audio MCP server (.mcp.json) while
+# choosing a voice. Scratch output — the narration that ships comes from
+# `npm run voice`.
+.voice-auditions/

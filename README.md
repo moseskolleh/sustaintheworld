@@ -196,6 +196,34 @@ paying for the whole page again.
 music, no background noise, no room echo. The clone is only as good as its
 source, and this is the one input that decides how the whole site sounds.
 
+### Auditioning voices (MCP)
+
+Choosing a voice is exploratory — you want to hear three candidates read the
+same line and pick one. That is a bad fit for a build script and a good fit for
+an MCP server, so the repo ships a project-scoped [`.mcp.json`](.mcp.json)
+wiring up [`@alanse/fish-audio-mcp-server`](https://github.com/da-okazaki/mcp-fish-audio-server).
+Claude Code picks it up automatically in this directory.
+
+No key is stored in it. `${FISH_AUDIO_API_KEY}` expands from your shell, and it
+is the same variable the build step reads, so one export drives both:
+
+```bash
+export FISH_AUDIO_API_KEY=your_key_here
+```
+
+The server exposes `fish_audio_tts` (pass `reference_id` per call to compare
+candidates) and `fish_audio_list_references`. Auditions are written to
+`.voice-auditions/`, which is gitignored.
+
+**MCP picks the voice; `npm run voice` ships it.** The narration on the live
+site is always produced by the build script — reproducible, hashed so unchanged
+text is not re-billed, and the only thing that writes the manifest the page
+reads. An MCP tool call is a conversation, not a build artefact.
+
+Prefer OAuth to an API key? Fish Audio also runs an official remote server —
+`claude mcp add --transport http fish-audio https://api.fish.audio/mcp` — which
+bills against plan credits rather than developer API credits.
+
 ### Verifying without spending credits
 
 The pipeline can be exercised end to end against a local stand-in that speaks
