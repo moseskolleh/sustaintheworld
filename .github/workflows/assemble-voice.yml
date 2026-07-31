@@ -4,10 +4,17 @@ name: Assemble voice narration
 # scripts/voice-chunks.json into assets/audio/*.mp3 plus the manifest,
 # and commits the result back to the branch it was dispatched on.
 # Runs here because the runners have ffmpeg and open egress to the
-# Fish Audio CDN. Manual trigger only — narration is a deliberate act.
+# Fish Audio CDN. Triggers only when the chunk map or the assembler
+# change — narration is a deliberate act, and the result commit
+# (assets/audio only) cannot re-trigger it.
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - scripts/voice-chunks.json
+      - scripts/assemble-voice.js
+      - .github/workflows/assemble-voice.yml
 
 permissions:
   contents: write
