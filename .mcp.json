@@ -1,0 +1,32 @@
+{
+  "$comment": [
+    "Project-scoped MCP server for auditioning Fish Audio voices while working",
+    "on the narration. Claude Code picks this up automatically in this repo.",
+    "",
+    "No secret lives here. ${FISH_AUDIO_API_KEY} is expanded from your shell at",
+    "launch, and it is the SAME variable scripts/generate-voice.js reads, so one",
+    "export drives both the audition tool and the build:",
+    "",
+    "    export FISH_AUDIO_API_KEY=your_key_here",
+    "",
+    "This is for picking a voice, not for building the site. Auditions land in",
+    ".voice-auditions/ (gitignored). The narration that ships is always produced",
+    "by `npm run voice`, which is reproducible, hashed and writes the manifest.",
+    "Pass reference_id per call to compare candidate voices."
+  ],
+  "mcpServers": {
+    "fish-audio": {
+      "command": "npx",
+      "args": ["-y", "@alanse/fish-audio-mcp-server"],
+      "env": {
+        "FISH_API_KEY": "${FISH_AUDIO_API_KEY}",
+        "FISH_MODEL_ID": "s1",
+        "FISH_OUTPUT_FORMAT": "mp3",
+        "FISH_MP3_BITRATE": "64",
+        "FISH_LATENCY": "balanced",
+        "FISH_AUTO_PLAY": "false",
+        "AUDIO_OUTPUT_DIR": ".voice-auditions"
+      }
+    }
+  }
+}
