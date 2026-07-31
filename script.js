@@ -1291,13 +1291,13 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
             if (arg === 'moses' || arg === 'human') {
                 fd.loadManifest().then(() => {
                     if (!fd.hasRecorded()) { print('the recorded narration has not been rendered yet — staying on the browser voice.', 'ft-err'); return; }
-                    fd.setMode('human');
+                    fd.setMode('human', true);
                     print('voice: Moses. each section is a file now — the player shows what it weighs.');
                 });
                 return;
             }
             if (arg === 'browser' || arg === 'synth') {
-                fd.setMode('synth');
+                fd.setMode('synth', true);
                 print('voice: your browser\'s. 0.00 g — nothing crosses the wire.');
                 return;
             }
@@ -2524,9 +2524,14 @@ window.mksShare = (() => {
     let audioEl = null;
     let keepAlive = null;
 
+    // Distinguishes "the visitor picked a voice" from "nobody has chosen yet".
+    // Only an explicit click is remembered, so the default below can change
+    // without overriding someone's stated preference.
+    let modeChosen = false;
+
     try {
         const savedMode = localStorage.getItem('mks-voice-mode');
-        if (savedMode === 'human' || savedMode === 'synth') mode = savedMode;
+        if (savedMode === 'human' || savedMode === 'synth') { mode = savedMode; modeChosen = true; }
         const savedRate = parseFloat(localStorage.getItem('mks-voice-rate'));
         if (savedRate >= 0.5 && savedRate <= 2) rate = savedRate;
     } catch (e) { /* private mode */ }
@@ -2756,7 +2761,7 @@ window.mksShare = (() => {
         audioEl.addEventListener('error', () => {
             audioEl = null;
             el.caption.textContent = 'that recording would not load — using the browser voice instead.';
-            setMode('synth');
+            setMode('synth', false);
             runSynth(script.id, sentences, 0);
         });
 
@@ -2804,9 +2809,15 @@ window.mksShare = (() => {
         else { synth.pause(); setIcon('play'); }
     };
 
-    function setMode(next) {
+    // `persist` is true only for a deliberate click on the voice switch.
+    // Falling back automatically (no engine, missing track) must not be
+    // recorded as a preference.
+    function setMode(next, persist) {
         mode = next;
-        try { localStorage.setItem('mks-voice-mode', mode); } catch (e) { /* ignore */ }
+        if (persist) {
+            modeChosen = true;
+            try { localStorage.setItem('mks-voice-mode', mode); } catch (e) { /* ignore */ }
+        }
         syncModeButtons();
         if (current) el.weight.textContent = weightLabel(current.id);
         refreshCosts();
@@ -2836,7 +2847,7 @@ window.mksShare = (() => {
         if (nextMode === mode) return;
         const resume = current ? window.VoiceScripts.byId[current.id] : null;
         if (nextMode === 'human') await loadManifest();
-        setMode(nextMode);
+        setMode(nextMode, true);
         if (resume) play(resume, document.querySelector(`.listen-btn[data-voice="${resume.id}"]`));
     }));
 
@@ -2894,14 +2905,18 @@ window.mksShare = (() => {
         else synth.onvoiceschanged = onVoicesReady;
     }
 
-    // Reveal the recorded-voice option only once we know it exists — and if
-    // this browser has no speech engine, the recording is what rescues the
-    // feature, so availability is rechecked here too.
+    // Reveal the recorded-voice option only once we know it exists.
+    //
+    // Where a recording exists it becomes the default: it is a real human
+    // reading, and it is the reason the narration was commissioned at all.
+    // The browser voice stays one click away and still says 0.00 g, so the
+    // lighter option is offered rather than imposed — and anyone who has
+    // actually picked a side keeps their choice.
     loadManifest().then(m => {
         if (!m) return;
         const humanBtn = el.modes.filter(b => b.dataset.mode === 'human')[0];
         if (humanBtn) humanBtn.hidden = false;
-        if (!canSpeak()) setMode('human');
+        if (!modeChosen || !canSpeak()) setMode('human', false);
         refreshCosts();
         updateAvailability();
     });

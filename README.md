@@ -135,6 +135,12 @@ which one a visitor picks is part of the point the site is making.
 | downloaded | **nothing** | ~40 KB/section, on click only |
 | label shown | `0.00 g · 0 KB` | the track's real grams and KB |
 | needs a build step | no | yes — `npm run voice` |
+| default | when no recording exists | whenever a recording exists |
+
+The recorded voice wins by default once it is there — it is a real human
+reading, and it is why the narration was commissioned. The browser voice stays
+one click away and still says `0.00 g`, so the lighter option is offered rather
+than imposed. Anyone who picks a side keeps their choice.
 
 The browser path costs nothing because the voice is already installed on the
 listener's device. Only **offline** voices are used: Chrome's default network
@@ -160,19 +166,50 @@ both have to survive intact.
 
 ### Rendering the recorded voice
 
+The API key is used in exactly one place — this build step, on your machine.
+It never reaches the browser, never appears in the shipped site, and never runs
+in CI. What ships is the rendered audio, which the page plays with a plain
+`<audio>` element and no API call at all.
+
 ```bash
-cp .env.example .env          # paste your Fish Audio key in — .env is gitignored
-npm run voice                 # only re-renders scripts whose text changed
-npm run voice -- --dry-run    # show the plan, spend nothing
-npm run voice -- --only hero  # re-render one section
+cp .env.example .env                              # paste your key in — .env is gitignored
+npm run voice -- --clone path/to/your-voice.mp3   # clone your voice, then render everything
 ```
 
-Then commit the generated `assets/audio/*.mp3` and `voice-manifest.json`. The
-key is read from the environment at build time and never reaches the browser.
+That one command uploads the sample, creates a Fish Audio voice model, writes
+the returned id back into `.env` as `FISH_AUDIO_VOICE_ID`, and narrates all ten
+sections in it. Afterwards:
 
-To narrate in your own voice, clone it on Fish Audio, then put the resulting
-model id in `FISH_AUDIO_VOICE_ID`. Without it you get the API's default voice,
-which works but isn't the point.
+```bash
+npm run voice                 # re-render only the scripts whose text changed
+npm run voice -- --force      # re-render everything
+npm run voice -- --only hero  # re-render one section
+npm run voice -- --dry-run    # show the plan, spend nothing
+```
+
+Then commit the generated `assets/audio/*.mp3` and `voice-manifest.json`.
+
+Scripts are hashed, so fixing one sentence re-renders one file rather than
+paying for the whole page again.
+
+**Give the clone a clean sample.** 30–60 seconds of you talking normally, no
+music, no background noise, no room echo. The clone is only as good as its
+source, and this is the one input that decides how the whole site sounds.
+
+### Verifying without spending credits
+
+The pipeline can be exercised end to end against a local stand-in that speaks
+the same protocol — real files, real byte sizes, real playback, no network call
+and no billing:
+
+```bash
+npm run voice:mock      # terminal 1
+npm run voice:check     # terminal 2 — clones and renders against the mock
+```
+
+It writes `.wav` (gitignored) so mock output can never be mistaken for the real
+narration. Useful for checking a script edit reads well before paying to render
+it, and for confirming the wiring after any change to the generator.
 
 ## Customization Guide
 

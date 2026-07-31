@@ -6,7 +6,9 @@
   "license": "MIT",
   "scripts": {
     "test": "node tests/bugs.test.js",
-    "voice": "node scripts/generate-voice.js"
+    "voice": "node scripts/generate-voice.js",
+    "voice:mock": "node scripts/mock-fish-audio.js",
+    "voice:check": "FISH_AUDIO_API_BASE=http://127.0.0.1:8199 FISH_AUDIO_API_KEY=mock FISH_AUDIO_FORMAT=wav node scripts/generate-voice.js --force"
   },
   "devDependencies": {
     "jsdom": "^26.1.0"
