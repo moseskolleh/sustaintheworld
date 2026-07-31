@@ -1,0 +1,81 @@
+{
+  "note": "Provenance for the recorded narration. Each section of voice-scripts.js was rendered by Fish Audio in sentence-boundary chunks (the free API caps one call at 500 bytes of text). scripts/assemble-voice.js downloads these task URLs and stitches them into assets/audio/<id>.mp3.",
+  "voiceId": "650ec6ce2dda4f1faf86fae5d591ca32",
+  "voiceTitle": "Spiritual African Narrator",
+  "model": "s1",
+  "bitrate": 64,
+  "renderedOn": "2026-07-31",
+  "sections": [
+    {
+      "id": "hero",
+      "urls": [
+        "https://platform.r2.fish.audio/tasks/2026-07-31/9fe7276a341740e4a91fa71478ad0589.mp3",
+        "https://platform.r2.fish.audio/tasks/2026-07-31/7b0bb002c9774a988fd230344e73793d.mp3"
+      ]
+    },
+    {
+      "id": "journey",
+      "urls": [
+        "https://platform.r2.fish.audio/tasks/2026-07-31/3f5dd9eb7c034480b7e76b35fae3dd09.mp3",
+        "https://platform.r2.fish.audio/tasks/2026-07-31/60c225731e9248969b7b1d09078f1207.mp3"
+      ]
+    },
+    {
+      "id": "about",
+      "urls": [
+        "https://platform.r2.fish.audio/tasks/2026-07-31/fae34d9d3ea042688e766e3e158ceacb.mp3",
+        "https://platform.r2.fish.audio/tasks/2026-07-31/b7e055660d144dbf944c2f7a7b6fa4e5.mp3"
+      ]
+    },
+    {
+      "id": "experience",
+      "urls": [
+        "https://platform.r2.fish.audio/tasks/2026-07-31/3cf7683511564f57a2261adf7fc1d546.mp3",
+        "https://platform.r2.fish.audio/tasks/2026-07-31/35443d4f01e146e0bee75664c1b32eb0.mp3"
+      ]
+    },
+    {
+      "id": "projects",
+      "urls": [
+        "https://platform.r2.fish.audio/tasks/2026-07-31/dc455bb020354b358a3a78e443d7bc6a.mp3",
+        "https://platform.r2.fish.audio/tasks/2026-07-31/39e28fb247e5405ab0514b9c96f9458b.mp3"
+      ]
+    },
+    {
+      "id": "ecoprompt",
+      "urls": [
+        "https://platform.r2.fish.audio/tasks/2026-07-31/1596755acda3460f8132da5b8a510d60.mp3",
+        "https://platform.r2.fish.audio/tasks/2026-07-31/4b00e4a2ac2b43b0857f6305a4e3b3e4.mp3"
+      ]
+    },
+    {
+      "id": "skills",
+      "urls": [
+        "https://platform.r2.fish.audio/tasks/2026-07-31/995bd31edab148328c67c033a94843fd.mp3",
+        "https://platform.r2.fish.audio/tasks/2026-07-31/7170c461e4824c14b85d87bac00ec04c.mp3"
+      ]
+    },
+    {
+      "id": "education",
+      "urls": [
+        "https://platform.r2.fish.audio/tasks/2026-07-31/74dfdc134e71442f8397acf861c905c5.mp3",
+        "https://platform.r2.fish.audio/tasks/2026-07-31/1373e306f9724d1d898cbf343ee0fa4d.mp3",
+        "https://platform.r2.fish.audio/tasks/2026-07-31/93b9974c354043d1bd49a5a6ffab2b74.mp3"
+      ]
+    },
+    {
+      "id": "notes",
+      "urls": [
+        "https://platform.r2.fish.audio/tasks/2026-07-31/a4fd78e1e5cd41e7b462fe07f76d978b.mp3",
+        "https://platform.r2.fish.audio/tasks/2026-07-31/b341e086c3884abb9f1d6c7bfbb81b40.mp3"
+      ]
+    },
+    {
+      "id": "contact",
+      "urls": [
+        "https://platform.r2.fish.audio/tasks/2026-07-31/f744af795a704769b2bb551f0acd8d34.mp3",
+        "https://platform.r2.fish.audio/tasks/2026-07-31/73b97f1112e14521b5af42841c4af76c.mp3"
+      ]
+    }
+  ]
+}
