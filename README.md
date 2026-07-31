@@ -126,6 +126,10 @@ To deploy or update:
 
 ## Narration (the spoken page)
 
+> Setting this up on a new machine, in the Desktop app, or in a cloud session?
+> See **[docs/narration-setup.md](docs/narration-setup.md)** for step-by-step
+> instructions per surface, including the two things that block cloud sessions.
+
 Every section carries a `listen` control. There are two voices behind it, and
 which one a visitor picks is part of the point the site is making.
 
