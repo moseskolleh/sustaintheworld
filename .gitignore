@@ -1,1 +1,8 @@
 node_modules/
+
+# API key for the narration build step (scripts/generate-voice.js).
+# The Fish Audio key must never be committed — it is read from the
+# environment at build time, and the rendered .mp3 files are what ship.
+.env
+.env.*
+!.env.example

@@ -1187,6 +1187,7 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
              ['cv', 'download the CV (PDF)'],
              ['map', 'fly to the journey map'],
              ['eco', 'toggle low-energy mode'],
+             ['voice', 'read a section aloud — try \'voice about\''],
              ['theme', 'toggle light/dark'],
              ['kushe', 'a greeting from Freetown'],
              ['clear', 'wipe the screen'],
@@ -1220,6 +1221,13 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
             const badge = document.getElementById('carbonBadgeText');
             print(badge ? badge.textContent : 'the scale is still warming up — scroll to the footer.');
             print('methodology: Resource Timing API × Sustainable Web Design model. every gram counted.');
+            const fd = window.FieldDispatch;
+            if (fd) {
+                const st = fd.state();
+                print(st.mode === 'human'
+                    ? 'narration: recorded voice — each section is a file, and the player prints its weight before you press play.'
+                    : 'narration: your browser\'s own voice. it downloads nothing, so listening adds 0.00 g to the figure above.');
+            }
         },
         drill: (args, done) => {
             const steps = [
@@ -1259,6 +1267,42 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
             const b = document.getElementById('ecoModeToggle');
             if (b) b.click();
             print('low-energy mode: ' + (document.body.classList.contains('eco-mode') ? 'on' : 'off'));
+        },
+        voice: (args) => {
+            const fd = window.FieldDispatch;
+            if (!fd) { print('no speech engine in this browser — the page stays quiet.', 'ft-err'); return; }
+            const state = fd.state();
+            const arg = (args && args[0]) || '';
+
+            if (!arg) {
+                print('usage: voice <section> — one of: ' + state.ids.join(', '));
+                print('       voice stop      — shut it up');
+                print('       voice moses     — switch to the recorded voice, if it has been rendered');
+                print('       voice browser   — switch back to your browser\'s own voice (0 bytes)');
+                print(`current: ${state.mode === 'human' ? 'recorded voice' : 'browser voice — ' + state.voice}`);
+                if (state.mode !== 'human') {
+                    print(state.local
+                        ? 'that voice is installed on your device. this narration downloads nothing.'
+                        : 'heads up: your browser has no offline voice, so it streams the audio from its vendor.');
+                }
+                return;
+            }
+            if (arg === 'stop') { fd.stop(); print('narration stopped.'); return; }
+            if (arg === 'moses' || arg === 'human') {
+                fd.loadManifest().then(() => {
+                    if (!fd.hasRecorded()) { print('the recorded narration has not been rendered yet — staying on the browser voice.', 'ft-err'); return; }
+                    fd.setMode('human');
+                    print('voice: Moses. each section is a file now — the player shows what it weighs.');
+                });
+                return;
+            }
+            if (arg === 'browser' || arg === 'synth') {
+                fd.setMode('synth');
+                print('voice: your browser\'s. 0.00 g — nothing crosses the wire.');
+                return;
+            }
+            if (fd.play(arg)) { close(); return; }
+            print(`no section called '${arg}'. try: ${state.ids.join(', ')}`, 'ft-err');
         },
         theme: () => {
             const b = document.querySelector('.theme-toggle');
@@ -2450,4 +2494,440 @@ window.mksShare = (() => {
     // A contact-form submission is the primary conversion goal.
     const form = document.getElementById('contactForm');
     if (form) form.addEventListener('submit', () => track('contact-form-submit'));
+})();
+
+// ===================================
+// FIELD DISPATCH — the spoken page
+// ===================================
+// Two voices for the same words, and the choice is the point.
+//
+//   browser voice — window.speechSynthesis. Zero bytes over the wire.
+//   Moses         — narration rendered ahead of time, fetched only when
+//                   asked for, labelled with exactly what it weighs.
+//
+// The recorded option stays hidden until assets/audio/voice-manifest.json
+// exists, so this works the moment it ships and gets richer after the first
+// `npm run voice`. Nothing here ever autoplays, in any mode.
+(() => {
+    const SCRIPTS = (window.VoiceScripts && window.VoiceScripts.SCRIPTS) || [];
+    if (!SCRIPTS.length) return;
+
+    const synth = window.speechSynthesis;
+    const canSynth = typeof synth !== 'undefined' && typeof window.SpeechSynthesisUtterance === 'function';
+    if (!canSynth && typeof window.Audio !== 'function') return;
+
+    let manifest = null;       // null until we know whether narration exists
+    let manifestTried = false;
+    let mode = 'synth';        // 'synth' | 'human'
+    let rate = 1;
+    let current = null;        // { id, sentences, index }
+    let audioEl = null;
+    let keepAlive = null;
+
+    try {
+        const savedMode = localStorage.getItem('mks-voice-mode');
+        if (savedMode === 'human' || savedMode === 'synth') mode = savedMode;
+        const savedRate = parseFloat(localStorage.getItem('mks-voice-rate'));
+        if (savedRate >= 0.5 && savedRate <= 2) rate = savedRate;
+    } catch (e) { /* private mode */ }
+
+    // Sentence splitting lives with the scripts themselves — see
+    // voice-scripts.js for why it is more careful than a split on ".".
+    const splitSentences = window.VoiceScripts.splitSentences;
+
+    // ---------------------------------------------------------------
+    // Voice choice. Offline voices are strongly preferred: Chrome's default
+    // network voices round-trip audio through Google's servers, which would
+    // quietly make the "0.00 g" claim false. When only a network voice is
+    // available the badge says so rather than printing a number the page
+    // cannot stand behind.
+    // ---------------------------------------------------------------
+    let chosenVoice = null;
+    let voiceIsLocal = false;
+
+    const pickVoice = () => {
+        if (!canSynth) return;
+        const voices = synth.getVoices() || [];
+        if (!voices.length) { updateAvailability(); return; }
+        const english = voices.filter(v => /^en(-|$)/i.test(v.lang || ''));
+        const pool = english.length ? english : voices;
+        const local = pool.filter(v => v.localService);
+        const ranked = (local.length ? local : pool).slice().sort((a, b) => {
+            const score = v => (/GB|IE|ZA|NG/i.test(v.lang || '') ? 0 : 1);
+            return score(a) - score(b);
+        });
+        chosenVoice = ranked[0] || null;
+        voiceIsLocal = !!(chosenVoice && chosenVoice.localService);
+        updateAvailability();
+    };
+
+    // A speech engine that reports no voices — headless browsers, and Linux
+    // builds without speech-dispatcher installed — accepts an utterance and
+    // then silently drops it. Rather than shipping a button that blinks and
+    // does nothing, the controls stay out of the page until there is either a
+    // usable voice or a recorded track to fall back on.
+    const canSpeak = () => !!(canSynth && (synth.getVoices() || []).length);
+
+    function updateAvailability() {
+        const usable = canSpeak() || !!manifest;
+        document.querySelectorAll('.listen-wrap').forEach(w => { w.hidden = !usable; });
+        if (!usable && current) stop();
+    }
+
+    // Voices arrive asynchronously in most browsers, and in Chrome the first
+    // getVoices() is routinely empty. Wiring happens at the end of this module
+    // instead of here, once the controls whose labels depend on the answer
+    // actually exist.
+
+    // ---------------------------------------------------------------
+    // The manifest records what each recorded track actually weighs.
+    // Fetched once, on demand, and only if a visitor reaches for it.
+    // ---------------------------------------------------------------
+    const loadManifest = async () => {
+        if (manifestTried) return manifest;
+        manifestTried = true;
+        try {
+            const res = await fetch('assets/audio/voice-manifest.json', { cache: 'force-cache' });
+            if (!res.ok) return null;
+            const data = await res.json();
+            manifest = (data && data.tracks && Object.keys(data.tracks).length) ? data : null;
+        } catch (e) {
+            manifest = null; // narration not generated yet — the synth path still works
+        }
+        return manifest;
+    };
+
+    const trackFor = id => (manifest && manifest.tracks && manifest.tracks[id]) || null;
+
+    const weightLabel = (id) => {
+        if (mode === 'human') {
+            const t = trackFor(id);
+            if (!t) return 'not recorded yet';
+            return `${t.grams.toFixed(2)} g · ${Math.round(t.bytes / 1024)} KB`;
+        }
+        return voiceIsLocal ? '0.00 g · 0 KB' : '≈0 g · voice from your browser';
+    };
+
+    const refreshCosts = () => {
+        document.querySelectorAll('.listen-wrap').forEach(w => {
+            const cost = w.querySelector('.listen-cost');
+            if (cost) cost.textContent = weightLabel(w.dataset.voiceId);
+        });
+    };
+
+    // ---------------------------------------------------------------
+    // The dispatch bar
+    // ---------------------------------------------------------------
+    const bar = document.createElement('div');
+    bar.className = 'dispatch-bar';
+    bar.id = 'dispatchBar';
+    bar.hidden = true;
+    bar.setAttribute('role', 'region');
+    bar.setAttribute('aria-label', 'Narration player');
+    bar.innerHTML = `
+        <div class="dispatch-row">
+            <button class="dispatch-play" type="button" aria-label="Pause narration">
+                <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-pause"></use></svg>
+            </button>
+            <div class="dispatch-info">
+                <span class="dispatch-title mono-label"></span>
+                <p class="dispatch-caption" aria-live="polite"></p>
+            </div>
+            <button class="dispatch-rate mono-label" type="button" aria-label="Playback speed">1&times;</button>
+            <button class="dispatch-close" type="button" aria-label="Stop narration">&times;</button>
+        </div>
+        <div class="dispatch-progress" aria-hidden="true"><span></span></div>
+        <div class="dispatch-foot">
+            <div class="dispatch-voices" role="group" aria-label="Choose a voice">
+                <button type="button" data-mode="synth" aria-pressed="true">browser voice</button>
+                <button type="button" data-mode="human" aria-pressed="false" hidden>Moses</button>
+            </div>
+            <span class="dispatch-weight mono-label"></span>
+        </div>`;
+
+    const el = {
+        play: bar.querySelector('.dispatch-play'),
+        title: bar.querySelector('.dispatch-title'),
+        caption: bar.querySelector('.dispatch-caption'),
+        rate: bar.querySelector('.dispatch-rate'),
+        close: bar.querySelector('.dispatch-close'),
+        progress: bar.querySelector('.dispatch-progress span'),
+        weight: bar.querySelector('.dispatch-weight'),
+        modes: Array.prototype.slice.call(bar.querySelectorAll('.dispatch-voices button'))
+    };
+
+    const setIcon = (name) => {
+        el.play.innerHTML = `<svg class="icon" aria-hidden="true" focusable="false"><use href="#i-${name}"></use></svg>`;
+        el.play.setAttribute('aria-label', name === 'pause' ? 'Pause narration' : 'Resume narration');
+    };
+
+    const setProgress = (frac) => {
+        el.progress.style.width = `${Math.max(0, Math.min(1, frac)) * 100}%`;
+    };
+
+    const syncModeButtons = () => {
+        el.modes.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === mode)));
+    };
+
+    // ---------------------------------------------------------------
+    // Playback — one engine per mode, one shared surface
+    // ---------------------------------------------------------------
+    const stopKeepAlive = () => { if (keepAlive) { clearInterval(keepAlive); keepAlive = null; } };
+
+    // The floating theme and scroll-top buttons are fixed to the same corner
+    // and outrank the player on z-index. On narrow screens, where the player
+    // spans the full width, they get lifted clear of it instead of sitting
+    // on top of the close button.
+    const showBar = (visible) => {
+        bar.hidden = !visible;
+        document.body.classList.toggle('dispatch-open', visible);
+    };
+
+    const stop = () => {
+        stopKeepAlive();
+        if (canSynth) synth.cancel();
+        if (audioEl) { audioEl.pause(); audioEl.removeAttribute('src'); audioEl.load(); audioEl = null; }
+        current = null;
+        showBar(false);
+        setProgress(0);
+        document.querySelectorAll('.listen-btn.is-playing').forEach(b => {
+            b.classList.remove('is-playing');
+            b.setAttribute('aria-pressed', 'false');
+        });
+    };
+
+    // Speaks `sentences` from `startAt`. Used for first play and for a rate
+    // change mid-sentence, since an utterance's rate is fixed once it starts.
+    const runSynth = (id, sentences, startAt) => {
+        current = { id, sentences, index: startAt };
+        synth.cancel();
+
+        const next = () => {
+            if (!current || current.index >= sentences.length) { stop(); return; }
+            const line = sentences[current.index];
+            el.caption.textContent = line;
+            setProgress(current.index / sentences.length);
+
+            const u = new SpeechSynthesisUtterance(line);
+            if (chosenVoice) u.voice = chosenVoice;
+            u.lang = (chosenVoice && chosenVoice.lang) || 'en-GB';
+            u.rate = rate;
+            u.onend = () => { if (current) { current.index++; next(); } };
+            u.onerror = () => { if (current) { current.index++; next(); } };
+            synth.speak(u);
+        };
+        next();
+
+        // Chrome drops long speech on the floor after ~15s of engine idle.
+        // A pause/resume tick keeps it alive without affecting playback.
+        stopKeepAlive();
+        keepAlive = setInterval(() => {
+            if (!current || audioEl) { stopKeepAlive(); return; }
+            if (synth.speaking && !synth.paused) { synth.pause(); synth.resume(); }
+        }, 10000);
+    };
+
+    const speakHuman = (script) => {
+        const track = trackFor(script.id);
+        if (!track) { runSynth(script.id, splitSentences(script.text), 0); return; }
+
+        const sentences = splitSentences(script.text);
+        current = { id: script.id, sentences, index: 0 };
+
+        audioEl = new Audio();
+        audioEl.preload = 'none';   // nothing crosses the wire until play()
+        audioEl.src = track.file;
+        audioEl.playbackRate = rate;
+
+        // No per-word timings come back from the API, so captions advance by
+        // position through the clip. Close enough to follow along, and never
+        // presented as more than that.
+        audioEl.addEventListener('timeupdate', () => {
+            if (!audioEl || !audioEl.duration) return;
+            const frac = audioEl.currentTime / audioEl.duration;
+            setProgress(frac);
+            const i = Math.min(sentences.length - 1, Math.floor(frac * sentences.length));
+            if (current && i !== current.index) {
+                current.index = i;
+                el.caption.textContent = sentences[i];
+            }
+        });
+        audioEl.addEventListener('ended', stop);
+        audioEl.addEventListener('error', () => {
+            audioEl = null;
+            el.caption.textContent = 'that recording would not load — using the browser voice instead.';
+            setMode('synth');
+            runSynth(script.id, sentences, 0);
+        });
+
+        el.caption.textContent = sentences[0];
+        audioEl.play().catch(() => {
+            el.caption.textContent = 'playback was blocked — press play again.';
+            setIcon('play');
+        });
+    };
+
+    const play = async (script, btn) => {
+        stop();
+        if (mode === 'human') await loadManifest();
+
+        showBar(true);
+        setIcon('pause');
+        setProgress(0);
+        el.title.textContent = script.label;
+        el.rate.innerHTML = `${rate}&times;`;
+        el.weight.textContent = weightLabel(script.id);
+        syncModeButtons();
+
+        if (btn) {
+            btn.classList.add('is-playing');
+            btn.setAttribute('aria-pressed', 'true');
+        }
+
+        // A recorded track also stands in when the browser has no voice of
+        // its own, which is the only reason this feature works at all on some
+        // Linux builds.
+        if ((mode === 'human' || !canSpeak()) && trackFor(script.id)) speakHuman(script);
+        else runSynth(script.id, splitSentences(script.text), 0);
+    };
+
+    const isPaused = () => (audioEl ? audioEl.paused : (canSynth && synth.paused));
+
+    const togglePause = () => {
+        if (!current) return;
+        if (audioEl) {
+            if (audioEl.paused) { audioEl.play(); setIcon('pause'); }
+            else { audioEl.pause(); setIcon('play'); }
+            return;
+        }
+        if (synth.paused) { synth.resume(); setIcon('pause'); }
+        else { synth.pause(); setIcon('play'); }
+    };
+
+    function setMode(next) {
+        mode = next;
+        try { localStorage.setItem('mks-voice-mode', mode); } catch (e) { /* ignore */ }
+        syncModeButtons();
+        if (current) el.weight.textContent = weightLabel(current.id);
+        refreshCosts();
+    }
+
+    // ---------------------------------------------------------------
+    // Controls
+    // ---------------------------------------------------------------
+    el.play.addEventListener('click', togglePause);
+    el.close.addEventListener('click', stop);
+
+    el.rate.addEventListener('click', () => {
+        const steps = [1, 1.25, 1.5, 0.85];
+        const at = steps.indexOf(rate);
+        rate = steps[(at + 1) % steps.length];
+        el.rate.innerHTML = `${rate}&times;`;
+        try { localStorage.setItem('mks-voice-rate', String(rate)); } catch (e) { /* ignore */ }
+
+        if (audioEl) { audioEl.playbackRate = rate; return; }
+        // An utterance's rate cannot change once it is speaking, so the
+        // current sentence restarts at the new rate rather than finishing old.
+        if (current) runSynth(current.id, current.sentences, current.index);
+    });
+
+    el.modes.forEach(b => b.addEventListener('click', async () => {
+        const nextMode = b.dataset.mode;
+        if (nextMode === mode) return;
+        const resume = current ? window.VoiceScripts.byId[current.id] : null;
+        if (nextMode === 'human') await loadManifest();
+        setMode(nextMode);
+        if (resume) play(resume, document.querySelector(`.listen-btn[data-voice="${resume.id}"]`));
+    }));
+
+    // Talking after someone has left the page is a bug, not a feature.
+    window.addEventListener('pagehide', stop);
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden && current && !isPaused()) togglePause();
+    });
+
+    // ---------------------------------------------------------------
+    // Buttons in the page
+    // ---------------------------------------------------------------
+    const makeButton = (script) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'listen-wrap';
+        wrap.dataset.voiceId = script.id;
+        wrap.innerHTML = `
+            <button class="listen-btn mono-label" type="button" data-voice="${script.id}"
+                    aria-pressed="false" data-analytics="listen-${script.id}">
+                <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg>
+                <span>listen<span class="sr-only"> to ${script.label}</span></span>
+            </button>
+            <span class="listen-cost mono-label">${weightLabel(script.id)}</span>`;
+        wrap.querySelector('.listen-btn').addEventListener('click', (e) => {
+            if (current && current.id === script.id) { stop(); return; }
+            play(script, e.currentTarget);
+        });
+        return wrap;
+    };
+
+    SCRIPTS.forEach(script => {
+        if (script.id === 'hero') {
+            const cta = document.querySelector('.hero-cta');
+            if (cta) cta.insertAdjacentElement('afterend', makeButton(script));
+            return;
+        }
+        const section = document.getElementById(script.id);
+        const header = section && section.querySelector('.section-header');
+        if (header) header.appendChild(makeButton(script));
+    });
+
+    // Now that the controls exist, work out which voice we have and whether
+    // the controls should be shown at all. A voice arriving late has to
+    // refresh the cost labels too — "≈0 g · voice from your browser" becomes
+    // "0.00 g · 0 KB" the moment an offline voice turns up.
+    const onVoicesReady = () => {
+        pickVoice();
+        refreshCosts();
+        updateAvailability();
+    };
+
+    onVoicesReady();
+    if (canSynth) {
+        if (typeof synth.addEventListener === 'function') synth.addEventListener('voiceschanged', onVoicesReady);
+        else synth.onvoiceschanged = onVoicesReady;
+    }
+
+    // Reveal the recorded-voice option only once we know it exists — and if
+    // this browser has no speech engine, the recording is what rescues the
+    // feature, so availability is rechecked here too.
+    loadManifest().then(m => {
+        if (!m) return;
+        const humanBtn = el.modes.filter(b => b.dataset.mode === 'human')[0];
+        if (humanBtn) humanBtn.hidden = false;
+        if (!canSpeak()) setMode('human');
+        refreshCosts();
+        updateAvailability();
+    });
+
+    syncModeButtons();
+    document.body.appendChild(bar);
+
+    // Exposed for the field terminal's `voice` command.
+    window.FieldDispatch = {
+        play: (id) => {
+            const script = window.VoiceScripts.byId[id];
+            if (!script) return false;
+            play(script, document.querySelector(`.listen-btn[data-voice="${id}"]`));
+            return true;
+        },
+        stop,
+        setMode,
+        hasRecorded: () => !!manifest,
+        loadManifest,
+        state: () => ({
+            mode,
+            playing: current ? current.id : null,
+            voice: chosenVoice ? `${chosenVoice.name} (${chosenVoice.lang})` : 'none available',
+            local: voiceIsLocal,
+            recorded: !!manifest,
+            ids: SCRIPTS.map(s => s.id)
+        })
+    };
 })();
