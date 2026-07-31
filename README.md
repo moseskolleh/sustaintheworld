@@ -196,6 +196,19 @@ Then commit the generated `assets/audio/*.mp3` and `voice-manifest.json`.
 Scripts are hashed, so fixing one sentence re-renders one file rather than
 paying for the whole page again.
 
+**Know the bill before you run it.** Fish Audio charges 1 credit per UTF-8 byte
+of text, so the cost is knowable up front — `npm run voice -- --dry-run` prints
+it. The full page is ~7,700 credits, and the free plan grants 8,000 per cycle.
+One complete render therefore uses most of a free month, which is the argument
+for getting the scripts right with `npm run voice:check` first.
+
+**Plan limits are handled for you.** The free plan accepts only 500 UTF-8 bytes
+per call and every script here is longer than that, so scripts are split at
+sentence boundaries and the rendered audio is joined back into one file per
+section. Splitting costs nothing extra, since billing is per byte of text. On a
+paid plan set `FISH_AUDIO_MAX_BYTES` to 15000 or 30000 to render each section in
+one call with no joins.
+
 **Give the clone a clean sample.** 30–60 seconds of you talking normally, no
 music, no background noise, no room echo. The clone is only as good as its
 source, and this is the one input that decides how the whole site sounds.

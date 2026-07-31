@@ -93,6 +93,31 @@ Press **listen** on any section. When you are happy:
 git add assets/audio && git commit -m "Add recorded narration" && git push
 ```
 
+### What it costs
+
+Fish Audio bills **1 credit per UTF-8 byte of text**, so the price is knowable
+before anything runs:
+
+```bash
+npm run voice -- --dry-run
+```
+
+The full page is **~7,708 credits**. The free plan grants **8,000 per cycle**, so
+one complete render uses about 96% of a free month and leaves almost nothing for
+corrections. Check your balance and per-call limit first — ask the Fish Audio
+connector for `get_credit_balance`, or look at the dashboard.
+
+Two things follow from that:
+
+- Get the scripts right **before** rendering. `npm run voice:check` (below) is free.
+- Cloning a voice is free. Only speech costs credits.
+
+The free plan also caps each call at 500 UTF-8 bytes, and every script here is
+longer. The generator handles that automatically by splitting at sentence
+boundaries and joining the audio back into one file per section — splitting costs
+no extra credits. On a paid plan, set `FISH_AUDIO_MAX_BYTES=15000` (lite/plus) or
+`30000` to render each section in a single call with no joins.
+
 ### Rehearsing without spending credits
 
 ```bash
@@ -200,13 +225,19 @@ proxy with a 403 on CONNECT.
 In the same dialog:
 
 1. Set **Network access** to **Custom**
-2. In **Allowed domains**, add:
+2. In **Allowed domains**, add **both**:
    ```
    api.fish.audio
+   platform.r2.fish.audio
    ```
 3. Tick **Also include default list of common package managers** — without it,
    npm stops working
 4. Save
+
+The second domain is easy to miss and breaks the render on its own: `api.fish.audio`
+accepts the request, but the generated audio is served from `platform.r2.fish.audio`,
+and a session that can reach only the first gets the job accepted and the bytes
+refused.
 
 Changing allowed hosts rebuilds the environment cache, so the next session takes
 slightly longer to start.
@@ -233,8 +264,16 @@ claude mcp add --transport http fish-audio https://api.fish.audio/mcp
 It signs in through the browser, stores no key on disk, and bills against your
 **plan** credits rather than developer API credits.
 
-This covers auditioning. It does not replace the build step — `npm run voice` still
-needs the API key and still needs `api.fish.audio` reachable.
+Its tools are `search_voices`, `get_voice`, `text_to_speech`, `create_voice_clone`,
+`speech_to_text` and `get_credit_balance`. **Cloning through it is free** — you
+only pay for speech.
+
+This covers auditioning, and it genuinely works inside a locked-down cloud
+session, because connector traffic never touches the session's network. What it
+cannot do is finish the job: `text_to_speech` returns a URL on
+`platform.r2.fish.audio`, and downloading that file *does* go through the
+session's network. So in a default cloud environment you can generate audio you
+cannot save. The build step still needs the API key and both domains reachable.
 
 ---
 

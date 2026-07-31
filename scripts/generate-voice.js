@@ -37,7 +37,7 @@ const MANIFEST = path.join(OUT_DIR, 'voice-manifest.json');
 // Everything below is resolved in resolveConfig(), AFTER .env has been read.
 // Reading process.env at module scope would silently ignore every setting in
 // .env except the key itself, which is a confusing way to lose an afternoon.
-let API_URL, MODEL_URL, MODEL, BITRATE, FORMAT;
+let API_URL, MODEL_URL, MODEL, BITRATE, FORMAT, MAX_BYTES;
 
 // VOICE_ID is also reassigned when --clone mints a new voice model mid-run.
 let VOICE_ID = '';
@@ -54,6 +54,10 @@ function resolveConfig() {
     MODEL = process.env.FISH_AUDIO_MODEL || 's1';
     BITRATE = Number(process.env.FISH_AUDIO_BITRATE || 64);
     VOICE_ID = process.env.FISH_AUDIO_VOICE_ID || '';
+    // 500 is the free-plan ceiling, so it is the safe default. Paid plans
+    // allow 15000 (lite/plus) or 30000 — raising this renders each section in
+    // one call, which is both fewer requests and a seamless result.
+    MAX_BYTES = Number(process.env.FISH_AUDIO_MAX_BYTES || 500);
     FORMAT = (process.env.FISH_AUDIO_FORMAT || 'mp3').toLowerCase();
     if (!FORMATS.includes(FORMAT)) {
         console.error(`\n  FISH_AUDIO_FORMAT="${FORMAT}" is not one of ${FORMATS.join(', ')}\n`);
@@ -92,7 +96,7 @@ const CLONE_FROM = flagValue('--clone');
 const CLONE_TITLE = flagValue('--clone-title') || 'Moses Kolleh Sesay — portfolio narration';
 
 const hash = text => crypto.createHash('sha256')
-    .update(`${text}::${MODEL}::${VOICE_ID}::${BITRATE}::${FORMAT}`)
+    .update(`${text}::${MODEL}::${VOICE_ID}::${BITRATE}::${FORMAT}::${MAX_BYTES}`)
     .digest('hex').slice(0, 12);
 
 const kb = bytes => `${(bytes / 1024).toFixed(0)} KB`;
@@ -175,6 +179,60 @@ function persistVoiceId(id) {
 }
 
 // ------------------------------------------------------------------
+// Chunking for the per-call text limit.
+//
+// Fish Audio caps how much text one TTS call accepts, and the cap depends
+// on the plan: 500 UTF-8 bytes on free, 15000 on lite/plus, 30000 on other
+// paid tiers. Every script here is longer than 500 bytes, so on a free plan
+// an unchunked render fails on all ten sections.
+//
+// Splitting happens at sentence boundaries — never mid-sentence — so the
+// joins in the rendered audio land where a reader would pause anyway.
+// Billing is per byte of text, so chunking costs exactly the same as one
+// large call; it only costs extra requests.
+//
+// Raise FISH_AUDIO_MAX_BYTES on a paid plan to render each section in a
+// single call and remove the joins entirely.
+// ------------------------------------------------------------------
+const utf8Len = s => Buffer.byteLength(s, 'utf8');
+
+function chunkText(text, maxBytes) {
+    if (utf8Len(text) <= maxBytes) return [text];
+
+    const { splitSentences } = require(path.join(ROOT, 'voice-scripts.js'));
+    const out = [];
+    let buf = '';
+
+    for (const sentence of splitSentences(text)) {
+        const candidate = buf ? `${buf} ${sentence}` : sentence;
+        if (utf8Len(candidate) <= maxBytes) { buf = candidate; continue; }
+        if (buf) out.push(buf);
+
+        if (utf8Len(sentence) <= maxBytes) { buf = sentence; continue; }
+
+        // A single sentence over the limit still has to go somewhere. Break it
+        // on commas and clause dashes before falling back to words, so the cut
+        // lands at the most natural pause available.
+        buf = '';
+        const pieces = sentence.split(/(?<=[,;:—])\s+/);
+        for (const piece of pieces) {
+            const merged = buf ? `${buf} ${piece}` : piece;
+            if (utf8Len(merged) <= maxBytes) { buf = merged; continue; }
+            if (buf) out.push(buf);
+            if (utf8Len(piece) <= maxBytes) { buf = piece; continue; }
+            buf = '';
+            for (const word of piece.split(/\s+/)) {
+                const w = buf ? `${buf} ${word}` : word;
+                if (utf8Len(w) <= maxBytes) buf = w;
+                else { if (buf) out.push(buf); buf = word; }
+            }
+        }
+    }
+    if (buf) out.push(buf);
+    return out.filter(Boolean);
+}
+
+// ------------------------------------------------------------------
 // One TTS request. Fish Audio returns raw audio bytes on success.
 // ------------------------------------------------------------------
 async function synthesise(text, apiKey) {
@@ -210,6 +268,37 @@ async function synthesise(text, apiKey) {
         throw new Error(`response was only ${buf.length} bytes — expected audio, got:\n         ${buf.toString('utf8').slice(0, 300)}`);
     }
     return buf;
+}
+
+// ------------------------------------------------------------------
+// Joining the rendered chunks back into one file per section.
+//
+// mp3 and opus are frame streams — concatenating the bytes gives a file
+// players decode straight through. wav is not: every part carries its own
+// 44-byte RIFF header, so the parts after the first are stripped and the
+// header's two length fields are rewritten to cover the whole thing.
+// ------------------------------------------------------------------
+function concatAudio(parts, format) {
+    if (parts.length === 1) return parts[0];
+    if (format !== 'wav') return Buffer.concat(parts);
+
+    const HEADER = 44;
+    const bodies = parts.map((p, i) => (i === 0 ? p.subarray(HEADER) : p.subarray(HEADER)));
+    const body = Buffer.concat(bodies);
+    const header = Buffer.from(parts[0].subarray(0, HEADER));
+    header.writeUInt32LE(36 + body.length, 4);    // RIFF chunk size
+    header.writeUInt32LE(body.length, 40);        // data chunk size
+    return Buffer.concat([header, body]);
+}
+
+// Renders one script, splitting it if the plan's per-call limit requires it.
+async function synthesiseScript(text, apiKey) {
+    const chunks = chunkText(text, MAX_BYTES);
+    const parts = [];
+    for (const chunk of chunks) {
+        parts.push(await synthesise(chunk, apiKey));
+    }
+    return { audio: concatAudio(parts, FORMAT), chunks: chunks.length };
 }
 
 // ------------------------------------------------------------------
@@ -279,11 +368,13 @@ async function main() {
     }
 
     console.log(`\n  fish audio · model ${MODEL} · ${FORMAT}${FORMAT === 'mp3' ? ` ${BITRATE} kbps` : ''}${VOICE_ID ? ` · voice ${VOICE_ID}` : ' · DEFAULT VOICE'}`);
-    console.log(`  ${targets.length} script(s) considered\n`);
+    console.log(`  ${targets.length} script(s) considered · max ${MAX_BYTES} bytes per call\n`);
 
     let rendered = 0;
     let skipped = 0;
     let failed = 0;
+    let creditsPlanned = 0;   // 1 credit per UTF-8 byte of text
+    let creditsSpent = 0;
 
     for (const script of targets) {
         const file = path.join(OUT_DIR, `${script.id}.${FORMAT}`);
@@ -298,23 +389,31 @@ async function main() {
         }
 
         const words = script.text.trim().split(/\s+/).length;
+        const textBytes = utf8Len(script.text);
+        const nChunks = chunkText(script.text, MAX_BYTES).length;
+        creditsPlanned += textBytes;
+
         if (DRY_RUN) {
-            console.log(`  → ${script.id.padEnd(11)} would render ${words} words / ${script.text.length} chars`);
+            const split = nChunks > 1 ? ` in ${nChunks} calls` : '';
+            console.log(`  → ${script.id.padEnd(11)} ${words} words · ${textBytes} bytes${split} · ${textBytes} credits`);
             rendered++;
             continue;
         }
 
-        process.stdout.write(`  → ${script.id.padEnd(11)} rendering ${words} words… `);
+        process.stdout.write(`  → ${script.id.padEnd(11)} rendering ${words} words${nChunks > 1 ? ` (${nChunks} calls)` : ''}… `);
         try {
-            const audio = await synthesise(script.text, apiKey);
+            const { audio, chunks } = await synthesiseScript(script.text, apiKey);
             fs.writeFileSync(file, audio);
             manifest.tracks[script.id] = {
                 file: `assets/audio/${script.id}.${FORMAT}`,
                 bytes: audio.length,
                 grams: Number(grams(audio.length).toFixed(3)),
                 chars: script.text.length,
+                textBytes,
+                chunks,
                 hash: sig
             };
+            creditsSpent += textBytes;
             console.log(`${kb(audio.length)}  (${grams(audio.length).toFixed(2)} g)`);
             rendered++;
         } catch (err) {
@@ -330,6 +429,14 @@ async function main() {
 
     const totalBytes = Object.values(manifest.tracks).reduce((n, t) => n + t.bytes, 0);
     console.log(`\n  rendered ${rendered} · skipped ${skipped}${failed ? ` · failed ${failed}` : ''}`);
+    // Fish Audio bills 1 credit per UTF-8 byte of text, so the spend is known
+    // before a single call goes out. Worth seeing on a free plan, where the
+    // whole page costs most of the monthly allowance.
+    if (DRY_RUN && creditsPlanned) {
+        console.log(`  would cost ~${creditsPlanned.toLocaleString()} credits (1 per UTF-8 byte of text)`);
+    } else if (creditsSpent) {
+        console.log(`  cost ~${creditsSpent.toLocaleString()} credits`);
+    }
     if (totalBytes) {
         console.log(`  full narration: ${kb(totalBytes)} across ${Object.keys(manifest.tracks).length} tracks (${grams(totalBytes).toFixed(2)} g if someone played all of it)`);
         console.log('  none of it is downloaded until a visitor presses play.');
