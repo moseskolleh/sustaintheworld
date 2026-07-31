@@ -112,11 +112,42 @@ Two things follow from that:
 - Get the scripts right **before** rendering. `npm run voice:check` (below) is free.
 - Cloning a voice is free. Only speech costs credits.
 
-The free plan also caps each call at 500 UTF-8 bytes, and every script here is
-longer. The generator handles that automatically by splitting at sentence
-boundaries and joining the audio back into one file per section — splitting costs
-no extra credits. On a paid plan, set `FISH_AUDIO_MAX_BYTES=15000` (lite/plus) or
-`30000` to render each section in a single call with no joins.
+### The per-call limit takes care of itself
+
+Fish Audio caps how much text one call accepts, and the cap depends on the plan:
+500 UTF-8 bytes on free, 15000 on lite/plus, 30000 on other paid tiers. Every
+script here is longer than 500 bytes.
+
+You don't have to track this. Scripts are split at sentence boundaries to fit
+`FISH_AUDIO_MAX_BYTES` (default 500) and the audio is joined back into one file
+per section. If the service rejects a chunk as too long, the generator halves the
+limit and retries automatically, keeping the lower value for the rest of the run
+— so a wrong setting costs one rejected call, not one per section, and a rejected
+call renders nothing and bills nothing.
+
+Splitting costs no extra credits, since billing is per byte of text. Fewer, larger
+calls do sound marginally better, because there are no joins at all:
+
+```bash
+FISH_AUDIO_MAX_BYTES=15000 npm run voice -- --force
+```
+
+Worth doing if you are on a paid tier or a trial that grants one. Ask the Fish
+Audio connector for `get_credit_balance` to see your plan and current
+`tts_max_text_bytes_per_call`.
+
+### If your access is time-limited
+
+A free month is a deadline as much as a budget. Two things are worth doing early,
+because they are the parts that can't be rushed later:
+
+1. **Clone your voice.** Cloning is free and the id doesn't expire with the trial.
+2. **Render the narration.** Rendered `.mp3` files are committed to the repo and
+   keep working forever — the site never calls Fish Audio at runtime. Whatever
+   you render while access lasts is yours permanently.
+
+Editing scripts afterwards costs credits again, so settle the wording with
+`npm run voice:check` first, then render.
 
 ### Rehearsing without spending credits
 

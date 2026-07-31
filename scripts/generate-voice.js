@@ -234,7 +234,17 @@ function chunkText(text, maxBytes) {
 
 // ------------------------------------------------------------------
 // One TTS request. Fish Audio returns raw audio bytes on success.
+//
+// The per-call text limit depends on the plan, and a plan can change under
+// you — a trial that expires, an upgrade that lands. Rather than making the
+// operator keep FISH_AUDIO_MAX_BYTES in sync by hand, a rejection for
+// over-long text is recognised here and handled by re-chunking smaller.
 // ------------------------------------------------------------------
+function isTooLong(status, detail) {
+    if (status !== 400 && status !== 413 && status !== 422) return false;
+    return /too\s*long|max(imum)?[\s_-]*(text|length|bytes)|exceed|payload too large|limit/i.test(detail || '');
+}
+
 async function synthesise(text, apiKey) {
     const body = {
         text,
@@ -260,7 +270,11 @@ async function synthesise(text, apiKey) {
         // field or an exhausted quota.
         let detail = '';
         try { detail = (await res.text()).slice(0, 600); } catch (e) { /* no body */ }
-        throw new Error(`HTTP ${res.status} ${res.statusText}${detail ? `\n         ${detail}` : ''}`);
+        const err = new Error(`HTTP ${res.status} ${res.statusText}${detail ? `\n         ${detail}` : ''}`);
+        // Flagged so the caller can re-chunk smaller and retry instead of
+        // failing the whole run over a plan limit it guessed wrong.
+        err.tooLong = isTooLong(res.status, detail);
+        throw err;
     }
 
     const buf = Buffer.from(await res.arrayBuffer());
@@ -292,13 +306,28 @@ function concatAudio(parts, format) {
 }
 
 // Renders one script, splitting it if the plan's per-call limit requires it.
+//
+// If the service rejects a chunk as too long, the limit is halved and the
+// script re-rendered from the start. MAX_BYTES stays lowered for the rest of
+// the run, so the discovery costs one rejected call, not one per section.
+// A rejected request renders nothing, so it bills nothing.
+const MIN_CHUNK_BYTES = 200;
+
 async function synthesiseScript(text, apiKey) {
-    const chunks = chunkText(text, MAX_BYTES);
-    const parts = [];
-    for (const chunk of chunks) {
-        parts.push(await synthesise(chunk, apiKey));
+    for (;;) {
+        const chunks = chunkText(text, MAX_BYTES);
+        const parts = [];
+        try {
+            for (const chunk of chunks) parts.push(await synthesise(chunk, apiKey));
+            return { audio: concatAudio(parts, FORMAT), chunks: chunks.length };
+        } catch (err) {
+            if (!err.tooLong || MAX_BYTES <= MIN_CHUNK_BYTES) throw err;
+            const next = Math.max(MIN_CHUNK_BYTES, Math.floor(MAX_BYTES / 2));
+            console.log(`\n         per-call limit is lower than ${MAX_BYTES} bytes — retrying at ${next}`);
+            console.log(`         set FISH_AUDIO_MAX_BYTES=${next} to skip this next time`);
+            MAX_BYTES = next;
+        }
     }
-    return { audio: concatAudio(parts, FORMAT), chunks: chunks.length };
 }
 
 // ------------------------------------------------------------------
@@ -411,7 +440,11 @@ async function main() {
                 chars: script.text.length,
                 textBytes,
                 chunks,
-                hash: sig
+                // Recomputed rather than reusing the pre-render signature:
+                // an adaptive retry may have lowered MAX_BYTES, which is part
+                // of the hash, and the stored value must describe how this
+                // file was actually produced.
+                hash: hash(script.text)
             };
             creditsSpent += textBytes;
             console.log(`${kb(audio.length)}  (${grams(audio.length).toFixed(2)} g)`);

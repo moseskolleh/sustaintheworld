@@ -205,9 +205,15 @@ for getting the scripts right with `npm run voice:check` first.
 **Plan limits are handled for you.** The free plan accepts only 500 UTF-8 bytes
 per call and every script here is longer than that, so scripts are split at
 sentence boundaries and the rendered audio is joined back into one file per
-section. Splitting costs nothing extra, since billing is per byte of text. On a
-paid plan set `FISH_AUDIO_MAX_BYTES` to 15000 or 30000 to render each section in
-one call with no joins.
+section. If the service rejects a chunk as too long, the generator halves the
+limit and retries, so a wrong setting costs one rejected call rather than a failed
+run. Splitting costs nothing extra, since billing is per byte of text — but on a
+paid tier, `FISH_AUDIO_MAX_BYTES=15000` renders each section in one call with no
+joins at all.
+
+**Rendered audio outlives your plan.** The files are committed and the site never
+calls Fish Audio at runtime, so anything rendered during a trial keeps working
+after it ends.
 
 **Give the clone a clean sample.** 30–60 seconds of you talking normally, no
 music, no background noise, no room echo. The clone is only as good as its
