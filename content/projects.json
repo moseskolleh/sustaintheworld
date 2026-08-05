@@ -1,0 +1,348 @@
+{
+  "$comment": [
+    "CASE STUDIES — problem → method → artifact → result, with the evidence attached.",
+    "",
+    "The site already told these stories, but as prose: a challenge paragraph, a",
+    "list of approaches, a list of outcomes. What a reader could not do was ask",
+    "'how do you know?' of any single number. Every `results` entry here",
+    "therefore carries a `basis` — how the figure was arrived at — and every",
+    "`artifacts` entry carries an availability `status`, because 'I built a",
+    "thing' means very little without saying whether anyone can see it.",
+    "",
+    "RULES THIS FILE IS HELD TO (tests/content.test.js enforces them):",
+    "",
+    "  · Every claim has a basis. A number with no basis is a boast.",
+    "  · Every artifact declares status: public | on-request | internal | planned.",
+    "    Only `public` may carry a url, and that url must resolve — either to a",
+    "    file in this repository or to a host the repository already trusts.",
+    "    This is the rule that makes fabricating a link fail the build.",
+    "  · No publication venue, DOI or journal is named anywhere unless the",
+    "    artifact genuinely has one. Two theses were examined and defended; that",
+    "    is what they say, and nothing more.",
+    "  · `lenses` lists which role-specific views a case study belongs to, and",
+    "    must reference ids defined in content/lenses.json."
+  ],
+
+  "caseStudies": [
+    {
+      "id": "sustainable-ai",
+      "title": "Sustainable AI Framework",
+      "subtitle": "Making a finance ministry's AI adoption accountable for its footprint",
+      "period": "2025 — present",
+      "location": "Amsterdam, NL",
+      "organization": "Digital Society School, Amsterdam University of Applied Sciences",
+      "partner": "Ministry of Finance (Ministerie van Financiën)",
+      "lenses": ["sustainable-ai", "climate-risk"],
+      "role": "Researcher — Sustainable Artificial Intelligence",
+
+      "problem": "Generative AI is becoming government infrastructure — but every prompt has a footprint. How does a finance ministry adopt AI responsibly without greenwashing, and without grinding innovation to a halt?",
+
+      "method": [
+        "Mapped the environmental footprint of generative AI end to end — Scope 2 electricity, Scope 3 hardware, and data-centre water.",
+        "Built a sustainability assessment framework for concrete AI use cases, framed against CSRD/ESRS disclosure logic so the output lands in a reporting language the ministry already speaks.",
+        "Prototyped decision-support tools with real users at both ends of the organisation: managers setting strategy, and employees writing prompts.",
+        "Aligned the framework against UN SDG 12 (responsible consumption and production) and SDG 13 (climate action)."
+      ],
+
+      "artifacts": [
+        {
+          "name": "EcoPrompt Coach — web tool",
+          "kind": "tool",
+          "status": "public",
+          "url": "carbon-ai.html",
+          "note": "Energy, water and carbon per LLM query across named models and grids, with every emission factor's source, range and review date shown in an evidence ledger."
+        },
+        {
+          "name": "promptcoach — the research prototype it mirrors",
+          "kind": "code",
+          "status": "public",
+          "url": "https://github.com/moseskolleh/promptcoach",
+          "note": "The Digital Society School prototype. The web tool reproduces its calculation model."
+        },
+        {
+          "name": "Sustainability assessment framework for AI use cases",
+          "kind": "framework",
+          "status": "internal",
+          "heldBy": "Digital Society School / Ministry of Finance",
+          "note": "Developed inside a research partnership; not mine to publish unilaterally."
+        }
+      ],
+
+      "results": [
+        {
+          "claim": "A working decision-support prototype, not a slide deck",
+          "basis": "The tool is public and runnable — every number it prints is derived in ai-carbon-data.js, which carries a source, publication date, uncertainty range and review date per factor.",
+          "verifiable": true
+        },
+        {
+          "claim": "Framework tested with users at both ends of the organisation",
+          "basis": "Public research sessions and demo days in Amsterdam, with managers and day-to-day users. Qualitative — no completion or satisfaction metric was collected.",
+          "verifiable": false
+        }
+      ],
+
+      "caveat": "This work is in progress and the outcome measures are qualitative. Any figure describing adoption or emissions avoided would be a guess, so none is given."
+    },
+
+    {
+      "id": "coastal",
+      "title": "Coastal Water Pollution Dynamics",
+      "subtitle": "What drives river-borne pollution, and what Africa's coasts look like by mid-century",
+      "period": "2023 — 2024",
+      "location": "Wageningen, NL",
+      "organization": "Wageningen University & Research",
+      "lenses": ["water", "climate-risk"],
+      "role": "MSc thesis research",
+
+      "problem": "Rivers carry whatever we put in them straight to the sea. How do income, urbanisation and agriculture shape the export of multiple pollutants across the world's sub-basins — and what does that mean for Africa's coasts by mid-century?",
+
+      "method": [
+        "Modelled river export of multiple pollutants with the MARINA-Multi model across 10,226 sub-basins worldwide.",
+        "Identified the socioeconomic drivers behind the resulting pollution patterns statistically.",
+        "Built qualitative future storylines for African coastal waters, including a deliberately pessimistic 'Dirty Delta' scenario.",
+        "Integrated climate-change scenarios into the projections."
+      ],
+
+      "artifacts": [
+        {
+          "name": "MSc thesis — socioeconomic drivers of river export of multiple pollutants, and qualitative future storylines for African coastal water pollution",
+          "kind": "thesis",
+          "status": "on-request",
+          "note": "Examined and defended at Wageningen University & Research. Available on request; not deposited in a public repository."
+        },
+        {
+          "name": "Scenario storylines for African coastal waters",
+          "kind": "narrative",
+          "status": "on-request",
+          "note": "Including the 'Dirty Delta' scenario. Part of the thesis."
+        }
+      ],
+
+      "results": [
+        {
+          "claim": "10,226 sub-basins modelled",
+          "basis": "The sub-basin count of the MARINA-Multi model configuration used — a property of the model domain, not an estimate.",
+          "verifiable": true
+        },
+        {
+          "claim": "Identified the socioeconomic factors that dominate coastal pollution export",
+          "basis": "Statistical analysis of model output against socioeconomic drivers. The finding is in the thesis; effect sizes are not restated here because they cannot be checked without it.",
+          "verifiable": false
+        },
+        {
+          "claim": "Scenario storylines that turn model output into policy conversation",
+          "basis": "Qualitative scenario method. Written to be argued with, not to be scored.",
+          "verifiable": false
+        }
+      ],
+
+      "caveat": "A pessimistic scenario is a device for surfacing what people would rather not plan for. It is not a forecast, and is not presented as one."
+    },
+
+    {
+      "id": "wuppertal",
+      "title": "Flood-Resilient Wuppertal",
+      "subtitle": "Keeping a city — and its suspended railway — out of the water next time",
+      "period": "2023",
+      "location": "Wuppertal, DE",
+      "organization": "Wageningen University & Research — Academic Consultancy Training",
+      "partner": "Municipality of Wuppertal",
+      "lenses": ["climate-risk", "water"],
+      "role": "Interdisciplinary team of six",
+
+      "problem": "Wuppertal's iconic suspended railway glides above a river that flooded catastrophically in 2021. The municipality asked: how do we keep the city — and the Schwebebahn — out of the water next time?",
+
+      "method": [
+        "Led a six-person interdisciplinary team across climate science, engineering and policy.",
+        "Assessed flood risk to the city and its transport infrastructure using historical records, climate projections and GIS.",
+        "Facilitated stakeholder workshops to map the social drivers of vulnerability, not just the hydraulic ones.",
+        "Translated the analysis into an implementation roadmap the municipality could act on."
+      ],
+
+      "artifacts": [
+        {
+          "name": "Consultancy report — 'Becoming a Boat: Towards a Flood-Resilient Wuppertal'",
+          "kind": "report",
+          "status": "internal",
+          "heldBy": "Municipality of Wuppertal / Wageningen University & Research",
+          "note": "Delivered to the client under the Academic Consultancy Training programme."
+        },
+        {
+          "name": "Flood cross-section — interactive",
+          "kind": "tool",
+          "status": "public",
+          "url": "index.html#projects",
+          "note": "The Wupper cross-section in the project dossier: slide the river from a calm day to July 2021 and watch the clearance under the Schwebebahn's hanging cars shrink."
+        }
+      ],
+
+      "results": [
+        {
+          "claim": "A complete flood-risk management framework delivered to the municipality",
+          "basis": "The deliverable of the consultancy: accepted and presented to municipal stakeholders. Held by the client.",
+          "verifiable": false
+        },
+        {
+          "claim": "Critical infrastructure vulnerabilities identified alongside cost-effective interventions",
+          "basis": "GIS and climate-projection analysis, cross-checked in stakeholder workshops. Whether the recommendations were implemented is not something I can claim — that is the municipality's to report.",
+          "verifiable": false
+        }
+      ],
+
+      "caveat": "Advice delivered is not the same as advice taken. Nothing here claims an implemented outcome."
+    },
+
+    {
+      "id": "un-disaster",
+      "title": "UN Disaster Risk Reduction — hazard data",
+      "subtitle": "You cannot reduce disaster risk with messy data",
+      "period": "Jun 2023 — Oct 2023",
+      "location": "Bonn, DE",
+      "organization": "United Nations Office for Disaster Risk Reduction (UNDRR)",
+      "lenses": ["climate-risk", "water"],
+      "role": "Climate Change Adaptation Intern",
+
+      "problem": "UNDRR needed clean, comparable hazard information to support the Sendai Framework — especially for small island states, where one storm can erase years of development.",
+
+      "method": [
+        "Audited Caribbean disaster-loss data against external datasets for the Sendai Framework Monitor and the Losses & Damages Tracking System.",
+        "Documented global hazard information systems, expanding regional and hazard-type coverage.",
+        "Standardised disaster-reporting terminology across sources, so economic loss and damage meant the same thing in each.",
+        "Built a risk-management factsheet for Trinidad and Tobago."
+      ],
+
+      "artifacts": [
+        {
+          "name": "Inventory of 54 global hazard information systems",
+          "kind": "dataset",
+          "status": "internal",
+          "heldBy": "UNDRR",
+          "note": "Contributed to the organisation's internal databases."
+        },
+        {
+          "name": "Risk-management factsheet — Trinidad and Tobago",
+          "kind": "report",
+          "status": "internal",
+          "heldBy": "UNDRR",
+          "note": "Produced for national policy use."
+        }
+      ],
+
+      "results": [
+        {
+          "claim": "54 global hazard information systems identified and documented",
+          "basis": "A count of the systems catalogued during the internship, recorded in the deliverable. Countable, not estimated.",
+          "verifiable": false
+        },
+        {
+          "claim": "Regional and hazard-type coverage expanded by 25%",
+          "basis": "Measured against the size of the organisation's existing catalogue at the start of the internship. The baseline is internal to UNDRR, so an outside reader cannot check it — which is why it is stated with its basis rather than on its own.",
+          "verifiable": false
+        }
+      ],
+
+      "caveat": "Internship deliverables sit inside the organisation. The counts are real and were recorded; the baselines they are measured against are not public."
+    },
+
+    {
+      "id": "water-management",
+      "title": "Soft Path Water Management",
+      "subtitle": "What if the answer isn't more pipes?",
+      "period": "2020 — 2021",
+      "location": "Changsha, CN",
+      "organization": "Hunan University",
+      "lenses": ["water"],
+      "role": "MSc thesis research",
+
+      "problem": "Freetown keeps building bigger pipes, and keeps running dry. The uncomfortable question: what if the answer isn't more hard infrastructure at all?",
+
+      "method": [
+        "Analysed Freetown's water-management challenges end to end, from supply through governance.",
+        "Developed soft-path alternatives: managing demand, capturing and reusing water close to where it is used, and community stewardship of the assets.",
+        "Evaluated feasibility specifically for resource-constrained settings, rather than assuming a European maintenance budget.",
+        "Packaged the result as an implementation framework other cities can reuse."
+      ],
+
+      "artifacts": [
+        {
+          "name": "MSc thesis — 'Approach to soft path water management: thinking beyond cement, steel and pipes', Freetown as case study",
+          "kind": "thesis",
+          "status": "on-request",
+          "note": "Defended at Hunan University, May 2021. Available on request; not deposited in a public repository."
+        }
+      ],
+
+      "results": [
+        {
+          "claim": "Successfully defended at Hunan University, May 2021",
+          "basis": "Degree awarded — MSc Industrial Engineering, 2021. The one fully checkable claim in this case study.",
+          "verifiable": true
+        },
+        {
+          "claim": "A community-centred alternative to pipe-and-pump thinking, scoped for fast-growing cities in the Global South",
+          "basis": "The thesis's contribution, as examined. It is a proposed framework, not a deployed one — no city has implemented it, and no cost saving is claimed.",
+          "verifiable": false
+        }
+      ],
+
+      "caveat": "This is a proposal that passed examination, not an intervention that was built. The distinction matters and is kept."
+    },
+
+    {
+      "id": "groundwater",
+      "title": "Groundwater Potential Mapping",
+      "subtitle": "De-risking the drill bit in hard rock",
+      "period": "2016 — 2017",
+      "location": "Freetown, SL",
+      "organization": "University of Sierra Leone",
+      "lenses": ["water"],
+      "role": "BSc dissertation, then applied in the field",
+
+      "problem": "The Freetown Complex is geologically stubborn — hard igneous rock where finding water is a gamble. Communities were paying for dry boreholes. The science needed to de-risk the drill bit.",
+
+      "method": [
+        "Applied electrical-resistivity surveying to detect groundwater in hard rock.",
+        "Combined geological and hydrogeological data into GIS groundwater-potential maps.",
+        "Validated the predictions through field drilling campaigns — the only test that counts.",
+        "Produced siting recommendations for future boreholes."
+      ],
+
+      "artifacts": [
+        {
+          "name": "BSc dissertation — 'Mapping groundwater potential in the Freetown Complex: a geophysical approach'",
+          "kind": "thesis",
+          "status": "on-request",
+          "note": "First class honours, University of Sierra Leone. Available on request; not deposited in a public repository."
+        },
+        {
+          "name": "Groundwater-potential maps for the Freetown Complex",
+          "kind": "dataset",
+          "status": "on-request",
+          "note": "Produced during the dissertation and used in subsequent siting work."
+        },
+        {
+          "name": "Site the borehole — interactive resistivity profile",
+          "kind": "tool",
+          "status": "public",
+          "url": "index.html#projects",
+          "note": "A playable version of the reading the method depends on: read the curve, place the rig, drill."
+        }
+      ],
+
+      "results": [
+        {
+          "claim": "70% aquifer strike rate in subsequent drilling",
+          "basis": "Successful strikes as a share of boreholes drilled on sites selected with the survey method, during the Team & Team International fieldwork. Compared against roughly 30% for blind siting in the same geology — which is the comparison that makes the number mean anything.",
+          "verifiable": false
+        },
+        {
+          "claim": "Method carried into 164 water points delivered across Sierra Leone",
+          "basis": "100 hand-dug wells rehabilitated, 50 boreholes constructed, 14 solar-powered boreholes — itemised, and summing to 164. The mapping informed siting; it is not the sole cause of the outcome.",
+          "verifiable": false
+        }
+      ],
+
+      "caveat": "The strike-rate comparison comes from field records, not a controlled trial. Geology varies between sites, and a good surveyor is part of the result."
+    }
+  ]
+}

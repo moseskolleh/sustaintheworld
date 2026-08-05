@@ -33,6 +33,16 @@
     "coordinates": "52.3676° N, 4.9041° E"
   },
 
+  "$knowsAbout": "Feeds JSON-LD. Keep it to areas with case-study evidence behind them — a schema.org claim is still a claim.",
+  "knowsAbout": [
+    "Sustainability",
+    "Climate Risk",
+    "ESG",
+    "Water Resource Management",
+    "Sustainable AI",
+    "GIS"
+  ],
+
   "links": {
     "site": "https://moseskolleh.github.io/sustaintheworld/",
     "github": "https://github.com/moseskolleh",
@@ -139,9 +149,12 @@
     }
   ],
 
+  "$pages": "Drives sitemap.xml. lastmod is set by hand when a page's content changes — a build timestamp would claim every page changed on every deploy, which is the fastest way to teach a crawler to ignore the field.",
   "pages": [
-    { "path": "index.html", "loc": "https://moseskolleh.github.io/sustaintheworld/" },
-    { "path": "carbon-ai.html", "loc": "https://moseskolleh.github.io/sustaintheworld/carbon-ai.html" },
-    { "path": "field-report.html", "loc": "https://moseskolleh.github.io/sustaintheworld/field-report.html" }
+    { "path": "index.html", "loc": "https://moseskolleh.github.io/sustaintheworld/", "lastmod": "2026-08-05", "changefreq": "monthly", "priority": "1.0" },
+    { "path": "case-studies.html", "loc": "https://moseskolleh.github.io/sustaintheworld/case-studies.html", "lastmod": "2026-08-05", "changefreq": "monthly", "priority": "0.9" },
+    { "path": "research.html", "loc": "https://moseskolleh.github.io/sustaintheworld/research.html", "lastmod": "2026-08-05", "changefreq": "monthly", "priority": "0.8" },
+    { "path": "carbon-ai.html", "loc": "https://moseskolleh.github.io/sustaintheworld/carbon-ai.html", "lastmod": "2026-08-05", "changefreq": "monthly", "priority": "0.8" },
+    { "path": "field-report.html", "loc": "https://moseskolleh.github.io/sustaintheworld/field-report.html", "lastmod": "2026-08-05", "changefreq": "monthly", "priority": "0.3" }
   ]
 }

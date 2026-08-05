@@ -17,7 +17,14 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
-const PAGES = ['index.html', 'carbon-ai.html', 'field-report.html', '404.html'];
+const PAGES = [
+    'index.html',
+    'carbon-ai.html',
+    'case-studies.html',
+    'research.html',
+    'field-report.html',
+    '404.html'
+];
 
 let failures = 0;
 function assert(cond, msg) {

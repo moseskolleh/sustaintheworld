@@ -1,0 +1,72 @@
+{
+  "$comment": [
+    "ROLE-SPECIFIC PORTFOLIO VIEWS.",
+    "",
+    "A hiring manager for a water utility and one for an AI governance team are",
+    "looking for different things, and both currently get the same undifferentiated",
+    "list of six projects in reverse-chronological order. A lens reorders the",
+    "portfolio around one of them and says, in one paragraph, what the through-line",
+    "is — without hiding anything: every lens still shows every case study, the",
+    "non-matching ones simply move below a divider.",
+    "",
+    "That constraint is deliberate. A view that silently drops the projects it",
+    "finds inconvenient is a CV that lies by omission. These reorder and frame;",
+    "they never filter.",
+    "",
+    "Lens ids are referenced from content/projects.json and appear in the URL",
+    "(case-studies.html?lens=water), so they are shareable and they are stable.",
+    "Renaming one breaks a link somebody has already sent."
+  ],
+
+  "default": {
+    "id": "all",
+    "label": "Everything",
+    "shortLabel": "All",
+    "summary": "Six projects across four countries, joined by one question: what does the data actually say, and who is it for? Water first, then climate risk, now the footprint of the tools themselves."
+  },
+
+  "lenses": [
+    {
+      "id": "water",
+      "label": "Water resources & WASH",
+      "shortLabel": "Water",
+      "tagline": "From the drill bit to the river mouth",
+      "summary": "I started underground. A geology degree, then electrical-resistivity surveying to find water in hard rock, then drilling crews delivering 164 water points across Sierra Leone. Later the same question at basin scale: what reaches the coast, and who put it there. The through-line is that water problems are rarely only hydraulic — the borehole that works is the one the community can maintain.",
+      "bestFor": "Roles in water resource management, WASH programming, hydrogeology, or utility planning — especially where field delivery and analysis have to meet.",
+      "evidence": [
+        "164 water points delivered — 100 wells rehabilitated, 50 boreholes, 14 solar-powered",
+        "70% aquifer strike rate against roughly 30% for blind siting",
+        "10,226 sub-basins modelled for river pollution export",
+        "MSc thesis proposing soft-path alternatives to hard water infrastructure"
+      ]
+    },
+    {
+      "id": "climate-risk",
+      "label": "Climate adaptation & disaster risk",
+      "shortLabel": "Climate & DRR",
+      "tagline": "Planning for the year the river wins",
+      "summary": "Disaster risk is a data problem before it is an engineering one — you cannot reduce what you cannot compare. At UNDRR that meant auditing Caribbean loss data and standardising the terminology behind it. In Wuppertal it meant asking a municipality what it would take to keep a suspended railway out of a flood, and turning climate projections into a roadmap somebody could act on.",
+      "bestFor": "Roles in climate adaptation, disaster risk reduction, resilience planning, or climate-risk analysis — particularly where frameworks like Sendai, CSRD or TCFD are in play.",
+      "evidence": [
+        "54 global hazard information systems documented for UNDRR",
+        "Caribbean disaster-loss data audited for the Sendai Framework Monitor",
+        "National risk-management factsheet for Trinidad and Tobago",
+        "Six-person flood-resilience consultancy for the Municipality of Wuppertal"
+      ]
+    },
+    {
+      "id": "sustainable-ai",
+      "label": "Sustainable AI & AI governance",
+      "shortLabel": "Sustainable AI",
+      "tagline": "Every prompt has a footprint",
+      "summary": "The newest thread, and the one that made the rest make sense: the tools we now use to analyse environmental problems have environmental costs of their own, and almost nobody is measuring them. At the Digital Society School I am building the framework and the decision-support tooling for a finance ministry adopting generative AI — mapping Scope 2 electricity, Scope 3 hardware and data-centre water, in a reporting language the organisation already speaks.",
+      "bestFor": "Roles in sustainable AI, AI governance, green software, or ESG where digital footprint is in scope — and anywhere the job is to make an environmental claim survive scrutiny.",
+      "evidence": [
+        "Sustainable-AI framework and prototype for the Dutch Ministry of Finance",
+        "EcoPrompt Coach — a public tool with a full evidence ledger behind every factor",
+        "Framework framed against CSRD/ESRS disclosure logic",
+        "This site: a first view of ~235 KB, budgeted and enforced in CI"
+      ]
+    }
+  ]
+}
