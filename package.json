@@ -11,6 +11,7 @@
     "test:unit": "node tests/bugs.test.js && node tests/resilience.test.js && node tests/carbon.test.js && node tests/voice.test.js && node tests/content.test.js && node tests/portfolio.test.js && node tests/html.test.js",
     "budget": "node scripts/check-budget.js",
     "mcp:verify": "node scripts/verify-mcp-pin.js",
+    "links:check": "node scripts/check-links.js",
     "map:build": "node scripts/generate-journey-map.js",
     "map:check": "node scripts/generate-journey-map.js --check",
     "voice": "node scripts/generate-voice.js",

@@ -151,37 +151,50 @@ ${bodyEnd}
 // ------------------------------------------------------------------
 // case-studies.html
 // ------------------------------------------------------------------
-function renderCaseStudies(data) {
+/** The file a lens is served from. Static pages, not query strings — see below. */
+function lensPage(lensId) {
+    return lensId === 'all' ? 'case-studies.html' : `case-studies-${lensId}.html`;
+}
+
+// Each lens is its own fully-rendered static page.
+//
+// The first version of this shipped one page holding every lens panel, with
+// `?lens=water` selected by JavaScript. On GitHub Pages the query string
+// cannot change the bytes the server sends, so with scripting off — or
+// blocked, or simply failing — following a lens link re-served the "Everything"
+// framing in the original order while the README claimed the lens worked
+// without JavaScript. That is precisely the kind of unenforced claim the rest
+// of this work exists to remove, so the claim is now true by construction:
+// there is no client-side lens logic left to fail.
+//
+// Four small pages cost less than one page carrying four hidden panels plus
+// the script to switch them, and each view gets a real URL and canonical.
+function renderCaseStudies(data, lens) {
     const { projects, lenses } = data;
     const all = [lenses.default].concat(lenses.lenses);
 
-    // The lens switcher. Real links, so it works with JavaScript off and every
-    // view is shareable; script below upgrades it to instant switching.
     const switcher = `
         <nav class="cs-lenses" aria-label="Portfolio views">
             <span class="cs-lenses-label mono-label">Viewing as</span>
-            ${all.map(l => `<a class="cs-lens" href="case-studies.html${l.id === 'all' ? '' : `?lens=${l.id}`}" data-lens="${esc(l.id)}">${esc(l.shortLabel || l.label)}</a>`).join('\n            ')}
+            ${all.map(l => l.id === lens.id
+                ? `<span class="cs-lens is-active" aria-current="page">${esc(l.shortLabel || l.label)}</span>`
+                : `<a class="cs-lens" href="${lensPage(l.id)}">${esc(l.shortLabel || l.label)}</a>`
+            ).join('\n            ')}
         </nav>`;
 
-    // One panel per lens, all present in the HTML. Without JavaScript the
-    // server cannot know which was asked for, so the "all" panel is shown and
-    // the rest are hidden — every case study is on the page either way.
-    const panels = all.map((l) => {
-        const isDefault = l.id === 'all';
-        const evidence = l.evidence
-            ? `<ul class="cs-lens-evidence">${l.evidence.map(e => `<li>${prose(e)}</li>`).join('')}</ul>`
-            : '';
-        const bestFor = l.bestFor ? `<p class="cs-lens-bestfor"><strong>Best fit for:</strong> ${prose(l.bestFor)}</p>` : '';
-        return `
-        <section class="cs-lens-panel" data-lens-panel="${esc(l.id)}"${isDefault ? '' : ' hidden'} aria-labelledby="lens-${esc(l.id)}-h">
-            <h2 id="lens-${esc(l.id)}-h">${esc(l.label)}${l.tagline ? ` <span class="cs-lens-tagline">${prose(l.tagline)}</span>` : ''}</h2>
-            <p class="cs-lens-summary">${prose(l.summary)}</p>
+    const evidence = lens.evidence
+        ? `<ul class="cs-lens-evidence">${lens.evidence.map(e => `<li>${prose(e)}</li>`).join('')}</ul>`
+        : '';
+    const bestFor = lens.bestFor ? `<p class="cs-lens-bestfor"><strong>Best fit for:</strong> ${prose(lens.bestFor)}</p>` : '';
+    const panels = `
+        <section class="cs-lens-panel" aria-labelledby="lens-${esc(lens.id)}-h">
+            <h2 id="lens-${esc(lens.id)}-h">${esc(lens.label)}${lens.tagline ? ` <span class="cs-lens-tagline">${prose(lens.tagline)}</span>` : ''}</h2>
+            <p class="cs-lens-summary">${prose(lens.summary)}</p>
             ${bestFor}
             ${evidence}
         </section>`;
-    }).join('\n');
 
-    const card = (cs) => {
+    const card = (cs, secondary) => {
         const artifacts = cs.artifacts.map((a) => {
             const name = a.status === 'public' && a.url
                 ? `<a href="${esc(a.url)}">${prose(a.name)}</a>`
@@ -208,7 +221,7 @@ function renderCaseStudies(data) {
                     </li>`).join('');
 
         return `
-            <article class="cs-card" id="${esc(cs.id)}" data-lenses="${esc((cs.lenses || []).join(' '))}">
+            <article class="cs-card${secondary ? ' cs-card-secondary' : ''}" id="${esc(cs.id)}" data-lenses="${esc((cs.lenses || []).join(' '))}">
                 <header class="cs-card-head">
                     <p class="cs-card-meta mono-label">${esc(cs.period)} &middot; ${esc(cs.location)}</p>
                     <h3>${prose(cs.title)}</h3>
@@ -242,7 +255,12 @@ ${cs.caveat ? `
             </article>`;
     };
 
-    const cards = projects.caseStudies.map(card).join('\n');
+    // Matching case studies first, the rest below — reordered at build time,
+    // so the order a visitor sees does not depend on scripting.
+    const { primary, secondary } = content.orderForLens(projects.caseStudies, lens.id);
+    const cards = primary.map(cs => card(cs, false))
+        .concat(secondary.map(cs => card(cs, true)))
+        .join('\n');
 
     const main = `${switcher}
 ${panels}
@@ -273,69 +291,18 @@ ${cards}
             </p>
         </section>`;
 
-    // Progressive enhancement only: the page is complete without this.
-    const script = `    <script>
-    // Lens switching without a reload. The page already contains every panel
-    // and every case study; this reorders and swaps which framing is shown,
-    // and keeps the URL shareable. With JavaScript off, each lens link is an
-    // ordinary navigation to the same page and everything is still readable.
-    (function () {
-        var grid = document.getElementById('csGrid');
-        if (!grid) return;
-        var cards = Array.prototype.slice.call(grid.children);
-        var order = cards.slice();
-
-        function apply(lens) {
-            document.querySelectorAll('[data-lens-panel]').forEach(function (p) {
-                p.hidden = p.getAttribute('data-lens-panel') !== lens;
-            });
-            document.querySelectorAll('.cs-lens').forEach(function (a) {
-                var on = a.getAttribute('data-lens') === lens;
-                a.classList.toggle('is-active', on);
-                if (on) { a.setAttribute('aria-current', 'true'); } else { a.removeAttribute('aria-current'); }
-            });
-
-            // Matching case studies rise to the top; the rest keep their order
-            // below. Nothing is removed from the document.
-            var matched = [], rest = [];
-            order.forEach(function (card) {
-                var owns = (card.getAttribute('data-lenses') || '').split(' ').indexOf(lens) > -1;
-                card.classList.toggle('cs-card-secondary', lens !== 'all' && !owns);
-                (lens === 'all' || owns ? matched : rest).push(card);
-            });
-            matched.concat(rest).forEach(function (card) { grid.appendChild(card); });
-        }
-
-        function fromUrl() {
-            var m = window.location.search.match(/[?&]lens=([a-z0-9-]+)/i);
-            var lens = m ? m[1] : 'all';
-            return document.querySelector('[data-lens-panel="' + lens + '"]') ? lens : 'all';
-        }
-
-        document.querySelectorAll('.cs-lens').forEach(function (a) {
-            a.addEventListener('click', function (e) {
-                if (e.metaKey || e.ctrlKey || e.shiftKey || e.button) return;
-                e.preventDefault();
-                var lens = a.getAttribute('data-lens');
-                history.pushState({ lens: lens }, '', lens === 'all' ? 'case-studies.html' : 'case-studies.html?lens=' + lens);
-                apply(lens);
-            });
-        });
-        window.addEventListener('popstate', function () { apply(fromUrl()); });
-
-        apply(fromUrl());
-    })();
-    </script>`;
-
     return pageShell({
-        title: 'Case studies — Moses Kolleh Sesay',
-        description: 'Six projects in water, climate risk and sustainable AI — problem, method, artifact and measurable result, with the basis for every number.',
-        canonical: `${SITE}case-studies.html`,
+        title: lens.id === 'all'
+            ? 'Case studies — Moses Kolleh Sesay'
+            : `Case studies: ${lens.label} — Moses Kolleh Sesay`,
+        description: lens.id === 'all'
+            ? 'Six projects in water, climate risk and sustainable AI — problem, method, artifact and measurable result, with the basis for every number.'
+            : `${lens.label}: ${lens.summary.slice(0, 150)}`,
+        canonical: `${SITE}${lensPage(lens.id)}`,
         heroTag: 'PROBLEM &middot; METHOD &middot; ARTIFACT &middot; RESULT',
         heroTitle: 'Case <span class="ca-accent">studies</span>',
         heroLead: 'Six projects across four countries, each one traced from the question that started it to what it actually produced &mdash; and to how far you can check the result from where you are sitting.',
-        main,
-        bodyEnd: script
+        main
     });
 }
 
@@ -594,13 +561,17 @@ function main() {
         process.exit(1);
     }
 
-    const outputs = [
-        ['case-studies.html', renderCaseStudies(data)],
+    // One fully-rendered page per lens, plus the default. No query strings,
+    // no client-side selection, nothing to fail with scripting off.
+    const lensPages = [data.lenses.default].concat(data.lenses.lenses)
+        .map(lens => [lensPage(lens.id), renderCaseStudies(data, lens)]);
+
+    const outputs = lensPages.concat([
         ['research.html', renderResearch(data)],
         ['sitemap.xml', renderSitemap(data)],
         ['voice-scripts.js', renderVoiceScripts(data)],
         ['index.html', injectJsonLd(data)]
-    ];
+    ]);
 
     const stale = [];
     outputs.forEach(([rel, next]) => {

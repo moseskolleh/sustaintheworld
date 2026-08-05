@@ -100,6 +100,9 @@ const { projects, research, lenses } = data;
         { label: 'a public entry pointing at a file that is not here', entry: { status: 'public', url: 'nope/missing.pdf' } },
         { label: 'a public entry on an untrusted host', entry: { status: 'public', url: 'https://doi.example.org/10.1234/made-up' } },
         { label: 'an invented DOI-looking link', entry: { status: 'public', url: 'https://doi.org/10.1000/xyz123' } },
+        // The one a host-only allowlist used to wave through.
+        { label: 'an invented path on an otherwise-trusted host', entry: { status: 'public', url: 'https://github.com/moseskolleh/does-not-exist' } },
+        { label: 'a real host but somebody else\'s repository', entry: { status: 'public', url: 'https://github.com/someoneelse/repo' } },
         { label: 'an on-request entry carrying a link anyway', entry: { status: 'on-request', url: 'https://github.com/moseskolleh' } },
         { label: 'an internal entry with no holder', entry: { status: 'internal' } },
         { label: 'an entry with no status at all', entry: { name: 'x' } },
@@ -113,7 +116,7 @@ const { projects, research, lenses } = data;
 
     // …and does not cry wolf on the legitimate shapes.
     assert(content.checkAvailability('t', { status: 'public', url: 'carbon-ai.html' }).length === 0, 'Guard: accepts a public entry with a working local link');
-    assert(content.checkAvailability('t', { status: 'public', url: 'https://github.com/moseskolleh/promptcoach' }).length === 0, 'Guard: accepts a public entry on a trusted host');
+    assert(content.checkAvailability('t', { status: 'public', url: 'https://github.com/moseskolleh/promptcoach' }).length === 0, 'Guard: accepts a public entry whose exact URL is approved');
     assert(content.checkAvailability('t', { status: 'on-request' }).length === 0, 'Guard: accepts an on-request entry with no link');
     assert(content.checkAvailability('t', { status: 'internal', heldBy: 'UNDRR' }).length === 0, 'Guard: accepts an internal entry that names its holder');
 }
@@ -179,99 +182,84 @@ function dom(file) {
         url: `https://example.com/${file}`
     });
 }
+// --- the generated pages, WITHOUT JavaScript ------------------------------
+// Every assertion below runs on a JSDOM built with no script execution at
+// all. That is the whole point: the first version of these pages selected the
+// lens in the browser, so on GitHub Pages — which cannot vary its bytes by
+// query string — `?lens=water` re-served the "Everything" framing while the
+// README claimed the lens worked without JavaScript. Each lens is now its own
+// static page, and these tests would fail the moment that regressed.
+const noScript = (file) => new JSDOM(fs.readFileSync(path.join(ROOT, file), 'utf8')).window.document;
 
-// --- case-studies.html ----------------------------------------------------
+const LENS_PAGE = id => (id === 'all' ? 'case-studies.html' : `case-studies-${id}.html`);
+const allLenses = [lenses.default].concat(lenses.lenses);
+
 {
-    const { window } = dom('case-studies.html');
-    const doc = window.document;
+    allLenses.forEach((lens) => {
+        const file = LENS_PAGE(lens.id);
+        assert(fs.existsSync(path.join(ROOT, file)), `Lens "${lens.id}": has its own static page (${file})`);
+        if (!fs.existsSync(path.join(ROOT, file))) return;
 
-    const cards = doc.querySelectorAll('.cs-card');
-    assert(cards.length === projects.caseStudies.length, `Page: every case study is rendered (${cards.length}/${projects.caseStudies.length})`);
+        const doc = noScript(file);
 
-    // Each card must carry all four stages, in the page as shipped.
-    const stageCounts = Array.from(cards).map(c => c.querySelectorAll('.cs-stage').length);
-    assert(stageCounts.every(n => n === 4), `Page: every card shows all four stages (${stageCounts.join(', ')})`);
+        // No JavaScript on the page at all — nothing left that could fail.
+        assert(doc.querySelectorAll('script').length === 0, `${file}: needs no JavaScript`);
 
-    const results = doc.querySelectorAll('.cs-result');
-    const withBasis = doc.querySelectorAll('.cs-result-basis');
-    assert(results.length === withBasis.length && results.length > 0, `Page: every rendered result shows its basis (${withBasis.length}/${results.length})`);
+        // The right framing, served rather than selected.
+        const panels = doc.querySelectorAll('.cs-lens-panel');
+        assert(panels.length === 1, `${file}: shows exactly one lens framing (${panels.length})`);
+        assert(
+            panels[0] && panels[0].querySelector('h2').textContent.includes(lens.label),
+            `${file}: the framing shown is "${lens.label}"`
+        );
 
-    const statuses = doc.querySelectorAll('.cs-status');
-    assert(statuses.length > 0, `Page: artifacts show an availability status (${statuses.length})`);
+        // Every case study, in every view. A lens reorders; it never hides.
+        const cards = Array.from(doc.querySelectorAll('.cs-card'));
+        assert(cards.length === projects.caseStudies.length, `${file}: every case study is present (${cards.length}/${projects.caseStudies.length})`);
+        assert(cards.every(c => !c.hidden), `${file}: no case study is hidden`);
 
-    // Every lens has a panel, and the default is the one on show.
-    const panels = doc.querySelectorAll('[data-lens-panel]');
-    assert(panels.length === lenses.lenses.length + 1, `Page: one panel per lens plus the default (${panels.length})`);
+        // Matching studies first, ordered at build time.
+        const { primary } = content.orderForLens(projects.caseStudies, lens.id);
+        const topIds = cards.slice(0, primary.length).map(c => c.id);
+        assert(
+            topIds.every(id => primary.some(p => p.id === id)),
+            `${file}: matching case studies come first (${topIds.join(', ')})`
+        );
 
-    const visible = Array.from(panels).filter(p => !p.hidden);
-    assert(visible.length === 1 && visible[0].dataset.lensPanel === 'all', 'Page: exactly one lens panel is shown, and it is the default');
-}
+        // The rest are set back visually, not removed.
+        const setBack = cards.filter(c => c.classList.contains('cs-card-secondary'));
+        assert(
+            setBack.length === projects.caseStudies.length - primary.length,
+            `${file}: the non-matching studies are set back, not dropped (${setBack.length})`
+        );
 
-// --- the lens switcher ----------------------------------------------------
-// Loaded with ?lens=water, the water framing must be the one on show and the
-// water case studies must be at the top — without anything disappearing.
-{
-    const html = fs.readFileSync(path.join(ROOT, 'case-studies.html'), 'utf8');
-    const { window } = new JSDOM(html, {
-        runScripts: 'dangerously',
-        url: 'https://example.com/case-studies.html?lens=water'
+        // The switcher marks where you are, and links to real files.
+        const active = doc.querySelector('.cs-lens.is-active');
+        assert(active && active.textContent.trim() === (lens.shortLabel || lens.label), `${file}: the switcher marks the current view`);
+        assert(active && active.tagName !== 'A', `${file}: the current view is not a link to itself`);
+
+        const links = Array.from(doc.querySelectorAll('a.cs-lens'));
+        assert(links.length === allLenses.length - 1, `${file}: links to every other lens (${links.length})`);
+        const broken = links.map(a => a.getAttribute('href')).filter(h => !fs.existsSync(path.join(ROOT, h)));
+        assert(broken.length === 0, `${file}: every lens link points at a page that exists (${broken.join(', ') || 'none'})`);
+
+        // Distinct canonical per view, or search engines see duplicates.
+        const canonical = doc.querySelector('link[rel="canonical"]');
+        assert(
+            canonical && canonical.getAttribute('href').endsWith(file),
+            `${file}: declares its own canonical URL`
+        );
+
+        // The evidence has to be in the served HTML, not assembled later.
+        assert(doc.querySelectorAll('.cs-stage').length === projects.caseStudies.length * 4, `${file}: all four stages render for every case study`);
+        assert(doc.querySelectorAll('.cs-result-basis').length > 0, `${file}: the basis for each result is in the served HTML`);
     });
-    const doc = window.document;
 
-    const shown = Array.from(doc.querySelectorAll('[data-lens-panel]')).filter(p => !p.hidden);
-    assert(
-        shown.length === 1 && shown[0].dataset.lensPanel === 'water',
-        `Lens URL: ?lens=water shows the water framing (${shown.map(s => s.dataset.lensPanel).join(', ')})`
-    );
-
-    const cards = Array.from(doc.querySelectorAll('#csGrid .cs-card'));
-    assert(cards.length === projects.caseStudies.length, `Lens URL: nothing is removed from the page (${cards.length}/${projects.caseStudies.length})`);
-
-    const waterIds = projects.caseStudies.filter(cs => cs.lenses.includes('water')).map(cs => cs.id);
-    const topIds = cards.slice(0, waterIds.length).map(c => c.id);
-    assert(
-        topIds.every(id => waterIds.includes(id)),
-        `Lens URL: water case studies are ordered first (${topIds.join(', ')})`
-    );
-
-    const setBack = cards.filter(c => c.classList.contains('cs-card-secondary')).map(c => c.id);
-    assert(
-        setBack.length === projects.caseStudies.length - waterIds.length,
-        `Lens URL: the rest are set back, not hidden (${setBack.join(', ')})`
-    );
-    assert(
-        setBack.every(id => !cards.find(c => c.id === id).hidden),
-        'Lens URL: the set-back case studies are still readable'
-    );
-
-    const active = doc.querySelector('.cs-lens.is-active');
-    assert(active && active.dataset.lens === 'water', 'Lens URL: the switcher marks the current view');
-
-    // An unknown lens must degrade to everything, not to an empty page.
-    const bogus = new JSDOM(html, { runScripts: 'dangerously', url: 'https://example.com/case-studies.html?lens=nonsense' });
-    const bogusShown = Array.from(bogus.window.document.querySelectorAll('[data-lens-panel]')).filter(p => !p.hidden);
-    assert(
-        bogusShown.length === 1 && bogusShown[0].dataset.lensPanel === 'all',
-        'Lens URL: an unknown lens falls back to showing everything'
-    );
-}
-
-// --- without JavaScript ---------------------------------------------------
-// The lens links are real navigations, and the page has to be complete before
-// any script runs — a portfolio that needs JS to show its work is a portfolio
-// that shows nothing to a crawler.
-{
-    const { window } = new JSDOM(fs.readFileSync(path.join(ROOT, 'case-studies.html'), 'utf8'), {
-        url: 'https://example.com/case-studies.html?lens=water'
-    });
-    const doc = window.document;
-
-    assert(doc.querySelectorAll('.cs-card').length === projects.caseStudies.length, 'No JS: every case study is in the served HTML');
-    assert(doc.querySelectorAll('.cs-result-basis').length > 0, 'No JS: the evidence is in the served HTML');
-
-    const links = Array.from(doc.querySelectorAll('.cs-lens'));
-    assert(links.length === lenses.lenses.length + 1, `No JS: every lens is a real link (${links.length})`);
-    assert(links.every(a => (a.getAttribute('href') || '').startsWith('case-studies.html')), 'No JS: lens links navigate rather than relying on script');
+    // Nothing may be left pointing at the old query-string form, which does
+    // nothing on a static host.
+    const pagesToScan = ['index.html', 'field-report.html', 'README.md'].concat(allLenses.map(l => LENS_PAGE(l.id)));
+    const stale = pagesToScan.filter(f => /case-studies\.html\?lens=/.test(fs.readFileSync(path.join(ROOT, f), 'utf8')));
+    assert(stale.length === 0, `No page still links to the query-string lens form (${stale.join(', ') || 'none'})`);
 }
 
 // --- research.html --------------------------------------------------------

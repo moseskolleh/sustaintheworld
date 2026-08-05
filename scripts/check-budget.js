@@ -21,6 +21,19 @@
 // does better than the gzip used here — but it is a conservative one, and it
 // is measured rather than asserted.
 //
+// FIRST-PARTY ONLY. Every figure below counts files in this repository. The
+// pages also pull a stylesheet and font files from Google Fonts, and those
+// bytes cannot be measured from here: the size depends on the browser, since
+// the stylesheet serves different woff2 subsets per unicode-range. Calling
+// the total "what a visitor transfers" while silently dropping a
+// render-blocking third-party request would be the same kind of unenforced
+// claim this script exists to remove, so the labels say "first-party" and
+// the third-party origins are listed separately and counted.
+//
+// The origins ARE budgeted, by number: adding a new third-party host fails
+// this check. That is the part worth enforcing — the bytes of any single
+// font file matter far less than a page quietly acquiring another origin.
+//
 // WHAT IT DOES NOT MEASURE. Render time, layout stability, and Lighthouse
 // scores need a real browser; none of them are claimed anywhere on the basis
 // of this script.
@@ -40,11 +53,25 @@ const MB = 1024 * 1024;
 // screenshot does. Raising one is a deliberate act: update the README in the
 // same commit, because the README quotes these.
 // ------------------------------------------------------------------
+// Third-party origins the pages are allowed to reach. Everything here is a
+// deliberate decision that predates this script; the budget's job is to stop
+// another one appearing without anybody noticing.
+const ALLOWED_THIRD_PARTY = [
+    'fonts.googleapis.com',   // the webfont stylesheet (render-blocking)
+    'fonts.gstatic.com'       // the woff2 files it references
+];
+
 const BUDGETS = {
     criticalWire: {
-        label: 'First view, over the wire (HTML + CSS + JS gzipped, plus eagerly-loaded images)',
+        label: 'First view, first-party bytes over the wire (HTML + CSS + JS gzipped, plus eagerly-loaded images)',
         max: 300 * KB,
-        readme: 'the number the README quotes for a first visit'
+        readme: 'the number the README quotes for a first visit — first-party only; see thirdPartyOrigins'
+    },
+    thirdPartyOrigins: {
+        label: 'Distinct third-party origins a page requests',
+        max: ALLOWED_THIRD_PARTY.length,
+        unit: 'count',
+        readme: 'font hosts only. Their bytes are not measurable from here, so the count is what is held.'
     },
     largestImage: {
         label: 'Largest single image',
@@ -70,12 +97,12 @@ const BUDGETS = {
     // stay small. A budget here is what stops "just one more section" turning
     // the evidence pages into the thing they were built to argue against.
     caseStudiesWire: {
-        label: 'Case studies page, over the wire',
+        label: 'Case studies page, first-party bytes over the wire',
         max: 40 * KB,
         readme: 'generated from content/projects.json — text only, no images'
     },
     researchWire: {
-        label: 'Research outputs page, over the wire',
+        label: 'Research outputs page, first-party bytes over the wire',
         max: 30 * KB,
         readme: 'generated from content/research.json — text only, no images'
     }
@@ -163,10 +190,54 @@ const pageWire = (page) => criticalAssets(page).reduce((n, rel) => {
     return n + (isText(rel) ? gzipOf(rel) : raw);
 }, 0);
 
+/**
+ * Every off-site origin a page asks the browser to contact during a first
+ * view: stylesheets, scripts, preconnects and eager images. Plain <a href>
+ * links are excluded — following one is the visitor's choice, not a request
+ * the page makes on its own.
+ */
+// The site's own host. An absolute self-reference is not a third party, and
+// canonical/og URLs are written absolute by necessity.
+const OWN_HOST = 'moseskolleh.github.io';
+
+// <link> rels that actually cause the browser to reach out. `canonical` and
+// `alternate` are metadata — they name a URL, they do not fetch it — and
+// counting them was this function's first bug.
+const FETCHING_REL = ['stylesheet', 'preload', 'prefetch', 'preconnect', 'dns-prefetch', 'icon', 'shortcut icon', 'apple-touch-icon', 'manifest', 'modulepreload'];
+
+function thirdPartyOrigins(page) {
+    const html = fs.readFileSync(path.join(ROOT, page), 'utf8').replace(/<!--[\s\S]*?-->/g, '');
+    const origins = new Set();
+
+    const tags = html.match(/<(?:link|script|img|iframe|source|video|audio)\b[^>]*>/gi) || [];
+    tags.forEach((tag) => {
+        if (/^<link\b/i.test(tag)) {
+            const rel = (tag.match(/\brel=["']([^"']+)["']/i) || [, ''])[1].toLowerCase().trim();
+            if (!FETCHING_REL.includes(rel)) return;
+        }
+        const m = tag.match(/(?:href|src)=["']([^"']+)["']/i);
+        if (!m) return;
+        const url = m[1];
+        if (!/^(https?:)?\/\//i.test(url)) return;
+        try {
+            const host = new URL(url.startsWith('//') ? `https:${url}` : url).host;
+            if (host !== OWN_HOST) origins.add(host);
+        } catch (e) { /* not a URL we can attribute */ }
+    });
+
+    return [...origins].sort();
+}
+
+const BUDGETED_PAGES = ['index.html', 'case-studies.html', 'research.html', 'field-report.html', 'carbon-ai.html'];
+const originsByPage = BUDGETED_PAGES.map(p => ({ page: p, origins: thirdPartyOrigins(p) }));
+const allOrigins = [...new Set(originsByPage.flatMap(o => o.origins))].sort();
+const unexpectedOrigins = allOrigins.filter(o => !ALLOWED_THIRD_PARTY.includes(o));
+
 const measured = {
     criticalWire: critical.reduce((n, a) => n + a.wire, 0),
     caseStudiesWire: pageWire('case-studies.html'),
     researchWire: pageWire('research.html'),
+    thirdPartyOrigins: allOrigins.length,
     largestImage: images.reduce((n, f) => Math.max(n, sizeOf(f) || 0), 0),
     allImages: images.reduce((n, f) => n + (sizeOf(f) || 0), 0),
     allAudio: audio.reduce((n, f) => n + (sizeOf(f) || 0), 0),
@@ -195,9 +266,32 @@ Object.entries(BUDGETS).forEach(([key, budget]) => {
     const pct = Math.round((value / budget.max) * 100);
     const ok = value <= budget.max;
     if (!ok) over++;
+    const show = budget.unit === 'count' ? (n) => String(n) : fmt;
     console.log(`    ${ok ? '·' : '✗'} ${budget.label}`);
-    console.log(`      ${fmt(value)} of ${fmt(budget.max)} (${pct}%)`);
+    console.log(`      ${show(value)} of ${show(budget.max)} (${pct}%)`);
 });
+
+// Named, not just counted — a reader should be able to see which third
+// parties the page reaches for without opening devtools.
+console.log('\n  Third-party origins requested during a first view:\n');
+if (!allOrigins.length) {
+    console.log('    none — every byte comes from this repository');
+} else {
+    allOrigins.forEach((origin) => {
+        const pages = originsByPage.filter(o => o.origins.includes(origin)).map(o => o.page);
+        const known = ALLOWED_THIRD_PARTY.includes(origin);
+        console.log(`    ${known ? '·' : '✗'} ${origin.padEnd(24)} on ${pages.length} page(s)`);
+    });
+    console.log('\n    These bytes are NOT in the totals above and cannot be measured from here:');
+    console.log('    the font stylesheet serves different woff2 subsets per browser. Typically a few');
+    console.log('    tens of KB on a first visit, then cached. Removing the webfonts would remove');
+    console.log('    the uncertainty along with them.');
+}
+
+if (unexpectedOrigins.length) {
+    console.error(`\n  ✗ new third-party origin(s): ${unexpectedOrigins.join(', ')}`);
+    console.error('    Add to ALLOWED_THIRD_PARTY in scripts/check-budget.js if this is intended.');
+}
 
 const largest = images
     .map(f => ({ f, size: sizeOf(f) || 0 }))

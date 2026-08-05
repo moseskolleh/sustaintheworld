@@ -153,6 +153,9 @@
   "pages": [
     { "path": "index.html", "loc": "https://moseskolleh.github.io/sustaintheworld/", "lastmod": "2026-08-05", "changefreq": "monthly", "priority": "1.0" },
     { "path": "case-studies.html", "loc": "https://moseskolleh.github.io/sustaintheworld/case-studies.html", "lastmod": "2026-08-05", "changefreq": "monthly", "priority": "0.9" },
+    { "path": "case-studies-water.html", "loc": "https://moseskolleh.github.io/sustaintheworld/case-studies-water.html", "lastmod": "2026-08-05", "changefreq": "monthly", "priority": "0.7" },
+    { "path": "case-studies-climate-risk.html", "loc": "https://moseskolleh.github.io/sustaintheworld/case-studies-climate-risk.html", "lastmod": "2026-08-05", "changefreq": "monthly", "priority": "0.7" },
+    { "path": "case-studies-sustainable-ai.html", "loc": "https://moseskolleh.github.io/sustaintheworld/case-studies-sustainable-ai.html", "lastmod": "2026-08-05", "changefreq": "monthly", "priority": "0.7" },
     { "path": "research.html", "loc": "https://moseskolleh.github.io/sustaintheworld/research.html", "lastmod": "2026-08-05", "changefreq": "monthly", "priority": "0.8" },
     { "path": "carbon-ai.html", "loc": "https://moseskolleh.github.io/sustaintheworld/carbon-ai.html", "lastmod": "2026-08-05", "changefreq": "monthly", "priority": "0.8" },
     { "path": "field-report.html", "loc": "https://moseskolleh.github.io/sustaintheworld/field-report.html", "lastmod": "2026-08-05", "changefreq": "monthly", "priority": "0.3" }

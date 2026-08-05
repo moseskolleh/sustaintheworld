@@ -42,6 +42,8 @@
     border-color: var(--primary-green);
     color: var(--primary-green);
 }
+/* The current view is a <span>, not a link — there is nowhere to navigate to.
+   It still has to look like part of the same control group. */
 .cs-lens.is-active {
     background: var(--primary-green);
     border-color: var(--primary-green);
@@ -57,7 +59,6 @@
     border-radius: 6px;
     background: var(--card-bg);
 }
-.cs-lens-panel[hidden] { display: none; }
 .cs-lens-panel h2 {
     margin: 0 0 10px;
     font-size: 1.25rem;
