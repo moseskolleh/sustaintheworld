@@ -2,76 +2,83 @@
   "voiceId": "650ec6ce2dda4f1faf86fae5d591ca32",
   "model": "s1",
   "bitrate": 64,
+  "format": "mp3",
+  "maxBytes": 500,
+  "signatureVersion": 1,
+  "voiceTitle": "Spiritual African Narrator",
+  "voiceKind": "synthetic",
+  "voiceProvider": "Fish Audio",
+  "renderedOn": "2026-07-31",
   "tracks": {
     "hero": {
       "file": "assets/audio/hero.mp3",
       "bytes": 344442,
       "grams": 0.118,
       "chars": 594,
-      "hash": "8ece5b0cdd57"
+      "hash": "84a9a5135677"
     },
     "journey": {
       "file": "assets/audio/journey.mp3",
       "bytes": 499714,
       "grams": 0.172,
       "chars": 877,
-      "hash": "b4353eac38e0"
+      "hash": "9139df01ffbc"
     },
     "about": {
       "file": "assets/audio/about.mp3",
       "bytes": 404628,
       "grams": 0.139,
       "chars": 733,
-      "hash": "15358a8283c3"
+      "hash": "79893ad062c2"
     },
     "experience": {
       "file": "assets/audio/experience.mp3",
       "bytes": 474636,
       "grams": 0.163,
       "chars": 825,
-      "hash": "d719769aaaec"
+      "hash": "dee845b10b87"
     },
     "projects": {
       "file": "assets/audio/projects.mp3",
       "bytes": 506401,
       "grams": 0.174,
       "chars": 861,
-      "hash": "7db9850a150d"
+      "hash": "bc41a98882cb"
     },
     "ecoprompt": {
       "file": "assets/audio/ecoprompt.mp3",
       "bytes": 324171,
       "grams": 0.111,
       "chars": 584,
-      "hash": "69fc1f7c6372"
+      "hash": "885e6ef29bec"
     },
     "skills": {
       "file": "assets/audio/skills.mp3",
       "bytes": 467113,
       "grams": 0.16,
       "chars": 798,
-      "hash": "517b6990a924"
+      "hash": "fae615df32d7"
     },
     "education": {
       "file": "assets/audio/education.mp3",
       "bytes": 529598,
       "grams": 0.182,
       "chars": 920,
-      "hash": "16186c2b70fa"
+      "hash": "b42a53f57b30"
     },
     "notes": {
       "file": "assets/audio/notes.mp3",
       "bytes": 421973,
       "grams": 0.145,
       "chars": 792,
-      "hash": "e1112db23511"
+      "hash": "4e3b6975a5f5"
     },
     "contact": {
       "file": "assets/audio/contact.mp3",
       "bytes": 362623,
       "grams": 0.124,
       "chars": 678,
-      "hash": "7805ccf40902"
+      "hash": "8595d6efdf61"
     }
   }
 }

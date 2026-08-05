@@ -21,6 +21,52 @@ This Google Apps Script automatically captures form responses and stores them in
 4. Click the **Save** icon (💾) or press `Ctrl+S`
 5. Give your project a name (e.g., "Form Response Capture")
 
+### Step 2b: Configure Script Properties (required)
+
+The script holds no spreadsheet id, owner address or secret in its source, so
+a copy of this repository never carries someone else's configuration. Set them
+once, in the project itself:
+
+1. In the Apps Script editor, click **Project Settings** (⚙️ in the left rail)
+2. Scroll to **Script Properties** → **Add script property**
+3. Add these:
+
+| Property | Required | Value |
+| --- | --- | --- |
+| `SPREADSHEET_ID` | yes | The id from the sheet's URL — `docs.google.com/spreadsheets/d/`**`<this part>`**`/edit` |
+| `OWNER_EMAIL` | yes | Where submission notifications are sent |
+| `SHEET_NAME` | no | Tab to write to. Defaults to `Responses`, and is created if missing |
+| `TURNSTILE_SECRET` | no | Cloudflare Turnstile secret key. When present, every submission must carry a valid token |
+
+4. Click **Save script properties**
+5. Run the `testConfiguration` function from the editor — it reports anything
+   missing without writing a row
+
+Without `SPREADSHEET_ID` the script cannot open a sheet and every submission
+returns an error. This is deliberate: the previous version wrote to
+`getActiveSpreadsheet().getActiveSheet()`, meaning whichever tab was last
+clicked, which silently scattered submissions across tabs.
+
+### Turnstile (optional, off by default)
+
+Nothing third-party is loaded unless you switch this on.
+
+1. Create a Turnstile widget at
+   [dash.cloudflare.com](https://dash.cloudflare.com/?to=/:account/turnstile)
+2. Put the **secret key** in the `TURNSTILE_SECRET` script property
+3. Add the widget and Cloudflare's script to the contact form in `index.html`,
+   using the **site key**:
+
+   ```html
+   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+   <div class="cf-turnstile" data-sitekey="YOUR_SITE_KEY"></div>
+   ```
+
+The site's own JavaScript already looks for the hidden
+`cf-turnstile-response` input the widget creates, and forwards the token as
+`turnstileToken`. Until the property is set, the server ignores the token and
+falls back to the honeypot plus the per-submitter rate limits.
+
 ### Step 3: Deploy as Web App
 
 1. Click **Deploy** → **New deployment**

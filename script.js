@@ -1,4 +1,91 @@
 // ===================================
+// SAFE STORAGE
+// ===================================
+// Touching localStorage is not a safe operation. Browsers throw on the
+// *property access itself* — not just on get/set — when storage is blocked:
+// Chrome with third-party cookies disabled inside an iframe, Firefox with
+// dom.storage.enabled off, Safari in Lockdown Mode, a corporate policy, or
+// simply a full quota. The exception is a SecurityError, and an uncaught one
+// at module scope stops the rest of this file from ever running.
+//
+// That is exactly what happened here: `localStorage.getItem('theme')` sat at
+// top level, so a visitor with storage blocked lost the theme toggle, the
+// low-energy mode, the narration player, the terminal — everything defined
+// below the throw. A preference that cannot be saved should cost the
+// preference, not the page.
+//
+// Every read and write in this file goes through here. Preferences then last
+// for the session in memory and are forgotten on reload, which is the correct
+// degradation: the feature still works, it just cannot remember.
+const safeStorage = (() => {
+    const fallback = { local: new Map(), session: new Map() };
+
+    // Resolved lazily and cached: the property access is itself the throw, so
+    // this cannot be hoisted to module scope, and probing on every call would
+    // pay for the same exception over and over.
+    const probed = {};
+    const backend = (kind) => {
+        if (kind in probed) return probed[kind];
+        let store = null;
+        try {
+            const candidate = kind === 'session' ? window.sessionStorage : window.localStorage;
+            // Safari's private mode used to expose a storage object whose
+            // setItem always threw, so presence alone is not proof of use.
+            const probe = '__mks_probe__';
+            candidate.setItem(probe, '1');
+            candidate.removeItem(probe);
+            store = candidate;
+        } catch (e) {
+            store = null;   // blocked, disabled, or out of quota
+        }
+        probed[kind] = store;
+        return store;
+    };
+
+    const api = (kind) => ({
+        get(key, fallbackValue = null) {
+            const store = backend(kind);
+            if (store) {
+                try {
+                    const v = store.getItem(key);
+                    return v === null ? fallbackValue : v;
+                } catch (e) { /* fall through to memory */ }
+            }
+            const mem = fallback[kind];
+            return mem.has(key) ? mem.get(key) : fallbackValue;
+        },
+        set(key, value) {
+            const v = String(value);
+            fallback[kind].set(key, v);
+            const store = backend(kind);
+            if (!store) return false;
+            try {
+                store.setItem(key, v);
+                return true;
+            } catch (e) {
+                // Quota exhaustion mid-session: the in-memory copy above still
+                // holds, so the preference survives until reload.
+                return false;
+            }
+        },
+        remove(key) {
+            fallback[kind].delete(key);
+            const store = backend(kind);
+            if (!store) return;
+            try { store.removeItem(key); } catch (e) { /* nothing to undo */ }
+        },
+        // True when a preference written now will still be there next visit.
+        get persistent() { return !!backend(kind); }
+    });
+
+    return { local: api('local'), session: api('session') };
+})();
+
+// Exposed so the tests can assert the degradation, and so the field terminal
+// can report honestly whether a preference will outlive the tab.
+window.mksStorage = safeStorage;
+
+// ===================================
 // PRELOADER
 // ===================================
 (() => {
@@ -11,10 +98,9 @@
 
     // Reduced-motion visitors, and anyone who has already seen the intro this
     // session, skip it entirely — no fake loading bar in front of static HTML.
-    let seen = false;
-    try { seen = sessionStorage.getItem('mks-intro-seen'); } catch (e) { /* private mode */ }
+    const seen = safeStorage.session.get('mks-intro-seen');
     if (reduce || seen) { wipe(); return; }
-    try { sessionStorage.setItem('mks-intro-seen', '1'); } catch (e) { /* ignore */ }
+    safeStorage.session.set('mks-intro-seen', '1');
 
     const coordsEl = document.getElementById('preloaderCoords');
     const journey = [
@@ -62,14 +148,36 @@ const initBackgroundSlideshow = () => {
     if (!slides.length) return;
     let currentSlide = 0;
 
-    // Only the first slide ships with the page; the rest are fetched
-    // after load so the initial payload stays light.
-    slides.forEach(slide => {
+    // The first slide is fetched now; the rest are fetched only once the
+    // rotation is about to need them. The previous version applied all three
+    // background-images in one pass, which is not what the comment above it
+    // claimed and meant three hero-sized images landed on every visit —
+    // including visits that never stayed long enough to see slides two and
+    // three, and visits in low-energy mode where the rotation never runs.
+    const loadSlide = (index) => {
+        const slide = slides[index];
+        if (!slide || slide.dataset.loaded) return;
         const src = slide.getAttribute('data-bg');
-        if (src) slide.style.backgroundImage = `url('${src}')`;
+        if (!src) return;
+        slide.style.backgroundImage = `url('${src}')`;
+        slide.dataset.loaded = '1';
+    };
+    loadSlide(0);
+
+    // Give slide two a head start, but only once the browser is idle and only
+    // if the rotation is actually going to run — low-energy mode holds on the
+    // first slide, and fetching for a rotation that never happens is the
+    // exact waste this section of the site argues against.
+    const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 1500));
+    idle(() => {
+        if (!document.body.classList.contains('eco-mode')) loadSlide(1);
     });
 
     const showSlide = (index) => {
+        loadSlide(index);
+        // Fetch the next one now, so it is decoded before it is shown rather
+        // than fading in from blank.
+        loadSlide((index + 1) % slides.length);
         slides.forEach((slide, i) => slide.classList.toggle('active', i === index));
         if (captionText && heroSlideCaptions[index]) {
             captionText.textContent = heroSlideCaptions[index];
@@ -470,6 +578,18 @@ window.addEventListener('resize', () => {
         lightboxImage.src = src;
         lightboxImage.alt = alt || '';
         if (lightboxCaption) lightboxCaption.textContent = caption || '';
+
+        // The dialog is named by its caption. Not every gallery item has one,
+        // and a dialog with no accessible name is announced as just "dialog",
+        // so the image's alt text stands in when the caption is empty.
+        if (caption) {
+            lightbox.setAttribute('aria-labelledby', 'lightboxCaption');
+            lightbox.removeAttribute('aria-label');
+        } else {
+            lightbox.removeAttribute('aria-labelledby');
+            lightbox.setAttribute('aria-label', alt || 'Enlarged image');
+        }
+
         lightbox.classList.add('active');
         lightbox.setAttribute('aria-hidden', 'false');
         document.body.style.overflow = 'hidden';
@@ -479,7 +599,9 @@ window.addEventListener('resize', () => {
     const close = () => {
         lightbox.classList.remove('active');
         lightbox.setAttribute('aria-hidden', 'true');
-        document.body.style.overflow = 'auto';
+        // Restore rather than assert: 'auto' overrides whatever the stylesheet
+        // had to say about body overflow.
+        document.body.style.overflow = '';
         if (lastFocus && typeof lastFocus.focus === 'function') lastFocus.focus();
         lastFocus = null;
     };
@@ -554,12 +676,18 @@ if (contactForm) {
         e.preventDefault();
 
         const honeypot = document.getElementById('website');
+        // Cloudflare Turnstile is optional and off by default — no third-party
+        // script is loaded unless the owner adds the widget to the form. When
+        // it is present it drops a hidden input with this name, and the Apps
+        // Script endpoint verifies the token server-side.
+        const challenge = contactForm.querySelector('[name="cf-turnstile-response"]');
         const formData = {
             name: document.getElementById('name').value.trim(),
             email: document.getElementById('email').value.trim(),
             subject: document.getElementById('subject').value.trim(),
             message: document.getElementById('message').value.trim(),
             website: honeypot ? honeypot.value : '',
+            turnstileToken: challenge ? challenge.value : '',
             submitted_at: new Date().toISOString(),
             source: 'Portfolio Website'
         };
@@ -614,12 +742,12 @@ const createThemeToggle = () => {
         const isLightMode = document.body.classList.contains('light-mode');
         const use = toggle.querySelector('use');
         if (use) use.setAttribute('href', `#i-${isLightMode ? 'sun' : 'moon'}`);
-        localStorage.setItem('theme', isLightMode ? 'light' : 'dark');
+        safeStorage.local.set('theme', isLightMode ? 'light' : 'dark');
     });
 };
 
 // Restore saved preference, then mount the toggle
-const currentTheme = localStorage.getItem('theme') || 'dark';
+const currentTheme = safeStorage.local.get('theme', 'dark');
 if (currentTheme === 'light') {
     document.body.classList.add('light-mode');
 }
@@ -628,18 +756,46 @@ createThemeToggle();
 // ===================================
 // KEYBOARD NAVIGATION
 // ===================================
+// Single-letter shortcuts are only safe while nothing is being operated by
+// keyboard. `input, textarea` was not enough: a <select> takes letter keys to
+// jump between options, so pressing "c" on the carbon calculator's model
+// picker scrolled the page to Contact instead of selecting Claude. The same
+// goes for buttons, contenteditable regions, anything with a text-entry ARIA
+// role, and any keystroke carrying a modifier — Ctrl+C is a copy, not a
+// navigation request.
+const TYPING_SELECTOR = [
+    'input',
+    'textarea',
+    'select',
+    'button',
+    '[contenteditable]:not([contenteditable="false"])',
+    '[role="textbox"]',
+    '[role="searchbox"]',
+    '[role="combobox"]',
+    '[role="listbox"]',
+    '[role="menu"]',
+    '[role="menuitem"]'
+].join(', ');
+
+const isTypingContext = (target) => {
+    // keydown can fire with document or window as the target, neither of
+    // which has closest(), and a detached node has no matches().
+    if (!target || typeof target.closest !== 'function') return false;
+    return !!target.closest(TYPING_SELECTOR);
+};
+
 document.addEventListener('keydown', (e) => {
-    if (e.target.matches('input, textarea')) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.isComposing || e.keyCode === 229) return;   // mid IME composition
+    if (isTypingContext(e.target)) return;
 
-    if (e.key === 'h' || e.key === 'H') {
-        const home = document.querySelector('#home');
-        if (home) home.scrollIntoView({ behavior: 'smooth' });
-    }
+    const jump = (selector) => {
+        const target = document.querySelector(selector);
+        if (target) target.scrollIntoView({ behavior: 'smooth' });
+    };
 
-    if (e.key === 'c' || e.key === 'C') {
-        const contact = document.querySelector('#contact');
-        if (contact) contact.scrollIntoView({ behavior: 'smooth' });
-    }
+    if (e.key === 'h' || e.key === 'H') jump('#home');
+    if (e.key === 'c' || e.key === 'C') jump('#contact');
 });
 
 // ===================================
@@ -686,7 +842,7 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
 
     // Compact homepage view, derived from the shared data.
     const MODELS = DATA.HOMEPAGE_MODELS.map(k => ({
-        key: k, label: DATA.MODELS[k].label, whPer1k: DATA.MODELS[k].energyPer1kTokens_Wh
+        key: k, label: DATA.MODELS[k].label, model: DATA.MODELS[k]
     }));
     const GRIDS = DATA.HOMEPAGE_REGIONS.map(k => ({
         key: k,
@@ -710,7 +866,12 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
     };
 
     const footprint = (model, tokens, grid) => {
-        const kWh = (model.whPer1k * tokens / 1000 / 1000) * PUE;
+        // Presets are a token budget, not a split, so they are spent at the
+        // reference mix the benchmarks are calibrated against. The full tool
+        // is where the input/output split becomes a control.
+        const mix = DATA.TOKEN_ENERGY.referenceMix;
+        const wh = DATA.energyForQuery(model.model, tokens * mix.input, tokens * mix.output);
+        const kWh = (wh / 1000) * PUE;
         return {
             wh: kWh * 1000,
             carbon: kWh * grid.intensity,
@@ -853,7 +1014,7 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
         toggle.setAttribute('aria-pressed', String(on));
     };
 
-    const saved = localStorage.getItem('eco-mode');
+    const saved = safeStorage.local.get('eco-mode');
     const prefersCalm = typeof window.matchMedia === 'function' &&
         window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     apply(saved !== null ? saved === 'on' : prefersCalm);
@@ -861,7 +1022,7 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
     toggle.addEventListener('click', () => {
         const on = !document.body.classList.contains('eco-mode');
         apply(on);
-        localStorage.setItem('eco-mode', on ? 'on' : 'off');
+        safeStorage.local.set('eco-mode', on ? 'on' : 'off');
     });
 })();
 
@@ -1220,13 +1381,14 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
         co2: () => {
             const badge = document.getElementById('carbonBadgeText');
             print(badge ? badge.textContent : 'the scale is still warming up — scroll to the footer.');
-            print('methodology: Resource Timing API × Sustainable Web Design model. every gram counted.');
+            print('methodology: Resource Timing API × Sustainable Web Design model.');
+            print('this counts network transfer only — not the energy your device spends rendering it.');
             const fd = window.FieldDispatch;
             if (fd) {
                 const st = fd.state();
                 print(st.mode === 'human'
-                    ? 'narration: recorded voice — each section is a file, and the player prints its weight before you press play.'
-                    : 'narration: your browser\'s own voice. it downloads nothing, so listening adds 0.00 g to the figure above.');
+                    ? `narration: ${st.voiceTitle || 'recorded voice'} — each section is a file, and the player prints its transfer weight before you press play.`
+                    : 'narration: your browser\'s own voice. it transfers nothing, so it adds nothing to the figure above — though your device still does the work.');
             }
         },
         drill: (args, done) => {
@@ -1277,28 +1439,36 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
             if (!arg) {
                 print('usage: voice <section> — one of: ' + state.ids.join(', '));
                 print('       voice stop      — shut it up');
-                print('       voice moses     — switch to the recorded voice, if it has been rendered');
+                print('       voice recorded  — switch to the recorded narration, if it has been rendered');
                 print('       voice browser   — switch back to your browser\'s own voice (0 bytes)');
-                print(`current: ${state.mode === 'human' ? 'recorded voice' : 'browser voice — ' + state.voice}`);
+                print(`current: ${state.mode === 'human' ? (state.voiceTitle || 'recorded narration') : 'browser voice — ' + state.voice}`);
+                if (state.mode === 'human' && state.voiceKind && state.voiceKind !== 'human') {
+                    print('note: that is a synthetic text-to-speech voice, not a recording of Moses.');
+                }
                 if (state.mode !== 'human') {
                     print(state.local
-                        ? 'that voice is installed on your device. this narration downloads nothing.'
+                        ? 'that voice is installed on your device. it transfers nothing over the network.'
                         : 'heads up: your browser has no offline voice, so it streams the audio from its vendor.');
                 }
                 return;
             }
             if (arg === 'stop') { fd.stop(); print('narration stopped.'); return; }
-            if (arg === 'moses' || arg === 'human') {
+            // 'moses' still works as an alias — it was the documented word —
+            // but it is no longer what the command prints back, because the
+            // recorded narration is not Moses's voice.
+            if (arg === 'recorded' || arg === 'human' || arg === 'moses') {
                 fd.loadManifest().then(() => {
                     if (!fd.hasRecorded()) { print('the recorded narration has not been rendered yet — staying on the browser voice.', 'ft-err'); return; }
                     fd.setMode('human', true);
-                    print('voice: Moses. each section is a file now — the player shows what it weighs.');
+                    const now = fd.state();
+                    print(`voice: ${now.voiceTitle || 'recorded narration'}${now.voiceKind && now.voiceKind !== 'human' ? ' (synthetic)' : ''}.`);
+                    print('each section is a file now — the player shows what it transfers.');
                 });
                 return;
             }
             if (arg === 'browser' || arg === 'synth') {
                 fd.setMode('synth', true);
-                print('voice: your browser\'s. 0.00 g — nothing crosses the wire.');
+                print('voice: your browser\'s. nothing crosses the wire — though your device still does the work.');
                 return;
             }
             if (fd.play(arg)) { close(); return; }
@@ -1794,7 +1964,11 @@ window.mksShare = (() => {
     const gridNow = () => (gridSel && DATA.REGIONS[gridSel.value]) || DATA.REGIONS['nl'];
 
     const compute = (key, grid) => {
-        const infWh = DATA.MODELS[key].energyPer1kTokens_Wh * (TOKENS / 1000); // inference energy
+        // Split the workload at the reference mix the per-1k benchmarks are
+        // calibrated against, so this widget and the full tool agree on what
+        // "1000 tokens" costs even though the tool lets you change the split.
+        const mix = DATA.TOKEN_ENERGY.referenceMix;
+        const infWh = DATA.energyForQuery(DATA.MODELS[key], TOKENS * mix.input, TOKENS * mix.output);
         const wh = infWh * PUE;                                                // facility energy (grid + cooling overhead)
         const kwh = wh / 1000;
         // Embodied hardware scales with the chips' compute, not facility overhead,
@@ -2529,12 +2703,10 @@ window.mksShare = (() => {
     // without overriding someone's stated preference.
     let modeChosen = false;
 
-    try {
-        const savedMode = localStorage.getItem('mks-voice-mode');
-        if (savedMode === 'human' || savedMode === 'synth') { mode = savedMode; modeChosen = true; }
-        const savedRate = parseFloat(localStorage.getItem('mks-voice-rate'));
-        if (savedRate >= 0.5 && savedRate <= 2) rate = savedRate;
-    } catch (e) { /* private mode */ }
+    const savedMode = safeStorage.local.get('mks-voice-mode');
+    if (savedMode === 'human' || savedMode === 'synth') { mode = savedMode; modeChosen = true; }
+    const savedRate = parseFloat(safeStorage.local.get('mks-voice-rate'));
+    if (savedRate >= 0.5 && savedRate <= 2) rate = savedRate;
 
     // Sentence splitting lives with the scripts themselves — see
     // voice-scripts.js for why it is more careful than a split on ".".
@@ -2604,20 +2776,68 @@ window.mksShare = (() => {
 
     const trackFor = id => (manifest && manifest.tracks && manifest.tracks[id]) || null;
 
+    // ---------------------------------------------------------------
+    // What the numbers mean.
+    //
+    // The Sustainable Web Design model converts *transferred bytes* into
+    // grams of CO₂e. That is the only thing it converts. It does not include
+    // the energy your device spends decoding audio, driving a speaker, or —
+    // for the browser voice — synthesising speech in the first place.
+    //
+    // The old label read "0.00 g" for the browser voice, which claimed the
+    // listening was free. It is not free; it is free *of network transfer*.
+    // Every figure here now says which of the two it is.
+    // ---------------------------------------------------------------
+    const TRANSFER_NOTE =
+        'Estimated network-transfer emissions only (Sustainable Web Design model: 0.36 g CO₂e per MB). ' +
+        'The energy your device spends synthesising, decoding and playing the audio is real and is not included.';
+
     const weightLabel = (id) => {
         if (mode === 'human') {
             const t = trackFor(id);
             if (!t) return 'not recorded yet';
-            return `${t.grams.toFixed(2)} g · ${Math.round(t.bytes / 1024)} KB`;
+            return `≈${t.grams.toFixed(2)} g transfer · ${Math.round(t.bytes / 1024)} KB`;
         }
-        return voiceIsLocal ? '0.00 g · 0 KB' : '≈0 g · voice from your browser';
+        // A local (offline) voice moves no bytes. A network voice — Chrome's
+        // default on some platforms — round-trips audio through a server, and
+        // the page cannot see how much, so it must not print a figure.
+        return voiceIsLocal ? '0 KB transferred' : 'streamed by your browser · size unknown';
     };
 
     const refreshCosts = () => {
         document.querySelectorAll('.listen-wrap').forEach(w => {
             const cost = w.querySelector('.listen-cost');
-            if (cost) cost.textContent = weightLabel(w.dataset.voiceId);
+            if (!cost) return;
+            cost.textContent = weightLabel(w.dataset.voiceId);
+            cost.title = TRANSFER_NOTE;
         });
+        if (el.weight) el.weight.title = TRANSFER_NOTE;
+        refreshVoiceNote();
+    };
+
+    // Who is actually reading, in the player's own words. The recorded option
+    // used to be labelled "Moses", which read as "this is his voice". It is a
+    // stock synthetic voice from a TTS library; the manifest records which
+    // one, and the page says so rather than implying otherwise.
+    const refreshVoiceNote = () => {
+        if (!el.voiceNote) return;
+        if (mode === 'human' && manifest) {
+            const title = manifest.voiceTitle || 'recorded narration';
+            const synthetic = manifest.voiceKind !== 'human';
+            el.voiceNote.textContent = synthetic
+                ? `“${title}” — a synthetic voice${manifest.voiceProvider ? ` from ${manifest.voiceProvider}` : ''}, not a recording of Moses.`
+                : `Read by ${title}.`;
+            el.voiceNote.hidden = false;
+            return;
+        }
+        if (mode === 'synth') {
+            el.voiceNote.textContent = voiceIsLocal
+                ? 'Your browser\'s own voice, running on your device — nothing crosses the network.'
+                : 'Your browser\'s voice. This one is served over the network, so it is not transfer-free.';
+            el.voiceNote.hidden = false;
+            return;
+        }
+        el.voiceNote.hidden = true;
     };
 
     // ---------------------------------------------------------------
@@ -2645,10 +2865,11 @@ window.mksShare = (() => {
         <div class="dispatch-foot">
             <div class="dispatch-voices" role="group" aria-label="Choose a voice">
                 <button type="button" data-mode="synth" aria-pressed="true">browser voice</button>
-                <button type="button" data-mode="human" aria-pressed="false" hidden>Moses</button>
+                <button type="button" data-mode="human" aria-pressed="false" hidden>recorded</button>
             </div>
             <span class="dispatch-weight mono-label"></span>
-        </div>`;
+        </div>
+        <p class="dispatch-voice-note" hidden></p>`;
 
     const el = {
         play: bar.querySelector('.dispatch-play'),
@@ -2658,6 +2879,7 @@ window.mksShare = (() => {
         close: bar.querySelector('.dispatch-close'),
         progress: bar.querySelector('.dispatch-progress span'),
         weight: bar.querySelector('.dispatch-weight'),
+        voiceNote: bar.querySelector('.dispatch-voice-note'),
         modes: Array.prototype.slice.call(bar.querySelectorAll('.dispatch-voices button'))
     };
 
@@ -2688,22 +2910,67 @@ window.mksShare = (() => {
         document.body.classList.toggle('dispatch-open', visible);
     };
 
-    const stop = () => {
-        stopKeepAlive();
-        if (canSynth) synth.cancel();
-        if (audioEl) { audioEl.pause(); audioEl.removeAttribute('src'); audioEl.load(); audioEl = null; }
-        current = null;
-        showBar(false);
-        setProgress(0);
+    const clearPlayingButtons = () => {
         document.querySelectorAll('.listen-btn.is-playing').forEach(b => {
             b.classList.remove('is-playing');
             b.setAttribute('aria-pressed', 'false');
         });
     };
 
+    // The script a failed attempt was for, so the player's play button can
+    // become a retry rather than doing nothing.
+    let retryScript = null;
+
+    const stop = () => {
+        stopKeepAlive();
+        if (canSynth) synth.cancel();
+        if (audioEl) { audioEl.pause(); audioEl.removeAttribute('src'); audioEl.load(); audioEl = null; }
+        current = null;
+        retryScript = null;
+        bar.classList.remove('dispatch-failed');
+        showBar(false);
+        setProgress(0);
+        clearPlayingButtons();
+    };
+
+    // Neither engine could produce sound.
+    //
+    // The old behaviour was to switch to 'synth' and call runSynth() no
+    // matter what. Where no speech engine exists — headless browsers, Linux
+    // without speech-dispatcher, browsers with speech disabled — that left a
+    // player showing a pause icon over silence, with no way back and no
+    // explanation. Now the player stops, says which engine failed, and turns
+    // its play button into a retry.
+    const failPlayback = (script, message) => {
+        stopKeepAlive();
+        if (canSynth) synth.cancel();
+        if (audioEl) { audioEl.pause(); audioEl.removeAttribute('src'); audioEl.load(); audioEl = null; }
+        current = null;
+        retryScript = script || null;
+        setProgress(0);
+        setIcon('play');
+        showBar(true);
+        bar.classList.add('dispatch-failed');
+        el.caption.textContent = message;
+        el.play.setAttribute('aria-label', retryScript ? 'Try playing the narration again' : 'Resume narration');
+        clearPlayingButtons();
+    };
+
     // Speaks `sentences` from `startAt`. Used for first play and for a rate
     // change mid-sentence, since an utterance's rate is fixed once it starts.
     const runSynth = (id, sentences, startAt) => {
+        // Every path that falls back to the browser voice arrives here, so
+        // this is the one place that has to establish there is a voice to
+        // fall back to. Without the check, the next line throws on a browser
+        // with no speech engine, or — worse — succeeds and plays nothing.
+        if (!canSpeak()) {
+            failPlayback(
+                window.VoiceScripts.byId[id],
+                'this browser has no speech voice available, and there is no recording to fall back on. Try another browser, or read the section instead.'
+            );
+            return;
+        }
+
         current = { id, sentences, index: startAt };
         synth.cancel();
 
@@ -2760,6 +3027,12 @@ window.mksShare = (() => {
         audioEl.addEventListener('ended', stop);
         audioEl.addEventListener('error', () => {
             audioEl = null;
+            // Only switch engines if there is another engine. Switching into
+            // a mode that cannot speak is how the player ended up dead.
+            if (!canSpeak()) {
+                failPlayback(script, 'that recording would not load, and this browser has no speech voice to fall back on. Press play to try again.');
+                return;
+            }
             el.caption.textContent = 'that recording would not load — using the browser voice instead.';
             setMode('synth', false);
             runSynth(script.id, sentences, 0);
@@ -2767,8 +3040,10 @@ window.mksShare = (() => {
 
         el.caption.textContent = sentences[0];
         audioEl.play().catch(() => {
-            el.caption.textContent = 'playback was blocked — press play again.';
-            setIcon('play');
+            // Autoplay policy, or a decode the browser refused. Either way it
+            // is retryable, so keep the track loaded and hand back a play
+            // button that actually restarts it.
+            failPlayback(script, 'playback was blocked by the browser — press play to try again.');
         });
     };
 
@@ -2782,7 +3057,9 @@ window.mksShare = (() => {
         el.title.textContent = script.label;
         el.rate.innerHTML = `${rate}&times;`;
         el.weight.textContent = weightLabel(script.id);
+        el.weight.title = TRANSFER_NOTE;
         syncModeButtons();
+        refreshVoiceNote();
 
         if (btn) {
             btn.classList.add('is-playing');
@@ -2799,7 +3076,13 @@ window.mksShare = (() => {
     const isPaused = () => (audioEl ? audioEl.paused : (canSynth && synth.paused));
 
     const togglePause = () => {
-        if (!current) return;
+        // After a failure the play button is a retry, not a resume.
+        if (!current) {
+            if (!retryScript) return;
+            const script = retryScript;
+            play(script, document.querySelector(`.listen-btn[data-voice="${script.id}"]`));
+            return;
+        }
         if (audioEl) {
             if (audioEl.paused) { audioEl.play(); setIcon('pause'); }
             else { audioEl.pause(); setIcon('play'); }
@@ -2816,7 +3099,7 @@ window.mksShare = (() => {
         mode = next;
         if (persist) {
             modeChosen = true;
-            try { localStorage.setItem('mks-voice-mode', mode); } catch (e) { /* ignore */ }
+            safeStorage.local.set('mks-voice-mode', mode);
         }
         syncModeButtons();
         if (current) el.weight.textContent = weightLabel(current.id);
@@ -2834,7 +3117,7 @@ window.mksShare = (() => {
         const at = steps.indexOf(rate);
         rate = steps[(at + 1) % steps.length];
         el.rate.innerHTML = `${rate}&times;`;
-        try { localStorage.setItem('mks-voice-rate', String(rate)); } catch (e) { /* ignore */ }
+        safeStorage.local.set('mks-voice-rate', String(rate));
 
         if (audioEl) { audioEl.playbackRate = rate; return; }
         // An utterance's rate cannot change once it is speaking, so the
@@ -2915,7 +3198,17 @@ window.mksShare = (() => {
     loadManifest().then(m => {
         if (!m) return;
         const humanBtn = el.modes.filter(b => b.dataset.mode === 'human')[0];
-        if (humanBtn) humanBtn.hidden = false;
+        if (humanBtn) {
+            // Name the voice on the control itself. "Moses" was misleading;
+            // the manifest knows what was actually used, so use that.
+            if (m.voiceTitle) {
+                humanBtn.textContent = m.voiceTitle;
+                humanBtn.title = m.voiceKind === 'human'
+                    ? `Recorded narration read by ${m.voiceTitle}.`
+                    : `“${m.voiceTitle}” — a synthetic text-to-speech voice${m.voiceProvider ? ` from ${m.voiceProvider}` : ''}. Not a recording of Moses Kolleh Sesay.`;
+            }
+            humanBtn.hidden = false;
+        }
         if (!modeChosen || !canSpeak()) setMode('human', false);
         refreshCosts();
         updateAvailability();
@@ -2942,6 +3235,11 @@ window.mksShare = (() => {
             voice: chosenVoice ? `${chosenVoice.name} (${chosenVoice.lang})` : 'none available',
             local: voiceIsLocal,
             recorded: !!manifest,
+            // Who the recorded narrator actually is, so no caller has to
+            // guess — and so nothing has to hardcode a name again.
+            voiceTitle: manifest ? (manifest.voiceTitle || '') : '',
+            voiceKind: manifest ? (manifest.voiceKind || '') : '',
+            voiceProvider: manifest ? (manifest.voiceProvider || '') : '',
             ids: SCRIPTS.map(s => s.id)
         })
     };

@@ -1,19 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!-- Every entry needs a lastmod, and none may be dated in the future.
+     tests/content.test.js checks both, and checks this list against the pages
+     declared in content/profile.json — carbon-ai.html was missing a lastmod
+     entirely, which is how it was found. -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://moseskolleh.github.io/sustaintheworld/</loc>
-    <lastmod>2026-07-12</lastmod>
+    <lastmod>2026-08-05</lastmod>
     <changefreq>monthly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://moseskolleh.github.io/sustaintheworld/carbon-ai.html</loc>
+    <lastmod>2026-08-05</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://moseskolleh.github.io/sustaintheworld/field-report.html</loc>
-    <lastmod>2026-07-12</lastmod>
+    <lastmod>2026-08-05</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.3</priority>
   </url>

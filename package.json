@@ -5,12 +5,22 @@
   "description": "Portfolio website for Moses Kolleh Sesay — static site, no build step",
   "license": "MIT",
   "scripts": {
-    "test": "node tests/bugs.test.js",
+    "test": "npm run test:unit && npm run map:check && npm run budget",
+    "test:unit": "node tests/bugs.test.js && node tests/resilience.test.js && node tests/carbon.test.js && node tests/voice.test.js && node tests/content.test.js && node tests/html.test.js",
+    "budget": "node scripts/check-budget.js",
+    "mcp:verify": "node scripts/verify-mcp-pin.js",
+    "map:build": "node scripts/generate-journey-map.js",
+    "map:check": "node scripts/generate-journey-map.js --check",
     "voice": "node scripts/generate-voice.js",
+    "voice:assemble": "node scripts/assemble-voice.js",
     "voice:mock": "node scripts/mock-fish-audio.js",
     "voice:check": "FISH_AUDIO_API_BASE=http://127.0.0.1:8199 FISH_AUDIO_API_KEY=mock FISH_AUDIO_FORMAT=wav node scripts/generate-voice.js --force"
   },
   "devDependencies": {
-    "jsdom": "^26.1.0"
+    "d3-geo": "3.1.1",
+    "jsdom": "^26.1.0",
+    "topojson-client": "3.1.0",
+    "topojson-simplify": "3.0.3",
+    "world-atlas": "2.0.2"
   }
 }

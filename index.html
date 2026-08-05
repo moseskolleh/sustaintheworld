@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Moses Kolleh Sesay — Sustainability & Climate Analyst. From mapping groundwater in Freetown to building sustainable AI frameworks in Amsterdam.">
+    <meta name="description" content="Moses Kolleh Sesay — Sustainability &amp; Climate Analyst. From mapping groundwater in Freetown to building sustainable AI frameworks in Amsterdam.">
     <meta name="author" content="Moses Kolleh Sesay">
-    <title>Moses Kolleh Sesay | Sustainability & Climate Analyst</title>
+    <title>Moses Kolleh Sesay | Sustainability &amp; Climate Analyst</title>
     <link rel="canonical" href="https://moseskolleh.github.io/sustaintheworld/">
     <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
     <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
@@ -13,15 +13,15 @@
 
     <!-- Open Graph / social sharing -->
     <meta property="og:type" content="website">
-    <meta property="og:title" content="Moses Kolleh Sesay | Sustainability & Climate Analyst">
+    <meta property="og:title" content="Moses Kolleh Sesay | Sustainability &amp; Climate Analyst">
     <meta property="og:description" content="From mapping groundwater in Freetown to building sustainable AI frameworks in Amsterdam — water, climate, and the data that connects them.">
     <meta property="og:url" content="https://moseskolleh.github.io/sustaintheworld/">
     <meta property="og:image" content="https://moseskolleh.github.io/sustaintheworld/assets/img/og-image.jpg">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
-    <meta property="og:image:alt" content="Moses Kolleh Sesay — Sustainability & Climate Analyst">
+    <meta property="og:image:alt" content="Moses Kolleh Sesay — Sustainability &amp; Climate Analyst">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Moses Kolleh Sesay | Sustainability & Climate Analyst">
+    <meta name="twitter:title" content="Moses Kolleh Sesay | Sustainability &amp; Climate Analyst">
     <meta name="twitter:description" content="From mapping groundwater in Freetown to building sustainable AI frameworks in Amsterdam.">
     <meta name="twitter:image" content="https://moseskolleh.github.io/sustaintheworld/assets/img/og-image.jpg">
 
@@ -53,7 +53,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <!-- Preload the hero (LCP) image so first paint doesn't wait to discover it in CSS -->
     <link rel="preload" as="image" href="assets/img/groundwater-mapping-1-hero.webp" fetchpriority="high">
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;family=Inter:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 
     <!-- Cookieless analytics (no consent banner needed). Pick ONE and uncomment.
@@ -91,7 +91,10 @@
     </div>
 
     <!-- Navigation -->
-    <nav class="navbar" id="navbar">
+    <!-- Two <nav> landmarks on this page, so each needs a name of its own or
+         a screen reader announces "navigation" twice with no way to tell them
+         apart. -->
+    <nav class="navbar" id="navbar" aria-label="Main">
         <div class="nav-container">
             <a href="#home" class="nav-logo" aria-label="Back to top">
                 <svg class="logo-mark" viewBox="0 0 40 40" aria-hidden="true">
@@ -271,7 +274,7 @@
             <div class="about-grid">
                 <div class="about-portrait reveal">
                     <div class="portrait-frame">
-                        <img src="assets/img/profile.webp" alt="Moses Kolleh Sesay — Sustainability & Climate Analyst" loading="lazy" width="640" height="640" decoding="async">
+                        <img src="assets/img/profile.webp" alt="Moses Kolleh Sesay — Sustainability &amp; Climate Analyst" loading="lazy" width="640" height="640" decoding="async">
                         <div class="portrait-ring" aria-hidden="true"></div>
                     </div>
                     <div class="portrait-meta">
@@ -1222,6 +1225,18 @@
                         <li>Real-world business cases</li>
                     </ul>
                 </div>
+                <div class="education-card certification reveal">
+                    <div class="education-top">
+                        <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-certificate"></use></svg>
+                        <span class="mono-label">2023</span>
+                    </div>
+                    <h3>Synergizing DRR &amp; Climate Change Adaptation</h3>
+                    <h4>UN System Staff College</h4>
+                    <ul>
+                        <li>Disaster risk reduction and adaptation, jointly</li>
+                        <li>Sendai Framework in practice</li>
+                    </ul>
+                </div>
             </div>
         </div>
     </section>
@@ -1387,7 +1402,7 @@
                 <div class="carbon-badge" id="carbonBadge">
                     <span class="blink-dot" aria-hidden="true"></span>
                     <span id="carbonBadgeText">Weighing this page&hellip;</span>
-                    <button class="carbon-badge-info" id="carbonInfoBtn" aria-label="How this is calculated" aria-expanded="false">?</button>
+                    <button type="button" class="carbon-badge-info" id="carbonInfoBtn" aria-label="How this is calculated" aria-expanded="false">?</button>
                 </div>
                 <div class="carbon-method" id="carbonMethod" hidden>
                     <p>Measured live in your browser via the Resource Timing API: each asset's transferred size, or its compressed size when served from cache &mdash; so a repeat visit is never flattered into looking lighter than it is. Converted with the
@@ -1395,7 +1410,7 @@
                     (&asymp;0.36&nbsp;g CO&#8322;e per MB, global average grid). Comparison point: the median web page ships &asymp;2.5&nbsp;MB
                     (<a href="https://httparchive.org/reports/page-weight" target="_blank" rel="noopener">HTTP Archive</a>).
                     A leading &ldquo;+&rdquo; means a third-party file served without timing headers couldn&rsquo;t be measured, so the true figure is a touch higher &mdash; never lower.
-                    Before this redesign, this page shipped ~25&nbsp;MB of images; it now ships a fraction of that &mdash; the site practises the sustainable-computing research it presents.
+                    Before this redesign, this page shipped ~25&nbsp;MB of images. A first view now costs about 235&nbsp;KB over the wire &mdash; text compressed, one hero image, everything else loaded only if you go looking for it. That figure is a budget the test suite enforces, not a claim in a README.
                     Want the logical extreme? The <a href="field-report.html">text-only field report</a> is the whole portfolio in 8&nbsp;KB.</p>
                 </div>
 
@@ -1408,7 +1423,7 @@
                 </div>
 
                 <p class="footer-fieldreport mono-label"><a href="field-report.html">prefer plain text? read the 8 KB field report — &asymp;0.003 g CO&#8322;e</a></p>
-                <button class="eco-mode-toggle" id="ecoModeToggle" aria-pressed="false">
+                <button type="button" class="eco-mode-toggle" id="ecoModeToggle" aria-pressed="false">
                     <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-leaf"></use></svg> <span id="ecoModeLabel">Low-energy mode: off</span>
                 </button>
                 <button class="terminal-toggle mono-label" id="terminalToggle" type="button" aria-haspopup="dialog"
@@ -1418,8 +1433,13 @@
     </footer>
 
     <!-- Lightbox -->
-    <div class="lightbox" id="lightbox" aria-hidden="true">
-        <button class="lightbox-close" id="lightboxClose" aria-label="Close image">&times;</button>
+    <!-- A modal needs to say so. Without role/aria-modal a screen reader keeps
+         reading the page behind it, and without aria-labelledby the dialog
+         announces itself with no name. The caption is the name. Focus handling
+         lives in script.js. -->
+    <div class="lightbox" id="lightbox" role="dialog" aria-modal="true"
+         aria-labelledby="lightboxCaption" aria-hidden="true" tabindex="-1">
+        <button type="button" class="lightbox-close" id="lightboxClose" aria-label="Close image">&times;</button>
         <figure class="lightbox-figure">
             <img id="lightboxImage" src="" alt="">
             <figcaption id="lightboxCaption"></figcaption>
@@ -1427,7 +1447,7 @@
     </div>
 
     <!-- Scroll to top -->
-    <button class="scroll-top" id="scrollTop" aria-label="Scroll to top">
+    <button type="button" class="scroll-top" id="scrollTop" aria-label="Scroll to top">
         <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-arrow-up"></use></svg>
     </button>
 
