@@ -65,6 +65,19 @@ const BUDGETS = {
         label: 'Text-only field report, whole page',
         max: 12 * KB,
         readme: 'the footer calls it "the whole portfolio in 8 KB" — this is what keeps that true'
+    },
+    // The generated pages carry no images and no framework, so they should
+    // stay small. A budget here is what stops "just one more section" turning
+    // the evidence pages into the thing they were built to argue against.
+    caseStudiesWire: {
+        label: 'Case studies page, over the wire',
+        max: 40 * KB,
+        readme: 'generated from content/projects.json — text only, no images'
+    },
+    researchWire: {
+        label: 'Research outputs page, over the wire',
+        max: 30 * KB,
+        readme: 'generated from content/research.json — text only, no images'
     }
 };
 
@@ -86,9 +99,9 @@ const isLocal = (href) => href && !/^(https?:)?\/\//.test(href) && !href.startsW
 // dropping loading="lazy" from an image shows up here instead of quietly
 // making the README wrong.
 // ------------------------------------------------------------------
-function criticalAssets() {
-    const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-    const assets = ['index.html'];
+function criticalAssets(page = 'index.html') {
+    const html = fs.readFileSync(path.join(ROOT, page), 'utf8');
+    const assets = [page];
     const add = (rel) => {
         if (isLocal(rel) && !assets.includes(rel) && sizeOf(rel) !== null) assets.push(rel);
     };
@@ -145,8 +158,15 @@ const critical = criticalAssets().map((rel) => {
     return { rel, raw, wire };
 });
 
+const pageWire = (page) => criticalAssets(page).reduce((n, rel) => {
+    const raw = sizeOf(rel);
+    return n + (isText(rel) ? gzipOf(rel) : raw);
+}, 0);
+
 const measured = {
     criticalWire: critical.reduce((n, a) => n + a.wire, 0),
+    caseStudiesWire: pageWire('case-studies.html'),
+    researchWire: pageWire('research.html'),
     largestImage: images.reduce((n, f) => Math.max(n, sizeOf(f) || 0), 0),
     allImages: images.reduce((n, f) => n + (sizeOf(f) || 0), 0),
     allAudio: audio.reduce((n, f) => n + (sizeOf(f) || 0), 0),

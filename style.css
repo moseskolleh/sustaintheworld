@@ -4142,6 +4142,25 @@ body.light-mode .dispatch-bar {
     .dispatch-voices button[data-mode="human"] { max-width: 10ch; }
 }
 
+/* Pointer from the story-shaped dossiers to the evidence-shaped case studies.
+   Two ways into the same six projects, for two different readers. */
+.section-cta {
+    max-width: 68ch;
+    margin: 14px auto 0;
+    padding: 12px 16px;
+    border-left: 3px solid var(--accent-color);
+    background: rgba(124, 252, 0, 0.04);
+    border-radius: 4px;
+    font-size: 0.88rem;
+    line-height: 1.65;
+    color: var(--text-secondary);
+}
+.section-cta a {
+    color: var(--accent-color);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
 /* Neither engine could play. The bar stays up carrying the reason, and the
    play button becomes a retry — the failure has to look different from
    ordinary playback, or it reads as "paused". */

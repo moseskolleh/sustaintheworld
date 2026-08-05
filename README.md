@@ -17,6 +17,9 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 - **Field terminal**: press <code>`</code> anywhere (or the footer button) for a hidden green-on-black terminal — try `journey`, `drill`, `co2`, `voice`, `kushe`, `help`
 - **The spoken page**: a `listen` control on every section, and the choice of voice is itself the argument. The browser's own speech engine transfers **zero bytes**; the recorded narration (pre-rendered via Fish Audio, synthetic — see [Narration](#narration-the-spoken-page)) is fetched only on click and labelled with exactly what it transfers. Same words, two costs, visitor's call. Nothing ever autoplays
 - **Carbon-aware by construction**: images ship as optimized WebP, and a first view costs about **235 KB over the wire**, against a 300 KB ceiling `npm test` enforces — a budget, not a number in a README (see [Performance](#performance)). A live footer badge weighs each visit in the browser (Resource Timing API × Sustainable Web Design model), counting network transfer only. A low-energy mode pauses all animation and honours `prefers-reduced-motion`
+- **[Case studies](case-studies.html), evidence-first**: the same six projects as **problem → method → artifact → result**. Every result carries the basis it rests on and says plainly whether you can check it from outside; every artifact says whether it is public, available on request, or held by the client. See [Content pipeline](#content-pipeline)
+- **Role-specific lenses**: `case-studies.html?lens=water`, `?lens=climate-risk`, `?lens=sustainable-ai` — shareable views that reframe the portfolio for one kind of role. They **reorder and frame, they never filter**: every case study stays on the page in every view, because a view that hides inconvenient work is a CV that lies by omission. Works with JavaScript off
+- **[Research outputs](research.html)**: theses, reports, datasets, code and tools, each labelled public / on request / held by the client. No DOI, journal or conference is named anywhere, because none of this work has one — and a test fails the build if one ever appears without proof
 - **Borehole core-log experience timeline**: career history logged the way a geologist logs a core — depth is time, every layer is a chapter
 - **"AI, Weighed" live widget**: a homepage slice of the EcoPrompt Coach research — model × workload × grid → energy, carbon, water, in units people can feel
 - **Evidence-first skills**: no invented percentages — every tool links to the project where it earned its place, plus real field numbers (164 water points itemized, 70% strike rate)
@@ -293,7 +296,8 @@ npm test          # everything below
 
 | Command | What it holds in place |
 |---|---|
-| `npm run test:unit` | the six suites in `tests/` |
+| `npm run build:check` | every generated page still matches `content/` |
+| `npm run test:unit` | the seven suites in `tests/` |
 | `npm run map:check` | the committed `journey-map.svg` still matches its generator |
 | `npm run budget` | the weights this README quotes (see [Performance](#performance)) |
 | `npm run mcp:verify` | the pinned MCP package still hashes to the reviewed tarball (needs network) |
@@ -316,22 +320,77 @@ The suites, and the failure each one exists to prevent:
   committed narration and fails if it plans to spend a single credit.
 - **`content.test.js`** — the pages must agree with `content/profile.json`
   (dates, degrees, certifications, JSON-LD, links, sitemap).
+- **`portfolio.test.js`** — every case study has all four stages and every
+  result a basis; no artifact claims to be public without a working link; the
+  lenses reorder without ever dropping a case study; and the validator is fed
+  deliberately fabricated links to prove it still rejects them.
 - **`html.test.js`** — button types, named landmarks, dialog semantics, image
   dimensions, labelled controls, resolvable links, valid JSON-LD.
 
-### One source for the profile
+## Content pipeline
 
-Employment dates, degrees, certifications and profile links live in
-[`content/profile.json`](content/profile.json). Nothing generates the pages
-from it — this stays a no-build static site — but `content.test.js` fails when
-a page disagrees with it, which is how a certification that appeared only on
-the text-only edition was found. Edit the JSON first, then make the pages
-match; the test names the ones that are behind.
+The site's facts used to live in six places at once — `index.html`, its JSON-LD
+block, `field-report.html`, the narration scripts, the README and the CV — with
+nothing keeping them in step. They had already drifted.
 
-It also carries `meta.verifiedOn`: the date a human last confirmed the
-open-ended facts (the "Present" role in particular) were still true. When that
-goes stale the test prints a notice rather than failing — a suite that goes red
-on a calendar date is one people learn to ignore.
+Everything derived now comes from `content/`:
+
+| Source | Feeds |
+|---|---|
+| `content/profile.json` | JSON-LD, `sitemap.xml`, the facts `content.test.js` holds every page to |
+| `content/projects.json` | `case-studies.html` |
+| `content/lenses.json` | the role-specific views |
+| `content/research.json` | `research.html` |
+| `content/narration.json` | `voice-scripts.js` |
+
+```bash
+npm run build:content     # regenerate everything derived from content/
+npm run build:check       # fail if a generated file is out of date (runs in CI)
+```
+
+`index.html` and `field-report.html` stay hand-authored — they are long-form
+editorial pages, and templating 130 KB of hand-tuned markup to remove
+duplication a test already catches would trade a small problem for a large one.
+`content.test.js` holds them to `content/` instead.
+
+### The rules the content model enforces
+
+The point of a content model is not tidiness, it is that unsupported claims
+should fail the build rather than ship. `scripts/lib/content.js` refuses:
+
+- **A result with no basis.** Every outcome states how it was measured, and
+  whether a reader can check it from outside. Where the answer is no — client
+  work, internship deliverables — it says so rather than implying otherwise.
+- **An artifact that claims to be public without a working link.** `status` is
+  one of `public` / `on-request` / `internal` / `planned`; only `public` may
+  carry a URL, and anything `internal` must name who holds it.
+- **A link this repository has not already vouched for.** Every URL must resolve
+  to a file in the repo or to a host on a short allowlist. Writing a
+  plausible-looking DOI or repository URL fails `npm test` — which is the
+  point, because a fabricated link is the easiest thing to write and the
+  hardest thing for a reader to check.
+- **A venue that implies peer review without a DOI.** Three theses were written
+  and defended; none is published in a journal, and nothing on the site says
+  otherwise.
+
+`tests/portfolio.test.js` feeds each of those rules deliberately bad data and
+fails if the validator lets it through — the rules are only worth having if
+they still fire on content nobody has written yet.
+
+### Keeping the profile honest over time
+
+`content/profile.json` also carries `meta.verifiedOn`: the date a human last
+confirmed the open-ended facts (the "Present" role in particular) were still
+true. When that goes stale the test prints a notice rather than failing — a
+suite that goes red on a calendar date is one people learn to ignore.
+
+### Editing the narration
+
+`content/narration.json` is the only copy of the spoken text; `voice-scripts.js`
+is generated from it. **Changing any of it costs money** — track signatures are
+content-addressed, so an edited script is a re-render at roughly one Fish Audio
+credit per UTF-8 byte of that section. `npm run voice -- --dry-run` shows the
+bill before you pay it, and unchanged sections are free.
 
 ## Customization Guide
 
@@ -380,7 +439,10 @@ every run of `npm test`, and the build fails when they are exceeded.
 
 | Budget | Measured | Ceiling |
 |---|---|---|
-| First view, over the wire | ~234 KB | 300 KB |
+| First view of the homepage, over the wire | ~234 KB | 300 KB |
+| Case studies page, over the wire | ~14 KB | 40 KB |
+| Research outputs page, over the wire | ~10 KB | 30 KB |
+| Text-only field report, whole page | ~8 KB | 12 KB |
 | Largest single image | ~200 KB | 220 KB |
 | Every image in the repository | ~3.24 MB | 3.5 MB |
 | Every narration track | ~4.13 MB | 4.5 MB |

@@ -1,0 +1,182 @@
+{
+  "$comment": [
+    "RESEARCH OUTPUTS.",
+    "",
+    "What exists, where it is, and — where it is not public — who holds it.",
+    "",
+    "WHAT THIS FILE DELIBERATELY DOES NOT CONTAIN: a DOI, a journal name, a",
+    "conference, or a citation for anything that does not have one. Three theses",
+    "were written, examined and defended; none has been published in a journal,",
+    "and saying otherwise would be the exact failure mode this whole review was",
+    "about. `status` carries the honest answer instead, and the page prints it",
+    "next to every entry rather than burying it.",
+    "",
+    "  public     — anyone can open it right now, and `url` proves it",
+    "  on-request — it exists, I hold it, ask me",
+    "  internal   — belongs to the organisation named in `heldBy`, not mine to publish",
+    "  planned    — intended, not yet done. Says so, so it cannot read as done.",
+    "",
+    "tests/content.test.js fails the build if a `public` entry has no url, if a",
+    "url does not resolve, or if a non-public entry carries one anyway."
+  ],
+
+  "intro": "Three degrees' worth of research, a consultancy, an internship and a working tool. Some of it is public, some of it belongs to the organisations it was done for, and the rest is a PDF I will happily send you. This page says which is which — because a portfolio that lists outputs without saying whether anyone can read them is a list of assertions.",
+
+  "outputs": [
+    {
+      "id": "msc-wur",
+      "title": "A study of socioeconomic drivers of river export of multiple pollutants in sub-basins worldwide, and qualitative future storylines for African coastal water pollution",
+      "type": "MSc thesis",
+      "venue": "Wageningen University & Research",
+      "year": "2024",
+      "status": "on-request",
+      "caseStudy": "coastal",
+      "summary": "Modelled multi-pollutant river export across 10,226 sub-basins with MARINA-Multi, identified the socioeconomic drivers statistically, and built qualitative scenario storylines for African coastal waters under climate change.",
+      "methods": ["MARINA-Multi model", "Statistical driver analysis", "Qualitative scenario storylines"],
+      "note": "Examined and defended. Not deposited in a public repository — ask and I will send it."
+    },
+    {
+      "id": "msc-hunan",
+      "title": "Approach to soft path water management: thinking beyond cement, steel and pipes — Freetown as case study",
+      "type": "MSc thesis",
+      "venue": "Hunan University",
+      "year": "2021",
+      "status": "on-request",
+      "caseStudy": "water-management",
+      "summary": "Argued that Freetown's water gap is not primarily a pipe-capacity problem, and developed demand-side, reuse and community-stewardship alternatives scoped for resource-constrained settings.",
+      "methods": ["Systems analysis", "Feasibility assessment", "Implementation framework design"],
+      "note": "Defended May 2021, on a full Chinese Government (MOFCOM) scholarship."
+    },
+    {
+      "id": "bsc-usl",
+      "title": "Mapping groundwater potential in the Freetown Complex: a geophysical approach",
+      "type": "BSc dissertation",
+      "venue": "University of Sierra Leone",
+      "year": "2017",
+      "status": "on-request",
+      "caseStudy": "groundwater",
+      "summary": "Electrical-resistivity surveying combined with geological and hydrogeological data into GIS potential maps for hard igneous rock, validated by subsequent drilling.",
+      "methods": ["Electrical-resistivity surveying", "GIS potential mapping", "Field validation"],
+      "note": "First class honours, graduated top of class. The method went on to inform real siting work."
+    },
+    {
+      "id": "act-wuppertal",
+      "title": "Becoming a Boat: towards a flood-resilient Wuppertal",
+      "type": "Consultancy report",
+      "venue": "Academic Consultancy Training, Wageningen University & Research",
+      "year": "2023",
+      "status": "internal",
+      "heldBy": "Municipality of Wuppertal / Wageningen University & Research",
+      "caseStudy": "wuppertal",
+      "summary": "Flood-risk assessment for the city and its suspended railway, combining historical records, climate projections, GIS and stakeholder workshops into an implementation roadmap.",
+      "methods": ["GIS flood-risk assessment", "Climate projections", "Stakeholder workshops"],
+      "note": "Delivered to the client; the report is theirs."
+    },
+    {
+      "id": "undrr-hazard-inventory",
+      "title": "Inventory of 54 global hazard information systems",
+      "type": "Dataset",
+      "venue": "UN Office for Disaster Risk Reduction",
+      "year": "2023",
+      "status": "internal",
+      "heldBy": "UNDRR",
+      "caseStudy": "un-disaster",
+      "summary": "Catalogued global hazard information systems, expanding the organisation's regional and hazard-type coverage, alongside a terminology standardisation for economic loss and damage reporting.",
+      "methods": ["Systematic source review", "Terminology harmonisation"],
+      "note": "Contributed to UNDRR's internal databases in support of the Sendai Framework Monitor."
+    },
+    {
+      "id": "undrr-tt-factsheet",
+      "title": "Risk-management factsheet — Trinidad and Tobago",
+      "type": "Policy brief",
+      "venue": "UN Office for Disaster Risk Reduction",
+      "year": "2023",
+      "status": "internal",
+      "heldBy": "UNDRR",
+      "caseStudy": "un-disaster",
+      "summary": "National-level risk-management factsheet produced to inform policy, drawing on the audited Caribbean disaster-loss data.",
+      "methods": ["Disaster-loss data audit", "Cross-dataset validation"],
+      "note": "Produced for national policy use."
+    },
+    {
+      "id": "promptcoach",
+      "title": "promptcoach — energy, water and carbon of LLM inference",
+      "type": "Code",
+      "venue": "Digital Society School",
+      "year": "2025",
+      "status": "public",
+      "url": "https://github.com/moseskolleh/promptcoach",
+      "caseStudy": "sustainable-ai",
+      "summary": "The research prototype behind EcoPrompt Coach. Calculates per-query energy, water and carbon across models, grid regions and cooling profiles.",
+      "methods": ["Inference energy modelling", "Grid-intensity and WUE accounting"],
+      "reproducible": true,
+      "note": "Open repository. The web tool on this site reproduces its calculation model."
+    },
+    {
+      "id": "ecoprompt-web",
+      "title": "EcoPrompt Coach — web tool and evidence ledger",
+      "type": "Tool",
+      "venue": "sustaintheworld",
+      "year": "2026",
+      "status": "public",
+      "url": "carbon-ai.html",
+      "caseStudy": "sustainable-ai",
+      "summary": "Interactive per-query footprint calculator, with an evidence ledger giving every emission factor a source, publication date, vintage, uncertainty range and review date. Input and output tokens are priced separately, because decode costs several times what prefill does.",
+      "methods": ["Published inference benchmarks", "Ember grid intensities", "Disclosed provider PUE/WUE"],
+      "reproducible": true,
+      "note": "Every factor is auditable from the page itself — no reading the source required."
+    },
+    {
+      "id": "carbon-data",
+      "title": "AI carbon factor set — sources, ranges and review dates",
+      "type": "Dataset",
+      "venue": "sustaintheworld",
+      "year": "2026",
+      "status": "public",
+      "url": "ai-carbon-data.js",
+      "caseStudy": "sustainable-ai",
+      "summary": "The machine-readable factor set behind both tools: ten models, thirteen grid regions, four cooling profiles, plus PUE, the token-energy model and everyday equivalents — each with a citation, a vintage and a plausible range.",
+      "methods": ["Literature synthesis", "Provider disclosure review"],
+      "reproducible": true,
+      "note": "Reusable on its own. A test fails the build if any factor loses its source, range or review date."
+    },
+    {
+      "id": "field-notes",
+      "title": "Field Notes",
+      "type": "Essays",
+      "venue": "sustaintheworld",
+      "year": "2026",
+      "status": "public",
+      "url": "index.html#notes",
+      "summary": "Short essays connecting the three threads: what 164 water points taught me about data, why I wrote a pessimistic future on purpose, and what to do about the footprint of a prompt.",
+      "methods": [],
+      "note": "Written for the site, not peer-reviewed."
+    },
+    {
+      "id": "journey-map",
+      "title": "Journey map generator — reproducible cartography",
+      "type": "Code",
+      "venue": "sustaintheworld",
+      "year": "2026",
+      "status": "public",
+      "url": "scripts/generate-journey-map.js",
+      "summary": "Builds the site's journey map from Natural Earth 50 m coastlines: a region-fitted Natural Earth projection, variable simplification, and deterministic output. Pinned dependencies, and a check that the committed SVG still matches the script.",
+      "methods": ["d3-geo Natural Earth projection", "TopoJSON variable simplification"],
+      "reproducible": true,
+      "note": "npm run map:build to regenerate, npm run map:check to verify. Byte-identical across runs."
+    }
+  ],
+
+  "reproducibility": {
+    "heading": "Reproducing what is here",
+    "body": "Everything public on this page runs from one clone with no build step and no API key. The two carbon tools share a single factor set, so they cannot quote different numbers. The map regenerates byte-identically from pinned dependencies. The narration is content-addressed, so re-rendering unchanged text costs nothing.",
+    "commands": [
+      { "command": "npm install && npm test", "does": "runs every suite, the map check and the asset-weight budgets" },
+      { "command": "npm run map:build", "does": "regenerates the journey map from Natural Earth data" },
+      { "command": "npm run map:check", "does": "proves the committed SVG still matches its generator" },
+      { "command": "npm run budget", "does": "measures what a first view actually costs, asset by asset" },
+      { "command": "npm run build:content", "does": "regenerates every page derived from content/" },
+      { "command": "npm run voice -- --dry-run", "does": "shows what re-rendering the narration would cost, and spends nothing" }
+    ]
+  }
+}

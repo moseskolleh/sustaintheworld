@@ -1,0 +1,419 @@
+/* ===================================================================
+   CONTENT PAGES — case studies and research outputs
+   Layered on carbon-ai.css, which already carries the shell: the nav, the
+   hero, the colour variables and the type scale. Only what those two pages
+   add lives here.
+   =================================================================== */
+
+.icon-flip { transform: scaleX(-1); }
+
+.mono-label {
+    font-family: var(--font-mono, 'IBM Plex Mono', monospace);
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+}
+
+/* -------------------------------------------------------------------
+   Role lenses
+   ------------------------------------------------------------------- */
+.cs-lenses {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 20px;
+}
+.cs-lenses-label { margin-right: 4px; }
+
+.cs-lens {
+    display: inline-block;
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.82rem;
+    transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+.cs-lens:hover,
+.cs-lens:focus-visible {
+    border-color: var(--primary-green);
+    color: var(--primary-green);
+}
+.cs-lens.is-active {
+    background: var(--primary-green);
+    border-color: var(--primary-green);
+    color: var(--darker-bg);
+    font-weight: 600;
+}
+
+.cs-lens-panel {
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--primary-green);
+    border-radius: 6px;
+    background: var(--card-bg);
+}
+.cs-lens-panel[hidden] { display: none; }
+.cs-lens-panel h2 {
+    margin: 0 0 10px;
+    font-size: 1.25rem;
+    color: var(--primary-green);
+}
+.cs-lens-tagline {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 400;
+    color: var(--text-secondary);
+    font-style: italic;
+    margin-top: 2px;
+}
+.cs-lens-summary { margin: 0 0 12px; line-height: 1.65; }
+.cs-lens-bestfor {
+    margin: 0 0 12px;
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+}
+.cs-lens-evidence {
+    margin: 0;
+    padding-left: 18px;
+    font-size: 0.85rem;
+    line-height: 1.7;
+    color: var(--text-secondary);
+}
+
+.cs-note {
+    margin: 0 0 28px;
+    padding: 12px 16px;
+    border-left: 3px solid var(--border);
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: var(--text-secondary);
+}
+
+/* -------------------------------------------------------------------
+   Case study cards
+   ------------------------------------------------------------------- */
+.cs-grid {
+    display: grid;
+    gap: 24px;
+}
+
+.cs-card {
+    padding: 26px 28px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--card-bg);
+    scroll-margin-top: 90px;
+}
+
+/* Out-of-lens studies stay on the page and stay readable — they are simply
+   set back, because a view that hides inconvenient work is a CV that lies by
+   omission. */
+.cs-card-secondary {
+    opacity: 0.72;
+    border-style: dashed;
+}
+.cs-card-secondary:hover,
+.cs-card-secondary:focus-within { opacity: 1; }
+
+.cs-card-head { margin-bottom: 22px; }
+.cs-card-meta { display: block; margin-bottom: 6px; }
+.cs-card-head h3 {
+    margin: 0 0 6px;
+    font-size: 1.5rem;
+    line-height: 1.25;
+}
+.cs-card-sub {
+    margin: 0 0 8px;
+    color: var(--primary-green);
+    font-size: 0.98rem;
+}
+.cs-card-org {
+    margin: 0;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+}
+
+.cs-stage { margin-bottom: 20px; }
+.cs-stage-h {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin: 0 0 8px;
+    font-size: 0.78rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--primary-green);
+}
+.cs-stage-n {
+    font-family: var(--font-mono, 'IBM Plex Mono', monospace);
+    color: var(--text-secondary);
+    opacity: 0.6;
+}
+.cs-stage p { margin: 0; line-height: 1.7; }
+
+.cs-method {
+    margin: 0;
+    padding-left: 18px;
+    line-height: 1.7;
+}
+.cs-method li { margin-bottom: 5px; }
+
+/* --- artifacts --- */
+.cs-artifacts,
+.cs-results {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 12px;
+}
+
+.cs-artifact {
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+}
+.cs-artifact-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+.cs-artifact-kind { opacity: 0.75; }
+.cs-artifact-name { line-height: 1.5; }
+.cs-artifact-name a {
+    color: var(--primary-green);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+.cs-artifact-note {
+    margin: 6px 0 0;
+    font-size: 0.82rem;
+    line-height: 1.55;
+    color: var(--text-secondary);
+}
+
+/* Availability, stated rather than implied. The colours are deliberately
+   flat: "held by the client" is not a failure, it is a fact. */
+.cs-status {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-family: var(--font-mono, 'IBM Plex Mono', monospace);
+    font-size: 0.62rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    cursor: help;
+}
+.cs-status-public {
+    background: rgba(124, 252, 0, 0.14);
+    color: var(--primary-green);
+    border: 1px solid rgba(124, 252, 0, 0.4);
+}
+.cs-status-on-request {
+    background: rgba(224, 168, 0, 0.12);
+    color: #e0a800;
+    border: 1px solid rgba(224, 168, 0, 0.35);
+}
+.cs-status-internal,
+.cs-status-planned {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+}
+
+/* --- results --- */
+.cs-result {
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--border);
+    border-radius: 6px;
+}
+.cs-result-verifiable { border-left-color: var(--primary-green); }
+
+.cs-result-claim {
+    margin: 0 0 8px;
+    font-weight: 600;
+    line-height: 1.5;
+}
+.cs-result-basis {
+    margin: 0 0 6px;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: var(--text-secondary);
+}
+.cs-result-basis .mono-label { display: block; margin-bottom: 2px; }
+.cs-result-check {
+    margin: 0;
+    font-size: 0.76rem;
+    font-style: italic;
+    color: var(--text-secondary);
+    opacity: 0.85;
+}
+
+.cs-caveat {
+    margin: 18px 0 0;
+    padding: 12px 14px;
+    background: rgba(224, 168, 0, 0.06);
+    border-left: 3px solid #e0a800;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: var(--text-secondary);
+}
+.cs-caveat .mono-label { display: block; margin-bottom: 3px; color: #e0a800; }
+
+.cs-footnote {
+    margin-top: 40px;
+    padding: 22px 24px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+.cs-footnote h2 { margin: 0 0 12px; font-size: 1.1rem; color: var(--primary-green); }
+.cs-footnote p { margin: 0 0 10px; line-height: 1.7; font-size: 0.9rem; }
+.cs-footnote code {
+    background: var(--darker-bg);
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: var(--primary-green);
+    font-size: 0.85em;
+}
+
+/* -------------------------------------------------------------------
+   Research outputs
+   ------------------------------------------------------------------- */
+.rs-intro { margin-bottom: 34px; }
+.rs-intro p { line-height: 1.7; }
+
+.rs-summary {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 16px 0;
+    padding: 0;
+}
+.rs-summary li {
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+.rs-summary strong {
+    color: var(--primary-green);
+    font-size: 1.1rem;
+    margin-right: 4px;
+}
+
+.rs-key {
+    padding: 12px 16px;
+    border-left: 3px solid var(--primary-green);
+    background: rgba(124, 252, 0, 0.04);
+    border-radius: 4px;
+    font-size: 0.85rem;
+    line-height: 1.65;
+    color: var(--text-secondary);
+}
+
+.rs-group { margin-bottom: 34px; }
+.rs-group > h2 {
+    margin: 0 0 14px;
+    font-size: 1.05rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--primary-green);
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+}
+
+.rs-item {
+    padding: 18px 20px;
+    margin-bottom: 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--card-bg);
+    scroll-margin-top: 90px;
+}
+.rs-item-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+.rs-item h3 {
+    margin: 0 0 4px;
+    font-size: 1.08rem;
+    line-height: 1.4;
+}
+.rs-item h3 a {
+    color: var(--primary-green);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+.rs-venue {
+    margin: 0 0 10px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+.rs-summary-text { margin: 0 0 10px; line-height: 1.65; font-size: 0.92rem; }
+.rs-methods,
+.rs-note {
+    margin: 0 0 6px;
+    font-size: 0.82rem;
+    line-height: 1.6;
+    color: var(--text-secondary);
+}
+.rs-methods .mono-label { margin-right: 4px; }
+.rs-link { margin: 10px 0 0; font-size: 0.85rem; }
+.rs-link a { color: var(--primary-green); text-decoration: none; }
+.rs-link a:hover { text-decoration: underline; }
+
+.rs-repro {
+    margin-top: 40px;
+    padding: 22px 24px;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--primary-green);
+    border-radius: 8px;
+}
+.rs-repro h2 { margin: 0 0 12px; font-size: 1.1rem; color: var(--primary-green); }
+.rs-repro > p { margin: 0 0 16px; line-height: 1.7; font-size: 0.92rem; }
+
+.rs-commands { margin: 0; }
+.rs-commands dt { margin-top: 10px; }
+.rs-commands dt code {
+    background: var(--darker-bg);
+    padding: 4px 8px;
+    border-radius: 4px;
+    color: var(--primary-green);
+    font-size: 0.82rem;
+}
+.rs-commands dd {
+    margin: 4px 0 0 2px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.55;
+}
+
+/* -------------------------------------------------------------------
+   Narrow screens
+   ------------------------------------------------------------------- */
+@media (max-width: 640px) {
+    .cs-card { padding: 20px 18px; }
+    .cs-card-head h3 { font-size: 1.25rem; }
+    .cs-lens-panel { padding: 16px 18px; }
+    .rs-item { padding: 16px 16px; }
+    .rs-repro, .cs-footnote { padding: 18px 18px; }
+}
+
+/* Low-energy and reduced-motion visitors get no transitions to pay for. */
+@media (prefers-reduced-motion: reduce) {
+    .cs-lens { transition: none; }
+}
