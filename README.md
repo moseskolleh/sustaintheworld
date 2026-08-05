@@ -18,7 +18,7 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 - **The spoken page**: a `listen` control on every section, and the choice of voice is itself the argument. The browser's own speech engine transfers **zero bytes**; the recorded narration (pre-rendered via Fish Audio, synthetic — see [Narration](#narration-the-spoken-page)) is fetched only on click and labelled with exactly what it transfers. Same words, two costs, visitor's call. Nothing ever autoplays
 - **Carbon-aware by construction**: images ship as optimized WebP, and a first view costs about **235 KB over the wire**, against a 300 KB ceiling `npm test` enforces — a budget, not a number in a README (see [Performance](#performance)). A live footer badge weighs each visit in the browser (Resource Timing API × Sustainable Web Design model), counting network transfer only. A low-energy mode pauses all animation and honours `prefers-reduced-motion`
 - **[Case studies](case-studies.html), evidence-first**: the same six projects as **problem → method → artifact → result**. Every result carries the basis it rests on and says plainly whether you can check it from outside; every artifact says whether it is public, available on request, or held by the client. See [Content pipeline](#content-pipeline)
-- **Role-specific lenses**: `case-studies.html?lens=water`, `?lens=climate-risk`, `?lens=sustainable-ai` — shareable views that reframe the portfolio for one kind of role. They **reorder and frame, they never filter**: every case study stays on the page in every view, because a view that hides inconvenient work is a CV that lies by omission. Works with JavaScript off
+- **Role-specific lenses**: [`case-studies-water.html`](case-studies-water.html), [`-climate-risk`](case-studies-climate-risk.html), [`-sustainable-ai`](case-studies-sustainable-ai.html) — each role view is its own fully-rendered static page, so it needs **no JavaScript at all** (these pages ship none). They **reorder and frame, they never filter**: every case study stays on the page in every view, set back rather than removed, because a view that hides inconvenient work is a CV that lies by omission
 - **[Research outputs](research.html)**: theses, reports, datasets, code and tools, each labelled public / on request / held by the client. No DOI, journal or conference is named anywhere, because none of this work has one — and a test fails the build if one ever appears without proof
 - **Borehole core-log experience timeline**: career history logged the way a geologist logs a core — depth is time, every layer is a chapter
 - **"AI, Weighed" live widget**: a homepage slice of the EcoPrompt Coach research — model × workload × grid → energy, carbon, water, in units people can feel
@@ -301,6 +301,7 @@ npm test          # everything below
 | `npm run map:check` | the committed `journey-map.svg` still matches its generator |
 | `npm run budget` | the weights this README quotes (see [Performance](#performance)) |
 | `npm run mcp:verify` | the pinned MCP package still hashes to the reviewed tarball (needs network) |
+| `npm run links:check` | every approved off-site link still resolves (needs network) |
 
 The suites, and the failure each one exists to prevent:
 
@@ -321,9 +322,11 @@ The suites, and the failure each one exists to prevent:
 - **`content.test.js`** — the pages must agree with `content/profile.json`
   (dates, degrees, certifications, JSON-LD, links, sitemap).
 - **`portfolio.test.js`** — every case study has all four stages and every
-  result a basis; no artifact claims to be public without a working link; the
-  lenses reorder without ever dropping a case study; and the validator is fed
-  deliberately fabricated links to prove it still rejects them.
+  result a basis; no artifact claims to be public without a working link; each
+  lens page is checked **with scripting disabled** for the right framing, the
+  right order and every case study still present; and the validator is fed
+  deliberately fabricated links — including a real host with an invented path
+  — to prove it still rejects them.
 - **`html.test.js`** — button types, named landmarks, dialog semantics, image
   dimensions, labelled controls, resolvable links, valid JSON-LD.
 
@@ -364,11 +367,14 @@ should fail the build rather than ship. `scripts/lib/content.js` refuses:
 - **An artifact that claims to be public without a working link.** `status` is
   one of `public` / `on-request` / `internal` / `planned`; only `public` may
   carry a URL, and anything `internal` must name who holds it.
-- **A link this repository has not already vouched for.** Every URL must resolve
-  to a file in the repo or to a host on a short allowlist. Writing a
-  plausible-looking DOI or repository URL fails `npm test` — which is the
-  point, because a fabricated link is the easiest thing to write and the
-  hardest thing for a reader to check.
+- **A link this repository has not already vouched for.** Every URL must
+  resolve to a file in the repo, or appear *in full* in `APPROVED_LINKS`.
+  A host allowlist was not enough — it accepted any path on a trusted host, so
+  `https://github.com/moseskolleh/does-not-exist` sailed through. Adding a URL
+  is now a visible line in a diff. `npm run links:check` goes further and
+  actually fetches them; it needs network, so it is not part of `npm test`,
+  and it reports hosts that block automated requests as unverifiable rather
+  than manufacturing a pass.
 - **A venue that implies peer review without a DOI.** Three theses were written
   and defended; none is published in a journal, and nothing on the site says
   otherwise.
@@ -439,9 +445,10 @@ every run of `npm test`, and the build fails when they are exceeded.
 
 | Budget | Measured | Ceiling |
 |---|---|---|
-| First view of the homepage, over the wire | ~234 KB | 300 KB |
-| Case studies page, over the wire | ~14 KB | 40 KB |
-| Research outputs page, over the wire | ~10 KB | 30 KB |
+| First view of the homepage, first-party over the wire | ~234 KB | 300 KB |
+| Case studies page, first-party over the wire | ~12 KB | 40 KB |
+| Research outputs page, first-party over the wire | ~10 KB | 30 KB |
+| Distinct third-party origins | 2 (font hosts) | 2 |
 | Text-only field report, whole page | ~8 KB | 12 KB |
 | Largest single image | ~200 KB | 220 KB |
 | Every image in the repository | ~3.24 MB | 3.5 MB |
@@ -449,7 +456,13 @@ every run of `npm test`, and the build fails when they are exceeded.
 
 **What "over the wire" means.** GitHub Pages compresses text, so HTML, CSS and
 JS are counted gzipped — what a visitor actually downloads — while images are
-counted as-is. The first view is `index.html`, its stylesheet and scripts, and
+counted as-is. These are **first-party bytes**: files in this repository. The
+pages also request a stylesheet and font files from Google Fonts, and those
+cannot be measured from here, because the stylesheet serves different woff2
+subsets per browser. `npm run budget` names every third-party origin
+separately and fails if a new one appears — the count is the part worth
+enforcing, since another origin matters more than the exact size of a font
+file. The first view is `index.html`, its stylesheet and scripts, and
 the one preloaded hero image. Everything else on the page is lazy: the other
 32 images load as you reach them, the remaining hero backgrounds load when the
 rotation needs them, and no narration is fetched until someone presses play.

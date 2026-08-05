@@ -17,13 +17,17 @@
 //      a url; anything else must say who holds it. "I built a thing" means
 //      little without saying whether a reader can see it.
 //
-//   3. Every url must resolve — to a file in this repository, or to a host
-//      the repository already trusts (see TRUSTED_HOSTS). This is the rule
-//      that makes an invented link fail the build rather than ship.
+//   3. Every url must resolve — to a file in this repository, or to an
+//      approved off-site URL listed in full in APPROVED_LINKS. This is the
+//      rule that makes an invented link fail the build rather than ship.
 //
 // Rule 3 matters more than it looks. A plausible-looking DOI or repository
 // URL is the easiest thing in the world to write and the hardest thing for a
 // reader to check. Here, writing one fails `npm test`.
+//
+// It was originally an allowlist of *hosts*, which was too weak: every path
+// on an allowed host passed, so an invented repository URL sailed through
+// while the README claimed such links were rejected. Full URLs only now.
 // ===================================================================
 
 const fs = require('fs');
@@ -32,16 +36,28 @@ const path = require('path');
 const ROOT = path.join(__dirname, '..', '..');
 const CONTENT_DIR = path.join(ROOT, 'content');
 
-// Hosts this repository already links to elsewhere. Adding one is a decision,
-// not an accident — which is the point.
-const TRUSTED_HOSTS = [
-    'github.com',
-    'moseskolleh.github.io',
-    'linkedin.com',
-    'www.linkedin.com',
-    'sustainablewebdesign.org',
-    'httparchive.org'
-];
+// Every off-site URL the content may link to, in full.
+//
+// An allowlist of *hosts* was not enough: it accepted any path on a trusted
+// host, so `https://github.com/moseskolleh/does-not-exist` passed while the
+// pipeline claimed invented links were rejected. Checking the whole URL closes
+// that — a fabricated link now fails `npm test` unless somebody also adds it
+// here, which is a visible line in a diff for a reviewer to question.
+//
+// This is a static check and makes no network request, so it proves the URL
+// was approved, not that the remote is up today. `npm run links:check`
+// actually fetches them; it needs network, so it is not part of `npm test`.
+// `botBlocked` marks a host that refuses automated requests regardless of
+// whether the page exists — LinkedIn answers 403 to anything without a
+// browser session. Recording that is more honest than letting the link
+// checker cry wolf every run, or than quietly dropping the URL from the
+// checks: it is reported as unverifiable-by-machine, not as passing.
+const APPROVED_LINKS = {
+    'https://github.com/moseskolleh': { note: 'GitHub profile' },
+    'https://github.com/moseskolleh/promptcoach': { note: 'The EcoPrompt Coach research prototype' },
+    'https://github.com/moseskolleh/sustaintheworld': { note: 'This repository' },
+    'https://linkedin.com/in/moseskollehsesay': { note: 'LinkedIn profile', botBlocked: true }
+};
 
 const STATUSES = ['public', 'on-request', 'internal', 'planned'];
 
@@ -69,15 +85,19 @@ function urlProblem(url) {
         return fs.existsSync(path.join(ROOT, local)) ? null : `points at ${local}, which is not in the repository`;
     }
 
-    let host;
     try {
-        host = new URL(url).host;
+        new URL(url);
     } catch (err) {
-        return `is not a valid URL`;
+        return 'is not a valid URL';
     }
-    if (!TRUSTED_HOSTS.includes(host)) {
-        return `points at ${host}, which is not a host this repository already uses — ` +
-               `add it to TRUSTED_HOSTS in scripts/lib/content.js only if you have checked the link yourself`;
+
+    // Compared in full, and normalised only for a trailing slash — the whole
+    // point is that a path nobody approved does not slip through on the
+    // strength of its host.
+    const normalised = url.replace(/\/$/, '');
+    if (!Object.prototype.hasOwnProperty.call(APPROVED_LINKS, normalised)) {
+        return `is not on the approved list — add the exact URL to APPROVED_LINKS in ` +
+               `scripts/lib/content.js, and only after opening it yourself`;
     }
     return null;
 }
@@ -228,7 +248,7 @@ function orderForLens(caseStudies, lensId) {
 module.exports = {
     ROOT,
     CONTENT_DIR,
-    TRUSTED_HOSTS,
+    APPROVED_LINKS,
     STATUSES,
     load,
     loadAll,
