@@ -1,51 +1,7 @@
 // Regression tests for script.js + index.html.
 // Run with: npm install && npm test
 
-const fs = require('fs');
-const path = require('path');
-const { JSDOM } = require('jsdom');
-
-const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-const js = fs.readFileSync(path.join(__dirname, '..', 'script.js'), 'utf8');
-const voiceJs = fs.readFileSync(path.join(__dirname, '..', 'voice-scripts.js'), 'utf8');
-
-function run(theme) {
-    const dom = new JSDOM(html, { runScripts: 'outside-only', pretendToBeVisual: true, url: 'https://example.com/' });
-    const { window } = dom;
-
-    // Seed localStorage before script runs
-    window.localStorage.setItem('theme', theme);
-
-    // Capture thrown errors from any listener (jsdom logs listener errors to console)
-    const errors = [];
-    window.addEventListener('error', (e) => errors.push(e.error || e.message));
-    const origConsoleError = window.console.error;
-    window.console.error = (...args) => {
-        errors.push(args.map(String).join(' '));
-        // swallow to keep test output clean
-    };
-    // Node-level: jsdom uses process.emit('uncaughtException') for some paths
-    const onUncaught = (err) => errors.push(err);
-    process.on('uncaughtException', onUncaught);
-
-    // Stub things the script touches but jsdom doesn't fully implement
-    window.HTMLElement.prototype.scrollIntoView = function () {};
-    window.scrollTo = () => {};
-    window.IntersectionObserver = class {
-        constructor() {}
-        observe() {}
-        unobserve() {}
-        disconnect() {}
-    };
-    window.requestAnimationFrame = (fn) => setTimeout(fn, 0);
-
-    // Execute the site scripts in the window context, in page order —
-    // script.js reads window.VoiceScripts, so this one has to land first.
-    window.eval(voiceJs);
-    window.eval(js);
-
-    return { window, errors };
-}
+const { run } = require('./harness.js');
 
 let failures = 0;
 function assert(cond, msg) {

@@ -11,12 +11,12 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 
 ## Features
 
-- **Living journey map**: a hand-built SVG map of the journey region — West Africa to East Asia, so every stop gets real resolution instead of a world map that's half empty ocean (Natural Earth 50 m coastlines, simplified hardest away from the Rhine delta where the map zooms deepest, zero runtime dependencies). It flies from Freetown to Changsha, Bonn, Wageningen and Amsterdam as you scroll, and fieldwork sites like Wuppertal join the map when the story reaches them. Regenerate with `npm install d3-geo topojson-client topojson-simplify world-atlas && node scripts/generate-journey-map.js`, then sync the printed stop pixels into `script.js`
+- **Living journey map**: a hand-built SVG map of the journey region — West Africa to East Asia, so every stop gets real resolution instead of a world map that's half empty ocean (Natural Earth 50 m coastlines, simplified hardest away from the Rhine delta where the map zooms deepest, zero runtime dependencies). It flies from Freetown to Changsha, Bonn, Wageningen and Amsterdam as you scroll, and fieldwork sites like Wuppertal join the map when the story reaches them. Regenerate with `npm install && npm run map:build`, then sync the printed stop pixels into `script.js`; `npm run map:check` proves the committed SVG still matches the script and runs in CI
 - **"Site the borehole" mini-game**: a playable resistivity profile in the Groundwater dossier — read the curve, place the rig, drill. Water-bearing fracture, clay pocket or dry hole; the score converges on the point: blind drilling hits ~30%, reading the curve hit 70%
 - **"Don't let it become a boat" flood scene**: an interactive Wupper cross-section in the Wuppertal dossier — slide the river from a calm day to July 2021 and watch the margin under the Schwebebahn's hanging cars shrink
 - **Field terminal**: press <code>`</code> anywhere (or the footer button) for a hidden green-on-black terminal — try `journey`, `drill`, `co2`, `voice`, `kushe`, `help`
-- **The spoken page**: a `listen` control on every section, and the choice of voice is itself the argument. The browser's own speech engine downloads **zero bytes** — the button says `0.00 g` and means it. A recorded voice (rendered ahead of time via Fish Audio) is the second option, fetched only on click and labelled with exactly what it weighs. Same words, two costs, visitor's call. Nothing ever autoplays. See [Narration](#narration-the-spoken-page)
-- **Carbon-aware by construction**: all images ship as optimized WebP (~25 MB → under 2 MB for the whole site), and a live footer badge weighs each visit in the browser (Resource Timing API × Sustainable Web Design model). A low-energy mode pauses all animation and honours `prefers-reduced-motion`
+- **The spoken page**: a `listen` control on every section, and the choice of voice is itself the argument. The browser's own speech engine transfers **zero bytes**; the recorded narration (pre-rendered via Fish Audio, synthetic — see [Narration](#narration-the-spoken-page)) is fetched only on click and labelled with exactly what it transfers. Same words, two costs, visitor's call. Nothing ever autoplays
+- **Carbon-aware by construction**: images ship as optimized WebP, and a first view costs about **235 KB over the wire**, against a 300 KB ceiling `npm test` enforces — a budget, not a number in a README (see [Performance](#performance)). A live footer badge weighs each visit in the browser (Resource Timing API × Sustainable Web Design model), counting network transfer only. A low-energy mode pauses all animation and honours `prefers-reduced-motion`
 - **Borehole core-log experience timeline**: career history logged the way a geologist logs a core — depth is time, every layer is a chapter
 - **"AI, Weighed" live widget**: a homepage slice of the EcoPrompt Coach research — model × workload × grid → energy, carbon, water, in units people can feel
 - **Evidence-first skills**: no invented percentages — every tool links to the project where it earned its place, plus real field numbers (164 water points itemized, 70% strike rate)
@@ -133,29 +133,51 @@ To deploy or update:
 Every section carries a `listen` control. There are two voices behind it, and
 which one a visitor picks is part of the point the site is making.
 
-| | browser voice | recorded voice |
+| | browser voice | recorded narration |
 |---|---|---|
 | engine | `window.speechSynthesis` | pre-rendered MP3 (Fish Audio) |
-| downloaded | **nothing** | ~40 KB/section, on click only |
-| label shown | `0.00 g · 0 KB` | the track's real grams and KB |
+| transferred | **nothing** | ~330–520 KB/section, on click only |
+| label shown | `0 KB transferred` | `≈0.14 g transfer · 395 KB` |
 | needs a build step | no | yes — `npm run voice` |
 | default | when no recording exists | whenever a recording exists |
 
-The recorded voice wins by default once it is there — it is a real human
-reading, and it is why the narration was commissioned. The browser voice stays
-one click away and still says `0.00 g`, so the lighter option is offered rather
-than imposed. Anyone who picks a side keeps their choice.
+**Whose voice it is.** The recorded narration is *Spiritual African Narrator*, a
+stock text-to-speech voice from the Fish Audio library. **It is synthetic — not
+a recording of Moses, and not a clone of anyone's voice.** No personal voice
+sample was ever uploaded, so no third party's consent is involved. The player
+labels the option with the voice's real title and says it is synthetic; the
+manifest carries `voiceTitle`, `voiceKind` and `voiceProvider` so nothing has to
+hardcode a name. It used to be labelled "Moses", which implied the opposite.
+To narrate in a real voice, run `npm run voice -- --clone <sample>` with a
+recording you have the right to use.
 
-The browser path costs nothing because the voice is already installed on the
-listener's device. Only **offline** voices are used: Chrome's default network
-voices stream audio from Google's servers, which would quietly make the
-`0.00 g` claim false. When a browser has no offline voice, the label says so
-instead of printing a number the page can't stand behind.
+**What the gram figures mean.** They are **estimated network-transfer
+emissions** — bytes moved, times the Sustainable Web Design constant
+(0.36 g CO₂e/MB). That is all they are. They exclude the energy the listener's
+device spends decoding audio, driving a speaker, and — for the browser voice —
+synthesising the speech in the first place. The browser voice transfers zero
+bytes, which is genuinely zero *transfer* emissions; it is not free. Every
+figure in the player says "transfer" for that reason.
 
-**The site works with no audio files at all.** Until `assets/audio/voice-manifest.json`
-exists, the controls use the browser voice and the recorded option stays hidden.
-If a browser has neither a voice nor a recording, the controls remove themselves
-rather than sit there dead. Nothing autoplays, in any mode.
+Only **offline** speech voices are used: Chrome's default network voices stream
+audio from Google's servers, so the label says "streamed by your browser · size
+unknown" rather than printing a zero the page cannot stand behind.
+
+**The site works with no audio files at all.** Until
+`assets/audio/voice-manifest.json` exists, the controls use the browser voice
+and the recorded option stays hidden. If a browser has neither a voice nor a
+recording, the controls stay out of the page rather than sit there dead — and
+if a recording fails to load with no speech engine to fall back on, the player
+says so and offers a retry instead of silently pretending to play. Nothing
+autoplays, in any mode.
+
+**Cost control.** `scripts/lib/voice-signature.js` is the single definition of
+"has this track already been rendered?", imported by both the generator and the
+chunk assembler. When they each had their own copy they disagreed, and
+`npm run voice` offered to re-render all ten sections — about 7,700 Fish Audio
+credits for audio that already existed. `tests/voice.test.js` runs the real
+generator in dry-run against the committed manifest and fails if it plans to
+spend anything.
 
 ### Editing what it says
 
@@ -262,6 +284,55 @@ It writes `.wav` (gitignored) so mock output can never be mistaken for the real
 narration. Useful for checking a script edit reads well before paying to render
 it, and for confirming the wiring after any change to the generator.
 
+## Tests and checks
+
+```bash
+npm install
+npm test          # everything below
+```
+
+| Command | What it holds in place |
+|---|---|
+| `npm run test:unit` | the six suites in `tests/` |
+| `npm run map:check` | the committed `journey-map.svg` still matches its generator |
+| `npm run budget` | the weights this README quotes (see [Performance](#performance)) |
+| `npm run mcp:verify` | the pinned MCP package still hashes to the reviewed tarball (needs network) |
+
+The suites, and the failure each one exists to prevent:
+
+- **`bugs.test.js`** — the original regressions: `href="#"` scroll handling,
+  the theme icon matching the persisted theme, the terminal firing `done()`
+  twice, narration scripts surviving sentence-splitting, every script having a
+  mount point, nothing autoplaying.
+- **`resilience.test.js`** — storage the browser refuses to hand over must not
+  abort the script (one unguarded `localStorage.getItem` at module scope used
+  to take the rest of the file with it); single-letter shortcuts must not fire
+  while a `<select>`, button or contenteditable has focus; a failed recording
+  with no speech engine must not leave a dead player.
+- **`carbon.test.js`** — negative, zero, `NaN` and absurd inputs, in the model
+  and through the real page; the input/output token split; and the evidence
+  ledger, which fails if any factor loses its source, range or review date.
+- **`voice.test.js`** — runs the real generator in dry-run against the
+  committed narration and fails if it plans to spend a single credit.
+- **`content.test.js`** — the pages must agree with `content/profile.json`
+  (dates, degrees, certifications, JSON-LD, links, sitemap).
+- **`html.test.js`** — button types, named landmarks, dialog semantics, image
+  dimensions, labelled controls, resolvable links, valid JSON-LD.
+
+### One source for the profile
+
+Employment dates, degrees, certifications and profile links live in
+[`content/profile.json`](content/profile.json). Nothing generates the pages
+from it — this stays a no-build static site — but `content.test.js` fails when
+a page disagrees with it, which is how a certification that appeared only on
+the text-only edition was found. Edit the JSON first, then make the pages
+match; the test names the ones that are behind.
+
+It also carries `meta.verifiedOn`: the date a human last confirmed the
+open-ended facts (the "Present" role in particular) were still true. When that
+goes stale the test prints a notice rather than failing — a suite that goes red
+on a calendar date is one people learn to ignore.
+
 ## Customization Guide
 
 ### Colors
@@ -301,22 +372,65 @@ To change the color scheme, edit the CSS variables in `style.css`:
 
 ## Performance
 
-- **Lighthouse Score**: 95+ (Performance, Accessibility, Best Practices, SEO)
-- **Load Time**: < 2 seconds on standard connections
+This section used to claim a Lighthouse score of 95+ and sub-two-second loads,
+with nothing measuring either. Claims like that decay quietly: by the time
+anyone checked, the image total had grown past 3 MB while the README still said
+"under 2 MB". So the numbers below are the ones `npm run budget` measures on
+every run of `npm test`, and the build fails when they are exceeded.
+
+| Budget | Measured | Ceiling |
+|---|---|---|
+| First view, over the wire | ~234 KB | 300 KB |
+| Largest single image | ~200 KB | 220 KB |
+| Every image in the repository | ~3.24 MB | 3.5 MB |
+| Every narration track | ~4.13 MB | 4.5 MB |
+
+**What "over the wire" means.** GitHub Pages compresses text, so HTML, CSS and
+JS are counted gzipped — what a visitor actually downloads — while images are
+counted as-is. The first view is `index.html`, its stylesheet and scripts, and
+the one preloaded hero image. Everything else on the page is lazy: the other
+32 images load as you reach them, the remaining hero backgrounds load when the
+rotation needs them, and no narration is fetched until someone presses play.
+So "every image in the repository" is the cost of opening every gallery, not
+the cost of arriving.
+
+Run `npm run budget` to see the current numbers, asset by asset. Raising a
+ceiling is deliberate: change it in `scripts/check-budget.js` **and** update
+this table in the same commit.
+
+**Not measured here.** Render time, layout stability and Lighthouse scores need
+a real browser, and nothing in this repository runs one. No score is claimed
+for that reason. To check for yourself:
+
+```bash
+npx lighthouse https://moseskolleh.github.io/sustaintheworld/ --view
+```
+
 - **Optimizations**:
-  - Minimal dependencies (no heavy frameworks)
-  - Lazy loading for images
+  - Minimal dependencies (no framework, no build step)
+  - Lazy loading for images and hero backgrounds
   - Debounced scroll events
-  - Optimized CSS and JavaScript
+  - Intrinsic `width`/`height` on every image, so nothing shifts as they arrive
 
 ## Accessibility
 
-- Semantic HTML5 elements
-- ARIA labels where appropriate
-- Keyboard navigation support
-- Skip to content link
-- High contrast ratios
-- Responsive text sizing
+Checked by `tests/html.test.js` on every run, so these are enforced rather than
+aspirational:
+
+- Semantic HTML5 elements, one `<main>` per page, named `<nav>` landmarks
+- Every `<button>` carries an explicit `type` (a missing one submits the form
+  it sits in)
+- Every form control has an accessible name; every image has `alt` plus
+  intrinsic `width`/`height`
+- The lightbox is a real modal: `role="dialog"`, `aria-modal`, an accessible
+  name, focus moved in and restored on close, Escape to close, Tab kept inside
+- Skip-to-content link that targets an element which exists
+- Single-letter shortcuts stand down while a form control has focus
+- No duplicate `id`s, no focusable element inside an `aria-hidden` container
+
+Not machine-checked, and worth a manual pass when the design changes: contrast
+ratios, focus-visible styling, and screen-reader flow through the interactive
+widgets.
 
 ## Contact
 

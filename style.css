@@ -4118,6 +4118,43 @@ body.light-mode .dispatch-bar {
     overflow: hidden;
 }
 
+/* Who is reading, and what the weight figure does and does not cover. Small
+   and quiet, but always present while the player is open — the alternative is
+   a label that lets a synthetic voice pass for a person. */
+.dispatch-voice-note {
+    margin: 8px 0 0;
+    font-size: 0.7rem;
+    line-height: 1.45;
+    color: var(--text-secondary);
+    opacity: 0.85;
+}
+.dispatch-voice-note[hidden] { display: none; }
+
+/* The recorded-voice button carries the narrator's real title, which is
+   longer than "Moses" was. Let it truncate rather than break the bar. */
+.dispatch-voices button[data-mode="human"] {
+    max-width: 15ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+@media (max-width: 480px) {
+    .dispatch-voices button[data-mode="human"] { max-width: 10ch; }
+}
+
+/* Neither engine could play. The bar stays up carrying the reason, and the
+   play button becomes a retry — the failure has to look different from
+   ordinary playback, or it reads as "paused". */
+.dispatch-bar.dispatch-failed {
+    border-color: #e0a800;
+}
+.dispatch-bar.dispatch-failed .dispatch-caption {
+    color: #e0a800;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+}
+.dispatch-bar.dispatch-failed .dispatch-progress { opacity: 0.35; }
+
 .dispatch-progress {
     height: 2px;
     background: var(--line-soft);

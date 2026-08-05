@@ -2,8 +2,12 @@
   "note": "Provenance for the recorded narration. Each section of voice-scripts.js was rendered by Fish Audio in sentence-boundary chunks (the free API caps one call at 500 bytes of text). scripts/assemble-voice.js downloads these task URLs and stitches them into assets/audio/<id>.mp3.",
   "voiceId": "650ec6ce2dda4f1faf86fae5d591ca32",
   "voiceTitle": "Spiritual African Narrator",
+  "voiceKind": "synthetic",
+  "voiceProvider": "Fish Audio",
+  "voiceNote": "A stock text-to-speech voice from the Fish Audio voice library, used under that library's terms. It is NOT a recording of Moses Kolleh Sesay and is not a clone of anyone's voice — no personal voice sample was uploaded, so there is no third party whose consent is at stake. The site labels it as a synthetic reading for exactly this reason. To narrate in a real voice instead, run `npm run voice -- --clone <sample>` with a sample you have the right to use.",
   "model": "s1",
   "bitrate": 64,
+  "maxBytes": 500,
   "renderedOn": "2026-07-31",
   "sections": [
     {

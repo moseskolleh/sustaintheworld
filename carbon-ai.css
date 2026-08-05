@@ -191,6 +191,21 @@ a { color: var(--primary-green); }
     outline-offset: 1px;
 }
 
+/* Shown when a typed value is outside the range the model can be evaluated
+   on, so the reading on screen is never quietly answering a different
+   question than the one in the input box. */
+.ca-notice {
+    margin: 4px 0 0;
+    padding: 8px 12px;
+    border-left: 3px solid #e0a800;
+    background: rgba(224, 168, 0, 0.08);
+    border-radius: 4px;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    color: var(--text-secondary);
+}
+.ca-notice[hidden] { display: none; }
+
 .ca-out {
     display: grid;
     gap: 12px;
@@ -381,6 +396,80 @@ a { color: var(--primary-green); }
     border-radius: 4px;
     color: var(--primary-green);
     font-size: 0.85rem;
+}
+
+/* Evidence ledger. Wide by nature — six columns of provenance — so it scrolls
+   inside its own box rather than making the page scroll sideways. */
+.ca-ledger-wrap {
+    overflow-x: auto;
+    margin: 16px 0;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+}
+.ca-ledger {
+    width: 100%;
+    min-width: 640px;
+    border-collapse: collapse;
+    font-size: 0.78rem;
+}
+.ca-ledger th,
+.ca-ledger td {
+    padding: 7px 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+}
+.ca-ledger thead th {
+    position: sticky;
+    top: 0;
+    background: var(--darker-bg);
+    color: var(--primary-green);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.68rem;
+}
+.ca-ledger-group th {
+    background: rgba(124, 252, 0, 0.06);
+    color: var(--text-primary);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+.ca-ledger-note td {
+    padding-top: 0;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-size: 0.72rem;
+    line-height: 1.5;
+    font-style: italic;
+}
+.ca-reviewed {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+.ca-sources-heading {
+    margin: 20px 0 8px;
+    font-size: 0.95rem;
+    color: var(--primary-green);
+}
+.ca-sources {
+    padding-left: 20px;
+    font-size: 0.78rem;
+    line-height: 1.6;
+    color: var(--text-secondary);
+}
+.ca-sources li { margin-bottom: 8px; }
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
 }
 
 .ca-disclaimer {

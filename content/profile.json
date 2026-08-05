@@ -1,0 +1,147 @@
+{
+  "$comment": [
+    "SINGLE SOURCE OF TRUTH for the time-sensitive facts about Moses Kolleh Sesay.",
+    "",
+    "The same employment dates, degrees, certifications and profile links were",
+    "written out by hand in index.html, its JSON-LD block, field-report.html, the",
+    "narration scripts, the README and the CV. Six copies of a fact is six chances",
+    "for them to disagree, and they already had: field-report.html listed a",
+    "certification the rest of the site did not.",
+    "",
+    "Nothing generates the pages from this file — the site is deliberately a",
+    "no-build static site, and turning it into a templated one is a bigger change",
+    "than the problem warrants. Instead tests/content.test.js reads this file and",
+    "fails if any page disagrees with it. Edit here first, then make the pages",
+    "match; the test tells you which ones are behind.",
+    "",
+    "`verifiedOn` is the date a human last confirmed the ongoing facts (the",
+    "'Present' role in particular) were still true. The test prints a loud notice",
+    "when it goes stale."
+  ],
+
+  "meta": {
+    "verifiedOn": "2026-08-05",
+    "staleAfterMonths": 6
+  },
+
+  "person": {
+    "name": "Moses Kolleh Sesay",
+    "jobTitle": "Sustainability & Climate Analyst",
+    "email": "moseskollehsesay@gmail.com",
+    "locality": "Amsterdam",
+    "country": "NL",
+    "coordinates": "52.3676° N, 4.9041° E"
+  },
+
+  "links": {
+    "site": "https://moseskolleh.github.io/sustaintheworld/",
+    "github": "https://github.com/moseskolleh",
+    "linkedin": "https://linkedin.com/in/moseskollehsesay",
+    "cv": "assets/Moses_Kolleh_Sesay_CV.pdf"
+  },
+
+  "currentRole": {
+    "$comment": "The one fact on the site with an open end date. Everything else is closed and cannot rot.",
+    "title": "Researcher — Sustainable Artificial Intelligence",
+    "organization": "Digital Society School",
+    "parentOrganization": "Amsterdam University of Applied Sciences",
+    "partner": "Ministry of Finance (Ministerie van Financiën)",
+    "location": "Amsterdam, The Netherlands",
+    "start": "2025-09",
+    "end": null,
+    "displayDates": "Sept 2025 — Present"
+  },
+
+  "experience": [
+    {
+      "title": "Researcher — Sustainable Artificial Intelligence",
+      "organization": "Digital Society School",
+      "displayDates": "Sept 2025 — Present",
+      "start": "2025-09",
+      "end": null
+    },
+    {
+      "title": "Cohort 7 Member — Sustainability Consulting Accelerator",
+      "organization": "OnePointFive (opf.degree)",
+      "displayDates": "Mar 2025 — Apr 2025",
+      "start": "2025-03",
+      "end": "2025-04"
+    },
+    {
+      "title": "Climate Change Adaptation Intern",
+      "organization": "United Nations Office for Disaster Risk Reduction",
+      "displayDates": "Jun 2023 — Oct 2023",
+      "start": "2023-06",
+      "end": "2023-10"
+    },
+    {
+      "title": "Field Operations Manager",
+      "organization": "Team & Team International",
+      "displayDates": "May 2019 — Sept 2019",
+      "start": "2019-05",
+      "end": "2019-09"
+    },
+    {
+      "title": "Operations Supervisor",
+      "organization": "Sierra Drilling and Water Supply Enterprise",
+      "displayDates": "Sept 2018 — Apr 2019",
+      "start": "2018-09",
+      "end": "2019-04"
+    }
+  ],
+
+  "education": [
+    {
+      "degree": "MSc Environmental Sciences",
+      "institution": "Wageningen University & Research",
+      "displayDates": "2021 — 2024",
+      "textEditionDates": "2021–2024"
+    },
+    {
+      "degree": "MSc Industrial Engineering",
+      "institution": "Hunan University",
+      "displayDates": "2019 — 2021",
+      "textEditionDates": "2019–2021"
+    },
+    {
+      "degree": "BSc Honours Geology",
+      "institution": "University of Sierra Leone",
+      "displayDates": "2013 — 2017",
+      "textEditionDates": "2013–2017"
+    }
+  ],
+
+  "certifications": [
+    {
+      "name": "ESG Specialist Program",
+      "issuer": "Corporate Finance Institute",
+      "displayDate": "Sep 2024",
+      "year": "2024"
+    },
+    {
+      "name": "Google Advanced Data Analytics",
+      "issuer": "Google — Coursera",
+      "displayDate": "Jan 2024",
+      "year": "2024"
+    },
+    {
+      "name": "Data Analytics Training",
+      "issuer": "Masterschool",
+      "displayDate": "Dec 2023",
+      "year": "2023"
+    },
+    {
+      "$comment": "Was on field-report.html only until this file forced the two to agree.",
+      "name": "Synergizing DRR & Climate Change Adaptation",
+      "issuer": "UN System Staff College",
+      "displayDate": "2023",
+      "year": "2023"
+    }
+  ],
+
+  "pages": [
+    { "path": "index.html", "loc": "https://moseskolleh.github.io/sustaintheworld/" },
+    { "path": "carbon-ai.html", "loc": "https://moseskolleh.github.io/sustaintheworld/carbon-ai.html" },
+    { "path": "field-report.html", "loc": "https://moseskolleh.github.io/sustaintheworld/field-report.html" }
+  ]
+}

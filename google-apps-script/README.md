@@ -17,12 +17,28 @@ Automatically capture form responses and store them in Google Sheets using Googl
 
 ## ✨ Features
 
-- ✅ Auto-creates Google Sheet with proper headers
-- ✅ Captures timestamp, name, email, subject, message, and custom fields
-- ✅ Accepts JSON and form-data payloads
-- ✅ Returns JSON response with status
+- ✅ Writes to a **configured** spreadsheet and tab, creating headers on first use
+- ✅ Captures timestamp, name, email, subject, message and source
+- ✅ Accepts JSON payloads and returns a JSON status
+- ✅ Escapes spreadsheet formulas so submissions can never execute
+- ✅ Serialises writes with `LockService`, so concurrent submissions cannot collide
+- ✅ Per-submitter rate limiting, plus an optional Cloudflare Turnstile check
 - ✅ No external dependencies required
-- ✅ CORS-friendly for web integration
+
+## ⚙️ Configuration
+
+Nothing is hardcoded in `Code.gs`. Set these in **Project Settings → Script
+Properties** before the first submission (see `DEPLOYMENT_GUIDE.md` step 2b):
+
+| Property | Required | Purpose |
+| --- | --- | --- |
+| `SPREADSHEET_ID` | yes | Which spreadsheet to write to |
+| `OWNER_EMAIL` | yes | Where notifications go |
+| `SHEET_NAME` | no | Tab name, default `Responses` |
+| `TURNSTILE_SECRET` | no | Enables per-visitor challenge verification |
+
+Run `testConfiguration()` from the editor to check them, and
+`testFormulaEscaping()` to confirm the injection defences are intact.
 
 ## 📊 Example Usage
 
@@ -60,9 +76,31 @@ curl -X POST "YOUR_WEB_APP_URL" \
 
 ## 🔒 Security
 
-- Configure access permissions in deployment settings
-- Use "Anyone with Google account" for better security
-- Add custom validation in the script if needed
+The endpoint is public by necessity — a contact form nobody can reach is not a
+contact form — so the script treats every payload as hostile.
+
+- **Formula injection**: values starting with `=`, `+`, `-`, `@` (or a leading
+  tab/carriage return) are prefixed with `'` and written to cells forced to
+  plain-text format. Without this, a message beginning `=IMPORTXML(...)`
+  becomes a live formula the moment the owner opens the sheet, able to read
+  neighbouring cells and send them to an attacker's server.
+- **Concurrent writes**: all sheet access runs inside a `LockService` critical
+  section, so two simultaneous submissions cannot claim the same row.
+- **Fixed target**: the sheet is opened by id and name, never
+  `getActiveSheet()`.
+- **Rate limiting**: limits are per-submitter (keyed on a hash of the email, so
+  the throttle cache stores no personal data). The endpoint-wide counter is a
+  much higher circuit breaker — one visitor can no longer lock out everyone
+  else, which the previous global-only limiter allowed with a double-click.
+- **Honeypot**: a hidden `website` field; anything that fills it gets a success
+  response and no record.
+- **Turnstile**: optional per-visitor challenge, verified server-side, failing
+  closed if Cloudflare is unreachable.
+- **Error messages**: failures return a generic message to the caller and log
+  the detail. Returning `error.toString()` leaked spreadsheet ids to anyone who
+  could make the script throw.
+- Deployment access still matters: prefer "Anyone with Google account" if you
+  do not need anonymous submissions.
 
 ## 📚 Documentation
 

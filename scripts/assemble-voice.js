@@ -21,8 +21,13 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const crypto = require('crypto');
 const { spawnSync } = require('child_process');
+
+// The one definition of a track signature and of the grams-per-MB constant,
+// shared with generate-voice.js. Before this module existed the two scripts
+// hashed different field lists, so `npm run voice` treated every assembled
+// track as stale — a ~7,700-credit re-render of audio that already existed.
+const sign = require('./lib/voice-signature.js');
 
 const ROOT = path.join(__dirname, '..');
 const OUT_DIR = path.join(ROOT, 'assets', 'audio');
@@ -30,10 +35,7 @@ const MANIFEST = path.join(OUT_DIR, 'voice-manifest.json');
 const CHUNKS = path.join(__dirname, 'voice-chunks.json');
 const FFMPEG = process.env.FFMPEG || 'ffmpeg';
 
-// Sustainable Web Design model — same constant as generate-voice.js and
-// the footer badge, so every quoted weight is derived the same way.
-const GRAMS_PER_MB = 0.36;
-const grams = bytes => (bytes / (1024 * 1024)) * GRAMS_PER_MB;
+const grams = sign.grams;
 const kb = bytes => `${(bytes / 1024).toFixed(0)} KB`;
 
 async function download(url, dest) {
@@ -65,21 +67,51 @@ function concat(chunkFiles, outFile, bitrate) {
     if (run.status !== 0) throw new Error(`ffmpeg exited ${run.status}: ${run.stderr}`);
 }
 
+// --from-disk rewrites the manifest from the .mp3 files already committed in
+// assets/audio, downloading and re-encoding nothing. It exists for the case
+// where the audio is correct but the manifest needs to be restated — a
+// signature-formula change, say. Re-running the full assembly for that would
+// mean re-fetching ten tracks to produce byte-identical output.
+const FROM_DISK = process.argv.slice(2).includes('--from-disk');
+
 async function main() {
     const plan = JSON.parse(fs.readFileSync(CHUNKS, 'utf8'));
     const { SCRIPTS } = require(path.join(ROOT, 'voice-scripts.js'));
     const byId = Object.fromEntries(SCRIPTS.map(s => [s.id, s]));
 
-    // Same signature formula as generate-voice.js, so a later run of
-    // `npm run voice` with matching env vars sees these tracks as current.
-    const hash = text => crypto.createHash('sha256')
-        .update(`${text}::${plan.model}::${plan.voiceId}::${plan.bitrate}`)
-        .digest('hex').slice(0, 12);
+    // ffmpeg re-encodes every chunk to mp3 at the plan's bitrate, so that —
+    // not whatever the chunks arrived as — is the format the signature has to
+    // describe. Both scripts go through the same module, so a later
+    // `npm run voice` with matching settings sees these tracks as current.
+    const config = sign.normaliseConfig({
+        model: plan.model,
+        voiceId: plan.voiceId,
+        bitrate: plan.bitrate,
+        format: 'mp3'
+    });
+    const hash = text => sign.signature(text, config);
 
     fs.mkdirSync(OUT_DIR, { recursive: true });
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'voice-chunks-'));
 
-    const manifest = { voiceId: plan.voiceId, model: plan.model, bitrate: plan.bitrate, tracks: {} };
+    const manifest = {
+        voiceId: config.voiceId,
+        model: config.model,
+        bitrate: config.bitrate,
+        format: config.format,
+        // Provenance, not staleness input. maxBytes is the per-call text cap
+        // these chunks were rendered under; the signature deliberately
+        // excludes it (see scripts/lib/voice-signature.js).
+        maxBytes: plan.maxBytes || 500,
+        signatureVersion: sign.SIGNATURE_VERSION,
+        // Who is actually reading. The page labels the recorded option with
+        // this, so a synthesised narrator is never presented as a person.
+        voiceTitle: plan.voiceTitle || '',
+        voiceKind: plan.voiceKind || 'synthetic',
+        voiceProvider: plan.voiceProvider || 'Fish Audio',
+        renderedOn: plan.renderedOn || '',
+        tracks: {}
+    };
     let failed = 0;
 
     for (const section of plan.sections) {
@@ -89,16 +121,20 @@ async function main() {
             failed++;
             continue;
         }
-        process.stdout.write(`  → ${section.id.padEnd(11)} ${section.urls.length} chunk(s)… `);
+        process.stdout.write(`  → ${section.id.padEnd(11)} ${FROM_DISK ? 'from disk' : `${section.urls.length} chunk(s)`}… `);
         try {
-            const files = [];
-            for (let i = 0; i < section.urls.length; i++) {
-                const f = path.join(tmp, `${section.id}-${i}.mp3`);
-                await download(section.urls[i], f);
-                files.push(f);
-            }
             const out = path.join(OUT_DIR, `${section.id}.mp3`);
-            concat(files, out, plan.bitrate);
+            if (FROM_DISK) {
+                if (!fs.existsSync(out)) throw new Error(`${path.relative(ROOT, out)} is not on disk — run without --from-disk`);
+            } else {
+                const files = [];
+                for (let i = 0; i < section.urls.length; i++) {
+                    const f = path.join(tmp, `${section.id}-${i}.mp3`);
+                    await download(section.urls[i], f);
+                    files.push(f);
+                }
+                concat(files, out, config.bitrate);
+            }
             const bytes = fs.statSync(out).size;
             manifest.tracks[section.id] = {
                 file: `assets/audio/${section.id}.mp3`,

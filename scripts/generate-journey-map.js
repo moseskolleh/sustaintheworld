@@ -1,7 +1,15 @@
 // Regenerates assets/journey-map.svg — the map behind the Journey section.
 //
-// Usage:  npm install d3-geo topojson-client topojson-simplify world-atlas
-//         node scripts/generate-journey-map.js
+// Usage:  npm install          # the dependencies below are declared in
+//         npm run map:build    # package.json, pinned to exact versions
+//         npm run map:check    # verify the committed SVG still matches
+//
+// The four map dependencies used to be undeclared, so this script only ran
+// on a machine where someone had installed them by hand — a fresh clone got
+// MODULE_NOT_FOUND. They are pinned exactly because the output is committed:
+// a patch bump in a projection or a simplification threshold would silently
+// change every path in the SVG, and map:check would then fail for a reason
+// nobody asked for.
 //
 // Instead of the whole world (half of which the journey never touches),
 // the projection is fitted to the region the route actually crosses —
@@ -147,6 +155,28 @@ ${current ? `<circle class="map-stop-ring" cx="${s.x}" cy="${s.y}" r="6.5"/>\n` 
 
 svg += '</g>\n</svg>\n';
 const out = path.join(__dirname, '..', 'assets', 'journey-map.svg');
+
+// --check regenerates the map and compares it with the committed file
+// without writing anything, so CI can prove the SVG in the repository is
+// still what this script produces from the pinned dependencies. The output
+// is deterministic — fixed projection, fixed rounding, no dates or random
+// ids — so any difference is a real change, not run-to-run noise.
+if (process.argv.slice(2).includes('--check')) {
+    if (!fs.existsSync(out)) {
+        console.error(`\n  ${path.relative(process.cwd(), out)} is missing — run: npm run map:build\n`);
+        process.exit(1);
+    }
+    const committed = fs.readFileSync(out, 'utf8');
+    if (committed === svg) {
+        console.log(`  journey-map.svg matches this script (${(svg.length / 1024).toFixed(1)} KB, viewBox 0 0 ${W} ${H})`);
+        process.exit(0);
+    }
+    console.error('\n  journey-map.svg does NOT match what this script generates.');
+    console.error(`  committed: ${committed.length} bytes · generated: ${svg.length} bytes`);
+    console.error('  run: npm run map:build   (and commit the result)\n');
+    process.exit(1);
+}
+
 fs.writeFileSync(out, svg);
 console.log('written', out, (svg.length / 1024).toFixed(1) + ' KB, viewBox 0 0', W, H);
 console.log('stop pixels (sync with STOPS + VB_H in script.js):');

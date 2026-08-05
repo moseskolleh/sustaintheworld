@@ -29,7 +29,10 @@
 
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
+
+// The one definition of a track signature, shared with assemble-voice.js.
+// See scripts/lib/voice-signature.js for why it lives in its own file.
+const sign = require('./lib/voice-signature.js');
 
 const ROOT = path.join(__dirname, '..');
 const OUT_DIR = path.join(ROOT, 'assets', 'audio');
@@ -98,16 +101,16 @@ const CLONE_TITLE = flagValue('--clone-title') || 'Moses Kolleh Sesay — portfo
 const AUDITION = (flagValue('--audition') || '').split(',').map(s => s.trim()).filter(Boolean);
 const AUDITION_TEXT = flagValue('--audition-text');
 
-const hash = text => crypto.createHash('sha256')
-    .update(`${text}::${MODEL}::${VOICE_ID}::${BITRATE}::${FORMAT}::${MAX_BYTES}`)
-    .digest('hex').slice(0, 12);
+// The render configuration, in the shape the shared signature module expects.
+// Read through a function because --clone can mint a new VOICE_ID mid-run.
+const renderConfig = () => ({ model: MODEL, voiceId: VOICE_ID, bitrate: BITRATE, format: FORMAT });
+const hash = text => sign.signature(text, renderConfig());
 
 const kb = bytes => `${(bytes / 1024).toFixed(0)} KB`;
 
 // Sustainable Web Design model, same constant the footer badge uses, so the
 // number quoted next to the play button is derived the same way as the badge.
-const GRAMS_PER_MB = 0.36;
-const grams = bytes => (bytes / (1024 * 1024)) * GRAMS_PER_MB;
+const grams = sign.grams;
 
 // ------------------------------------------------------------------
 // Voice cloning. Uploads a sample and creates a Fish Audio voice model;
@@ -448,10 +451,17 @@ async function main() {
             if (prev && prev.tracks) manifest = prev;
         } catch (e) { /* corrupt manifest — start fresh */ }
     }
+    // Compare against what the existing manifest was rendered under BEFORE
+    // overwriting the header, so a config change can be named out loud
+    // instead of showing up as ten mysteriously stale tracks.
+    const drift = sign.configDrift(manifest, renderConfig());
+
     manifest.voiceId = VOICE_ID;
     manifest.model = MODEL;
     manifest.bitrate = BITRATE;
     manifest.format = FORMAT;
+    manifest.maxBytes = MAX_BYTES;              // provenance only — not hashed
+    manifest.signatureVersion = sign.SIGNATURE_VERSION;
 
     const targets = SCRIPTS.filter(s => !ONLY.length || ONLY.includes(s.id));
     if (ONLY.length) {
@@ -464,7 +474,18 @@ async function main() {
     }
 
     console.log(`\n  fish audio · model ${MODEL} · ${FORMAT}${FORMAT === 'mp3' ? ` ${BITRATE} kbps` : ''}${VOICE_ID ? ` · voice ${VOICE_ID}` : ' · DEFAULT VOICE'}`);
-    console.log(`  ${targets.length} script(s) considered · max ${MAX_BYTES} bytes per call\n`);
+    console.log(`  ${targets.length} script(s) considered · max ${MAX_BYTES} bytes per call`);
+
+    // A run that invalidates everything is almost always a settings mistake —
+    // an unset FISH_AUDIO_VOICE_ID, a changed bitrate — not ten rewritten
+    // scripts. Say which field moved, before anything is billed.
+    if (drift.length && Object.keys(manifest.tracks).length) {
+        console.log('\n  ⚠ this run does not match how the existing narration was rendered:');
+        drift.forEach(d => console.log(`      ${d.field}: manifest has "${d.was}", this run uses "${d.now}"`));
+        console.log('    every affected track counts as stale and will be re-rendered and re-billed.');
+        console.log('    if that is not what you meant, fix the setting (or .env) and run again.');
+    }
+    console.log('');
 
     let rendered = 0;
     let skipped = 0;
@@ -474,9 +495,8 @@ async function main() {
 
     for (const script of targets) {
         const file = path.join(OUT_DIR, `${script.id}.${FORMAT}`);
-        const sig = hash(script.text);
         const prev = manifest.tracks[script.id];
-        const unchanged = prev && prev.hash === sig && fs.existsSync(file);
+        const unchanged = sign.isCurrent(prev, script.text, renderConfig()) && fs.existsSync(file);
 
         if (unchanged && !FORCE) {
             console.log(`  · ${script.id.padEnd(11)} unchanged — skipped (${kb(prev.bytes)})`);
@@ -507,10 +527,6 @@ async function main() {
                 chars: script.text.length,
                 textBytes,
                 chunks,
-                // Recomputed rather than reusing the pre-render signature:
-                // an adaptive retry may have lowered MAX_BYTES, which is part
-                // of the hash, and the stored value must describe how this
-                // file was actually produced.
                 hash: hash(script.text)
             };
             creditsSpent += textBytes;
