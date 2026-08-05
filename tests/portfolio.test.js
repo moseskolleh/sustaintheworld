@@ -281,6 +281,43 @@ const allLenses = [lenses.default].concat(lenses.lenses);
     assert(doc.querySelectorAll('.rs-commands dt').length > 0, 'Research page: the reproduction commands are listed');
 }
 
+// --- the budget's origin check must reach the exit code -------------------
+// Counting origins was not enough: swapping an allowed host for an unapproved
+// one keeps the count at its ceiling, so the numeric budget passed while the
+// script printed an error and still exited 0 — enforcing nothing.
+{
+    const budget = require('../scripts/check-budget.js');
+
+    assert(
+        budget.unexpected(['fonts.googleapis.com', 'fonts.gstatic.com']).length === 0,
+        'Budget: the approved font origins raise nothing'
+    );
+
+    // The exact scenario from the review: a swap, not an addition.
+    const swapped = budget.unexpected(['fonts.googleapis.com', 'evil.example']);
+    assert(
+        swapped.length === 1 && swapped[0] === 'evil.example',
+        `Budget: an unapproved origin is caught even when the count is unchanged (${swapped.join(', ')})`
+    );
+
+    assert(
+        budget.unexpected(['fonts.googleapis.com', 'fonts.gstatic.com', 'tracker.example']).length === 1,
+        'Budget: an added unapproved origin is caught too'
+    );
+    assert(budget.unexpected([]).length === 0, 'Budget: no origins is not a problem');
+
+    // What the pages actually reach for right now.
+    const live = budget.thirdPartyOrigins('case-studies.html');
+    assert(
+        budget.unexpected(live).length === 0,
+        `Budget: the shipped pages reach no unapproved origin (${live.join(', ')})`
+    );
+
+    // Self-references and metadata are not third parties — both were bugs in
+    // the detector's first version.
+    assert(!live.includes('moseskolleh.github.io'), 'Budget: the site\'s own host is not counted as third-party');
+}
+
 // --- generated files carry their warning ---------------------------------
 {
     ['case-studies.html', 'research.html', 'sitemap.xml', 'voice-scripts.js'].forEach((file) => {

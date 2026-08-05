@@ -228,10 +228,23 @@ function thirdPartyOrigins(page) {
     return [...origins].sort();
 }
 
+/**
+ * Origins present that nobody approved.
+ *
+ * Counting origins was not enough on its own: swap an allowed host for an
+ * unapproved one and the count stays at the ceiling, so the numeric budget
+ * passes. The identities have to be checked, not just how many there are —
+ * and the result has to reach the exit code, which is the half this
+ * originally got wrong.
+ */
+function unexpected(origins, allowed = ALLOWED_THIRD_PARTY) {
+    return origins.filter(o => !allowed.includes(o));
+}
+
 const BUDGETED_PAGES = ['index.html', 'case-studies.html', 'research.html', 'field-report.html', 'carbon-ai.html'];
 const originsByPage = BUDGETED_PAGES.map(p => ({ page: p, origins: thirdPartyOrigins(p) }));
 const allOrigins = [...new Set(originsByPage.flatMap(o => o.origins))].sort();
-const unexpectedOrigins = allOrigins.filter(o => !ALLOWED_THIRD_PARTY.includes(o));
+const unexpectedOrigins = unexpected(allOrigins);
 
 const measured = {
     criticalWire: critical.reduce((n, a) => n + a.wire, 0),
@@ -249,6 +262,10 @@ const measured = {
 // ------------------------------------------------------------------
 // Report
 // ------------------------------------------------------------------
+// Reporting and the exit code only happen when this is run as a command.
+// Importing it (from tests/portfolio.test.js) must not print or exit.
+if (require.main === module) {
+
 console.log('\n  First view, asset by asset:\n');
 critical
     .slice()
@@ -288,8 +305,13 @@ if (!allOrigins.length) {
     console.log('    the uncertainty along with them.');
 }
 
+// This has to count towards the failure, not merely print. Without it, an
+// unapproved origin that *replaced* an approved one kept the count inside its
+// ceiling, and the script reported "All budgets met" and exited 0 — enforcing
+// nothing while claiming to enforce it.
 if (unexpectedOrigins.length) {
-    console.error(`\n  ✗ new third-party origin(s): ${unexpectedOrigins.join(', ')}`);
+    over++;
+    console.error(`\n  ✗ unapproved third-party origin(s): ${unexpectedOrigins.join(', ')}`);
     console.error('    Add to ALLOWED_THIRD_PARTY in scripts/check-budget.js if this is intended.');
 }
 
@@ -307,4 +329,6 @@ if (over) {
 
 console.log('\n  All budgets met.\n');
 
-module.exports = { BUDGETS, measured };
+}
+
+module.exports = { BUDGETS, ALLOWED_THIRD_PARTY, measured, unexpected, thirdPartyOrigins };

@@ -13,9 +13,16 @@
     "finds inconvenient is a CV that lies by omission. These reorder and frame;",
     "they never filter.",
     "",
-    "Lens ids are referenced from content/projects.json and appear in the URL",
-    "(case-studies.html?lens=water), so they are shareable and they are stable.",
-    "Renaming one breaks a link somebody has already sent."
+    "Each lens id names its own generated page — case-studies-water.html, and so",
+    "on. That is deliberate: an earlier version selected the lens client-side from",
+    "?lens=water, which cannot work on a static host, so every shared link showed",
+    "the default view while the README claimed otherwise. A static page per lens",
+    "needs no JavaScript at all, and these pages ship none.",
+    "",
+    "Renaming a lens id therefore renames a URL. Do it only with a reason, and",
+    "update index.html, field-report.html and the README in the same commit —",
+    "tests/portfolio.test.js checks that every lens link points at a page that",
+    "exists, and that nothing has drifted back to the ?lens= form."
   ],
 
   "default": {
