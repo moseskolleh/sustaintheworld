@@ -22,13 +22,16 @@
     <meta name="twitter:title" content="Case studies — Moses Kolleh Sesay">
     <meta name="twitter:description" content="Six projects in water, climate risk and sustainable AI — problem, method, artifact and measurable result, with the basis for every number.">
     <meta name="twitter:image" content="https://moseskolleh.github.io/sustaintheworld/assets/img/og-image.jpg">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;family=Inter:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+    <!-- The three typefaces are self-hosted (assets/fonts/, built by scripts/build-fonts.js):
+         no request leaves this origin, and the bytes are counted in the budget. -->
+    <link rel="preload" as="font" type="font/woff2" href="assets/fonts/space-grotesk-latin.woff2" crossorigin>
+    <link rel="preload" as="font" type="font/woff2" href="assets/fonts/inter-latin.woff2" crossorigin>
+    <link rel="preload" as="font" type="font/woff2" href="assets/fonts/ibm-plex-mono-latin-400.woff2" crossorigin>
     <link rel="stylesheet" href="carbon-ai.css">
     <link rel="stylesheet" href="content.css">
 </head>
 <body>
+    <a class="skip-link" href="#main">Skip to content</a>
     <svg xmlns="http://www.w3.org/2000/svg" class="icon-sprite" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden"><symbol id="i-arrow-right" viewBox="0 0 448 512"><path d="M438.6 278.6c12.5-12.5 12.5-32.8 0-45.3l-160-160c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L338.8 224 32 224c-17.7 0-32 14.3-32 32s14.3 32 32 32l306.7 0L233.4 393.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0l160-160z"/></symbol></svg>
     <nav class="ca-nav" aria-label="Main">
         <a href="index.html" class="ca-nav-logo" aria-label="Back to portfolio home">
@@ -82,7 +85,7 @@
             <h2 id="lens-sustainable-ai-h">Sustainable AI &amp; AI governance <span class="cs-lens-tagline">Every prompt has a footprint</span></h2>
             <p class="cs-lens-summary">The newest thread, and the one that made the rest make sense: the tools we now use to analyse environmental problems have environmental costs of their own, and almost nobody is measuring them. At the Digital Society School I am building the framework and the decision-support tooling for a finance ministry adopting generative AI &mdash; mapping Scope 2 electricity, Scope 3 hardware and data-centre water, in a reporting language the organisation already speaks.</p>
             <p class="cs-lens-bestfor"><strong>Best fit for:</strong> Roles in sustainable AI, AI governance, green software, or ESG where digital footprint is in scope &mdash; and anywhere the job is to make an environmental claim survive scrutiny.</p>
-            <ul class="cs-lens-evidence"><li>Sustainable-AI framework and prototype for the Dutch Ministry of Finance</li><li>EcoPrompt Coach &mdash; a public tool with a full evidence ledger behind every factor</li><li>Framework framed against CSRD/ESRS disclosure logic</li><li>This site: a first view of ~235 KB, budgeted and enforced in CI</li></ul>
+            <ul class="cs-lens-evidence"><li>Sustainable-AI framework and prototype for the Dutch Ministry of Finance</li><li>EcoPrompt Coach &mdash; a public tool with a full evidence ledger behind every factor</li><li>Framework framed against CSRD/ESRS disclosure logic</li><li>This site: a first view of ~270 KB with its fonts, budgeted and enforced in CI</li></ul>
         </section>
 
         <p class="cs-note">

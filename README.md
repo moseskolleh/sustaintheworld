@@ -16,7 +16,7 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 - **"Don't let it become a boat" flood scene**: an interactive Wupper cross-section in the Wuppertal dossier — slide the river from a calm day to July 2021 and watch the margin under the Schwebebahn's hanging cars shrink
 - **Field terminal**: press <code>`</code> anywhere (or the footer button) for a hidden green-on-black terminal — try `journey`, `drill`, `co2`, `voice`, `kushe`, `help`
 - **The spoken page**: a `listen` control on every section, and the choice of voice is itself the argument. The browser's own speech engine transfers **zero bytes**; the recorded narration (pre-rendered via Fish Audio, synthetic — see [Narration](#narration-the-spoken-page)) is fetched only on click and labelled with exactly what it transfers. Same words, two costs, visitor's call. Nothing ever autoplays
-- **Carbon-aware by construction**: images ship as optimized WebP, and a first view costs about **235 KB over the wire**, against a 300 KB ceiling `npm test` enforces — a budget, not a number in a README (see [Performance](#performance)). A live footer badge weighs each visit in the browser (Resource Timing API × Sustainable Web Design model), counting network transfer only. A low-energy mode pauses all animation and honours `prefers-reduced-motion`
+- **Carbon-aware by construction**: images ship as optimized WebP, the three typefaces are self-hosted subsets, and a first view costs about **270 KB over the wire, fonts included**, against a 300 KB ceiling `npm test` enforces — a budget, not a number in a README, and one that `npm run smoke` checks against a real browser (see [Performance](#performance)). Everything a visit does not reach — the narration player, the field terminal, the dossier games, the section-05 interactives — is fetched only when it is used. No request leaves the site's own origin. A live footer badge weighs each visit in the browser (Resource Timing API × Sustainable Web Design model), counting network transfer only. A low-energy mode pauses all animation and honours `prefers-reduced-motion`
 - **[Case studies](case-studies.html), evidence-first**: the same six projects as **problem → method → artifact → result**. Every result carries the basis it rests on and says plainly whether you can check it from outside; every artifact says whether it is public, available on request, or held by the client. See [Content pipeline](#content-pipeline)
 - **Role-specific lenses**: `case-studies.html?lens=water`, `?lens=climate-risk`, `?lens=sustainable-ai` — shareable views that reframe the portfolio for one kind of role. They **reorder and frame, they never filter**: every case study stays on the page in every view, because a view that hides inconvenient work is a CV that lies by omission. Works with JavaScript off
 - **[Research outputs](research.html)**: theses, reports, datasets, code and tools, each labelled public / on request / held by the client. No DOI, journal or conference is named anywhere, because none of this work has one — and a test fails the build if one ever appears without proof
@@ -31,37 +31,36 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 
 - **HTML5**: Semantic markup for better SEO and accessibility
 - **CSS3**: Modern styling with CSS Grid, Flexbox, animations, and transitions
-- **JavaScript (Vanilla)**: Interactive features without dependencies
-- **Font Awesome**: Icon library for visual enhancements
+- **JavaScript (Vanilla)**: no framework, no bundler. A 58 KB core (`script.js`) and four on-demand modules in `modules/` that the core fetches the first time a feature is used
+- **Icons**: an inline SVG symbol sprite, no icon font
+- **Fonts**: Inter, Space Grotesk and IBM Plex Mono, self-hosted as Latin subsets under the SIL Open Font License (see [Fonts](#fonts))
 - **GitHub Pages**: Free hosting for static websites
 
 ## Sections Overview
 
 ### 🏠 Home (Hero)
-- Dynamic introduction with search functionality
-- Call-to-action buttons
-- Animated scroll indicator
+- Name, role and a one-line value proposition over a rotating set of fieldwork photographs (the rotation only runs while the hero is on screen and the tab is visible)
+- Call-to-action buttons, a `listen` control, and a live index of the five interactive features
+
+### 🗺️ Journey
+- The living journey map: Freetown → Changsha → Bonn → Wageningen → Amsterdam, flown as you scroll, with a visitor mark for wherever you are reading from
 
 ### 👤 About
-- Professional summary
-- Impact statistics with animated counters
-- Core expertise areas
-- Highlight cards showcasing key achievements
+- Professional summary with the CV download
+- Field numbers with animated counters (water points, strike rate, sub-basins)
 
 ### 💼 Experience
-- Interactive timeline of professional roles
-- Detailed descriptions of responsibilities
-- Technology tags for each position
-- From current role at Digital Society School to past positions in water resource management
+- The borehole core-log timeline: depth is time, every layer a chapter, technology tags for each
 
-### 🔬 Research & Projects
-- 6 major research projects and initiatives
-- Key areas: Climate adaptation, water pollution, sustainable AI, disaster risk reduction
-- Technology stack for each project
+### 🔬 Projects
+- Six expandable dossiers with photo galleries, each with challenge → approach → results
+- Two of them carry a mini-game: "Site the borehole" and "Don't let it become a boat"
+
+### ⚡ AI, Weighed
+- The homepage slice of the EcoPrompt Coach research: You Draw It, the live cost widget and Anatomy of a Prompt
 
 ### 🛠️ Skills
-- Technical skills with animated progress bars
-- Sustainability expertise badges
+- Evidence-first: every tool links to the project where it earned its place, with real field numbers instead of percentages
 - ESG frameworks and standards (SBTi, CDP, GHG Protocol, TCFD, TNFD, etc.)
 
 ### 🎓 Education
@@ -69,10 +68,11 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 - Bachelor's degree in Geology
 - Professional certifications (ESG Specialist, Google Data Analytics, etc.)
 
+### 📝 Field Notes
+- Short essays connecting boreholes, scenario storytelling and sustainable AI
+
 ### 📧 Contact
-- Contact form with email integration
-- Direct contact information
-- Social media links (GitHub, LinkedIn)
+- Contact form (Google Apps Script backend, honeypot, rate limits; works without JavaScript by posting to the same endpoint), The Assay, direct contact details and social links
 
 ## Setup Instructions
 
@@ -297,9 +297,11 @@ npm test          # everything below
 | Command | What it holds in place |
 |---|---|
 | `npm run build:check` | every generated page still matches `content/` |
+| `npm run fonts:check` | the committed fonts still hash to their manifest and every stylesheet's `@font-face` block is current |
 | `npm run test:unit` | the seven suites in `tests/` |
 | `npm run map:check` | the committed `journey-map.svg` still matches its generator |
 | `npm run budget` | the weights this README quotes (see [Performance](#performance)) |
+| `npm run smoke` | every page in a real browser: no errors, no failed or off-origin requests, every on-demand module arrives when used, and the measured first view is no heavier than the budget claims (its own CI job; needs Chromium) |
 | `npm run mcp:verify` | the pinned MCP package still hashes to the reviewed tarball (needs network) |
 
 The suites, and the failure each one exists to prevent:
@@ -325,7 +327,13 @@ The suites, and the failure each one exists to prevent:
   lenses reorder without ever dropping a case study; and the validator is fed
   deliberately fabricated links to prove it still rejects them.
 - **`html.test.js`** — button types, named landmarks, dialog semantics, image
-  dimensions, labelled controls, resolvable links, valid JSON-LD.
+  dimensions, labelled controls, resolvable links, valid JSON-LD, and no
+  stylesheet, script, preload or preconnect pointing off this origin.
+
+The jsdom harness (`tests/harness.js`) evaluates `script.js` and then every
+file in `modules/`, so the suites see the page the way a visitor who used
+every feature would — and a module that declared anything at the top level,
+or reached for storage directly, fails `resilience.test.js`.
 
 ## Content pipeline
 
@@ -439,47 +447,100 @@ every run of `npm test`, and the build fails when they are exceeded.
 
 | Budget | Measured | Ceiling |
 |---|---|---|
-| First view of the homepage, over the wire | ~234 KB | 300 KB |
-| Case studies page, over the wire | ~14 KB | 40 KB |
-| Research outputs page, over the wire | ~10 KB | 30 KB |
-| Text-only field report, whole page | ~8 KB | 12 KB |
+| First view of the homepage, over the wire (fonts included) | ~272 KB | 300 KB |
+| Everything a full visit adds on demand (modules, scripts, map) | ~57 KB | 72 KB |
+| Case studies page, over the wire (fonts included) | ~92 KB | 120 KB |
+| Research outputs page, over the wire (fonts included) | ~87 KB | 110 KB |
+| Text-only field report, whole page | ~9 KB | 12 KB |
 | Largest single image | ~200 KB | 220 KB |
 | Every image in the repository | ~3.24 MB | 3.5 MB |
 | Every narration track | ~4.13 MB | 4.5 MB |
 
+**What the estimate used to miss.** An earlier version of this table said
+234 KB. Opening the page in a real browser measured over 500 KB. Two things
+were never counted: about 100 KB of fonts, which came from Google and so were
+never a file in this repository, and a second 150 KB hero image the slideshow
+fetched "on idle" for every visit, whether or not it stayed the eight seconds
+needed to see it. The fonts are now self-hosted and counted; the slideshow
+fetches a slide only just before it shows it, and only while the hero is on
+screen; and `npm run smoke` opens the page in Chromium and fails if what it
+measures comes in above what the table claims. The honest number is larger
+than the old one and smaller than the old truth.
+
 **What "over the wire" means.** GitHub Pages compresses text, so HTML, CSS and
-JS are counted gzipped — what a visitor actually downloads — while images are
-counted as-is. The first view is `index.html`, its stylesheet and scripts, and
-the one preloaded hero image. Everything else on the page is lazy: the other
-32 images load as you reach them, the remaining hero backgrounds load when the
-rotation needs them, and no narration is fetched until someone presses play.
-So "every image in the repository" is the cost of opening every gallery, not
-the cost of arriving.
+JS are counted gzipped — what a visitor actually downloads — while images and
+fonts are counted as-is. The first view is `index.html`, its stylesheet, the
+core script, the four font files and the one preloaded hero image. Everything
+else is fetched only when it is reached: the journey map on the first scroll,
+the other 32 images as you get to them, the remaining hero backgrounds when the
+rotation needs them, and no narration until someone presses play. So "every
+image in the repository" is the cost of opening every gallery, not the cost of
+arriving.
+
+**On-demand modules.** About two thirds of the site's JavaScript serves
+features most visits never reach. It used to ship in one 155 KB file, parsed
+and run on every visit. It now lives in `modules/` and `script.js` fetches
+each file the moment it is first needed:
+
+| Module | Loads when | Gzipped |
+|---|---|---|
+| `modules/interactives.js` (+ `ai-carbon-data.js`) | section 05 or the footer receipt comes within a screen of the viewport, or a deep link lands there | ~23 KB |
+| `modules/dispatch.js` (+ `voice-scripts.js`) | the first press of a `listen` control, or `voice` in the terminal | ~13 KB |
+| `modules/dossier.js` | a project dossier with a mini-game is opened | ~6 KB |
+| `modules/terminal.js` | the backtick key or the footer button | ~5 KB |
+
+Modules are classic scripts sharing the page's global scope: they declare
+nothing at the top level and reach the core only through `window.mks*`. The
+core renders the `listen` controls itself so the page has something to press
+before the player exists; the first press fetches the player, which takes the
+controls over.
 
 Run `npm run budget` to see the current numbers, asset by asset. Raising a
 ceiling is deliberate: change it in `scripts/check-budget.js` **and** update
 this table in the same commit.
 
-**Not measured here.** Render time, layout stability and Lighthouse scores need
-a real browser, and nothing in this repository runs one. No score is claimed
-for that reason. To check for yourself:
+**Measured in a browser, not scored.** `npm run smoke` runs every page in
+headless Chromium (its own job in CI) and reports the bytes actually
+transferred. It does not compute a Lighthouse score, and none is claimed. To
+check for yourself:
 
 ```bash
 npx lighthouse https://moseskolleh.github.io/sustaintheworld/ --view
 ```
 
 - **Optimizations**:
-  - Minimal dependencies (no framework, no build step)
-  - Lazy loading for images and hero backgrounds
-  - Debounced scroll events
+  - Minimal dependencies (no framework, no bundler)
+  - Lazy loading for images and hero backgrounds; on-demand modules for the features
+  - One passive, frame-coalesced scroll listener for the navbar, progress bar, active link and scroll-to-top button; section offsets measured once, not per event
+  - The hero rotation stops in hidden tabs and once the hero has scrolled away
   - Intrinsic `width`/`height` on every image, so nothing shifts as they arrive
+
+### Fonts
+
+Inter, Space Grotesk and IBM Plex Mono live in `assets/fonts/`, subset to the
+same Latin range Google Fonts served and instanced to the weights the
+stylesheets use (Inter 400–600, Space Grotesk 400–700, Plex Mono 400 and 500):
+76 KB in four files, against about 100 KB and two extra origins before. They
+are the last third-party request the site had, and `tests/html.test.js` now
+fails if one comes back.
+
+```bash
+npm run fonts:build     # fetch the sources, subset, write assets/fonts/ and the @font-face blocks
+npm run fonts:check     # verify the committed files against their manifest (runs in npm test)
+```
+
+`scripts/build-fonts.js` records each file's source URL and hash in
+`assets/fonts/manifest.json` and writes the `@font-face` block between the
+`FONTS:START` / `FONTS:END` markers in each stylesheet. All three families are
+under the SIL Open Font License; the notices are in
+`assets/fonts/LICENSE-OFL.txt`.
 
 ## Accessibility
 
 Checked by `tests/html.test.js` on every run, so these are enforced rather than
 aspirational:
 
-- Semantic HTML5 elements, one `<main>` per page, named `<nav>` landmarks
+- Semantic HTML5 elements, one `<main>` per page, named `<nav>` landmarks, a skip link on every page
 - Every `<button>` carries an explicit `type` (a missing one submits the form
   it sits in)
 - Every form control has an accessible name; every image has `alt` plus
@@ -509,8 +570,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Acknowledgments
 
 - Design inspiration: EcoSearch theme (environmental sustainability focus)
-- Icons: [Font Awesome](https://fontawesome.com/)
-- Fonts: Space Grotesk, Inter & IBM Plex Mono (Google Fonts)
+- Icons: an inline SVG sprite drawn from [Font Awesome Free](https://fontawesome.com/) (CC BY 4.0)
+- Fonts: [Inter](https://github.com/rsms/inter), [Space Grotesk](https://github.com/floriankarsten/space-grotesk) & [IBM Plex Mono](https://github.com/IBM/plex), self-hosted under the SIL Open Font License
 - Map data: [Natural Earth](https://www.naturalearthdata.com/) via world-atlas, projected with d3-geo
 - Hosting: [GitHub Pages](https://pages.github.com/)
 

@@ -6,7 +6,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { run, ROOT } = require('./harness.js');
+const { run, ROOT, MODULE_FILES } = require('./harness.js');
 
 let failures = 0;
 function assert(cond, msg) {
@@ -81,12 +81,24 @@ function assert(cond, msg) {
     assert(store.local.get('theme') === 'dark', 'Storage available: seeded values are read back');
 }
 
-// No direct storage access may creep back into the shipped scripts.
+// No direct storage access may creep back into the shipped scripts — the
+// core after its adapter, and every on-demand module.
 {
     const src = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8');
-    const body = src.slice(src.indexOf('// PRELOADER'));   // skip the adapter itself
+    const body = src.slice(src.indexOf('// ON-DEMAND MODULES'));   // skip the adapter itself
     const direct = body.match(/(?<!\.)\b(?:window\.)?(?:local|session)Storage\s*\./g) || [];
     assert(direct.length === 0, `Storage: nothing in script.js reaches past the adapter (found: ${direct.join(', ') || 'none'})`);
+
+    MODULE_FILES.forEach((rel) => {
+        const mod = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+        const hits = mod.match(/(?<!\.)\b(?:window\.)?(?:local|session)Storage\s*\./g) || [];
+        assert(hits.length === 0, `Storage: ${rel} goes through the adapter too (found: ${hits.join(', ') || 'none'})`);
+        // A module is a classic script sharing the page's global scope, so a
+        // top-level declaration would collide with the core's — `const
+        // safeStorage` twice is a SyntaxError that takes the module with it.
+        const topLevel = mod.split('\n').filter((l) => /^(const|let|class|function|async function)\s/.test(l));
+        assert(topLevel.length === 0, `Modules: ${rel} declares nothing at the top level (found: ${topLevel.join(' | ') || 'none'})`);
+    });
 }
 
 // ===================================================================
@@ -182,10 +194,10 @@ function assert(cond, msg) {
 // The source-level guarantee: the failure path may not call into the speech
 // engine without first checking that one exists.
 {
-    const src = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8');
+    const src = fs.readFileSync(path.join(ROOT, 'modules/dispatch.js'), 'utf8');
     const start = src.indexOf('const runSynth =');
     const body = src.slice(start, src.indexOf('const speakHuman', start));
-    assert(start > -1, 'Fallback setup: found runSynth in script.js');
+    assert(start > -1, 'Fallback setup: found runSynth in modules/dispatch.js');
     assert(
         /if \(!canSpeak\(\)\)/.test(body) || /if \(!canSynth\)/.test(body),
         'Fallback: runSynth refuses to run when there is no speech engine'

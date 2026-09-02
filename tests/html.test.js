@@ -156,6 +156,18 @@ PAGES.forEach((page) => {
     });
     assert(broken.length === 0, `${page}: every local link and asset resolves (missing: ${[...new Set(broken)].join(', ') || 'none'})`);
 
+    // --- Nothing a page needs comes from a third party --------------------
+    // Fonts were the last cross-origin dependency: every visitor's IP went
+    // to Google before a word rendered, and the bytes escaped the budget.
+    // Links to other sites are fine; stylesheets, scripts, preloads and
+    // fonts must be files in this repository. `npm run smoke` checks the
+    // same thing at runtime.
+    const remoteDeps = [
+        ...tags(html, 'link').filter(t => /rel=["'](stylesheet|preload|modulepreload|preconnect|dns-prefetch)["']/i.test(t)),
+        ...tags(html, 'script')
+    ].map(t => attr(t, 'href') || attr(t, 'src')).filter(ref => ref && /^(https?:)?\/\//i.test(ref));
+    assert(remoteDeps.length === 0, `${page}: no stylesheet, script, preload or preconnect points off this origin (${remoteDeps.join(', ') || 'none'})`);
+
     // --- Skip links must land somewhere -----------------------------------
     const skip = (html.match(/<a[^>]+class=["'][^"']*skip-link[^"']*["'][^>]*>/i) || [])[0];
     if (skip) {

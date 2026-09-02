@@ -5,9 +5,12 @@
   "description": "Portfolio website for Moses Kolleh Sesay — static site; pages derived from content/ by npm run build:content",
   "license": "MIT",
   "scripts": {
-    "test": "npm run build:check && npm run test:unit && npm run map:check && npm run budget",
+    "test": "npm run build:check && npm run fonts:check && npm run test:unit && npm run map:check && npm run budget",
     "build:content": "node scripts/build-content.js",
     "build:check": "node scripts/build-content.js --check",
+    "fonts:build": "node scripts/build-fonts.js",
+    "fonts:check": "node scripts/build-fonts.js --check",
+    "smoke": "node scripts/smoke.js",
     "test:unit": "node tests/bugs.test.js && node tests/resilience.test.js && node tests/carbon.test.js && node tests/voice.test.js && node tests/content.test.js && node tests/portfolio.test.js && node tests/html.test.js",
     "budget": "node scripts/check-budget.js",
     "mcp:verify": "node scripts/verify-mcp-pin.js",
@@ -21,6 +24,8 @@
   "devDependencies": {
     "d3-geo": "3.1.1",
     "jsdom": "^26.1.0",
+    "playwright-core": "1.56.1",
+    "subset-font": "2.4.0",
     "topojson-client": "3.1.0",
     "topojson-simplify": "3.0.3",
     "world-atlas": "2.0.2"
