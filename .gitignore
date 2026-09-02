@@ -15,3 +15,6 @@ assets/audio/*.wav
 # choosing a voice. Scratch output — the narration that ships comes from
 # `npm run voice`.
 .voice-auditions/
+
+# Screenshots written by `npm run smoke -- --screens`.
+.smoke/

@@ -277,20 +277,69 @@ function doPost(e) {
   var config = getConfig();
 
   try {
-    if (!e || !e.postData || !e.postData.contents) {
-      return jsonResponse('error', 'No submission data received.');
-    }
-
+    // Two ways in. With JavaScript, the site posts a JSON string. Without it,
+    // the <form> posts itself here as application/x-www-form-urlencoded
+    // (its action attribute points at this deployment) — before that, a
+    // JavaScript-free submit navigated to the portfolio with the visitor's
+    // message and email in the query string. Both arrive as the same fields.
+    var isForm = !!(e && e.postData && /x-www-form-urlencoded|multipart\/form-data/i.test(e.postData.type || ''));
     var data;
-    try {
-      data = JSON.parse(e.postData.contents);
-    } catch (parseError) {
-      return jsonResponse('error', 'Could not read the submission.');
+    if (isForm) {
+      data = e.parameter || {};
+    } else {
+      if (!e || !e.postData || !e.postData.contents) {
+        return jsonResponse('error', 'No submission data received.');
+      }
+      try {
+        data = JSON.parse(e.postData.contents);
+      } catch (parseError) {
+        return jsonResponse('error', 'Could not read the submission.');
+      }
     }
     if (!data || typeof data !== 'object') {
       return jsonResponse('error', 'Could not read the submission.');
     }
+    if (isForm) {
+      // A browser is going to render whatever comes back, so answer a form
+      // post with a page rather than a JSON blob.
+      var result = handleSubmission(data, config);
+      return htmlResponse(result.status, result.message);
+    }
+    return handleSubmission(data, config);
+  } catch (error) {
+    console.error('doPost failed: ' + (error && error.stack ? error.stack : error));
+    return jsonResponse('error', 'Something went wrong on our side. Please try again in a moment.');
+  }
+}
 
+/**
+ * A minimal page for JavaScript-free submissions. No styling to speak of:
+ * the point is that the visitor learns what happened and has a way back.
+ */
+function htmlResponse(status, message) {
+  var ok = status === 'success';
+  var esc = function (s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  };
+  var html = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">' +
+    '<meta name="viewport" content="width=device-width, initial-scale=1">' +
+    '<title>' + (ok ? 'Message sent' : 'Message not sent') + '</title>' +
+    '<style>body{font-family:system-ui,sans-serif;max-width:36rem;margin:4rem auto;padding:0 1.5rem;line-height:1.6}</style>' +
+    '</head><body><h1>' + (ok ? 'Thank you' : 'Something went wrong') + '</h1>' +
+    '<p>' + esc(message) + '</p>' +
+    '<p><a href="https://moseskolleh.github.io/sustaintheworld/#contact">Back to the portfolio</a></p>' +
+    '</body></html>';
+  return HtmlService.createHtmlOutput(html);
+}
+
+/**
+ * Validates, rate-limits, records and notifies. Returns the JSON response
+ * the JavaScript path sends back; the form path reads its status/message.
+ */
+function handleSubmission(data, config) {
+  try {
     // Honeypot: real visitors never see this field. If it's filled, a bot
     // did it — claim success so it moves on, but record and send nothing.
     if (data.website) {
@@ -362,7 +411,7 @@ function doPost(e) {
     // The visitor gets a generic message; the detail goes to the Apps Script
     // log. Returning error.toString() leaked spreadsheet ids and internal
     // paths to anyone who could make the script throw.
-    console.error('doPost failed: ' + error);
+    console.error('handleSubmission failed: ' + error);
     return jsonResponse('error', 'Something went wrong on our side. Please try again shortly.');
   }
 }

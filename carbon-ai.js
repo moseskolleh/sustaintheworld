@@ -258,6 +258,15 @@ if (typeof document !== 'undefined') {
         const pue = $('#pue');
         const compareMode = $('#compareMode');
 
+        // A renamed control used to throw here and take the whole tool down
+        // with it. Name what is missing and stop, rather than half-render.
+        const missing = Object.entries({ modelSelect, regionSelect, wueSelect, inputTokens, outputTokens, queriesPerDay, pue, compareMode })
+            .filter(([, el]) => !el).map(([name]) => name);
+        if (missing.length) {
+            console.error(`carbon-ai: controls missing from the page: ${missing.join(', ')}`);
+            return;
+        }
+
         Object.entries(MODELS).forEach(([key, m]) => {
             const o = document.createElement('option');
             o.value = key;
@@ -470,8 +479,21 @@ if (typeof document !== 'undefined') {
 
         renderLedger();
 
+        // Every keystroke in a number field used to recalculate all thirteen
+        // regions and rebuild the chart — several times per keystroke when
+        // the browser fires input events in bursts. One recalculation per
+        // frame is as fast as anyone can see.
+        const nextFrame = typeof requestAnimationFrame === 'function'
+            ? requestAnimationFrame
+            : (fn) => fn();   // no frames to wait for (jsdom): update at once
+        let pending = false;
+        const scheduleUpdate = () => {
+            if (pending) return;
+            pending = true;
+            nextFrame(() => { pending = false; update(); });
+        };
         [modelSelect, regionSelect, wueSelect, inputTokens, outputTokens, queriesPerDay, pue, compareMode]
-            .forEach(el => el.addEventListener('input', update));
+            .forEach(el => el.addEventListener('input', scheduleUpdate));
 
         document.querySelectorAll('[data-preset]').forEach(btn => {
             btn.addEventListener('click', () => {

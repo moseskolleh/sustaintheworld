@@ -20,6 +20,20 @@ const ROOT = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const js = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8');
 const voiceJs = fs.readFileSync(path.join(ROOT, 'voice-scripts.js'), 'utf8');
+const dataJs = fs.readFileSync(path.join(ROOT, 'ai-carbon-data.js'), 'utf8');
+
+// The on-demand modules script.js fetches in the browser. Here they are
+// evaluated straight after the core, in the order a visitor who used every
+// feature would have loaded them, so the suites see the page fully built.
+// Each marks itself in window.mksLoaded, which is how the core's loader
+// knows not to inject a <script> for it.
+const MODULE_FILES = [
+    'modules/dossier.js',
+    'modules/terminal.js',
+    'modules/interactives.js',
+    'modules/dispatch.js'
+];
+const moduleJs = MODULE_FILES.map((rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8'));
 
 /**
  * @param {string} theme  value seeded into localStorage before the script runs
@@ -81,14 +95,17 @@ function run(theme, options) {
         delete window.SpeechSynthesisUtterance;
     }
 
-    // Execute the site scripts in the window context, in page order —
-    // script.js reads window.VoiceScripts, so this one has to land first.
+    // Execute the site scripts in the window context, in the order the
+    // browser would: the two data files a module depends on, the core, then
+    // the modules the core would have fetched on demand.
     window.eval(voiceJs);
+    window.eval(dataJs);
     window.eval(js);
+    moduleJs.forEach((src) => window.eval(src));
 
     process.removeListener('uncaughtException', onUncaught);
 
     return { window, errors, dom };
 }
 
-module.exports = { run, ROOT, html, js, voiceJs };
+module.exports = { run, ROOT, html, js, voiceJs, MODULE_FILES };

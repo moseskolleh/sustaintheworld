@@ -154,6 +154,17 @@ function assert(cond, msg) {
 
     assert(orphans.length === 0, `Bug5: every voice script has a mount point (orphans: ${orphans.join(', ') || 'none'})`);
 
+    // The reverse holds too. The player loads on demand, so until someone
+    // presses "listen" the core renders a stand-in control in every section
+    // header. A header for a section with no narration script would get a
+    // button that loads the player and then reads nothing.
+    const headed = Array.from(doc.querySelectorAll('section[id]'))
+        .filter((s) => s.querySelector('.section-header'))
+        .map((s) => s.id);
+    const scripted = new Set(SCRIPTS.map((s) => s.id));
+    const unscripted = headed.filter((id) => !scripted.has(id));
+    assert(unscripted.length === 0, `Bug5: every section header has a narration script behind its listen control (missing: ${unscripted.join(', ') || 'none'})`);
+
     const buttons = doc.querySelectorAll('.listen-btn');
     assert(
         buttons.length === SCRIPTS.length,

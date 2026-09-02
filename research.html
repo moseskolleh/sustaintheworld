@@ -22,13 +22,16 @@
     <meta name="twitter:title" content="Research outputs — Moses Kolleh Sesay">
     <meta name="twitter:description" content="Theses, reports, datasets, code and tools — what exists, where it is, and who holds the parts that are not public.">
     <meta name="twitter:image" content="https://moseskolleh.github.io/sustaintheworld/assets/img/og-image.jpg">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;family=Inter:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+    <!-- The three typefaces are self-hosted (assets/fonts/, built by scripts/build-fonts.js):
+         no request leaves this origin, and the bytes are counted in the budget. -->
+    <link rel="preload" as="font" type="font/woff2" href="assets/fonts/space-grotesk-latin.woff2" crossorigin>
+    <link rel="preload" as="font" type="font/woff2" href="assets/fonts/inter-latin.woff2" crossorigin>
+    <link rel="preload" as="font" type="font/woff2" href="assets/fonts/ibm-plex-mono-latin-400.woff2" crossorigin>
     <link rel="stylesheet" href="carbon-ai.css">
     <link rel="stylesheet" href="content.css">
 </head>
 <body>
+    <a class="skip-link" href="#main">Skip to content</a>
     <svg xmlns="http://www.w3.org/2000/svg" class="icon-sprite" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden"><symbol id="i-arrow-right" viewBox="0 0 448 512"><path d="M438.6 278.6c12.5-12.5 12.5-32.8 0-45.3l-160-160c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L338.8 224 32 224c-17.7 0-32 14.3-32 32s14.3 32 32 32l306.7 0L233.4 393.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0l160-160z"/></symbol></svg>
     <nav class="ca-nav" aria-label="Main">
         <a href="index.html" class="ca-nav-logo" aria-label="Back to portfolio home">

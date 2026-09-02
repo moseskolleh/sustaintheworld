@@ -114,13 +114,16 @@ function pageShell({ title, description, canonical, heroTag, heroTitle, heroLead
     <meta name="twitter:title" content="${esc(title)}">
     <meta name="twitter:description" content="${esc(description)}">
     <meta name="twitter:image" content="${SITE}assets/img/og-image.jpg">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;family=Inter:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+    <!-- The three typefaces are self-hosted (assets/fonts/, built by scripts/build-fonts.js):
+         no request leaves this origin, and the bytes are counted in the budget. -->
+    <link rel="preload" as="font" type="font/woff2" href="assets/fonts/space-grotesk-latin.woff2" crossorigin>
+    <link rel="preload" as="font" type="font/woff2" href="assets/fonts/inter-latin.woff2" crossorigin>
+    <link rel="preload" as="font" type="font/woff2" href="assets/fonts/ibm-plex-mono-latin-400.woff2" crossorigin>
     <link rel="stylesheet" href="carbon-ai.css">
     <link rel="stylesheet" href="content.css">
 </head>
 <body>
+    <a class="skip-link" href="#main">Skip to content</a>
     ${sprite(icons)}
     <nav class="ca-nav" aria-label="Main">
         <a href="index.html" class="ca-nav-logo" aria-label="Back to portfolio home">

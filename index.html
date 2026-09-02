@@ -75,11 +75,13 @@
     </script>
     <!-- JSON-LD:END -->
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <!-- Preload the hero (LCP) image so first paint doesn't wait to discover it in CSS -->
     <link rel="preload" as="image" href="assets/img/groundwater-mapping-1-hero.webp" fetchpriority="high">
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;family=Inter:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+    <!-- The three typefaces are self-hosted (assets/fonts/, built by scripts/build-fonts.js):
+         no request leaves this origin, and the bytes are counted in the budget. -->
+    <link rel="preload" as="font" type="font/woff2" href="assets/fonts/space-grotesk-latin.woff2" crossorigin>
+    <link rel="preload" as="font" type="font/woff2" href="assets/fonts/inter-latin.woff2" crossorigin>
+    <link rel="preload" as="font" type="font/woff2" href="assets/fonts/ibm-plex-mono-latin-400.woff2" crossorigin>
     <link rel="stylesheet" href="style.css">
 
     <!-- Cookieless analytics (no consent banner needed). Pick ONE and uncomment.
@@ -1021,7 +1023,7 @@
                     <div class="eco-stat"><span class="eco-num" id="ecoCarbon">—</span><span class="eco-unit">g CO₂e</span></div>
                     <div class="eco-stat"><span class="eco-num" id="ecoWater">—</span><span class="eco-unit">mL water</span></div>
                 </div>
-                <p class="eco-equiv" id="ecoEquiv"></p>
+                <p class="eco-equiv" id="ecoEquiv" aria-live="polite"></p>
                 <div class="eco-compare">
                     <div class="mono-label eco-compare-title">Same workload on other models — g CO₂e per answer</div>
                     <div id="ecoBars" class="eco-bars"></div>
@@ -1392,7 +1394,7 @@
                     </div>
                 </div>
                 <div class="contact-form-container reveal">
-                    <form class="contact-form" id="contactForm">
+                    <form class="contact-form" id="contactForm" action="https://script.google.com/macros/s/AKfycbzgyqRUmu0d2UFjb0WxbYyoDbO8F9jVnlvIQnNAfMU0v8JFpH5KAefy4z9BNoQqd68/exec" method="post">
                         <div class="form-group">
                             <input type="text" id="name" name="name" placeholder=" " required>
                             <label for="name">Your Name</label>
@@ -1447,7 +1449,7 @@
                     (&asymp;0.36&nbsp;g CO&#8322;e per MB, global average grid). Comparison point: the median web page ships &asymp;2.5&nbsp;MB
                     (<a href="https://httparchive.org/reports/page-weight" target="_blank" rel="noopener">HTTP Archive</a>).
                     A leading &ldquo;+&rdquo; means a third-party file served without timing headers couldn&rsquo;t be measured, so the true figure is a touch higher &mdash; never lower.
-                    Before this redesign, this page shipped ~25&nbsp;MB of images. A first view now costs about 235&nbsp;KB over the wire &mdash; text compressed, one hero image, everything else loaded only if you go looking for it. That figure is a budget the test suite enforces, not a claim in a README.
+                    Before this redesign, this page shipped ~25&nbsp;MB of images. A first view now costs about 270&nbsp;KB over the wire, fonts included &mdash; text compressed, one hero image, everything else loaded only if you go looking for it. That figure is a budget the test suite enforces, not a claim in a README.
                     Want the logical extreme? The <a href="field-report.html">text-only field report</a> is the whole portfolio in 8&nbsp;KB.</p>
                 </div>
 
@@ -1488,8 +1490,10 @@
         <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-arrow-up"></use></svg>
     </button>
 
-    <script src="ai-carbon-data.js"></script>
-    <script src="voice-scripts.js"></script>
+    <!-- One script. The narration player, the field terminal, the dossier
+         games and the section-05 interactives live in modules/ and are
+         fetched by script.js the first time each is needed — see its
+         ON-DEMAND MODULES section. -->
     <script src="script.js"></script>
 </body>
 </html>
