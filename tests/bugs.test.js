@@ -14,10 +14,19 @@ function assert(cond, msg) {
 }
 
 // --- Bug 1: clicking an <a href="#"> should not throw SyntaxError ---
+// The dossier toggles used to be the page's href="#" links; they are buttons
+// now, so a probe is put in the page before the scroll handler binds.
 {
-    const { window, errors } = run('dark');
-    const viewDetails = window.document.querySelector('.view-details-btn');
-    assert(!!viewDetails, 'Bug1 setup: found a .view-details-btn with href="#"');
+    const { window, errors } = run('dark', {
+        before: (w) => {
+            const a = w.document.createElement('a');
+            a.href = '#';
+            a.className = 'bug1-probe';
+            w.document.body.appendChild(a);
+        }
+    });
+    const viewDetails = window.document.querySelector('.bug1-probe');
+    assert(!!viewDetails, 'Bug1 setup: an <a href="#"> is on the page');
 
     // Dispatch a real click
     const ev = new window.MouseEvent('click', { bubbles: true, cancelable: true });
@@ -28,6 +37,26 @@ function assert(cond, msg) {
         return s.includes('Invalid selector') || s.includes('SyntaxError');
     });
     assert(!threw, 'Bug1: smooth-scroll handler must not throw on href="#"');
+}
+
+// --- Dossiers open from a real button, by keyboard as well as mouse ---
+{
+    const { window } = run('dark');
+    const doc = window.document;
+    const cards = Array.from(doc.querySelectorAll('.project-card'));
+    const toggles = cards.map(c => c.querySelector('h3 > button.project-toggle[type="button"]'));
+    assert(cards.length > 0 && toggles.every(Boolean), `A11y: every dossier title is a button inside its heading (${toggles.filter(Boolean).length}/${cards.length})`);
+    assert(!doc.querySelector('.project-summary[href], a.project-summary'), 'A11y: the summary is no longer one link around the whole card');
+
+    const first = toggles[0];
+    const details = doc.getElementById(first.getAttribute('aria-controls') || '');
+    assert(!!details && details.classList.contains('project-details'), 'A11y: the button controls its dossier');
+    first.click();   // what Enter or Space does to a button
+    assert(first.getAttribute('aria-expanded') === 'true' && cards[0].classList.contains('expanded'), 'A11y: the button opens the dossier and says so');
+
+    cards[1].querySelector('.project-head p').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    assert(cards[1].classList.contains('expanded') && !cards[0].classList.contains('expanded'), 'Mouse: clicking anywhere on a summary still opens it, and closes the other');
+    assert(first.getAttribute('aria-expanded') === 'false', 'A11y: the closed dossier\'s button says collapsed');
 }
 
 // --- Bug 2: theme-toggle icon must match persisted theme on load ---
@@ -58,11 +87,15 @@ function assert(cond, msg) {
         assert(toggle.getAttribute('aria-expanded') === 'true', 'A11y: nav toggle aria-expanded follows open state');
     }
 
+    // A real button inside each figure; role=button on the <figure> itself
+    // is not allowed and hides the caption from assistive technology.
     const item = doc.querySelector('.gallery-item');
+    const open = item && item.querySelector('button.gallery-open');
     assert(
-        !!item && item.getAttribute('tabindex') === '0' && item.getAttribute('role') === 'button',
-        'A11y: gallery items are keyboard-focusable buttons'
+        !!open && open.getAttribute('type') === 'button' && /^View larger: ./.test(open.getAttribute('aria-label') || '') && !!open.querySelector('img'),
+        'A11y: every gallery photo is inside a named button'
     );
+    assert(!doc.querySelector('.gallery-item[role], .gallery-item[tabindex]'), 'A11y: the <figure> keeps its own semantics');
 
     assert(!!doc.getElementById('website'), 'Form: honeypot field is present');
     assert(!!doc.getElementById('formStatus'), 'Form: inline status element is present');

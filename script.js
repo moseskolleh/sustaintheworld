@@ -85,6 +85,15 @@ const safeStorage = (() => {
 // can report honestly whether a preference will outlive the tab.
 window.mksStorage = safeStorage;
 
+// A smooth scroll is motion. The stylesheet turns it off for reduced
+// motion, but scrollIntoView({ behavior: 'smooth' }) does not ask the
+// stylesheet, so every scripted scroll asks here instead.
+const scrollMotion = () => (
+    (document.body && document.body.classList.contains('eco-mode')) ||
+    (typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+) ? 'auto' : 'smooth';
+window.mksScrollMotion = scrollMotion;
+
 // ===================================
 // ON-DEMAND MODULES
 // ===================================
@@ -297,8 +306,8 @@ function revealTarget(target) {
     let expanded = false;
     const card = target.closest('.project-card');
     if (card && !card.classList.contains('expanded')) {
-        const summary = card.querySelector('.project-summary');
-        if (summary) { summary.click(); expanded = true; }
+        const toggle = card.querySelector('.project-toggle');
+        if (toggle) { toggle.click(); expanded = true; }
     }
     const panel = target.id === 'receiptPanel' ? target : target.closest('#receiptPanel');
     if (panel && panel.hasAttribute('hidden')) {
@@ -319,7 +328,7 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         e.preventDefault();
         mksLoadFor(target);
         const didExpand = revealTarget(target);
-        const scroll = () => target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const scroll = () => target.scrollIntoView({ behavior: scrollMotion(), block: 'start' });
         if (didExpand) setTimeout(scroll, 180); else scroll();
         setMenuOpen(false);
     });
@@ -627,10 +636,17 @@ if (statsSection && 'IntersectionObserver' in window) {
 // ===================================
 // EXPANDABLE PROJECT DOSSIERS
 // ===================================
+// Each dossier opens from a real <button> around its title: announced as
+// "Sustainable AI Framework, button, collapsed", toggled by Enter or Space,
+// and inside the <h3> so heading navigation still finds it. The summary used
+// to be one <a href="#"> around the whole card — a sixty-word link name, and
+// Space scrolled the page. The rest of the summary stays clickable for a
+// mouse; the click from the button bubbles to the same handler.
 document.querySelectorAll('.project-card').forEach((card, i) => {
-    const toggle = card.querySelector('.project-summary');
+    const summary = card.querySelector('.project-summary');
+    const toggle = card.querySelector('.project-toggle');
     const details = card.querySelector('.project-details');
-    if (!toggle || !details) return;
+    if (!summary || !toggle || !details) return;
 
     // Disclosure semantics + keep collapsed content non-interactive. `inert`
     // (with the CSS visibility:hidden fallback) takes the hidden galleries and
@@ -652,15 +668,15 @@ document.querySelectorAll('.project-card').forEach((card, i) => {
 
     const collapse = (c) => {
         const d = c.querySelector('.project-details');
-        const t = c.querySelector('.project-summary');
+        const t = c.querySelector('.project-toggle');
         c.classList.remove('expanded');
         if (d) { d.style.maxHeight = '0px'; d.inert = true; }
         if (t) t.setAttribute('aria-expanded', 'false');
     };
 
-    toggle.addEventListener('click', (e) => {
-        // Let real links inside the summary (e.g. demo buttons) work normally
-        if (e.target.closest('a') && e.target.closest('a') !== toggle) return;
+    summary.addEventListener('click', (e) => {
+        // Let real links inside the summary work normally
+        if (e.target.closest('a')) return;
         e.preventDefault();
 
         const isExpanded = card.classList.contains('expanded');
@@ -755,20 +771,20 @@ window.addEventListener('resize', () => {
         lastFocus = null;
     };
 
+    // The photo sits in a real button. A <figure> cannot take role=button —
+    // the role hides the figure and its caption from assistive technology —
+    // and a button brings Enter, Space and focus with it. A click anywhere on
+    // the figure, caption included, still opens it.
     document.querySelectorAll('.gallery-item').forEach(item => {
         const img = item.querySelector('img');
         if (!img) return;
-        item.setAttribute('tabindex', '0');
-        item.setAttribute('role', 'button');
-        item.setAttribute('aria-label', 'View larger: ' + (img.alt || 'photo'));
-        const openItem = () => open(img.src, img.alt, item.getAttribute('data-caption'));
-        item.addEventListener('click', openItem);
-        item.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                openItem();
-            }
-        });
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'gallery-open';
+        btn.setAttribute('aria-label', 'View larger: ' + (img.alt || 'photo'));
+        img.replaceWith(btn);
+        btn.appendChild(img);
+        item.addEventListener('click', () => open(img.src, img.alt, item.getAttribute('data-caption')));
     });
 
     if (lightboxClose) lightboxClose.addEventListener('click', close);
@@ -793,7 +809,7 @@ window.addEventListener('resize', () => {
 // Its visibility is handled by the shared scroll handler above.
 if (scrollTopBtn) {
     scrollTopBtn.addEventListener('click', () => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        window.scrollTo({ top: 0, behavior: scrollMotion() });
     });
 }
 
@@ -964,7 +980,7 @@ document.addEventListener('keydown', (e) => {
 
     const jump = (selector) => {
         const target = document.querySelector(selector);
-        if (target) target.scrollIntoView({ behavior: 'smooth' });
+        if (target) target.scrollIntoView({ behavior: scrollMotion() });
     };
 
     if (e.key === 'h' || e.key === 'H') jump('#home');
@@ -995,10 +1011,17 @@ document.querySelectorAll('.current-year').forEach(el => {
             if (!window.FieldTerminal) openTerminal();
         });
     }
+    // The backtick is not a letter shortcut: a focused button or <select>
+    // does nothing with it, so only text entry holds it back. That is the
+    // rule modules/terminal.js applies once it is loaded; the two used to
+    // disagree, and a backtick after clicking a dossier title (a button)
+    // did nothing until focus moved on.
+    const TEXT_ENTRY = 'textarea, [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="searchbox"], ' +
+        'input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"])';
     document.addEventListener('keydown', (e) => {
         if (window.FieldTerminal) return;
         if (e.key !== '`' || e.ctrlKey || e.metaKey || e.altKey) return;
-        if (isTypingContext(e.target)) return;
+        if (e.target && typeof e.target.closest === 'function' && e.target.closest(TEXT_ENTRY)) return;
         e.preventDefault();
         openTerminal();
     });

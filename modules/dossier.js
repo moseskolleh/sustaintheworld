@@ -106,9 +106,21 @@
         placeRig(rigX);
     };
 
+    // The drawing is aria-hidden, and the curve is the whole of the
+    // information: without this a screen reader could only guess where to
+    // drill. It grades the dip the way the picture does — deeper or
+    // shallower — without saying what is down there.
+    const reading = (r) => (r < 0.45 ? 'very low — a deep dip in the curve'
+        : r < 0.7 ? 'low — a dip in the curve'
+        : r < 0.9 ? 'slightly low — the edge of a dip'
+        : 'high — no dip here');
+
     function placeRig(x) {
         rigX = Math.max(50, Math.min(W - 50, x));
         rigEl.setAttribute('transform', `translate(${rigX.toFixed(1)} ${surfaceY(rigX).toFixed(1)})`);
+        const pct = Math.round((rigX - 50) / (W - 100) * 100);
+        stage.setAttribute('aria-valuenow', String(pct));
+        stage.setAttribute('aria-valuetext', `rig at ${pct}% along the profile; resistivity ${reading(resistivityAt(rigX))}`);
     }
 
     const toViewX = (clientX) => {
@@ -313,6 +325,7 @@
         const lv = LEVELS[+slider.value] || LEVELS[0];
         levelLabel.textContent = lv.label;
         note.textContent = lv.note;
+        slider.setAttribute('aria-valuetext', lv.label === 'normal' ? 'normal river level' : `river ${lv.label} above normal`);
         setWater(lv.y, instant);
     };
     slider.addEventListener('input', () => update(false));

@@ -217,7 +217,7 @@ async function exerciseHomepage(page, r, origin) {
     }
 
     // Opening the groundwater dossier fetches the games.
-    const summary = await page.$('.project-card[data-project="groundwater"] .project-summary');
+    const summary = await page.$('.project-card[data-project="groundwater"] .project-toggle');
     if (summary) {
         await summary.scrollIntoViewIfNeeded();
         await summary.click();

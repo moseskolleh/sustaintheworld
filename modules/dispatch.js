@@ -209,7 +209,8 @@
             </button>
             <div class="dispatch-info">
                 <span class="dispatch-title mono-label"></span>
-                <p class="dispatch-caption" aria-live="polite"></p>
+                <p class="dispatch-caption"></p>
+                <p class="sr-only dispatch-status" role="status"></p>
             </div>
             <button class="dispatch-rate mono-label" type="button" aria-label="Playback speed">1&times;</button>
             <button class="dispatch-close" type="button" aria-label="Stop narration">&times;</button>
@@ -228,6 +229,10 @@
         play: bar.querySelector('.dispatch-play'),
         title: bar.querySelector('.dispatch-title'),
         caption: bar.querySelector('.dispatch-caption'),
+        // The caption follows the voice sentence by sentence; a live region
+        // there read every sentence out over the voice reading it. Only what
+        // a listener would otherwise miss — a failure, a fallback — is said.
+        status: bar.querySelector('.dispatch-status'),
         rate: bar.querySelector('.dispatch-rate'),
         close: bar.querySelector('.dispatch-close'),
         progress: bar.querySelector('.dispatch-progress span'),
@@ -277,6 +282,7 @@
     const stop = () => {
         playTicket++;
         stopKeepAlive();
+        el.status.textContent = '';
         if (canSynth) synth.cancel();
         if (audioEl) { audioEl.pause(); audioEl.removeAttribute('src'); audioEl.load(); audioEl = null; }
         current = null;
@@ -305,7 +311,7 @@
         setIcon('play');
         showBar(true);
         bar.classList.add('dispatch-failed');
-        el.caption.textContent = message;
+        el.caption.textContent = el.status.textContent = message;
         el.play.setAttribute('aria-label', retryScript ? 'Try playing the narration again' : 'Resume narration');
         clearPlayingButtons();
     };
@@ -402,7 +408,7 @@
                 failPlayback(script, 'that recording would not load, and this browser has no speech voice to fall back on. Press play to try again.');
                 return;
             }
-            el.caption.textContent = 'that recording would not load — using the browser voice instead.';
+            el.caption.textContent = el.status.textContent = 'that recording would not load — using the browser voice instead.';
             setMode('synth', false);
             runSynth(script.id, sentences, 0);
         });

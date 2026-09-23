@@ -220,7 +220,7 @@
                 <div class="ft-screen" aria-live="polite"></div>
                 <form class="ft-line">
                     <label class="ft-prompt" for="ftInput">moses@sustaintheworld:~$</label>
-                    <input id="ftInput" class="ft-input" type="text" autocomplete="off" spellcheck="false" autocapitalize="off">
+                    <input id="ftInput" class="ft-input" type="text" aria-label="Terminal command" autocomplete="off" spellcheck="false" autocapitalize="off">
                 </form>
             </div>`;
         document.body.appendChild(overlay);

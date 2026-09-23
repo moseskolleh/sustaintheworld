@@ -110,6 +110,10 @@
 
     [modelSel, presetSel, gridSel].forEach(el => el.addEventListener('change', render));
     render();
+    // Announce changes from here on, not the first fill: that happens as the
+    // section comes within a screen of the viewport, and was read out in the
+    // middle of whatever the visitor was doing further up the page.
+    document.getElementById('ecoEquiv').setAttribute('aria-live', 'polite');
 })();
 
 
@@ -326,7 +330,7 @@ window.mksShare = (() => {
         b.addEventListener('click', () => {
             input.value = SAMPLES[b.getAttribute('data-sample')] || '';
             assay();
-            result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            result.scrollIntoView({ behavior: window.mksScrollMotion(), block: 'nearest' });
         });
     });
 })();
@@ -427,6 +431,8 @@ window.mksShare = (() => {
     };
 
     update();
+    // A status from here on; the first fill happens before anyone is looking.
+    if (summary) { summary.setAttribute('role', 'status'); summary.setAttribute('aria-live', 'polite'); }
     sel.addEventListener('change', update);
     if (gridSel) gridSel.addEventListener('change', update);
     const copyBtn = document.getElementById('anatomyCopy');
@@ -950,7 +956,7 @@ window.mksShare = (() => {
         if (open) build();
         panel.toggleAttribute('hidden', !open);
         btn.setAttribute('aria-expanded', String(open));
-        if (open) panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        if (open) panel.scrollIntoView({ behavior: window.mksScrollMotion(), block: 'nearest' });
     });
 
     if (dlBtn && canvas) {
