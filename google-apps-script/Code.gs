@@ -299,13 +299,12 @@ function doPost(e) {
     if (!data || typeof data !== 'object') {
       return jsonResponse('error', 'Could not read the submission.');
     }
-    if (isForm) {
-      // A browser is going to render whatever comes back, so answer a form
-      // post with a page rather than a JSON blob.
-      var result = handleSubmission(data, config);
-      return htmlResponse(result.status, result.message);
-    }
-    return handleSubmission(data, config);
+    // A browser is going to render whatever comes back from a form post, so
+    // that path is answered with a page rather than a JSON blob.
+    var result = handleSubmission(data, config);
+    return isForm
+      ? htmlResponse(result.status, result.message)
+      : jsonResponse(result.status, result.message);
   } catch (error) {
     console.error('doPost failed: ' + (error && error.stack ? error.stack : error));
     return jsonResponse('error', 'Something went wrong on our side. Please try again in a moment.');
@@ -335,15 +334,22 @@ function htmlResponse(status, message) {
 }
 
 /**
- * Validates, rate-limits, records and notifies. Returns the JSON response
- * the JavaScript path sends back; the form path reads its status/message.
+ * Validates, rate-limits, records and notifies. Returns a plain
+ * { status, message } that doPost turns into JSON or a page. It used to
+ * return the JSON TextOutput itself, which has no .status or .message, so
+ * every JavaScript-free submission was answered "Something went wrong" and
+ * "undefined" — including the ones that had just been recorded.
  */
 function handleSubmission(data, config) {
+  var reply = function (status, message) {
+    return { status: status, message: message };
+  };
+
   try {
     // Honeypot: real visitors never see this field. If it's filled, a bot
     // did it — claim success so it moves on, but record and send nothing.
     if (data.website) {
-      return jsonResponse('success', 'Response recorded successfully!');
+      return reply('success', 'Response recorded successfully!');
     }
 
     var name = String(data.name || '').trim().slice(0, FIELD_LIMITS.name);
@@ -352,20 +358,20 @@ function handleSubmission(data, config) {
     var message = String(data.message || '').trim().slice(0, FIELD_LIMITS.message);
 
     if (!name || !message) {
-      return jsonResponse('error', 'Name and message are required.');
+      return reply('error', 'Name and message are required.');
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return jsonResponse('error', 'Please provide a valid email address.');
+      return reply('error', 'Please provide a valid email address.');
     }
 
     var challengeError = verifyTurnstile(data.turnstileToken, config.turnstileSecret);
     if (challengeError) {
-      return jsonResponse('error', challengeError);
+      return reply('error', challengeError);
     }
 
     var limited = checkRateLimit(email);
     if (limited) {
-      return jsonResponse('error', limited);
+      return reply('error', limited);
     }
 
     // "Source" is visitor-supplied and gets the same treatment as everything
@@ -405,14 +411,14 @@ function handleSubmission(data, config) {
       }
     }
 
-    return jsonResponse('success', 'Response recorded successfully!');
+    return reply('success', 'Response recorded successfully!');
 
   } catch (error) {
     // The visitor gets a generic message; the detail goes to the Apps Script
     // log. Returning error.toString() leaked spreadsheet ids and internal
     // paths to anyone who could make the script throw.
     console.error('handleSubmission failed: ' + error);
-    return jsonResponse('error', 'Something went wrong on our side. Please try again shortly.');
+    return reply('error', 'Something went wrong on our side. Please try again shortly.');
   }
 }
 
