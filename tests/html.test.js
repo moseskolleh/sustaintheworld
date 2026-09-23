@@ -178,6 +178,12 @@ PAGES.forEach((page) => {
         );
     }
 
+    // --- An entity escaped twice renders as its own source ----------------
+    // The generator once passed "&middot;" through esc(), and two page
+    // headers read "PROBLEM &middot; METHOD" in the browser.
+    const doubled = html.match(/&amp;(#\d+|#x[0-9a-f]+|[a-z][a-z0-9]*);/gi) || [];
+    assert(doubled.length === 0, `${page}: no entity is escaped twice (${[...new Set(doubled)].join(', ') || 'none'})`);
+
     // --- An aria-hidden container must not hold focusable children --------
     // Focus lands somewhere the screen reader has been told does not exist.
     const hiddenBlocks = html.match(/<(\w+)[^>]*aria-hidden=["']true["'][^>]*>/gi) || [];

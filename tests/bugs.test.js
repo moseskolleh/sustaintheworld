@@ -196,12 +196,51 @@ function assert(cond, msg) {
     assert(pressed.length === 0, 'Bug6: every listen button reports aria-pressed="false" on load');
 }
 
-if (failures > 0) {
-    console.log(`\n${failures} assertion(s) failed`);
+// --- Bug 7: a message the endpoint turns down says why ---
+// The Apps Script answers a rejection with a reason written for the visitor
+// ("a valid email address", "wait a moment"). The form used to throw that
+// away and show the same generic error it shows when the network is down.
+const formChecks = (async () => {
+    const submit = async (respond) => {
+        const { window } = run('dark');
+        const doc = window.document;
+        window.fetch = respond;
+        doc.getElementById('name').value = 'Ada';
+        doc.getElementById('email').value = 'ada@example.com';
+        doc.getElementById('message').value = 'A question about groundwater.';
+        doc.getElementById('contactForm').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        return doc.getElementById('formStatus');
+    };
+    const answer = (body) => async () => ({ ok: true, json: async () => body });
+
+    const turnedDown = await submit(answer({ status: 'error', message: 'You just sent a message — please wait a moment before sending another.' }));
+    assert(
+        turnedDown.classList.contains('error') && /not sent/.test(turnedDown.textContent) && /wait a moment/.test(turnedDown.textContent),
+        `Bug7: a rejection shows the endpoint's reason (${turnedDown.textContent})`
+    );
+
+    const offline = await submit(async () => { throw new TypeError('Failed to fetch'); });
+    assert(
+        offline.classList.contains('error') && /email me directly/.test(offline.textContent),
+        'Bug7: when the endpoint cannot be reached, the visitor is pointed at email'
+    );
+
+    const sent = await submit(answer({ status: 'success', message: 'Response recorded successfully!' }));
+    assert(sent.classList.contains('success') && !sent.hidden, 'Bug7: a recorded message is reported as sent');
+})();
+
+formChecks.then(() => {
+    if (failures > 0) {
+        console.log(`\n${failures} assertion(s) failed`);
+        process.exit(1);
+    } else {
+        console.log('\nAll assertions passed');
+        // The site script leaves timers running (slideshow, typewriter) which
+        // would otherwise keep the process alive forever.
+        process.exit(0);
+    }
+}, (err) => {
+    console.log('FAIL: form checks threw', err);
     process.exit(1);
-} else {
-    console.log('\nAll assertions passed');
-    // The site script leaves timers running (slideshow, typewriter) which
-    // would otherwise keep the process alive forever.
-    process.exit(0);
-}
+});

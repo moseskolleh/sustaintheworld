@@ -56,6 +56,16 @@ const prose = (s) => esc(s)
 
 const slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
+// Group headings on research.html. Appending an "s" gave "MSc thesiss" and
+// "Codes"; these are the rules the output types actually need.
+const UNCOUNTABLE = new Set(['Code']);
+const plural = (type) => {
+    if (UNCOUNTABLE.has(type)) return type;
+    if (/is$/.test(type)) return type.slice(0, -2) + 'es';   // thesis → theses
+    if (/s$/.test(type)) return type;                          // already plural: Essays
+    return type + 's';
+};
+
 /** Pulls named <symbol> definitions out of the sprite index.html already ships. */
 function sprite(ids) {
     const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
@@ -139,7 +149,7 @@ function pageShell({ title, description, canonical, heroTag, heroTitle, heroLead
     </nav>
     <main class="ca-shell" id="main">
         <header class="ca-hero">
-            <div class="ca-hero-tag">${esc(heroTag)}</div>
+            <div class="ca-hero-tag">${heroTag}</div>
             <h1>${heroTitle}</h1>
             <p>${heroLead}</p>
         </header>
@@ -387,7 +397,7 @@ function renderResearch(data) {
 
     const sections = Object.keys(byType).map(type => `
             <section class="rs-group">
-                <h2>${esc(type)}${byType[type].length > 1 ? 's' : ''}</h2>
+                <h2>${esc(byType[type].length > 1 ? plural(type) : type)}</h2>
                 ${byType[type].map(entry).join('\n')}
             </section>`).join('\n');
 

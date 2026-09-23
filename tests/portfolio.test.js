@@ -291,6 +291,22 @@ function dom(file) {
     assert(linkedTitles.length === publicCount, `Research page: only public outputs are links (${linkedTitles.length}/${publicCount})`);
 
     assert(doc.querySelectorAll('.rs-commands dt').length > 0, 'Research page: the reproduction commands are listed');
+
+    // Group headings are plurals a person would write: not "MSc thesiss".
+    const headings = Array.from(doc.querySelectorAll('.rs-group h2')).map(h => h.textContent.trim());
+    const misspelt = headings.filter(h => /(iss|sss|Codes)$/.test(h));
+    assert(misspelt.length === 0, `Research page: group headings are real plurals (${headings.join(', ')})`);
+
+    // The intro follows the hero lead; it should not say the same thing again.
+    // Compared on runs of three words, so a light rewording still counts.
+    const trigrams = (s) => {
+        const w = s.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').split(/\s+/).filter(Boolean);
+        return new Set(w.slice(2).map((x, i) => `${w[i]} ${w[i + 1]} ${x}`));
+    };
+    const lead = trigrams(doc.querySelector('.ca-hero p').textContent);
+    const intro = trigrams(doc.querySelector('.rs-intro p').textContent);
+    const shared = [...lead].filter(t => intro.has(t)).length / (lead.size || 1);
+    assert(shared < 0.25, `Research page: the intro does not repeat the hero lead (${Math.round(shared * 100)}% of its phrasing shared)`);
 }
 
 // --- generated files carry their warning ---------------------------------

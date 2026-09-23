@@ -838,6 +838,10 @@ if (contactForm) {
         }
         if (formStatus) formStatus.hidden = true;
 
+        // When the endpoint turns a message down it says why, in words meant
+        // for the visitor ("a valid email address", "wait a moment"). That
+        // beats a generic error, which is kept for when it could not be asked.
+        let reason = '';
         try {
             // A plain-string body keeps this a "simple" request — no CORS
             // preflight, which Apps Script cannot answer — while the followed
@@ -849,14 +853,17 @@ if (contactForm) {
             if (!response.ok) throw new Error('HTTP ' + response.status);
             const result = await response.json();
             if (result.status !== 'success') {
-                throw new Error(result.message || 'Submission rejected');
+                reason = typeof result.message === 'string' ? result.message.trim() : '';
+                throw new Error(reason || 'Submission rejected');
             }
 
             showStatus('success', 'Thank you for your message! It has been sent — I will get back to you soon.');
             contactForm.reset();
         } catch (error) {
             console.error('Error submitting form:', error);
-            showStatus('error', 'Something went wrong and your message was not sent. Please try again in a moment, or email me directly at moseskollehsesay@gmail.com.');
+            showStatus('error', reason
+                ? `Your message was not sent. ${reason}`
+                : 'Something went wrong and your message was not sent. Please try again in a moment, or email me directly at moseskollehsesay@gmail.com.');
         } finally {
             if (submitBtn) {
                 submitBtn.disabled = false;
