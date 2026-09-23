@@ -263,9 +263,18 @@
     // and outrank the player on z-index. On narrow screens, where the player
     // spans the full width, they get lifted clear of it instead of sitting
     // on top of the close button.
+    // The corner buttons lift clear of the player by its real height. A
+    // fixed 178px sat them on its top corner in normal playback, and on its
+    // speed and close buttons in the taller failure state.
+    const liftCorner = () => {
+        if (!bar.hidden) document.body.style.setProperty('--dispatch-clear', `${bar.offsetHeight + 8}px`);
+    };
+    if ('ResizeObserver' in window) new ResizeObserver(liftCorner).observe(bar);
+
     const showBar = (visible) => {
         bar.hidden = !visible;
         document.body.classList.toggle('dispatch-open', visible);
+        liftCorner();
     };
 
     const clearPlayingButtons = () => {

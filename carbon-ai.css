@@ -249,6 +249,9 @@ a { color: var(--primary-green); }
     margin-bottom: 16px;
 }
 .ca-out-3 { grid-template-columns: repeat(3, 1fr); }
+/* Three ~92px cells forced the page to 374px, so on a 320px phone every
+   card and field was cut off at the edge. */
+@media (max-width: 420px) { .ca-out-3 { grid-template-columns: 1fr; } }
 .ca-out-2 { grid-template-columns: repeat(2, 1fr); }
 .ca-out-cell {
     background: var(--darker-bg);
@@ -350,12 +353,15 @@ a { color: var(--primary-green); }
 }
 .ca-chart-controls {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 12px;
     margin-bottom: 16px;
 }
 .ca-chart-controls label { color: var(--text-secondary); font-size: 0.85rem; }
 .ca-chart-controls select {
+    max-width: 100%;
+    min-width: 0;
     background: var(--darker-bg);
     color: var(--text-primary);
     border: 1px solid var(--border);
@@ -509,6 +515,7 @@ a { color: var(--primary-green); }
     border: 0;
 }
 
+.ca-disclaimer a { overflow-wrap: anywhere; }   /* the long GitHub URL, on a phone */
 .ca-disclaimer {
     margin-top: 16px;
     padding: 12px 16px;

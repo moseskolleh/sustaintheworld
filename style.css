@@ -272,12 +272,16 @@ body.light-mode .navbar {
 }
 
 .nav-container {
-    max-width: 1400px;
+    /* Ten numbered links, CV and Contact need about 1,380px on one line;
+       1400px left 1,352 for them, so labels wrapped at every desktop width
+       and Contact was clipped off-screen up to 1373px. */
+    max-width: 1520px;
     margin: 0 auto;
     padding: 0 24px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 24px;
     height: 72px;
 }
 
@@ -316,11 +320,12 @@ body.light-mode .navbar {
 .nav-menu {
     display: flex;
     align-items: center;
-    gap: 28px;
+    gap: 20px;
     list-style: none;
 }
 
 .nav-link {
+    white-space: nowrap;
     font-family: var(--font-display);
     font-size: 0.85rem;
     font-weight: 500;
@@ -1180,6 +1185,14 @@ body.light-mode .hero-photo-caption {
     height: 70px;
     width: 2px;
     overflow: hidden;
+}
+
+/* On narrow screens the centred cue ran through the right-anchored photo
+   caption; the caption is the more useful of the two. */
+@media (max-width: 900px) {
+    .scroll-indicator {
+        display: none;
+    }
 }
 
 .scroll-indicator-line {
@@ -2345,6 +2358,13 @@ body.light-mode .hero-photo-caption {
 .contact-card p {
     font-size: 0.98rem;
     color: var(--text-primary);
+    /* The email address is one unbreakable word. On a 320px phone it set the
+       whole column's width, and the cards and the form ran 19px off-screen. */
+    overflow-wrap: anywhere;
+}
+
+.contact-card > div {
+    min-width: 0;
 }
 
 .social-links {
@@ -2488,6 +2508,15 @@ body.light-mode .form-status.error {
     text-align: center;
 }
 
+/* At the very end of the page the floating buttons cannot be scrolled clear,
+   and on narrow screens they sat on the low-energy switch and the terminal
+   button. The footer leaves room for them. */
+@media (max-width: 760px) {
+    .footer {
+        padding-bottom: 160px;
+    }
+}
+
 .footer-logo {
     font-family: var(--font-display);
     font-weight: 700;
@@ -2623,9 +2652,21 @@ body.light-mode .form-status.error {
 /* ===================================
    RESPONSIVE
    =================================== */
-/* The nav now carries 8 numbered links + contact — collapse to the
-   hamburger earlier than the old 768px so it never overflows */
-@media (max-width: 1180px) {
+/* Between the hamburger and full width, the section numbers step aside
+   so the labels fit on one line (the menu is ~1,070px without them). */
+@media (min-width: 1260px) and (max-width: 1479px) {
+    .nav-num {
+        display: none;
+    }
+
+    .nav-menu {
+        gap: 18px;
+    }
+}
+
+/* Ten numbered links, CV and Contact: below 1260px they do not fit on one
+   line even without the numbers, so the hamburger takes over. */
+@media (max-width: 1259px) {
     .nav-toggle {
         display: flex;
     }
@@ -2638,6 +2679,12 @@ body.light-mode .form-status.error {
         background: var(--darker-bg);
         width: min(320px, 80vw);
         height: calc(100vh - 72px);
+        /* The drawer scrolls: on a short screen (a phone on its side, a
+           320x568 phone) the last items were below the fold with no way to
+           reach them. dvh follows the mobile toolbar where supported. */
+        height: calc(100dvh - 72px);
+        overflow-y: auto;
+        overscroll-behavior: contain;
         padding: 40px 32px;
         gap: 24px;
         align-items: flex-start;
@@ -2653,6 +2700,13 @@ body.light-mode .form-status.error {
         right: 0;
         visibility: visible;
         transition: right 0.35s ease, visibility 0s;
+    }
+}
+
+@media (max-width: 1259px) and (max-height: 700px) {
+    .nav-menu {
+        padding: 20px 32px;
+        gap: 12px;
     }
 }
 
@@ -2683,7 +2737,7 @@ body.light-mode .form-status.error {
 @media (max-width: 860px) {
     .skills-grid,
     .contact-content {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 
     .project-summary {
@@ -2960,7 +3014,9 @@ body.light-mode .journey-map-readout {
 
 .eco-widget-controls {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    /* minmax(0, …): a 1fr track still grows to its longest <option>, and
+       the selects pushed out of the card (by 67px on a 320px phone). */
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 18px;
     margin-bottom: 26px;
 }
@@ -2972,6 +3028,8 @@ body.light-mode .journey-map-readout {
 }
 
 .eco-field select {
+    width: 100%;
+    min-width: 0;
     background: var(--card-bg-alt);
     color: var(--text-primary);
     border: 1px solid var(--line-color);
@@ -3384,7 +3442,7 @@ body.eco-mode .hero-bg-slide:not(.active) {
     .eco-widget-controls,
     .eco-widget-out,
     .impact-row-inline {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 
     .eco-bar-row {
@@ -4320,8 +4378,9 @@ body.eco-mode .dispatch-progress span {
 /* The player is centred and 560px wide, so it only reaches under the
    floating corner buttons once the viewport drops below roughly 760px. */
 @media (max-width: 760px) {
-    body.dispatch-open .scroll-top { bottom: 178px; }
-    body.dispatch-open .theme-toggle { bottom: 243px; }
+    /* --dispatch-clear is the player's measured height, set by the player. */
+    body.dispatch-open .scroll-top { bottom: calc(var(--dispatch-clear, 178px) + 12px); }
+    body.dispatch-open .theme-toggle { bottom: calc(var(--dispatch-clear, 178px) + 74px); }
 }
 
 /* --- narrow screens ------------------------------------------------ */
