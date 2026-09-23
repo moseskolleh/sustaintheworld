@@ -267,6 +267,10 @@
     };
 
     const open = () => {
+        // Already open: a double press while the module was loading called
+        // this twice, and the second saved the terminal's own input as the
+        // place to return focus to — so Escape dropped focus on <body>.
+        if (overlay && overlay.classList.contains('open')) return;
         if (!overlay) build();
         lastFocus = document.activeElement;
         overlay.classList.add('open');

@@ -36,7 +36,6 @@
         label: `${DATA.REGIONS[k].label} — ${DATA.REGIONS[k].intensity} gCO₂e/kWh`,
         intensity: DATA.REGIONS[k].intensity
     }));
-    const PRESET_TOKENS = { short: 400, chat: 1000, doc: 5000, reasoning: 9000 };
     const PUE = DATA.PUE;                              // data-centre overhead
     const WUE = DATA.WUE_PROFILES.avg.wue_L_per_kWh;   // L per kWh, typical cooling
 
@@ -49,15 +48,23 @@
         if (n >= 100) return n.toFixed(0);
         if (n >= 1) return n.toFixed(1);
         if (n >= 0.01) return n.toFixed(2);
+        // A small model on a clean grid is tiny, not free: "0.000 g" said free.
+        if (n > 0 && n < 0.001) return '<0.001';
         return n.toFixed(3);
     };
 
-    const footprint = (model, tokens, grid) => {
-        // Presets are a token budget, not a split, so they are spent at the
-        // reference mix the benchmarks are calibrated against. The full tool
-        // is where the input/output split becomes a control.
-        const mix = DATA.TOKEN_ENERGY.referenceMix;
-        const wh = DATA.energyForQuery(model.model, tokens * mix.input, tokens * mix.output);
+    // Each workload is the split its label promises ("1,000 in / 8,000
+    // out"), read from the option itself so the two cannot drift. Generated
+    // tokens cost more than read ones, so spending every preset at a 50/50
+    // mix under-counted a reasoning run by a third and over-counted a
+    // document read by more than half.
+    const workload = () => {
+        const opt = presetSel.options[presetSel.selectedIndex];
+        return { input: Number(opt.dataset.in) || 0, output: Number(opt.dataset.out) || 0 };
+    };
+
+    const footprint = (model, work, grid) => {
+        const wh = DATA.energyForQuery(model.model, work.input, work.output);
         const kWh = (wh / 1000) * PUE;
         return {
             wh: kWh * 1000,
@@ -69,8 +76,8 @@
     const render = () => {
         const model = MODELS[modelSel.value];
         const grid = GRIDS[gridSel.value];
-        const tokens = PRESET_TOKENS[presetSel.value];
-        const f = footprint(model, tokens, grid);
+        const work = workload();
+        const f = footprint(model, work, grid);
 
         document.getElementById('ecoEnergy').textContent = fmt(f.wh);
         document.getElementById('ecoCarbon').textContent = fmt(f.carbon);
@@ -85,7 +92,7 @@
             `and <strong>${fmt(teaspoons)} teaspoons</strong> of cooling water.`;
 
         const bars = document.getElementById('ecoBars');
-        const results = MODELS.map(m => ({ m, f: footprint(m, tokens, grid) }))
+        const results = MODELS.map(m => ({ m, f: footprint(m, work, grid) }))
             .sort((a, b) => a.f.carbon - b.f.carbon);
         const max = results[results.length - 1].f.carbon || 1;
         bars.innerHTML = results.map(({ m, f: mf }) => `
@@ -113,11 +120,17 @@
 // ===================================
 window.mksShare = (() => {
     const SITE = (location.hostname + location.pathname).replace(/\/+$/, '') || 'moseskolleh.github.io/sustaintheworld';
+    // Restores the button's markup, not just its text: putting back
+    // textContent dropped the icon for good. A second flash before the first
+    // has finished keeps the original rather than saving "Copied ✓" as it.
+    const flashing = new WeakMap();
     const flash = (btn, msg) => {
         if (!btn) return;
-        if (!btn.dataset.label) btn.dataset.label = btn.textContent;
+        const state = flashing.get(btn) || { html: btn.innerHTML };
+        clearTimeout(state.timer);
         btn.textContent = msg;
-        setTimeout(() => { btn.textContent = btn.dataset.label; }, 1700);
+        state.timer = setTimeout(() => { btn.innerHTML = state.html; flashing.delete(btn); }, 1700);
+        flashing.set(btn, state);
     };
     return {
         site: SITE,

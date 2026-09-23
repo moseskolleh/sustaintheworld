@@ -126,6 +126,18 @@
     const finishHole = (x) => {
         const zone = zones.find(z => Math.abs(x - z.center) <= z.half);
         const sy = surfaceY(x);
+        // A zone already drilled tells you nothing new. Counting it again let
+        // one strike be re-drilled into any score you liked, which is the
+        // opposite of the point: the curve has to be read for each new hole.
+        if (zone && zone.drilled) {
+            result.textContent = zone.kind === 'water'
+                ? 'Already struck here — that fracture zone is yours. Move the rig and read the curve for the next one.'
+                : 'That\'s the clay pocket you already found. Move the rig and read the curve again.';
+            drilling = false;
+            drillBtn.disabled = false;
+            return;
+        }
+        if (zone) zone.drilled = true;
         attempts++;
         if (zone && zone.kind === 'water') {
             strikes++;

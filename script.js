@@ -639,6 +639,17 @@ document.querySelectorAll('.project-card').forEach((card, i) => {
     toggle.setAttribute('aria-controls', details.id);
     details.inert = true;
 
+    // What is inside can grow after the dossier opens — a mini-game logs
+    // every drill, late images arrive — and a max-height measured at opening
+    // clipped it, leaving the end of the dossier hidden but still tabbable.
+    // The inner wrapper is not clamped, so its size is the content's.
+    const inner = details.querySelector('.project-details-inner');
+    if (inner && 'ResizeObserver' in window) {
+        new ResizeObserver(() => {
+            if (card.classList.contains('expanded')) details.style.maxHeight = details.scrollHeight + 'px';
+        }).observe(inner);
+    }
+
     const collapse = (c) => {
         const d = c.querySelector('.project-details');
         const t = c.querySelector('.project-summary');
@@ -1007,21 +1018,37 @@ document.querySelectorAll('.current-year').forEach(el => {
     const load = () => mksLoad('interactives').catch(mksLoadWarn);
 
     if ('IntersectionObserver' in window) {
+        // Stop watching only once the module is in. Disconnecting first meant
+        // one failed fetch left the section blank for the rest of the visit;
+        // now coming back into range tries again.
         const io = new IntersectionObserver((entries) => {
-            if (entries.some(en => en.isIntersecting)) { io.disconnect(); load(); }
+            if (entries.some(en => en.isIntersecting)) {
+                mksLoad('interactives').then(() => io.disconnect(), mksLoadWarn);
+            }
         }, { rootMargin: '1200px 0px' });
         hosts.forEach(h => io.observe(h));
     } else {
         load();
     }
 
+    // Presses waiting for the module. A second press on the same button
+    // while it is on its way is the same request: replaying both opened the
+    // receipt and closed it again.
+    const waiting = new Set();
     document.addEventListener('click', (e) => {
         if (window.mksLoaded.interactives) return;
         const btn = e.target && e.target.closest ? e.target.closest('button') : null;
         if (!btn || !btn.closest(INTERACTIVE_HOSTS)) return;
+        // The section's listen control lives in the same host but belongs to
+        // the narration player, which handles its own first press.
+        if (btn.classList.contains('listen-btn')) return;
         e.preventDefault();
+        if (waiting.has(btn)) return;
+        waiting.add(btn);
         // Replay the press once the module's own handler is listening.
-        mksLoad('interactives').then(() => btn.click()).catch(mksLoadWarn);
+        mksLoad('interactives')
+            .then(() => btn.click(), mksLoadWarn)
+            .then(() => waiting.delete(btn));
     });
 })();
 

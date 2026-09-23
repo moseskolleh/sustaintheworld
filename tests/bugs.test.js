@@ -196,6 +196,93 @@ function assert(cond, msg) {
     assert(pressed.length === 0, 'Bug6: every listen button reports aria-pressed="false" on load');
 }
 
+// --- Bug 8: "AI, Weighed" spends the split each workload's label promises ---
+// Every preset used to be spent at a 50/50 mix whatever its label said, so a
+// "1,000 in / 8,000 out" reasoning run came out a third too light.
+{
+    const { window } = run('dark');
+    const doc = window.document;
+    const data = window.AICarbonData;
+    const preset = doc.getElementById('ecoPreset');
+    const model = data.MODELS[data.HOMEPAGE_MODELS[0]];
+
+    Array.from(preset.options).forEach((opt) => {
+        const nums = (opt.textContent.match(/([\d,]+) in \/ ([\d,]+) out/) || []).slice(1).map(n => Number(n.replace(/,/g, '')));
+        assert(
+            nums.length === 2 && nums[0] === Number(opt.dataset.in) && nums[1] === Number(opt.dataset.out),
+            `Bug8: the "${opt.value}" workload's data matches its label (${nums.join('/')} vs ${opt.dataset.in}/${opt.dataset.out})`
+        );
+    });
+
+    doc.getElementById('ecoModel').value = '0';
+    preset.value = 'reasoning';
+    preset.dispatchEvent(new window.Event('change'));
+    const shown = Number(doc.getElementById('ecoEnergy').textContent);
+    const expected = data.energyForQuery(model, 1000, 8000) * data.PUE;
+    assert(Math.abs(shown - expected) / expected < 0.05, `Bug8: a reasoning run is costed at 1,000 in / 8,000 out (${shown} Wh vs ${expected.toFixed(2)})`);
+
+    // Small is not zero.
+    const cells = Array.from(doc.querySelectorAll('#ecoCarbon, #ecoWater, #ecoEnergy, .eco-bar-val')).map(e => e.textContent.trim());
+    const grids = doc.getElementById('ecoGrid');
+    Array.from(grids.options).forEach((g) => {
+        grids.value = g.value;
+        preset.value = 'short';
+        grids.dispatchEvent(new window.Event('change'));
+        cells.push(...Array.from(doc.querySelectorAll('#ecoCarbon, .eco-bar-val')).map(e => e.textContent.trim()));
+    });
+    const zeros = cells.filter(t => /^0\.0+( g)?$/.test(t));
+    assert(zeros.length === 0, `Bug8: no non-zero footprint is printed as 0.000 (${[...new Set(zeros)].join(', ') || 'none'})`);
+}
+
+// --- Bug 10: opening the terminal twice still returns focus on close ---
+// A double press while the module loaded called open() twice; the second
+// recorded the terminal's own input as where focus should go back to.
+{
+    const { window } = run('dark');
+    const doc = window.document;
+    const toggle = doc.getElementById('terminalToggle');
+    toggle.focus();
+    window.FieldTerminal.open();
+    window.FieldTerminal.open();
+    assert(window.FieldTerminal.isOpen(), 'Bug10 setup: the terminal is open');
+    window.FieldTerminal.close();
+    assert(doc.activeElement === toggle, `Bug10: closing returns focus to what had it before (${doc.activeElement && (doc.activeElement.id || doc.activeElement.tagName)})`);
+}
+
+// --- Bug 11: re-drilling a struck zone does not farm the score ---
+// Each repeat of a known strike used to count as a new strike, so the score
+// that is meant to converge on "read the curve: 70%" could be pushed to 100%.
+{
+    const { window } = run('dark');
+    const doc = window.document;
+    doc.body.classList.add('eco-mode');   // drilling finishes at once
+    const stage = doc.getElementById('boreholeStage');
+    const drillBtn = doc.getElementById('drillBtn');
+    const result = doc.getElementById('drillResult');
+    const score = doc.getElementById('drillScore');
+    const key = (k) => stage.dispatchEvent(new window.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+    const drill = () => drillBtn.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+
+    for (let i = 0; i < 80; i++) key('ArrowLeft');
+    let struck = false;
+    for (let i = 0; i < 80 && !struck; i++) {
+        drill();
+        struck = /STRIKE/.test(result.textContent);
+        if (!struck) key('ArrowRight');
+    }
+    assert(struck, 'Bug11 setup: walking the rig along the profile finds water');
+
+    const tally = score.textContent.match(/Strikes: (\d+)\/(\d+)/);
+    drill();
+    drill();
+    const again = score.textContent.match(/Strikes: (\d+)\/(\d+)/);
+    assert(
+        !!tally && !!again && tally[1] === again[1] && tally[2] === again[2],
+        `Bug11: re-drilling the same strike leaves the score alone (${tally && tally[0]} → ${again && again[0]})`
+    );
+    assert(/Already struck/.test(result.textContent), 'Bug11: and says why it did not count');
+}
+
 // --- Bug 7: a message the endpoint turns down says why ---
 // The Apps Script answers a rejection with a reason written for the visitor
 // ("a valid email address", "wait a moment"). The form used to throw that
@@ -228,6 +315,19 @@ const formChecks = (async () => {
 
     const sent = await submit(answer({ status: 'success', message: 'Response recorded successfully!' }));
     assert(sent.classList.contains('success') && !sent.hidden, 'Bug7: a recorded message is reported as sent');
+
+    // --- Bug 9: a copy button gets its icon back after "Copied ✓" ---
+    {
+        const { window } = run('dark');
+        const btn = window.document.getElementById('anatomyCopy');
+        const before = btn.innerHTML;
+        window.navigator.clipboard = { writeText: async () => {} };
+        await window.mksShare.copy('x', btn);
+        await window.mksShare.copy('x', btn);   // pressed again while it still says Copied
+        assert(/Copied/.test(btn.textContent), 'Bug9: the button confirms the copy');
+        await new Promise((resolve) => setTimeout(resolve, 1800));
+        assert(btn.innerHTML === before && !!btn.querySelector('svg'), 'Bug9: the button is restored with its icon');
+    }
 })();
 
 formChecks.then(() => {
