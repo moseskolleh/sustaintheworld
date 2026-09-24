@@ -40,6 +40,9 @@ const moduleJs = MODULE_FILES.map((rel) => fs.readFileSync(path.join(ROOT, rel),
  * @param {object} options
  *   storage: 'ok' | 'blocked'   how window.localStorage/sessionStorage behave
  *   speech:  'none' | undefined  remove the speech synthesis API entirely
+ *   before:  function(window)     runs after the stubs, before any site
+ *                                 script — for installing fakes (a speech
+ *                                 engine, a slow fetch) the scripts will see
  */
 function run(theme, options) {
     const opts = options || {};
@@ -94,6 +97,8 @@ function run(theme, options) {
         delete window.speechSynthesis;
         delete window.SpeechSynthesisUtterance;
     }
+
+    if (typeof opts.before === 'function') opts.before(window);
 
     // Execute the site scripts in the window context, in the order the
     // browser would: the two data files a module depends on, the core, then

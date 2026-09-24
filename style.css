@@ -46,6 +46,10 @@
     --card-bg-alt: #141414;
     --text-primary: #ffffff;
     --text-secondary: #b0b0b0;
+    /* Small print: the quiet tier below secondary. It used to be done with
+       opacity on inherited colour, which fell under 4.5:1 — as low as 2.8:1
+       in light mode. A colour of its own keeps it quiet and legible. */
+    --text-dim: #8f8f8f;
     --accent-color: #7CFC00;
     --hover-color: #9FFF4D;
     /* Feature accents — theme-aware so they keep contrast in light mode */
@@ -74,13 +78,14 @@ body.light-mode {
     --card-bg-alt: #fafbf8;
     --text-primary: #161914;
     --text-secondary: #54584f;
+    --text-dim: #5f635a;
     --accent-color: #1a7a1a;
     --hover-color: #146414;
     /* Darker accent variants that clear 4.5:1 on the light background */
     --accent-amber: #8a6100;
     --accent-blue: #1c6fa6;
     --accent-salmon: #b0442c;
-    --accent-emerald: #157f43;
+    --accent-emerald: #127a3f;
     --line-color: rgba(34, 139, 34, 0.25);
     --line-soft: rgba(34, 139, 34, 0.1);
     --box-shadow: 0 8px 30px rgba(34, 139, 34, 0.1);
@@ -267,12 +272,16 @@ body.light-mode .navbar {
 }
 
 .nav-container {
-    max-width: 1400px;
+    /* Ten numbered links, CV and Contact need about 1,380px on one line;
+       1400px left 1,352 for them, so labels wrapped at every desktop width
+       and Contact was clipped off-screen up to 1373px. */
+    max-width: 1520px;
     margin: 0 auto;
     padding: 0 24px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 24px;
     height: 72px;
 }
 
@@ -311,11 +320,12 @@ body.light-mode .navbar {
 .nav-menu {
     display: flex;
     align-items: center;
-    gap: 28px;
+    gap: 20px;
     list-style: none;
 }
 
 .nav-link {
+    white-space: nowrap;
     font-family: var(--font-display);
     font-size: 0.85rem;
     font-weight: 500;
@@ -516,6 +526,13 @@ body.light-mode .navbar {
     color: var(--text-secondary);
     font-size: 1.05rem;
     margin-bottom: 28px;
+}
+
+/* Over the fieldwork photos the light theme's green reads at 3.4-4.1:1
+   against the lightest pixels behind it; a deeper green clears 5:1. */
+body.light-mode .hero-eyebrow,
+body.light-mode .hero-availability {
+    color: #125a12;
 }
 
 .hero-availability {
@@ -938,7 +955,7 @@ body.light-mode .navbar {
 
 .assay-actions { display: flex; align-items: center; gap: 14px; margin-top: 12px; flex-wrap: wrap; }
 .assay-actions .btn[hidden] { display: none; }
-.assay-privacy { opacity: 0.7; display: inline-flex; align-items: center; gap: 6px; }
+.assay-privacy { color: var(--text-dim); display: inline-flex; align-items: center; gap: 6px; }
 .assay-privacy i { color: var(--primary-green); }
 
 .assay-samples { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
@@ -1037,7 +1054,7 @@ body.light-mode .navbar {
 .assay-gaps { margin-top: 18px; }
 .assay-gaps ul { margin: 0; padding-left: 20px; }
 .assay-gaps li { color: var(--text-secondary); font-size: 0.88rem; line-height: 1.5; margin-bottom: 6px; }
-.assay-note { margin-top: 16px; font-size: 0.74rem; color: var(--text-secondary); opacity: 0.8; line-height: 1.5; }
+.assay-note { margin-top: 16px; font-size: 0.74rem; color: var(--text-dim); line-height: 1.5; }
 
 @media (max-width: 560px) {
     .assay-row { grid-template-columns: 1fr; gap: 6px; }
@@ -1071,6 +1088,11 @@ body.light-mode .navbar {
 .btn-primary {
     background: var(--primary-green);
     color: #051000;
+}
+
+/* Near-black on the light theme's darker green is 3.6:1; white is 5.5:1. */
+body.light-mode .btn-primary {
+    color: #fff;
 }
 
 .btn-primary:hover {
@@ -1163,6 +1185,14 @@ body.light-mode .hero-photo-caption {
     height: 70px;
     width: 2px;
     overflow: hidden;
+}
+
+/* On narrow screens the centred cue ran through the right-anchored photo
+   caption; the caption is the more useful of the two. */
+@media (max-width: 900px) {
+    .scroll-indicator {
+        display: none;
+    }
 }
 
 .scroll-indicator-line {
@@ -1555,7 +1585,7 @@ body.light-mode .hero-photo-caption {
 
 .corelog-depth span {
     font-size: 0.62rem;
-    opacity: 0.7;
+    color: var(--text-dim);
 }
 
 .corelog-strata {
@@ -1723,6 +1753,23 @@ body.light-mode .hero-photo-caption {
     text-decoration: none;
     color: inherit;
     cursor: pointer;
+}
+
+.project-toggle {
+    font: inherit;
+    color: inherit;
+    letter-spacing: inherit;
+    text-align: left;
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+}
+
+.project-toggle:focus-visible {
+    outline: 2px solid var(--primary-green);
+    outline-offset: 4px;
+    border-radius: 4px;
 }
 
 .project-thumb {
@@ -1922,10 +1969,23 @@ body.light-mode .hero-photo-caption {
     transform: translateY(-3px);
 }
 
-.gallery-item:focus-visible {
-    outline: 2px solid var(--primary-green);
-    outline-offset: 2px;
+.gallery-item:focus-within {
     border-color: var(--primary-green);
+}
+
+.gallery-open {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: zoom-in;
+    overflow: hidden;
+}
+
+.gallery-open:focus-visible {
+    outline: 2px solid var(--primary-green);
+    outline-offset: -2px;
 }
 
 .gallery-item img {
@@ -2298,6 +2358,13 @@ body.light-mode .hero-photo-caption {
 .contact-card p {
     font-size: 0.98rem;
     color: var(--text-primary);
+    /* The email address is one unbreakable word. On a 320px phone it set the
+       whole column's width, and the cards and the form ran 19px off-screen. */
+    overflow-wrap: anywhere;
+}
+
+.contact-card > div {
+    min-width: 0;
 }
 
 .social-links {
@@ -2441,6 +2508,15 @@ body.light-mode .form-status.error {
     text-align: center;
 }
 
+/* At the very end of the page the floating buttons cannot be scrolled clear,
+   and on narrow screens they sat on the low-energy switch and the terminal
+   button. The footer leaves room for them. */
+@media (max-width: 760px) {
+    .footer {
+        padding-bottom: 160px;
+    }
+}
+
 .footer-logo {
     font-family: var(--font-display);
     font-weight: 700;
@@ -2457,6 +2533,14 @@ body.light-mode .form-status.error {
 .footer-content p {
     color: var(--text-secondary);
     font-size: 0.9rem;
+}
+
+.footer-fieldreport a {
+    color: var(--text-secondary);
+}
+
+.footer-fieldreport a:hover {
+    color: var(--primary-green);
 }
 
 .footer-tagline {
@@ -2540,6 +2624,8 @@ body.light-mode .form-status.error {
         transition-duration: 0.01ms !important;
     }
     .reveal { opacity: 1; transform: none; }
+    /* An anchor jump is not animated across 11,000px either. */
+    html { scroll-behavior: auto; }
 }
 
 /* ===================================
@@ -2566,9 +2652,21 @@ body.light-mode .form-status.error {
 /* ===================================
    RESPONSIVE
    =================================== */
-/* The nav now carries 8 numbered links + contact — collapse to the
-   hamburger earlier than the old 768px so it never overflows */
-@media (max-width: 1180px) {
+/* Between the hamburger and full width, the section numbers step aside
+   so the labels fit on one line (the menu is ~1,070px without them). */
+@media (min-width: 1260px) and (max-width: 1479px) {
+    .nav-num {
+        display: none;
+    }
+
+    .nav-menu {
+        gap: 18px;
+    }
+}
+
+/* Ten numbered links, CV and Contact: below 1260px they do not fit on one
+   line even without the numbers, so the hamburger takes over. */
+@media (max-width: 1259px) {
     .nav-toggle {
         display: flex;
     }
@@ -2581,15 +2679,34 @@ body.light-mode .form-status.error {
         background: var(--darker-bg);
         width: min(320px, 80vw);
         height: calc(100vh - 72px);
+        /* The drawer scrolls: on a short screen (a phone on its side, a
+           320x568 phone) the last items were below the fold with no way to
+           reach them. dvh follows the mobile toolbar where supported. */
+        height: calc(100dvh - 72px);
+        overflow-y: auto;
+        overscroll-behavior: contain;
         padding: 40px 32px;
         gap: 24px;
         align-items: flex-start;
         border-left: 1px solid var(--line-soft);
-        transition: right 0.35s ease;
+        /* Off-canvas is not gone: without this the closed menu's links
+           stayed in the tab order, a dozen stops on things nobody can see.
+           Hidden once it has slid out, visible before it slides in. */
+        visibility: hidden;
+        transition: right 0.35s ease, visibility 0s linear 0.35s;
     }
 
     .nav-menu.active {
         right: 0;
+        visibility: visible;
+        transition: right 0.35s ease, visibility 0s;
+    }
+}
+
+@media (max-width: 1259px) and (max-height: 700px) {
+    .nav-menu {
+        padding: 20px 32px;
+        gap: 12px;
     }
 }
 
@@ -2620,7 +2737,7 @@ body.light-mode .form-status.error {
 @media (max-width: 860px) {
     .skills-grid,
     .contact-content {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 
     .project-summary {
@@ -2652,29 +2769,6 @@ body.light-mode .form-status.error {
 @media (max-width: 768px) {
     section {
         padding: 70px 0;
-    }
-
-    .nav-toggle {
-        display: flex;
-    }
-
-    .nav-menu {
-        position: fixed;
-        top: 72px;
-        right: -100%;
-        flex-direction: column;
-        background: var(--darker-bg);
-        width: min(320px, 80vw);
-        height: calc(100vh - 72px);
-        padding: 40px 32px;
-        gap: 24px;
-        align-items: flex-start;
-        border-left: 1px solid var(--line-soft);
-        transition: right 0.35s ease;
-    }
-
-    .nav-menu.active {
-        right: 0;
     }
 
     .hero-photo-caption {
@@ -2920,7 +3014,9 @@ body.light-mode .journey-map-readout {
 
 .eco-widget-controls {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    /* minmax(0, …): a 1fr track still grows to its longest <option>, and
+       the selects pushed out of the card (by 67px on a 320px phone). */
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 18px;
     margin-bottom: 26px;
 }
@@ -2932,6 +3028,8 @@ body.light-mode .journey-map-readout {
 }
 
 .eco-field select {
+    width: 100%;
+    min-width: 0;
     background: var(--card-bg-alt);
     color: var(--text-primary);
     border: 1px solid var(--line-color);
@@ -3344,7 +3442,7 @@ body.eco-mode .hero-bg-slide:not(.active) {
     .eco-widget-controls,
     .eco-widget-out,
     .impact-row-inline {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 
     .eco-bar-row {
@@ -3653,7 +3751,7 @@ body.light-mode .fl-building {
     display: flex;
     justify-content: space-between;
     font-size: 0.7rem;
-    opacity: 0.7;
+    color: var(--text-dim);
     margin-top: 2px;
 }
 
@@ -4024,7 +4122,7 @@ body.light-mode .journey-you-readout {
 
 .listen-cost {
     font-size: 0.66rem;
-    opacity: 0.62;
+    color: var(--text-dim);
     letter-spacing: 0.05em;
 }
 
@@ -4180,10 +4278,10 @@ body.light-mode .dispatch-bar {
    play button becomes a retry — the failure has to look different from
    ordinary playback, or it reads as "paused". */
 .dispatch-bar.dispatch-failed {
-    border-color: #e0a800;
+    border-color: var(--accent-amber);
 }
 .dispatch-bar.dispatch-failed .dispatch-caption {
-    color: #e0a800;
+    color: var(--accent-amber);
     -webkit-line-clamp: 3;
     line-clamp: 3;
 }
@@ -4252,7 +4350,7 @@ body.light-mode .dispatch-voices button[aria-pressed="true"] {
 
 .dispatch-weight {
     font-size: 0.64rem;
-    opacity: 0.7;
+    color: var(--text-dim);
     white-space: nowrap;
 }
 
@@ -4280,8 +4378,9 @@ body.eco-mode .dispatch-progress span {
 /* The player is centred and 560px wide, so it only reaches under the
    floating corner buttons once the viewport drops below roughly 760px. */
 @media (max-width: 760px) {
-    body.dispatch-open .scroll-top { bottom: 178px; }
-    body.dispatch-open .theme-toggle { bottom: 243px; }
+    /* --dispatch-clear is the player's measured height, set by the player. */
+    body.dispatch-open .scroll-top { bottom: calc(var(--dispatch-clear, 178px) + 12px); }
+    body.dispatch-open .theme-toggle { bottom: calc(var(--dispatch-clear, 178px) + 74px); }
 }
 
 /* --- narrow screens ------------------------------------------------ */

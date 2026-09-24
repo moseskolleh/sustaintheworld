@@ -37,12 +37,16 @@
     if (!canSynth && typeof window.Audio !== 'function') return;
 
     let manifest = null;       // null until we know whether narration exists
-    let manifestTried = false;
+    let manifestLoad = null;   // the one fetch, shared by everyone who asks
     let mode = 'synth';        // 'synth' | 'human'
     let rate = 1;
     let current = null;        // { id, sentences, index }
     let audioEl = null;
     let keepAlive = null;
+    // Bumped by every stop(). A play() still waiting on the manifest checks
+    // it afterwards, so a later press or the close button wins — rather than
+    // a second voice starting alongside the first.
+    let playTicket = 0;
 
     // Distinguishes "the visitor picked a voice" from "nobody has chosen yet".
     // Only an explicit click is remembered, so the default below can change
@@ -106,9 +110,12 @@
     // The manifest records what each recorded track actually weighs.
     // Fetched once, on demand, and only if a visitor reaches for it.
     // ---------------------------------------------------------------
-    const loadManifest = async () => {
-        if (manifestTried) return manifest;
-        manifestTried = true;
+    //
+    // Everyone gets the same promise. A "tried" flag used to answer null to
+    // anyone who asked while the fetch was still in flight — so the first
+    // listen press played the browser voice under the recording's label, or
+    // on a browser with no voice, said there was no recording at all.
+    const loadManifest = () => manifestLoad || (manifestLoad = (async () => {
         try {
             const res = await fetch('assets/audio/voice-manifest.json', { cache: 'force-cache' });
             if (!res.ok) return null;
@@ -118,7 +125,7 @@
             manifest = null; // narration not generated yet — the synth path still works
         }
         return manifest;
-    };
+    })());
 
     const trackFor = id => (manifest && manifest.tracks && manifest.tracks[id]) || null;
 
@@ -202,7 +209,8 @@
             </button>
             <div class="dispatch-info">
                 <span class="dispatch-title mono-label"></span>
-                <p class="dispatch-caption" aria-live="polite"></p>
+                <p class="dispatch-caption"></p>
+                <p class="sr-only dispatch-status" role="status"></p>
             </div>
             <button class="dispatch-rate mono-label" type="button" aria-label="Playback speed">1&times;</button>
             <button class="dispatch-close" type="button" aria-label="Stop narration">&times;</button>
@@ -221,6 +229,10 @@
         play: bar.querySelector('.dispatch-play'),
         title: bar.querySelector('.dispatch-title'),
         caption: bar.querySelector('.dispatch-caption'),
+        // The caption follows the voice sentence by sentence; a live region
+        // there read every sentence out over the voice reading it. Only what
+        // a listener would otherwise miss — a failure, a fallback — is said.
+        status: bar.querySelector('.dispatch-status'),
         rate: bar.querySelector('.dispatch-rate'),
         close: bar.querySelector('.dispatch-close'),
         progress: bar.querySelector('.dispatch-progress span'),
@@ -251,9 +263,18 @@
     // and outrank the player on z-index. On narrow screens, where the player
     // spans the full width, they get lifted clear of it instead of sitting
     // on top of the close button.
+    // The corner buttons lift clear of the player by its real height. A
+    // fixed 178px sat them on its top corner in normal playback, and on its
+    // speed and close buttons in the taller failure state.
+    const liftCorner = () => {
+        if (!bar.hidden) document.body.style.setProperty('--dispatch-clear', `${bar.offsetHeight + 8}px`);
+    };
+    if ('ResizeObserver' in window) new ResizeObserver(liftCorner).observe(bar);
+
     const showBar = (visible) => {
         bar.hidden = !visible;
         document.body.classList.toggle('dispatch-open', visible);
+        liftCorner();
     };
 
     const clearPlayingButtons = () => {
@@ -268,7 +289,9 @@
     let retryScript = null;
 
     const stop = () => {
+        playTicket++;
         stopKeepAlive();
+        el.status.textContent = '';
         if (canSynth) synth.cancel();
         if (audioEl) { audioEl.pause(); audioEl.removeAttribute('src'); audioEl.load(); audioEl = null; }
         current = null;
@@ -297,7 +320,7 @@
         setIcon('play');
         showBar(true);
         bar.classList.add('dispatch-failed');
-        el.caption.textContent = message;
+        el.caption.textContent = el.status.textContent = message;
         el.play.setAttribute('aria-label', retryScript ? 'Try playing the narration again' : 'Resume narration');
         clearPlayingButtons();
     };
@@ -317,21 +340,35 @@
             return;
         }
 
-        current = { id, sentences, index: startAt };
+        // cancel() ends the utterance that was speaking, and its end/error
+        // event arrives later — after `current` already belongs to this run.
+        // Handlers that only asked "is anything playing?" advanced the new
+        // run with the old one's sentences: two sections interleaved, or the
+        // browser voice talked over a recording. Each run now only answers
+        // to its own utterances.
+        const run = current = { id, sentences, index: startAt };
         synth.cancel();
 
         const next = () => {
-            if (!current || current.index >= sentences.length) { stop(); return; }
-            const line = sentences[current.index];
+            if (current !== run) return;
+            if (run.index >= sentences.length) { stop(); return; }
+            const line = sentences[run.index];
             el.caption.textContent = line;
-            setProgress(current.index / sentences.length);
+            setProgress(run.index / sentences.length);
 
             const u = new SpeechSynthesisUtterance(line);
             if (chosenVoice) u.voice = chosenVoice;
             u.lang = (chosenVoice && chosenVoice.lang) || 'en-GB';
             u.rate = rate;
-            u.onend = () => { if (current) { current.index++; next(); } };
-            u.onerror = () => { if (current) { current.index++; next(); } };
+            let settled = false;
+            const advance = () => {
+                if (settled || current !== run) return;
+                settled = true;
+                run.index++;
+                next();
+            };
+            u.onend = advance;
+            u.onerror = advance;
             synth.speak(u);
         };
         next();
@@ -352,7 +389,7 @@
         const sentences = splitSentences(script.text);
         current = { id: script.id, sentences, index: 0 };
 
-        audioEl = new Audio();
+        const thisEl = audioEl = new Audio();
         audioEl.preload = 'none';   // nothing crosses the wire until play()
         audioEl.src = track.file;
         audioEl.playbackRate = rate;
@@ -370,8 +407,9 @@
                 el.caption.textContent = sentences[i];
             }
         });
-        audioEl.addEventListener('ended', stop);
+        audioEl.addEventListener('ended', () => { if (audioEl === thisEl) stop(); });
         audioEl.addEventListener('error', () => {
+            if (audioEl !== thisEl) return;   // a track that was already let go
             audioEl = null;
             // Only switch engines if there is another engine. Switching into
             // a mode that cannot speak is how the player ended up dead.
@@ -379,13 +417,17 @@
                 failPlayback(script, 'that recording would not load, and this browser has no speech voice to fall back on. Press play to try again.');
                 return;
             }
-            el.caption.textContent = 'that recording would not load — using the browser voice instead.';
+            el.caption.textContent = el.status.textContent = 'that recording would not load — using the browser voice instead.';
             setMode('synth', false);
             runSynth(script.id, sentences, 0);
         });
 
         el.caption.textContent = sentences[0];
-        audioEl.play().catch(() => {
+        audioEl.play().catch((err) => {
+            // Stopping, or starting another section, pauses this element
+            // before it has begun, which rejects play() with an AbortError.
+            // That is the visitor changing their mind, not a failure.
+            if (audioEl !== thisEl || (err && err.name === 'AbortError')) return;
             // Autoplay policy, or a decode the browser refused. Either way it
             // is retryable, so keep the track loaded and hand back a play
             // button that actually restarts it.
@@ -395,7 +437,12 @@
 
     const play = async (script, btn) => {
         stop();
-        if (mode === 'human') await loadManifest();
+        const ticket = playTicket;
+        // Whether a recording exists decides the engine even in 'synth' mode
+        // (it stands in when the browser has no voice), so always ask. The
+        // module fetched it on load; this waits for that, not a second fetch.
+        await loadManifest();
+        if (ticket !== playTicket) return;
 
         showBar(true);
         setIcon('pause');
@@ -430,7 +477,7 @@
             return;
         }
         if (audioEl) {
-            if (audioEl.paused) { audioEl.play(); setIcon('pause'); }
+            if (audioEl.paused) { audioEl.play().catch(() => setIcon('play')); setIcon('pause'); }
             else { audioEl.pause(); setIcon('play'); }
             return;
         }

@@ -106,9 +106,21 @@
         placeRig(rigX);
     };
 
+    // The drawing is aria-hidden, and the curve is the whole of the
+    // information: without this a screen reader could only guess where to
+    // drill. It grades the dip the way the picture does — deeper or
+    // shallower — without saying what is down there.
+    const reading = (r) => (r < 0.45 ? 'very low — a deep dip in the curve'
+        : r < 0.7 ? 'low — a dip in the curve'
+        : r < 0.9 ? 'slightly low — the edge of a dip'
+        : 'high — no dip here');
+
     function placeRig(x) {
         rigX = Math.max(50, Math.min(W - 50, x));
         rigEl.setAttribute('transform', `translate(${rigX.toFixed(1)} ${surfaceY(rigX).toFixed(1)})`);
+        const pct = Math.round((rigX - 50) / (W - 100) * 100);
+        stage.setAttribute('aria-valuenow', String(pct));
+        stage.setAttribute('aria-valuetext', `rig at ${pct}% along the profile; resistivity ${reading(resistivityAt(rigX))}`);
     }
 
     const toViewX = (clientX) => {
@@ -126,6 +138,18 @@
     const finishHole = (x) => {
         const zone = zones.find(z => Math.abs(x - z.center) <= z.half);
         const sy = surfaceY(x);
+        // A zone already drilled tells you nothing new. Counting it again let
+        // one strike be re-drilled into any score you liked, which is the
+        // opposite of the point: the curve has to be read for each new hole.
+        if (zone && zone.drilled) {
+            result.textContent = zone.kind === 'water'
+                ? 'Already struck here — that fracture zone is yours. Move the rig and read the curve for the next one.'
+                : 'That\'s the clay pocket you already found. Move the rig and read the curve again.';
+            drilling = false;
+            drillBtn.disabled = false;
+            return;
+        }
+        if (zone) zone.drilled = true;
         attempts++;
         if (zone && zone.kind === 'water') {
             strikes++;
@@ -301,6 +325,7 @@
         const lv = LEVELS[+slider.value] || LEVELS[0];
         levelLabel.textContent = lv.label;
         note.textContent = lv.note;
+        slider.setAttribute('aria-valuetext', lv.label === 'normal' ? 'normal river level' : `river ${lv.label} above normal`);
         setWater(lv.y, instant);
     };
     slider.addEventListener('input', () => update(false));

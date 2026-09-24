@@ -177,6 +177,31 @@ async function visit(context, page, rel, origin) {
         bad(`index.html: measured first view ${fmt(home.arrivalBytes)} exceeds the budget's estimate of ${fmt(estimate)} — check-budget.js is missing something the page fetches on load`);
     }
 
+    // The top nav at every desktop width: one line per item, nothing past the
+    // right edge. It used to wrap "Case studies" and "AI, Weighed" at every
+    // width and clip Contact off-screen up to 1373px — and body's
+    // overflow-x:hidden meant nothing else would ever have noticed.
+    {
+        const page = await context.newPage();
+        await page.goto(`${origin}/index.html`, { waitUntil: 'load' });
+        const broken = [];
+        for (let w = 1000; w <= 1920; w += 20) {
+            await page.setViewportSize({ width: w, height: 800 });
+            const r = await page.evaluate(() => {
+                if (getComputedStyle(document.getElementById('navToggle')).display !== 'none') return null;
+                return Array.from(document.querySelectorAll('.nav-menu .nav-link')).filter((a) => {
+                    const box = a.getBoundingClientRect();
+                    const line = parseFloat(getComputedStyle(a).lineHeight) || 20;
+                    return box.right > innerWidth || box.height > line * 1.6 + 12;
+                }).map(a => a.textContent.trim());
+            });
+            if (r && r.length) broken.push(`${w}px: ${r.join(', ')}`);
+        }
+        if (broken.length) broken.forEach(b => bad(`nav item wraps or is clipped at ${b}`));
+        else ok('nav: every item on one line and on screen, 1000–1920px (or the menu button instead)');
+        await page.close();
+    }
+
     await browser.close();
     server.close();
 
@@ -217,7 +242,7 @@ async function exerciseHomepage(page, r, origin) {
     }
 
     // Opening the groundwater dossier fetches the games.
-    const summary = await page.$('.project-card[data-project="groundwater"] .project-summary');
+    const summary = await page.$('.project-card[data-project="groundwater"] .project-toggle');
     if (summary) {
         await summary.scrollIntoViewIfNeeded();
         await summary.click();

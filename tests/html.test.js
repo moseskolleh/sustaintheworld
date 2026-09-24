@@ -240,7 +240,10 @@ PAGES.forEach((page) => {
     // Focus management is in script.js, and a dialog without it is worse than
     // no dialog — the keyboard ends up behind the overlay.
     const js = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8');
-    const block = js.slice(js.indexOf("getElementById('lightbox')"), js.indexOf("getElementById('lightbox')") + 3000);
+    // The lightbox's own block: from where it looks the element up to the
+    // end of its IIFE, rather than a character count a comment can outgrow.
+    const start = js.indexOf("getElementById('lightbox')");
+    const block = js.slice(start, js.indexOf('})();', start));
     assert(/lastFocus\s*=\s*document\.activeElement/.test(block), 'Lightbox: remembers what had focus before opening');
     assert(/lastFocus[\s\S]{0,80}\.focus\(\)/.test(block), 'Lightbox: returns focus when it closes');
     assert(/e\.key === 'Escape'/.test(block), 'Lightbox: closes on Escape');

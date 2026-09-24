@@ -140,6 +140,13 @@ function checkResult(label, params) {
 
     const clamped = sanitize({ ...BASE, queriesPerDay: -100 });
     assert(clamped.notices.length === 1 && /queriesPerDay/.test(clamped.notices[0]), 'An out-of-range value produces exactly one named notice');
+
+    // An in-range value that is only rounded is not "outside" anything.
+    const rounded = sanitize({ ...BASE, queriesPerDay: 2.5 });
+    assert(
+        rounded.notices.length === 1 && /rounded to 3/.test(rounded.notices[0]) && !/outside/.test(rounded.notices[0]),
+        `A fractional count says it was rounded, not out of range (${rounded.notices[0]})`
+    );
 }
 
 // --- Suggestions stay well-formed across the whole input space ------------
@@ -346,6 +353,21 @@ function checkResult(label, params) {
 
     type('queriesPerDay', 50);
     assert($('#inputNotice').hidden, 'Page: the notice clears when the value becomes usable');
+
+    // "2e" in a number field: the browser reports '' and flags badInput.
+    // It used to be calculated as 0 tokens with nothing said.
+    {
+        const field = doc.getElementById('inputTokens');
+        Object.defineProperty(field, 'validity', { configurable: true, value: { badInput: true } });
+        type('inputTokens', '');
+        assert(
+            !$('#inputNotice').hidden && /inputTokens was not a number/.test($('#inputNotice').textContent),
+            `Page: unparseable input is called out, not silently zeroed (${$('#inputNotice').textContent || 'no notice'})`
+        );
+        delete field.validity;
+        type('inputTokens', 500);
+        assert($('#inputNotice').hidden, 'Page: the notice clears once the field is a number again');
+    }
 
     // Zero tokens: the scenario that produced "cut carbon by NaN%".
     type('inputTokens', 0);

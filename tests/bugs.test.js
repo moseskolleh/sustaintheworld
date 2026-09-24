@@ -14,10 +14,19 @@ function assert(cond, msg) {
 }
 
 // --- Bug 1: clicking an <a href="#"> should not throw SyntaxError ---
+// The dossier toggles used to be the page's href="#" links; they are buttons
+// now, so a probe is put in the page before the scroll handler binds.
 {
-    const { window, errors } = run('dark');
-    const viewDetails = window.document.querySelector('.view-details-btn');
-    assert(!!viewDetails, 'Bug1 setup: found a .view-details-btn with href="#"');
+    const { window, errors } = run('dark', {
+        before: (w) => {
+            const a = w.document.createElement('a');
+            a.href = '#';
+            a.className = 'bug1-probe';
+            w.document.body.appendChild(a);
+        }
+    });
+    const viewDetails = window.document.querySelector('.bug1-probe');
+    assert(!!viewDetails, 'Bug1 setup: an <a href="#"> is on the page');
 
     // Dispatch a real click
     const ev = new window.MouseEvent('click', { bubbles: true, cancelable: true });
@@ -28,6 +37,26 @@ function assert(cond, msg) {
         return s.includes('Invalid selector') || s.includes('SyntaxError');
     });
     assert(!threw, 'Bug1: smooth-scroll handler must not throw on href="#"');
+}
+
+// --- Dossiers open from a real button, by keyboard as well as mouse ---
+{
+    const { window } = run('dark');
+    const doc = window.document;
+    const cards = Array.from(doc.querySelectorAll('.project-card'));
+    const toggles = cards.map(c => c.querySelector('h3 > button.project-toggle[type="button"]'));
+    assert(cards.length > 0 && toggles.every(Boolean), `A11y: every dossier title is a button inside its heading (${toggles.filter(Boolean).length}/${cards.length})`);
+    assert(!doc.querySelector('.project-summary[href], a.project-summary'), 'A11y: the summary is no longer one link around the whole card');
+
+    const first = toggles[0];
+    const details = doc.getElementById(first.getAttribute('aria-controls') || '');
+    assert(!!details && details.classList.contains('project-details'), 'A11y: the button controls its dossier');
+    first.click();   // what Enter or Space does to a button
+    assert(first.getAttribute('aria-expanded') === 'true' && cards[0].classList.contains('expanded'), 'A11y: the button opens the dossier and says so');
+
+    cards[1].querySelector('.project-head p').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    assert(cards[1].classList.contains('expanded') && !cards[0].classList.contains('expanded'), 'Mouse: clicking anywhere on a summary still opens it, and closes the other');
+    assert(first.getAttribute('aria-expanded') === 'false', 'A11y: the closed dossier\'s button says collapsed');
 }
 
 // --- Bug 2: theme-toggle icon must match persisted theme on load ---
@@ -58,11 +87,15 @@ function assert(cond, msg) {
         assert(toggle.getAttribute('aria-expanded') === 'true', 'A11y: nav toggle aria-expanded follows open state');
     }
 
+    // A real button inside each figure; role=button on the <figure> itself
+    // is not allowed and hides the caption from assistive technology.
     const item = doc.querySelector('.gallery-item');
+    const open = item && item.querySelector('button.gallery-open');
     assert(
-        !!item && item.getAttribute('tabindex') === '0' && item.getAttribute('role') === 'button',
-        'A11y: gallery items are keyboard-focusable buttons'
+        !!open && open.getAttribute('type') === 'button' && /^View larger: ./.test(open.getAttribute('aria-label') || '') && !!open.querySelector('img'),
+        'A11y: every gallery photo is inside a named button'
     );
+    assert(!doc.querySelector('.gallery-item[role], .gallery-item[tabindex]'), 'A11y: the <figure> keeps its own semantics');
 
     assert(!!doc.getElementById('website'), 'Form: honeypot field is present');
     assert(!!doc.getElementById('formStatus'), 'Form: inline status element is present');
@@ -196,6 +229,93 @@ function assert(cond, msg) {
     assert(pressed.length === 0, 'Bug6: every listen button reports aria-pressed="false" on load');
 }
 
+// --- Bug 8: "AI, Weighed" spends the split each workload's label promises ---
+// Every preset used to be spent at a 50/50 mix whatever its label said, so a
+// "1,000 in / 8,000 out" reasoning run came out a third too light.
+{
+    const { window } = run('dark');
+    const doc = window.document;
+    const data = window.AICarbonData;
+    const preset = doc.getElementById('ecoPreset');
+    const model = data.MODELS[data.HOMEPAGE_MODELS[0]];
+
+    Array.from(preset.options).forEach((opt) => {
+        const nums = (opt.textContent.match(/([\d,]+) in \/ ([\d,]+) out/) || []).slice(1).map(n => Number(n.replace(/,/g, '')));
+        assert(
+            nums.length === 2 && nums[0] === Number(opt.dataset.in) && nums[1] === Number(opt.dataset.out),
+            `Bug8: the "${opt.value}" workload's data matches its label (${nums.join('/')} vs ${opt.dataset.in}/${opt.dataset.out})`
+        );
+    });
+
+    doc.getElementById('ecoModel').value = '0';
+    preset.value = 'reasoning';
+    preset.dispatchEvent(new window.Event('change'));
+    const shown = Number(doc.getElementById('ecoEnergy').textContent);
+    const expected = data.energyForQuery(model, 1000, 8000) * data.PUE;
+    assert(Math.abs(shown - expected) / expected < 0.05, `Bug8: a reasoning run is costed at 1,000 in / 8,000 out (${shown} Wh vs ${expected.toFixed(2)})`);
+
+    // Small is not zero.
+    const cells = Array.from(doc.querySelectorAll('#ecoCarbon, #ecoWater, #ecoEnergy, .eco-bar-val')).map(e => e.textContent.trim());
+    const grids = doc.getElementById('ecoGrid');
+    Array.from(grids.options).forEach((g) => {
+        grids.value = g.value;
+        preset.value = 'short';
+        grids.dispatchEvent(new window.Event('change'));
+        cells.push(...Array.from(doc.querySelectorAll('#ecoCarbon, .eco-bar-val')).map(e => e.textContent.trim()));
+    });
+    const zeros = cells.filter(t => /^0\.0+( g)?$/.test(t));
+    assert(zeros.length === 0, `Bug8: no non-zero footprint is printed as 0.000 (${[...new Set(zeros)].join(', ') || 'none'})`);
+}
+
+// --- Bug 10: opening the terminal twice still returns focus on close ---
+// A double press while the module loaded called open() twice; the second
+// recorded the terminal's own input as where focus should go back to.
+{
+    const { window } = run('dark');
+    const doc = window.document;
+    const toggle = doc.getElementById('terminalToggle');
+    toggle.focus();
+    window.FieldTerminal.open();
+    window.FieldTerminal.open();
+    assert(window.FieldTerminal.isOpen(), 'Bug10 setup: the terminal is open');
+    window.FieldTerminal.close();
+    assert(doc.activeElement === toggle, `Bug10: closing returns focus to what had it before (${doc.activeElement && (doc.activeElement.id || doc.activeElement.tagName)})`);
+}
+
+// --- Bug 11: re-drilling a struck zone does not farm the score ---
+// Each repeat of a known strike used to count as a new strike, so the score
+// that is meant to converge on "read the curve: 70%" could be pushed to 100%.
+{
+    const { window } = run('dark');
+    const doc = window.document;
+    doc.body.classList.add('eco-mode');   // drilling finishes at once
+    const stage = doc.getElementById('boreholeStage');
+    const drillBtn = doc.getElementById('drillBtn');
+    const result = doc.getElementById('drillResult');
+    const score = doc.getElementById('drillScore');
+    const key = (k) => stage.dispatchEvent(new window.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+    const drill = () => drillBtn.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+
+    for (let i = 0; i < 80; i++) key('ArrowLeft');
+    let struck = false;
+    for (let i = 0; i < 80 && !struck; i++) {
+        drill();
+        struck = /STRIKE/.test(result.textContent);
+        if (!struck) key('ArrowRight');
+    }
+    assert(struck, 'Bug11 setup: walking the rig along the profile finds water');
+
+    const tally = score.textContent.match(/Strikes: (\d+)\/(\d+)/);
+    drill();
+    drill();
+    const again = score.textContent.match(/Strikes: (\d+)\/(\d+)/);
+    assert(
+        !!tally && !!again && tally[1] === again[1] && tally[2] === again[2],
+        `Bug11: re-drilling the same strike leaves the score alone (${tally && tally[0]} → ${again && again[0]})`
+    );
+    assert(/Already struck/.test(result.textContent), 'Bug11: and says why it did not count');
+}
+
 // --- Bug 7: a message the endpoint turns down says why ---
 // The Apps Script answers a rejection with a reason written for the visitor
 // ("a valid email address", "wait a moment"). The form used to throw that
@@ -228,6 +348,19 @@ const formChecks = (async () => {
 
     const sent = await submit(answer({ status: 'success', message: 'Response recorded successfully!' }));
     assert(sent.classList.contains('success') && !sent.hidden, 'Bug7: a recorded message is reported as sent');
+
+    // --- Bug 9: a copy button gets its icon back after "Copied ✓" ---
+    {
+        const { window } = run('dark');
+        const btn = window.document.getElementById('anatomyCopy');
+        const before = btn.innerHTML;
+        window.navigator.clipboard = { writeText: async () => {} };
+        await window.mksShare.copy('x', btn);
+        await window.mksShare.copy('x', btn);   // pressed again while it still says Copied
+        assert(/Copied/.test(btn.textContent), 'Bug9: the button confirms the copy');
+        await new Promise((resolve) => setTimeout(resolve, 1800));
+        assert(btn.innerHTML === before && !!btn.querySelector('svg'), 'Bug9: the button is restored with its icon');
+    }
 })();
 
 formChecks.then(() => {

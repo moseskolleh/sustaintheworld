@@ -220,7 +220,7 @@
                 <div class="ft-screen" aria-live="polite"></div>
                 <form class="ft-line">
                     <label class="ft-prompt" for="ftInput">moses@sustaintheworld:~$</label>
-                    <input id="ftInput" class="ft-input" type="text" autocomplete="off" spellcheck="false" autocapitalize="off">
+                    <input id="ftInput" class="ft-input" type="text" aria-label="Terminal command" autocomplete="off" spellcheck="false" autocapitalize="off">
                 </form>
             </div>`;
         document.body.appendChild(overlay);
@@ -267,6 +267,10 @@
     };
 
     const open = () => {
+        // Already open: a double press while the module was loading called
+        // this twice, and the second saved the terminal's own input as the
+        // place to return focus to — so Escape dropped focus on <body>.
+        if (overlay && overlay.classList.contains('open')) return;
         if (!overlay) build();
         lastFocus = document.activeElement;
         overlay.classList.add('open');

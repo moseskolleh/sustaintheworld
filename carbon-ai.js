@@ -92,8 +92,13 @@ function sanitize(params) {
         if (raw === undefined || raw === null) return;
         if (typeof raw !== 'number' || !isFinite(raw)) {
             notices.push(`${field} was not a number — using ${value}`);
-        } else if (raw !== value) {
+        } else if (raw < limit.min || raw > limit.max) {
             notices.push(`${field} ${raw} is outside ${limit.min}–${limit.max} — using ${value}`);
+        } else if (raw !== value) {
+            // In range, just not a whole number: 2.5 queries a day is not
+            // "outside 0–1000000000", and saying so sent people looking for
+            // a limit they had not hit.
+            notices.push(`${field} ${raw} is rounded to ${value}`);
         }
     });
 
@@ -300,15 +305,24 @@ if (typeof document !== 'undefined') {
         // Raw field values, straight from the DOM and deliberately unclamped —
         // sanitize() is the single place that decides what is usable, so the
         // UI never has its own second opinion about the bounds.
+        //
+        // A number field holding something the browser cannot parse ("2e",
+        // a lone "-") reports its value as '', exactly like an empty one, and
+        // that was calculated as 0 without a word. badInput tells them apart;
+        // NaN lets sanitize() say "was not a number".
+        const numberIn = (input, empty) => {
+            if (input.validity && input.validity.badInput) return NaN;
+            return input.value === '' ? empty : Number(input.value);
+        };
         function readInputs() {
             return {
                 modelKey: modelSelect.value,
                 regionKey: regionSelect.value,
                 wueKey: wueSelect.value,
-                inputTokens: inputTokens.value === '' ? 0 : Number(inputTokens.value),
-                outputTokens: outputTokens.value === '' ? 0 : Number(outputTokens.value),
-                queriesPerDay: queriesPerDay.value === '' ? 0 : Number(queriesPerDay.value),
-                pue: pue.value === '' ? LIMITS.pue.fallback : Number(pue.value)
+                inputTokens: numberIn(inputTokens, 0),
+                outputTokens: numberIn(outputTokens, 0),
+                queriesPerDay: numberIn(queriesPerDay, 0),
+                pue: numberIn(pue, LIMITS.pue.fallback)
             };
         }
 
