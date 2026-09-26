@@ -181,6 +181,8 @@ async function visit(context, page, rel, origin) {
         bad(`index.html: measured first view ${fmt(home.arrivalBytes)} exceeds the budget's estimate of ${fmt(estimate)} — check-budget.js is missing something the page fetches on load`);
     }
 
+    await exerciseNavigation(browser, origin);
+
     // The top nav at every desktop width: one line per item, nothing past the
     // right edge. It used to wrap "Case studies" and "AI, Weighed" at every
     // width and clip Contact off-screen up to 1373px — and body's
@@ -193,11 +195,17 @@ async function visit(context, page, rel, origin) {
             await page.setViewportSize({ width: w, height: 800 });
             const r = await page.evaluate(() => {
                 if (getComputedStyle(document.getElementById('navToggle')).display !== 'none') return null;
-                return Array.from(document.querySelectorAll('.nav-menu .nav-link')).filter((a) => {
+                const links = Array.from(document.querySelectorAll('.nav-menu .nav-link'));
+                const off = links.filter((a) => {
                     const box = a.getBoundingClientRect();
                     const line = parseFloat(getComputedStyle(a).lineHeight) || 20;
                     return box.right > innerWidth || box.height > line * 1.6 + 12;
                 }).map(a => a.textContent.trim());
+                // The theme switch shares the bar: on screen, clear of the links.
+                const sw = document.querySelector('.nav-container > #themeToggle');
+                const t = sw ? sw.getBoundingClientRect() : { width: 0 };
+                if (!t.width || t.left < 0 || t.right > links[0].getBoundingClientRect().left) off.push('theme switch');
+                return off;
             });
             if (r && r.length) broken.push(`${w}px: ${r.join(', ')}`);
         }
@@ -286,6 +294,135 @@ async function exerciseCarbonTool(page, r) {
     else ok(`carbon-ai.html: ${presets.length} presets, no exponent notation and no rounded-away zero`);
     await page.setViewportSize({ width: 1280, height: 800 });
     if (r.errors.length) r.errors.forEach(e => bad(e));
+}
+
+// ------------------------------------------------------------------
+// In-page links, the theme switch and back to top, as a visitor meets them
+// ------------------------------------------------------------------
+// What jsdom cannot show: where the next Tab goes after the skip link, what
+// Back does after a nav link, and what the one floating button covers on a
+// phone's real layout. Reduced motion, so every jump lands at once.
+async function exerciseNavigation(browser, origin) {
+    console.log('  index.html — links, theme switch, back to top');
+    const desk = await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' });
+    const page = await desk.newPage();
+    await page.goto(`${origin}/index.html`, { waitUntil: 'load' });
+
+    // The skip link, by keyboard: Tab, Enter, Tab.
+    await page.keyboard.press('Tab');
+    const first = await page.evaluate(() => document.activeElement.className);
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Tab');
+    const next = await page.evaluate(() => {
+        const a = document.activeElement;
+        const main = document.querySelector('main');
+        const r = a.getBoundingClientRect();
+        const hit = document.elementFromPoint(r.left + Math.min(r.width, 16) / 2, r.top + Math.min(r.height, 16) / 2);
+        return { inside: a !== main && main.contains(a), seen: !!hit && (hit === a || a.contains(hit)), what: a.textContent.trim().slice(0, 40) || a.tagName };
+    });
+    if (first === 'skip-link' && next.inside) ok(`skip link: the next Tab lands inside <main> ("${next.what}")`);
+    else bad(`skip link: Tab, Enter, Tab ends on "${next.what}", not inside <main> (first stop: .${first})`);
+    if (next.seen) ok('skip link: that stop is in sight, not under the fixed nav bar');
+    else bad(`skip link: "${next.what}" has focus but is hidden under the nav bar`);
+
+    // Back after following two nav links.
+    await page.click('.nav-menu a[href="#about"]');
+    await page.click('.nav-menu a[href="#skills"]');
+    await page.goBack();
+    await page.waitForTimeout(300);
+    const back = await page.evaluate(() => ({ hash: location.hash, focus: document.activeElement.id }));
+    if (back.hash === '#about' && back.focus === 'about') ok('Back after two nav links returns to #about, focus with it');
+    else bad(`Back after two nav links: address ${back.hash || 'with no fragment'}, focus on "${back.focus}"`);
+
+    // The theme switch on a phone: in the bar, clear of its neighbours, and
+    // working without opening the menu.
+    if (!(await page.$('.nav-container > #themeToggle'))) bad('theme switch: no #themeToggle in the nav bar');
+    else {
+        for (const w of [320, 390]) {
+            await page.setViewportSize({ width: w, height: 800 });
+            const t = await page.evaluate(() => {
+                const b = document.getElementById('themeToggle');
+                const r = b.getBoundingClientRect();
+                const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+                const clear = (sel) => { const o = document.querySelector(sel).getBoundingClientRect(); return r.right <= o.left || r.left >= o.right; };
+                return { seen: !!hit && b.contains(hit), clear: r.left >= 0 && r.right <= innerWidth && clear('.nav-logo') && clear('#navToggle') };
+            });
+            if (t.seen && t.clear) ok(`theme switch: in the bar at ${w}px, clear of the logo and the menu button`);
+            else bad(`theme switch at ${w}px: ${t.seen ? 'overlaps the logo or the menu button' : 'not visible'}`);
+        }
+        await page.click('#themeToggle');
+        const flipped = await page.evaluate(() => ({
+            light: document.body.classList.contains('light-mode'),
+            chrome: document.querySelector('meta[name="theme-color"]').content,
+            name: document.getElementById('themeToggle').getAttribute('aria-label')
+        }));
+        if (flipped.light && flipped.chrome === '#f4f6f0' && flipped.name === 'Switch to dark theme') ok('theme switch: a tap turns the page, the browser chrome and its own name to light');
+        else bad(`theme switch: after a tap, light=${flipped.light}, theme-color ${flipped.chrome}, name "${flipped.name}"`);
+    }
+    await desk.close();
+
+    // Without script the switch could not switch anything, so it must not show.
+    const noScript = await browser.newContext({ viewport: { width: 390, height: 800 }, javaScriptEnabled: false });
+    const bare = await noScript.newPage();
+    await bare.goto(`${origin}/index.html`, { waitUntil: 'load' });
+    if (await bare.isVisible('#themeToggle')) bad('theme switch: shows with JavaScript off, where it cannot work');
+    else ok('theme switch: absent with JavaScript off');
+    await noScript.close();
+
+    // Back to top on a 390x844 phone: not before one full screen, and never
+    // over the controls it floats beside. Each is scrolled across the
+    // button's corner (its foot, middle and head on the button's centre),
+    // and wherever the two overlap, a tap there must not reach the button.
+    const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' });
+    const p = await phone.newPage();
+    await p.goto(`${origin}/index.html`, { waitUntil: 'load' });
+    const settle = () => p.waitForTimeout(120);
+    const shown = () => p.evaluate(() => document.getElementById('scrollTop').classList.contains('visible'));
+    await p.evaluate(() => scrollTo(0, innerHeight - 10));
+    await settle();
+    const early = await shown();
+    await p.evaluate(() => scrollTo(0, innerHeight * 2));
+    await settle();
+    const later = await shown();
+    if (!early && later) ok('back to top: hidden for the first screen, shown after it');
+    else bad(`back to top: shown ${early ? 'before' : 'only after'} one full screen (${early}, ${later})`);
+
+    // Everything below loads on the way down first, so nothing moves mid-check.
+    await p.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
+    await p.waitForTimeout(800);
+    const GUARDED = ['.hero-availability', '.hero-cta .btn', '.btn-submit', '.carbon-badge', '.receipt-btn', '.footer-fieldreport a', '.eco-mode-toggle', '.terminal-toggle'];
+    const covered = [];
+    let passes = 0;
+    for (const sel of GUARDED) {
+        const n = await p.$$eval(sel, (els) => els.length);
+        if (!n) { bad(`back to top: nothing matches ${sel} any more — update the guarded list`); continue; }
+        for (let i = 0; i < n; i++) {
+            for (const at of [1, 0.5, 0]) {
+                await p.evaluate(({ sel, i, at }) => {
+                    const r = document.querySelectorAll(sel)[i].getBoundingClientRect();
+                    const b = document.getElementById('scrollTop').getBoundingClientRect();
+                    scrollTo(0, r.top + scrollY + r.height * at - (b.top + b.height / 2));
+                }, { sel, i, at });
+                await settle();
+                const hit = await p.evaluate(({ sel, i }) => {
+                    const r = document.querySelectorAll(sel)[i].getBoundingClientRect();
+                    const btn = document.getElementById('scrollTop');
+                    const b = btn.getBoundingClientRect();
+                    const x1 = Math.max(r.left, b.left), x2 = Math.min(r.right, b.right);
+                    const y1 = Math.max(r.top, b.top), y2 = Math.min(r.bottom, b.bottom);
+                    if (x2 <= x1 || y2 <= y1) return null;   // not beneath the button here
+                    const h = document.elementFromPoint((x1 + x2) / 2, (y1 + y2) / 2);
+                    return { covered: !!h && btn.contains(h) };
+                }, { sel, i });
+                if (!hit) continue;
+                passes++;
+                if (hit.covered) covered.push(`${sel}${n > 1 ? `[${i}]` : ''}`);
+            }
+        }
+    }
+    if (covered.length) Array.from(new Set(covered)).forEach((c) => bad(`back to top covers ${c} at 390x844`));
+    else ok(`back to top: covers none of the hero's line and buttons, the send button or the footer's controls (${passes} crossings checked at 390x844)`);
+    await phone.close();
 }
 
 // ------------------------------------------------------------------

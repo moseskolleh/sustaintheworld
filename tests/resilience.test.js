@@ -37,7 +37,8 @@ function assert(cond, msg) {
 
     // Each of these is defined at a different point in script.js. If an early
     // throw aborted the file, the later ones are the ones that go missing.
-    assert(!!doc.querySelector('.theme-toggle'), 'Storage blocked: the theme toggle still mounts');
+    // The switch is in the markup, hidden until the script shows it.
+    assert(doc.querySelector('.theme-toggle').hidden === false, 'Storage blocked: the script still shows the theme toggle');
     assert(!!doc.getElementById('dispatchBar'), 'Storage blocked: the narration player still mounts (defined late in the file)');
     assert(doc.querySelectorAll('.listen-btn').length > 0, 'Storage blocked: listen buttons still render');
     assert(!!doc.getElementById('terminalToggle'), 'Storage blocked: the field terminal is still wired');

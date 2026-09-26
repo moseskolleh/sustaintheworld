@@ -87,11 +87,12 @@ window.mksStorage = safeStorage;
 
 // A smooth scroll is motion. The stylesheet turns it off for reduced
 // motion, but scrollIntoView({ behavior: 'smooth' }) does not ask the
-// stylesheet, so every scripted scroll asks here instead.
+// stylesheet, so every scripted scroll asks here instead. 'instant', since
+// 'auto' defers to the stylesheet, which still glides in low-energy mode.
 const scrollMotion = () => (
     (document.body && document.body.classList.contains('eco-mode')) ||
     (typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches)
-) ? 'auto' : 'smooth';
+) ? 'instant' : 'smooth';
 window.mksScrollMotion = scrollMotion;
 
 // ===================================
@@ -327,35 +328,69 @@ function revealTarget(target) {
     return expanded;
 }
 
+// Focus is what makes a jump real to a keyboard or a screen reader: without
+// it the next Tab starts from the link that was pressed, so the skip link
+// skipped nothing. A section gets tabindex="-1" (focusable, never a Tab
+// stop) only when it needs one. preventScroll: the scroll is the caller's.
+function focusTarget(target) {
+    if (target.tabIndex < 0 && !target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
+    target.focus({ preventScroll: true });
+}
+
+// Fetch what the target needs, open the dossier or receipt around it (and
+// give that a moment to push things into place), then scroll and focus.
+function jumpTo(target, behavior, focus, wait) {
+    mksLoadFor(target);
+    const land = () => {
+        target.scrollIntoView({ behavior, block: 'start' });
+        if (focus) focusTarget(target);
+    };
+    if (revealTarget(target)) setTimeout(land, 240);
+    else if (wait) setTimeout(land, 0); else land();
+}
+
+// The address each jump was handled for: Back and Forward fire popstate
+// and, when the fragment changes, hashchange too. The second is dropped.
+let jumpedTo = null;
+
+// In-page links used to scroll and stop there: the address never changed,
+// so Back left the site, and focus stayed on the link. Now they navigate.
 document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     anchor.addEventListener('click', function (e) {
         const href = this.getAttribute('href');
         // Bare "#" hrefs (e.g. project expand toggles) are not real targets;
         // querySelector('#') would throw SyntaxError, so bail out.
         if (!href || href === '#') return;
+        // A modified click asks for a new tab or window: the browser's job.
+        if (e.button || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
         const target = document.querySelector(href);
         if (!target) return;
         e.preventDefault();
-        mksLoadFor(target);
-        const didExpand = revealTarget(target);
-        const scroll = () => target.scrollIntoView({ behavior: scrollMotion(), block: 'start' });
-        if (didExpand) setTimeout(scroll, 180); else scroll();
+        // The same link twice is one entry. Safari throws past 100 pushes
+        // in 30 seconds, which should cost the entry, not the jump.
+        if (location.hash !== href) {
+            try { history.pushState(null, '', href); } catch (err) { /* jump anyway */ }
+        }
+        jumpedTo = location.href;
+        jumpTo(target, scrollMotion(), true, false);
         setMenuOpen(false);
     });
 });
 
-// Direct hits (a shared link, back/forward) also open the collapsed feature.
-function handleHashReveal() {
+// Direct hits (a shared link, Back and Forward, a typed fragment) land the
+// same way, a task later so the browser's own scroll restoring comes first.
+// A shared link on arrival is not focused: nobody has pressed anything yet.
+function handleHashReveal(e) {
+    if (location.href === jumpedTo) return;
+    jumpedTo = location.href;
     if (!location.hash || location.hash === '#') return;
     let target;
-    try { target = document.querySelector(location.hash); } catch (e) { return; }
-    if (!target) return;
-    mksLoadFor(target);
-    const didExpand = revealTarget(target);
-    setTimeout(() => target.scrollIntoView({ behavior: 'auto', block: 'start' }), didExpand ? 240 : 0);
+    try { target = document.querySelector(location.hash); } catch (err) { return; }
+    if (target) jumpTo(target, scrollMotion(), !!e, true);
 }
+window.addEventListener('popstate', handleHashReveal);
 window.addEventListener('hashchange', handleHashReveal);
-if (location.hash) window.addEventListener('load', () => setTimeout(handleHashReveal, 320));
+if (location.hash) window.addEventListener('load', () => setTimeout(() => handleHashReveal(null), 320));
 
 function setMenuOpen(open) {
     if (!navToggle || !navMenu) return;
@@ -401,6 +436,7 @@ const navLinks = Array.from(document.querySelectorAll('.nav-link'));
 
 (() => {
     let sectionTops = [];
+    const underfoot = new Set();   // keep-clear elements in the button's band
     const measure = () => {
         sectionTops = sections.map(s => ({ id: s.id, top: s.offsetTop - 220 }));
     };
@@ -415,7 +451,7 @@ const navLinks = Array.from(document.querySelectorAll('.nav-link'));
             if (y >= sectionTops[i].top) current = sectionTops[i].id;
         }
         if (navbar) navbar.classList.toggle('scrolled', y > 100);
-        if (scrollTopBtn) scrollTopBtn.classList.toggle('visible', y > 400);
+        if (scrollTopBtn) scrollTopBtn.classList.toggle('visible', y > window.innerHeight && !underfoot.size);
         if (scrollProgress) scrollProgress.style.width = (docHeight > 0 ? (y / docHeight) * 100 : 0) + '%';
         navLinks.forEach(link => {
             link.classList.toggle('active', link.getAttribute('href') === `#${current}`);
@@ -427,6 +463,21 @@ const navLinks = Array.from(document.querySelectorAll('.nav-link'));
         requestAnimationFrame(update);
     };
     const relayout = () => { measure(); onScroll(); };
+
+    // Back to top floats bottom right. It waits for a full screen of scroll
+    // (the hero's buttons are above it by then) and steps aside while a
+    // control it would cover is in the bottom quarter of the screen, or
+    // about to be: the observer does that geometry off the scroll path.
+    if (scrollTopBtn && 'IntersectionObserver' in window) {
+        const band = new IntersectionObserver((entries) => {
+            entries.forEach(en => {
+                if (en.isIntersecting) underfoot.add(en.target); else underfoot.delete(en.target);
+            });
+            onScroll();
+        }, { rootMargin: '-75% 0px 10% 0px' });
+        document.querySelectorAll('.hero-availability, .hero-cta, .contact-form, .footer')
+            .forEach(el => band.observe(el));
+    }
 
     window.addEventListener('scroll', onScroll, { passive: true });
     let resizeTimer;
@@ -834,10 +885,13 @@ window.addEventListener('resize', () => {
 // ===================================
 // SCROLL TO TOP BUTTON
 // ===================================
-// Its visibility is handled by the shared scroll handler above.
+// Its visibility is handled by the shared scroll handler above. It hides as
+// the page rises, so focus moves to the top rather than vanish with it.
 if (scrollTopBtn) {
     scrollTopBtn.addEventListener('click', () => {
         window.scrollTo({ top: 0, behavior: scrollMotion() });
+        const home = document.getElementById('home');
+        if (home) focusTarget(home);
     });
 }
 
@@ -931,21 +985,26 @@ if (contactForm) {
 // ===================================
 // THEME TOGGLE
 // ===================================
-const createThemeToggle = () => {
-    const toggle = document.createElement('button');
-    const startsLight = document.body.classList.contains('light-mode');
-    toggle.innerHTML = `<svg class="icon" aria-hidden="true" focusable="false"><use href="#i-${startsLight ? 'sun' : 'moon'}"></use></svg>`;
-    toggle.className = 'theme-toggle';
-    toggle.setAttribute('aria-label', 'Toggle light/dark mode');
-
-    document.body.appendChild(toggle);
+// A button in the nav bar (it used to float over the hero on a phone). It
+// ships hidden, since without script it cannot switch anything. Its name
+// says what pressing it does, which also tells the current theme.
+const initThemeToggle = () => {
+    const toggle = document.getElementById('themeToggle');
+    if (!toggle) return;
+    const sync = () => {
+        const isLightMode = document.body.classList.contains('light-mode');
+        const use = toggle.querySelector('use');
+        if (use) use.setAttribute('href', `#i-${isLightMode ? 'sun' : 'moon'}`);
+        toggle.setAttribute('aria-label', isLightMode ? 'Switch to dark theme' : 'Switch to light theme');
+    };
+    sync();
+    toggle.hidden = false;
 
     toggle.addEventListener('click', () => {
         document.body.classList.toggle('light-mode');
         const isLightMode = document.body.classList.contains('light-mode');
-        const use = toggle.querySelector('use');
-        if (use) use.setAttribute('href', `#i-${isLightMode ? 'sun' : 'moon'}`);
         safeStorage.local.set('theme', isLightMode ? 'light' : 'dark');
+        sync();
         syncThemeColor();
     });
 };
@@ -967,7 +1026,7 @@ const currentTheme = safeStorage.local.get('theme', 'dark');
 if (currentTheme === 'light') {
     document.body.classList.add('light-mode');
 }
-createThemeToggle();
+initThemeToggle();
 syncThemeColor();
 
 // ===================================

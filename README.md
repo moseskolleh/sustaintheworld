@@ -298,7 +298,7 @@ npm test          # everything below
 |---|---|
 | `npm run build:check` | every generated page still matches `content/` |
 | `npm run fonts:check` | the committed fonts still hash to their manifest and every stylesheet's `@font-face` block is current |
-| `npm run test:unit` | the seven suites in `tests/` |
+| `npm run test:unit` | the suites in `tests/` |
 | `npm run map:check` | the committed `journey-map.svg` still matches its generator |
 | `npm run budget` | the weights this README quotes (see [Performance](#performance)) |
 | `npm run smoke` | every page in a real browser: no errors, no failed or off-origin requests, every on-demand module arrives when used, and the measured first view is no heavier than the budget claims (its own CI job; needs Chromium) |
@@ -343,6 +343,13 @@ The suites, and the failure each one exists to prevent:
 - **`html.test.js`** — button types, named landmarks, dialog semantics, image
   dimensions, labelled controls, resolvable links, valid JSON-LD, and no
   stylesheet, script, preload or preconnect pointing off this origin.
+- **`navigation.test.js`** — an in-page link updates the address (so Back
+  works) and moves focus to its target, Back and Forward land there again and
+  reopen a closed dossier, the theme switch sits in the nav bar and names what
+  it will do, and back to top waits a full screen and steps aside for the
+  controls beneath it. `npm run smoke` checks the same in a real browser: the
+  next Tab after the skip link lands inside `<main>`, and at 390x844 back to
+  top never covers the hero's buttons, the send button or the footer.
 
 The jsdom harness (`tests/harness.js`) evaluates `script.js` and then every
 file in `modules/`, so the suites see the page the way a visitor who used
@@ -561,7 +568,9 @@ aspirational:
   intrinsic `width`/`height`
 - The lightbox is a real modal: `role="dialog"`, `aria-modal`, an accessible
   name, focus moved in and restored on close, Escape to close, Tab kept inside
-- Skip-to-content link that targets an element which exists
+- Skip-to-content link that targets an element which exists and moves focus
+  there, so the next Tab lands inside `<main>`; every in-page link moves focus
+  and updates the address (`tests/navigation.test.js`, `npm run smoke`)
 - Single-letter shortcuts stand down while a form control has focus
 - No duplicate `id`s, no focusable element inside an `aria-hidden` container
 

@@ -137,22 +137,27 @@
                 </svg>
                 <span class="logo-text">MK<span class="logo-accent">S</span></span>
             </a>
+            <!-- Hidden until script.js wires it up: without the script it
+                 could not switch anything, so it does not show. -->
+            <button type="button" class="theme-toggle" id="themeToggle" aria-label="Switch to light theme" hidden>
+                <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-moon"></use></svg>
+            </button>
             <button type="button" class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="navMenu">
                 <span></span>
                 <span></span>
                 <span></span>
             </button>
             <ul class="nav-menu" id="navMenu">
-                <li><a href="#journey" class="nav-link"><span class="nav-num">01</span>Journey</a></li>
-                <li><a href="#about" class="nav-link"><span class="nav-num">02</span>About</a></li>
-                <li><a href="#experience" class="nav-link"><span class="nav-num">03</span>Experience</a></li>
-                <li><a href="#projects" class="nav-link"><span class="nav-num">04</span>Projects</a></li>
-                <li><a href="case-studies.html" class="nav-link" data-analytics="nav-case-studies"><span class="nav-num">05</span>Case studies</a></li>
-                <li><a href="research.html" class="nav-link" data-analytics="nav-research"><span class="nav-num">06</span>Research</a></li>
-                <li><a href="#ecoprompt" class="nav-link"><span class="nav-num">07</span>AI, Weighed</a></li>
-                <li><a href="#skills" class="nav-link"><span class="nav-num">08</span>Skills</a></li>
-                <li><a href="#education" class="nav-link"><span class="nav-num">09</span>Education</a></li>
-                <li><a href="#notes" class="nav-link"><span class="nav-num">10</span>Notes</a></li>
+                <li><a href="#journey" class="nav-link">Journey</a></li>
+                <li><a href="#about" class="nav-link">About</a></li>
+                <li><a href="#experience" class="nav-link">Experience</a></li>
+                <li><a href="#projects" class="nav-link">Projects</a></li>
+                <li><a href="case-studies.html" class="nav-link" data-analytics="nav-case-studies">Case studies</a></li>
+                <li><a href="research.html" class="nav-link" data-analytics="nav-research">Research</a></li>
+                <li><a href="#ecoprompt" class="nav-link">AI, Weighed</a></li>
+                <li><a href="#skills" class="nav-link">Skills</a></li>
+                <li><a href="#education" class="nav-link">Education</a></li>
+                <li><a href="#notes" class="nav-link">Notes</a></li>
                 <li><a href="assets/Moses_Kolleh_Sesay_CV.pdf" class="nav-link nav-cv" download data-analytics="cv-download-nav"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-file-arrow-down"></use></svg> CV</a></li>
                 <li><a href="#contact" class="nav-link contact-btn" data-analytics="contact-nav">Contact</a></li>
             </ul>

@@ -287,17 +287,22 @@ body.light-mode .navbar {
     box-shadow: 0 2px 24px rgba(124, 252, 0, 0.12);
 }
 
+/* Jumps and Tab stops land below the fixed 72px bar, not under it: the
+   first stop after the skip link was hidden there. */
+html {
+    scroll-padding-top: 72px;
+}
+
 .nav-container {
-    /* Ten numbered links, CV and Contact need about 1,380px on one line;
-       1400px left 1,352 for them, so labels wrapped at every desktop width
-       and Contact was clipped off-screen up to 1373px. */
+    /* The logo, the theme switch, ten links, CV and Contact need about
+       1,270px on one line, padding included (see the 1279px query). */
     max-width: 1520px;
     margin: 0 auto;
     padding: 0 24px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 24px;
+    gap: 16px;
     height: 72px;
 }
 
@@ -305,6 +310,8 @@ body.light-mode .navbar {
     display: flex;
     align-items: center;
     gap: 10px;
+    /* Everything after the logo keeps to the right, together. */
+    margin-right: auto;
     text-decoration: none;
     color: var(--primary-green);
 }
@@ -336,7 +343,7 @@ body.light-mode .navbar {
 .nav-menu {
     display: flex;
     align-items: center;
-    gap: 20px;
+    gap: 16px;
     list-style: none;
 }
 
@@ -352,14 +359,6 @@ body.light-mode .navbar {
     transition: var(--transition);
     position: relative;
     padding: 6px 0;
-}
-
-.nav-num {
-    font-family: var(--font-mono);
-    font-size: 0.65rem;
-    color: var(--primary-green);
-    margin-right: 5px;
-    vertical-align: super;
 }
 
 .nav-link::after {
@@ -421,6 +420,33 @@ body.light-mode .navbar {
 .nav-toggle.active span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
 .nav-toggle.active span:nth-child(2) { opacity: 0; }
 .nav-toggle.active span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+/* In the bar at every width, over nothing. No display value on purpose:
+   the hidden attribute it ships with (for a page without script) wins. */
+.theme-toggle {
+    flex: none;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 1px solid var(--line-color);
+    border-radius: 50%;
+    background: none;
+    color: var(--primary-green);
+    font-size: 1.05rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.theme-toggle:hover {
+    background: var(--primary-green);
+    color: var(--darker-bg);
+}
+
+.theme-toggle:focus-visible {
+    outline: 2px solid var(--primary-green);
+    outline-offset: 3px;
+}
 
 /* ===================================
    HERO
@@ -2572,7 +2598,7 @@ body.light-mode .form-status.error {
 }
 
 /* ===================================
-   FLOATING BUTTONS
+   BACK TO TOP (when it shows: script.js)
    =================================== */
 .scroll-top {
     position: fixed;
@@ -2591,38 +2617,20 @@ body.light-mode .form-status.error {
     transform: translateY(10px);
     transition: var(--transition);
     z-index: 999;
+    /* Gone at once for a tap, not after the fade: it steps aside for
+       controls, and a fading button would still catch their taps. */
+    pointer-events: none;
 }
 
 .scroll-top.visible {
     opacity: 1;
     visibility: visible;
     transform: translateY(0);
+    pointer-events: auto;
 }
 
 .scroll-top:hover {
     background: var(--hover-color);
-    transform: translateY(-4px);
-}
-
-.theme-toggle {
-    position: fixed;
-    bottom: 95px;
-    right: 30px;
-    width: 50px;
-    height: 50px;
-    background-color: var(--card-bg);
-    border: 1px solid var(--line-color);
-    border-radius: 50%;
-    color: var(--primary-green);
-    font-size: 1.1rem;
-    cursor: pointer;
-    z-index: 999;
-    transition: var(--transition);
-}
-
-.theme-toggle:hover {
-    background: var(--primary-green);
-    color: var(--darker-bg);
     transform: translateY(-4px);
 }
 
@@ -2722,21 +2730,9 @@ html.js .nojs-note { display: none; }
 /* ===================================
    RESPONSIVE
    =================================== */
-/* Between the hamburger and full width, the section numbers step aside
-   so the labels fit on one line (the menu is ~1,070px without them). */
-@media (min-width: 1260px) and (max-width: 1479px) {
-    .nav-num {
-        display: none;
-    }
-
-    .nav-menu {
-        gap: 18px;
-    }
-}
-
-/* Ten numbered links, CV and Contact: below 1260px they do not fit on one
-   line even without the numbers, so the hamburger takes over. */
-@media (max-width: 1259px) {
+/* Below 1280px the bar's ~1,270px do not fit on one line, so the
+   hamburger takes over (the theme switch stays in the bar). */
+@media (max-width: 1279px) {
     .nav-toggle {
         display: flex;
     }
@@ -2773,7 +2769,7 @@ html.js .nojs-note { display: none; }
     }
 }
 
-@media (max-width: 1259px) and (max-height: 700px) {
+@media (max-width: 1279px) and (max-height: 700px) {
     .nav-menu {
         padding: 20px 32px;
         gap: 12px;
@@ -4439,7 +4435,6 @@ body.eco-mode .dispatch-progress span {
 @media (max-width: 760px) {
     /* --dispatch-clear is the player's measured height, set by the player. */
     body.dispatch-open .scroll-top { bottom: calc(var(--dispatch-clear, 178px) + 12px); }
-    body.dispatch-open .theme-toggle { bottom: calc(var(--dispatch-clear, 178px) + 74px); }
 }
 
 /* --- narrow screens ------------------------------------------------ */
