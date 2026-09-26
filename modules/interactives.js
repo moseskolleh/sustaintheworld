@@ -715,10 +715,11 @@ window.mksShare = (() => {
     const TOKENS = 1000;                              // everyday-chat workload
     const PUE = DATA.PUE;
     const WUE = DATA.WUE_PROFILES.avg.wue_L_per_kWh;
-    // The roughest term: embodied hardware carbon amortised per query, as
-    // gCO2e per Wh of inference. Grid-independent (manufacturing is already
-    // spent), so on a clean grid it can exceed operational Scope 2.
-    const EMBODIED_G_PER_WH = 0.05;
+    // Embodied hardware carbon belongs on Scope 3 (capital goods), so the line
+    // stays on the diagram, but without a number: the 0.05 gCO2e/Wh once typed
+    // here had no source, and the full coach excludes embodied carbon. A sourced
+    // factor in ai-carbon-data.js would bring it back on both pages at once.
+    const EMBODIED_NOTE = 'not quantified';
     const ANSWERS_PER_YEAR = 20 * 220;               // 20 prompts/day × 220 working days
     let scale = 'answer';
 
@@ -738,10 +739,11 @@ window.mksShare = (() => {
         const infWh = DATA.energyForQuery(DATA.MODELS[key], TOKENS * mix.input, TOKENS * mix.output);
         const wh = infWh * PUE;                                                // facility energy (grid + cooling overhead)
         const kwh = wh / 1000;
-        // Embodied hardware scales with the chips' compute, not facility overhead,
-        // so Scope 3 uses pre-PUE inference energy (matching the coefficient's basis).
-        return { scope2: kwh * grid.intensity, scope3: infWh * EMBODIED_G_PER_WH, water: kwh * WUE * 1000 };
+        return { scope2: kwh * grid.intensity, water: kwh * WUE * 1000 };
     };
+    // With Scope 2 the only carbon term, its ribbon is scaled against the
+    // dirtiest grid on offer, so switching grids still visibly moves it.
+    const worstIntensity = Math.max(...DATA.HOMEPAGE_REGIONS.map(k => DATA.REGIONS[k].intensity));
     const fmt = (n) => (n === 0 ? '0' : n >= 1 ? n.toFixed(2) : n >= 0.001 ? n.toFixed(3) : '<0.001');
 
     const cy = 160, sx = 180, tx = 430, rows = [70, 160, 250];
@@ -771,19 +773,19 @@ window.mksShare = (() => {
     const update = () => {
         const grid = gridNow();
         const d = compute(sel.value, grid);
-        const carbonMax = Math.max(d.scope2, d.scope3, 0.0001);
-        const widths = [8 + (d.scope2 / carbonMax) * 40, 8 + (d.scope3 / carbonMax) * 40, 26];
+        // Scope 3 keeps a hairline: the flow exists, its size is not claimed.
+        const widths = [8 + (grid.intensity / worstIntensity) * 40, 2, 26];
         rows.forEach((ry, i) => ribbons[i].setAttribute('d', ribbon(sx, cy, tx, ry, widths[i])));
         const yr = scale === 'year';
         const m = yr ? ANSWERS_PER_YEAR : 1;
         const cDiv = yr ? 1000 : 1;                   // g -> kg, mL -> L
         const cu = yr ? 'kg' : 'g', wu = yr ? 'L' : 'mL';
         vals[0].textContent = `${fmt(d.scope2 * m / cDiv)} ${cu} CO₂e`;
-        vals[1].textContent = `${fmt(d.scope3 * m / cDiv)} ${cu} CO₂e`;
+        vals[1].textContent = EMBODIED_NOTE;
         vals[2].textContent = `${fmt(d.water * m / cDiv)} ${wu} water`;
         if (summary) {
             const basis = yr ? `at ~${ANSWERS_PER_YEAR.toLocaleString()} answers/analyst-year (20/day × 220 days)` : 'one everyday answer';
-            summary.innerHTML = `<strong>${DATA.MODELS[sel.value].label}</strong>, ${basis} on the <strong>${grid.label}</strong> grid: <strong>${fmt(d.scope2 * m / cDiv)} ${cu}</strong> Scope 2, <strong>${fmt(d.scope3 * m / cDiv)} ${cu}</strong> Scope 3, <strong>${fmt(d.water * m / cDiv)} ${wu}</strong> cooling water — three ESRS lines.`;
+            summary.innerHTML = `<strong>${DATA.MODELS[sel.value].label}</strong>, ${basis} on the <strong>${grid.label}</strong> grid: <strong>${fmt(d.scope2 * m / cDiv)} ${cu}</strong> Scope 2 and <strong>${fmt(d.water * m / cDiv)} ${wu}</strong> cooling water — two ESRS lines quantified. Scope 3 embodied hardware is a third line, named but ${EMBODIED_NOTE}.`;
         }
     };
 
@@ -887,7 +889,7 @@ window.mksShare = (() => {
     svg.appendChild(mk('polyline', { points: knownPts, class: 'ydi-known-line' }));
     models.slice(0, KNOWN).forEach((m, i) => svg.appendChild(mk('circle', { cx: xAt(i), cy: yAt(m.wh), r: 4, class: 'ydi-known-dot' })));
 
-    // "typical intuition" line + the measured line (both revealed later)
+    // the illustrative straight-line guess + the measured line (both revealed later)
     const intuitLine = mk('polyline', { points: '', class: 'ydi-intuit-line' });
     svg.appendChild(intuitLine);
     const realLine = mk('polyline', { points: '', class: 'ydi-real-line' });
@@ -1041,8 +1043,8 @@ window.mksShare = (() => {
         else shape = 'You underestimated the frontier — the reasoning model is the outlier.';
         if (verdictEl) { verdictEl.innerHTML = `<span class="ydi-shape">${shape}</span> ${msg}`; verdictEl.hidden = false; }
         cardData = { shape: shape, factor: factorFrontier };
-        // Third line: what people typically expect — a near-linear ramp that
-        // misses the reasoning spike, reframing the miss as the industry's.
+        // Third line: a straight-line guess that misses the reasoning spike —
+        // drawn, not measured, so the legend and the data table say illustrative.
         const intuitEnd = 0.55;
         intuitLine.setAttribute('points', models.map((m, i) => `${xAt(i)},${yAt(tiny + (i / (n - 1)) * (intuitEnd - tiny))}`).join(' '));
         // Callout on the frontier spike.
@@ -1136,7 +1138,7 @@ window.mksShare = (() => {
     // --- accessible, non-visual data table ---
     if (tableEl) {
         const rows = models.map(m => `<tr><td>${m.label}</td><td>${m.wh} Wh</td></tr>`).join('');
-        tableEl.innerHTML = `<table><caption>Measured energy per 1,000-token answer by model (order-of-magnitude estimates)</caption><thead><tr><th>Model</th><th>Wh per answer</th></tr></thead><tbody>${rows}</tbody></table>`;
+        tableEl.innerHTML = `<table><caption>Measured energy per 1,000-token answer by model (order-of-magnitude estimates). The chart's straight-line guess is illustrative — not a measured figure — so it is not listed here.</caption><thead><tr><th>Model</th><th>Wh per answer</th></tr></thead><tbody>${rows}</tbody></table>`;
     }
 })();
 
@@ -1230,7 +1232,7 @@ window.mksShare = (() => {
         if (totalMb < MEDIAN_MB) {
             lines.push({ t: 'c', s: `— you're ${Math.round((1 - totalMb / MEDIAN_MB) * 100)}% lighter —` });
         }
-        lines.push({ t: 'r', l: 'Text-only report', r: '8 KB' });
+        lines.push({ t: 'r', l: 'Text-only report', r: '9 KB' });
         if (unmeasured) {
             lines.push({ t: 'c', s: `* ${unmeasured} third-party file${unmeasured > 1 ? 's' : ''} not counted`, dim: true });
         }

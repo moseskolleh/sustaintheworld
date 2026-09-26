@@ -10,6 +10,10 @@
 // makes disagreement fail loudly, so the profile is edited in one place and
 // the test says which pages are behind.
 //
+// The "Figures" sections apply the same rule to numbers: a figure on a page
+// agrees with the content/ entry that is its basis, a figure with no basis
+// stays off, and one that is only illustrative says so where it is shown.
+//
 // Run with: node tests/content.test.js
 
 const fs = require('fs');
@@ -220,6 +224,164 @@ const fieldText = plain(fieldReport);
     assert(future.length === 0, `Sitemap: no lastmod is in the future (${future.join(', ') || 'none'})`);
 }
 
+// --- Figures: record facts ----------------------------------------------
+// A headcount, a programme's length or a grade is a record fact, and it lives
+// on the profile entry it describes. The pages have to print the same one.
+{
+    const missing = [];
+    profile.experience.filter(r => r.teamSize).forEach((r) => {
+        const phrase = new RegExp(`team of ${r.teamSize}\\b`);
+        if (!phrase.test(indexText)) missing.push(`index: team of ${r.teamSize} (${r.organization})`);
+        if (!phrase.test(fieldText)) missing.push(`field-report: team of ${r.teamSize} (${r.organization})`);
+    });
+    profile.experience.filter(r => r.programmeWeeks).forEach((r) => {
+        if (!indexText.includes(`${r.programmeWeeks}-week`)) missing.push(`index: ${r.programmeWeeks}-week (${r.organization})`);
+    });
+    profile.education.filter(e => e.grade).forEach((e) => {
+        if (!indexText.includes(e.grade)) missing.push(`index: grade ${e.grade} (${e.institution})`);
+    });
+    assert(missing.length === 0, `Figures: the pages print the record facts profile.json holds (missing: ${missing.join('; ') || 'none'})`);
+}
+
+// --- Figures: case-study periods ------------------------------------------
+// A thesis period is not the degree's dates. The two editions had drifted
+// apart on exactly that — 2021–24 against 2023–24 for the coastal thesis —
+// so each project's years are held to its case study.
+{
+    const projects = JSON.parse(read('content/projects.json')).caseStudies;
+    const years = (s) => [...new Set((String(s).match(/\b(?:19|20)\d{2}\b/g) || []))].sort().join(',');
+
+    const wrongIndex = [];
+    projects.forEach((cs) => {
+        const at = index.indexOf(`data-project="${cs.id}"`);
+        const meta = at < 0 ? null : index.slice(at).match(/class="project-meta">\s*<span class="mono-label">([^<]+)</);
+        if (!meta || years(meta[1]) !== years(cs.period)) wrongIndex.push(`${cs.id}: "${meta ? meta[1] : 'no dossier'}" vs "${cs.period}"`);
+    });
+    assert(wrongIndex.length === 0, `Figures: every homepage dossier shows its case study's years (wrong: ${wrongIndex.join('; ') || 'none'})`);
+
+    // The field report numbers its projects in the case-study order.
+    const section = fieldReport.split(/<h2>Projects<\/h2>/)[1] || '';
+    const listed = (section.split('</dl>')[0].match(/<dt>\[\d+\][^<]*<\/dt>/g) || []);
+    assert(listed.length === projects.length, `Figures: the field report lists every case study (${listed.length}/${projects.length})`);
+    const wrongField = projects
+        .filter((cs, i) => !listed[i] || years(listed[i]) !== years(cs.period))
+        .map((cs) => `${cs.id} vs "${cs.period}"`);
+    assert(wrongField.length === 0, `Figures: every field-report project shows its case study's years (wrong: ${wrongField.join('; ') || 'none'})`);
+}
+
+// --- Figures: the page's own weight --------------------------------------
+// The footer and the Receipt quote sizes that scripts/check-budget.js
+// measures. The field report had grown to 9 KB while all three still said 8.
+{
+    const { measure } = require('../scripts/check-budget.js');
+    const { measured } = measure();
+    const KB = 1024;
+
+    const reportKB = Math.round(measured.fieldReport / KB);
+    const quoted = [...index.matchAll(/(\d+)(?:&nbsp;| )KB field report|whole portfolio in (\d+)(?:&nbsp;| )KB/g)]
+        .concat([...read('modules/interactives.js').matchAll(/'Text-only report', r: '(\d+) KB'/g)])
+        .map(m => +(m[1] || m[2]));
+    assert(
+        quoted.length === 3 && quoted.every(n => n === reportKB),
+        `Figures: the footer and the Receipt quote the field report's real size (${quoted.join(', ')} KB quoted, ${reportKB} KB measured)`
+    );
+
+    // "About" gets five kilobytes either way; past that the sentence is stale.
+    // The sustainable-AI lens quotes the same figure as evidence.
+    const wireKB = measured.criticalWire / KB;
+    const firstView = [
+        ['footer', index.match(/first view now costs about (\d+)(?:&nbsp;| )KB/)],
+        ['sustainable-AI lens', read('content/lenses.json').match(/first view of ~(\d+) KB/)]
+    ];
+    firstView.forEach(([where, m]) => assert(
+        !!m && Math.abs(+m[1] - wireKB) <= 5,
+        `Figures: the ${where}'s first-view weight is within 5 KB of the budget's measure (${m && m[1]} KB quoted, ${wireKB.toFixed(1)} KB measured)`
+    ));
+}
+
+// --- Figures: claims with no basis stay off ------------------------------
+// Each of these was on the site with nothing in content/ behind it. They are
+// named here so that one coming back is a failure with its reason attached,
+// not something a reader has to notice.
+{
+    const { SCRIPTS } = require('../voice-scripts.js');
+    const pages = {
+        'index.html': indexText,
+        'field-report.html': fieldText,
+        'case-studies.html': plain(read('case-studies.html')),
+        narration: SCRIPTS.map(s => s.text).join(' ')
+    };
+    const UNSUPPORTED = [
+        { re: /10,000\+ (?:people|beneficiaries)|ten thousand people/i, why: 'no count of people reached exists in content/' },
+        { re: /project completion/i, why: 'a completion rate with no method or denominator behind it' },
+        { re: /15% efficiency|efficiency by 15%/i, why: 'an efficiency gain with no baseline behind it' },
+        { re: /advised the (?:UN|United Nations)/i, why: 'the UN role was an internship: "supported", as everywhere else' },
+        { re: /certified across/i, why: 'there is one ESG certificate, not a set of frameworks' },
+        { re: /well above local averages|against roughly 30%/i, why: 'leans on the blind-drilling baseline, which has no recorded source' }
+    ];
+    const found = [];
+    Object.entries(pages).forEach(([page, text]) => {
+        UNSUPPORTED.forEach(({ re, why }) => {
+            const m = text.match(re);
+            if (m) found.push(`${page}: "${m[0]}" (${why})`);
+        });
+    });
+    assert(found.length === 0, `Figures: no claim without a basis is back (${found.join('; ') || 'none'})`);
+}
+
+// --- Figures: illustrative numbers say so --------------------------------
+// The 30% blind-drilling baseline and the straight-line guess in You Draw It
+// have no source behind them. They stay, because the comparison is the
+// point of both widgets, but wherever they are shown they are labelled.
+{
+    const { run } = require('./harness.js');
+    const { window } = run('dark', { before: (w) => { w.console.log = () => {}; } });
+    const doc = window.document;
+    const text = (id) => (doc.getElementById(id) || { textContent: '' }).textContent;
+
+    const anchors = doc.querySelector('.strike-anchors');
+    assert(!!anchors && /30%, illustrative/.test(anchors.textContent), `Illustrative: the 30% anchor says so (${anchors && anchors.textContent})`);
+    const foot = doc.querySelector('.strike-foot');
+    assert(!!foot && /illustrative\s+—\s+not a measured figure/.test(foot.textContent), 'Illustrative: the Seven-in-ten footnote says the 30% is not measured');
+
+    const slider = doc.getElementById('strikeSlider');
+    const leaning = [30, 50, 70].filter((rate) => {
+        slider.value = String(rate);
+        slider.dispatchEvent(new window.Event('input', { bubbles: true }));
+        return !/illustrative/.test(text('strikeCounter'));
+    });
+    assert(leaning.length === 0, `Illustrative: every Seven-in-ten message that compares with blind drilling says illustrative (unlabelled at: ${leaning.join(', ') || 'none'})`);
+
+    // Three holes anywhere put the comparison on the score line.
+    doc.body.classList.add('eco-mode');   // drilling finishes at once
+    const stage = doc.getElementById('boreholeStage');
+    const key = (k) => stage.dispatchEvent(new window.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+    const attempts = () => +((text('drillScore').match(/Strikes: \d+\/(\d+)/) || [])[1] || 0);
+    for (let i = 0; i < 60 && attempts() < 3; i++) {
+        doc.getElementById('drillBtn').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+        for (let k = 0; k < 4; k++) key('ArrowRight');
+    }
+    assert(attempts() >= 3 && /30%, illustrative/.test(text('drillScore')), `Illustrative: the borehole score line labels the 30% (${text('drillScore')})`);
+
+    const legend = doc.querySelector('.ydi-leg-intuit');
+    assert(!!legend && /illustrative/.test(legend.textContent), `Illustrative: the You Draw It legend labels the guess line (${legend && legend.textContent})`);
+    const caption = doc.querySelector('#ydiTable caption');
+    assert(!!caption && /illustrative — not a measured figure/.test(caption.textContent), 'Illustrative: the You Draw It data table says the guess line is not measured');
+
+    // --- One boundary for embodied carbon on both pages ---
+    // Anatomy of a Prompt used to add a Scope 3 figure from a constant with no
+    // source, while the full coach said it excluded embodied carbon.
+    const vals = Array.from(doc.querySelectorAll('#anatomySvg .anatomy-t-val')).map(v => v.textContent);
+    assert(vals.length === 3 && vals[1] === 'not quantified', `Boundary: Anatomy names Scope 3 without a number (${vals.join(' | ')})`);
+    assert(!/\d\s*g\s*<\/strong>\s*Scope 3/.test(doc.getElementById('anatomySummary').innerHTML), 'Boundary: the Anatomy summary gives no Scope 3 figure');
+    const coach = plain(read('carbon-ai.html'));
+    assert(
+        /Embodied carbon of the hardware \(Scope 3, capital goods\) is excluded, here and in Anatomy of a Prompt/.test(coach)
+            && /neither page quantifies it/.test(indexText),
+        'Boundary: the coach and Anatomy both state that embodied carbon is excluded'
+    );
+}
+
 // --- Staleness ----------------------------------------------------------
 // Deliberately not a failure. A test that goes red on a calendar date teaches
 // people to ignore red. This prints where anyone will see it and moves on.
@@ -245,3 +407,4 @@ if (failures > 0) {
     process.exit(1);
 }
 console.log('\nAll assertions passed');
+process.exit(0);   // the page booted above leaves timers running

@@ -131,7 +131,8 @@
     const updateScore = () => {
         if (!attempts) { score.textContent = ''; return; }
         let t = `Strikes: ${strikes}/${attempts}`;
-        if (attempts >= 3) t += ' · blind drilling here hits ~30% — our crews read the curve and hit 70%';
+        // The 30% has no recorded source, so it is labelled illustrative.
+        if (attempts >= 3) t += ' · in the field, reading the curve first struck water 70% of the time (blind drilling: ~30%, illustrative)';
         score.textContent = t;
     };
 
@@ -336,7 +337,8 @@
 // ===================================
 // SEVEN IN TEN — the 70% strike rate as a felt human delta
 // A 100-dot waffle of boreholes; the slider moves the strike rate from blind
-// drilling in hard rock up to the field-proven 70%, flipping dry holes to water.
+// drilling (30% — illustrative, no source is recorded) up to the 70% in the
+// field records (content/projects.json), flipping dry holes to water.
 // ===================================
 (() => {
     const waffle = document.getElementById('strikeWaffle');
@@ -346,6 +348,7 @@
     if (!waffle || !slider || !counter) return;
 
     const N = 100;
+    const BLIND = 30;   // illustrative — not a measured figure
     // Deterministic scatter: 37 is coprime with 100, so (k*37)%100 is a fixed
     // permutation of every cell — the same rate always paints the same picture,
     // no Math.random, no fake variation.
@@ -363,18 +366,18 @@
         const water = new Set(order.slice(0, rate));
         for (let i = 0; i < N; i++) cells[i].classList.toggle('water', water.has(i));
         const dry = N - rate;
-        const moreThanBlind = rate - 30;
+        const moreThanBlind = rate - BLIND;
         if (out) out.textContent = rate + '%';
         // Announce a meaningful value on the slider itself instead of spamming a
         // live region on every 1% step.
         slider.setAttribute('aria-valuetext', `${rate}% strike rate — ${rate} of 100 boreholes strike water`);
         let msg = `<strong>${rate} of 100</strong> boreholes strike water — <strong>${dry}</strong> come up dry.`;
         if (rate <= 32) {
-            msg += ' Blind drilling in hard rock: about 7 in 10 are dry holes a community paid for.';
+            msg += ' At the illustrative blind-drilling rate, about 7 in 10 are dry holes a community paid for.';
         } else if (rate >= 68) {
-            msg += ` Reading the resistivity curve first: <strong>7 in 10 strike water</strong> — ${moreThanBlind} more communities served per 100 boreholes, same rigs, same budget.`;
+            msg += ` Reading the resistivity curve first: <strong>7 in 10 strike water</strong> — ${moreThanBlind} more per 100 boreholes than the illustrative blind-drilling rate, same rigs, same budget.`;
         } else {
-            msg += ` That's <strong>${moreThanBlind} more</strong> communities with water than blind drilling — same rigs, same budget.`;
+            msg += ` That's <strong>${moreThanBlind} more</strong> per 100 boreholes than the illustrative blind-drilling rate — same rigs, same budget.`;
         }
         counter.innerHTML = msg;
     };
@@ -384,7 +387,7 @@
     // Soft snap to the two meaningful anchors on release.
     slider.addEventListener('change', () => {
         const v = +slider.value;
-        if (Math.abs(v - 30) <= 3) { slider.value = 30; render(30); }
+        if (Math.abs(v - BLIND) <= 3) { slider.value = BLIND; render(BLIND); }
         else if (Math.abs(v - 70) <= 3) { slider.value = 70; render(70); }
     });
     render(+slider.value);
@@ -399,8 +402,8 @@
             if (entries.some(e => e.isIntersecting) && !played && !userInteracted && !document.body.classList.contains('eco-mode')) {
                 played = true;
                 io.disconnect();
-                slider.value = 30; render(30);
-                let v = 30;
+                slider.value = BLIND; render(BLIND);
+                let v = BLIND;
                 const step = () => {
                     if (userInteracted) return;
                     v += 2;

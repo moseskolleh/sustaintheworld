@@ -82,7 +82,7 @@ const BUDGETS = {
     fieldReport: {
         label: 'Text-only field report, whole page',
         max: 12 * KB,
-        readme: 'the footer calls it "the whole portfolio in 8 KB" — this is what keeps that true'
+        readme: 'the footer calls it "the whole portfolio in 9 KB" — this is what keeps that true'
     },
     // The generated pages carry no images and no framework, so they should
     // stay small. A budget here is what stops "just one more section" turning

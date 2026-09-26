@@ -332,7 +332,7 @@
       "results": [
         {
           "claim": "70% aquifer strike rate in subsequent drilling",
-          "basis": "Successful strikes as a share of boreholes drilled on sites selected with the survey method, during the Team & Team International fieldwork. Compared against roughly 30% for blind siting in the same geology — which is the comparison that makes the number mean anything.",
+          "basis": "Successful strikes as a share of boreholes drilled on sites selected with the survey method, during the Team & Team International fieldwork. The site sets it beside roughly 30% for blind siting in the same geology, but no source for that baseline is recorded — so wherever the 30% appears it is labelled illustrative, not measured.",
           "verifiable": false
         },
         {
@@ -342,7 +342,7 @@
         }
       ],
 
-      "caveat": "The strike-rate comparison comes from field records, not a controlled trial. Geology varies between sites, and a good surveyor is part of the result."
+      "caveat": "The strike rate comes from field records, not a controlled trial. Geology varies between sites, and a good surveyor is part of the result."
     }
   ]
 }
