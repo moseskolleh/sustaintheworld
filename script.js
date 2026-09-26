@@ -159,6 +159,15 @@ function mksLoadFor(target) {
 }
 
 // ===================================
+// WITHOUT JAVASCRIPT, AND LATE
+// ===================================
+// The stylesheet hides nothing unless <head> marked the page html.js, and
+// <head> takes the mark off if this file has not set mksReady within 4 s.
+// Arriving after that is a slow network, not a failure: the reader has
+// already been shown the page, so nothing is hidden again or replayed.
+const lateStart = !document.documentElement.classList.contains('js');
+
+// ===================================
 // PRELOADER
 // ===================================
 (() => {
@@ -171,8 +180,9 @@ function mksLoadFor(target) {
 
     // Reduced-motion visitors, and anyone who has already seen the intro this
     // session, skip it entirely — no fake loading bar in front of static HTML.
+    // So does a late start: the page is already on screen.
     const seen = safeStorage.session.get('mks-intro-seen');
-    if (reduce || seen) { wipe(); return; }
+    if (reduce || seen || lateStart) { wipe(); return; }
     safeStorage.session.set('mks-intro-seen', '1');
 
     const coordsEl = document.getElementById('preloaderCoords');
@@ -434,9 +444,21 @@ const navLinks = Array.from(document.querySelectorAll('.nav-link'));
 // ===================================
 // ANIMATED COUNTERS (hero stats)
 // ===================================
+// The real figures are in the HTML, so a reader without JavaScript sees 164,
+// not 0 — and they are exact counts, so nothing is appended. Counting up is
+// motion: not under reduced motion, low-energy mode or a late start.
+const counters = Array.from(document.querySelectorAll('.hero-stat-number'));
+const countersMove = () => !lateStart && scrollMotion() === 'smooth';
+
 const animateCounters = () => {
-    document.querySelectorAll('.hero-stat-number').forEach(counter => {
-        const target = parseInt(counter.getAttribute('data-target'));
+    counters.forEach(counter => {
+        const target = parseInt(counter.getAttribute('data-target'), 10);
+        if (isNaN(target)) return;
+        if (!countersMove()) {
+            // Only differs if low-energy mode came on after it was zeroed.
+            if (counter.textContent !== String(target)) counter.textContent = String(target);
+            return;
+        }
         const duration = 1800;
         const increment = target / (duration / 16);
         let current = 0;
@@ -447,7 +469,7 @@ const animateCounters = () => {
                 counter.textContent = Math.ceil(current);
                 requestAnimationFrame(updateCounter);
             } else {
-                counter.textContent = target + '+';
+                counter.textContent = String(target);
             }
         };
 
@@ -468,6 +490,12 @@ if (statsSection && 'IntersectionObserver' in window) {
         });
     }, observerOptions);
     counterObserver.observe(statsSection);
+
+    // Zeroed before the next paint, only if they will count up from it. The
+    // microtask waits for low-energy mode, restored further down this file.
+    Promise.resolve().then(() => {
+        if (countersMove()) counters.forEach(counter => { counter.textContent = '0'; });
+    });
 }
 
 // ===================================
@@ -1321,6 +1349,18 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
         scene.appendChild(g);
     });
 })();
+
+// ===================================
+// TAKEN OVER
+// ===================================
+// Everything the stylesheet's html.js rules wait on has run, so the <head>
+// failsafe can stand down. On a late start every reveal is marked done
+// first: putting the mark back must not hide what the reader has seen.
+if (lateStart) {
+    document.querySelectorAll('.reveal').forEach(el => el.classList.add('visible'));
+    document.documentElement.classList.add('js');
+}
+window.mksReady = true;
 
 // ===================================
 // CONVERSION ANALYTICS (privacy-first, provider-agnostic)

@@ -64,6 +64,10 @@
 }
 .cs-lenses-label { margin-right: 4px; }
 
+/* Without JavaScript (no html.js) a lens link only reloads the "all" view,
+   so the switcher is not offered: every case study is on the page anyway. */
+html:not(.js) .cs-lenses { display: none; }
+
 .cs-lens {
     display: inline-block;
     padding: 6px 14px;
@@ -94,7 +98,6 @@
     border-radius: 6px;
     background: var(--card-bg);
 }
-.cs-lens-panel[hidden] { display: none; }
 .cs-lens-panel h2 {
     margin: 0 0 10px;
     font-size: 1.25rem;

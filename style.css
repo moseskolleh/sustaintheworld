@@ -99,6 +99,12 @@ body.light-mode {
     box-sizing: border-box;
 }
 
+/* One rule for [hidden], everywhere: the browser's own loses to any class
+   that sets display, and it had been patched one element at a time. */
+[hidden] {
+    display: none !important;
+}
+
 html {
     scroll-behavior: smooth;
     font-size: 16px;
@@ -192,7 +198,13 @@ body.light-mode .contour-layer {
 /* ===================================
    PRELOADER
    =================================== */
+/* Only with JavaScript on (html.js, set in <head>): script.js lifts it.
+   Reduced motion skips the intro from the first paint. */
 .preloader {
+    display: none;
+}
+
+html.js .preloader {
     position: fixed;
     inset: 0;
     background: var(--darker-bg);
@@ -201,6 +213,10 @@ body.light-mode .contour-layer {
     justify-content: center;
     z-index: 3000;
     transition: opacity 0.5s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html.js .preloader { display: none; }
 }
 
 .preloader-inner {
@@ -751,8 +767,6 @@ body.light-mode .hero-availability {
 }
 
 .ydi-controls { display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
-/* [hidden] alone loses to .btn's display; scope a stronger rule so toggling works */
-.ydi-controls .btn[hidden] { display: none; }
 
 .ydi-verdict {
     margin-top: 16px;
@@ -954,7 +968,6 @@ body.light-mode .hero-availability {
 .assay-io textarea:focus { outline: none; border-color: var(--primary-green); }
 
 .assay-actions { display: flex; align-items: center; gap: 14px; margin-top: 12px; flex-wrap: wrap; }
-.assay-actions .btn[hidden] { display: none; }
 .assay-privacy { color: var(--text-dim); display: inline-flex; align-items: center; gap: 6px; }
 .assay-privacy i { color: var(--primary-green); }
 
@@ -1874,8 +1887,12 @@ body.light-mode .hero-photo-caption {
 }
 
 .project-details {
-    max-height: 0;
     overflow: hidden;
+}
+
+/* Collapsed only when JavaScript can open it again; without it, open. */
+html.js .project-details {
+    max-height: 0;
     /* Collapsed: kept out of the tab order and the screen-reader tree so
        keyboard users don't land on the hidden galleries and mini-games inside.
        visibility flips to hidden only after the height finishes animating. */
@@ -2607,12 +2624,16 @@ body.light-mode .form-status.error {
    REVEAL ANIMATIONS
    =================================== */
 .reveal {
-    opacity: 0;
-    transform: translateY(26px);
     transition: opacity 0.7s ease, transform 0.7s ease;
 }
 
-.reveal.visible {
+/* Hidden only when JavaScript is on (html.js), for script.js to show. */
+html.js .reveal {
+    opacity: 0;
+    transform: translateY(26px);
+}
+
+html.js .reveal.visible {
     opacity: 1;
     transform: translateY(0);
 }
@@ -2623,10 +2644,53 @@ body.light-mode .form-status.error {
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
     }
-    .reveal { opacity: 1; transform: none; }
+    html.js .reveal { opacity: 1; transform: none; }
     /* An anchor jump is not animated across 11,000px either. */
     html { scroll-behavior: auto; }
 }
+
+/* ===================================
+   WITHOUT JAVASCRIPT
+   =================================== */
+/* What only script.js can make work is taken away when it cannot run,
+   rather than left as controls that do nothing. */
+html:not(.js) .theme-toggle,
+html:not(.js) .listen-btn,
+html:not(.js) .play-index,
+html:not(.js) .journey-map,
+html:not(.js) .dossier-widget,
+html:not(.js) .project-chevron,
+html:not(.js) .ydi,
+html:not(.js) .eco-widget,
+html:not(.js) .anatomy,
+html:not(.js) .assay,
+html:not(.js) .nav-toggle,
+html:not(.js) .carbon-badge,
+html:not(.js) .receipt-btn,
+html:not(.js) .eco-mode-toggle,
+html:not(.js) .terminal-toggle {
+    display: none !important;
+}
+
+/* Every dossier is already open, so its title stops promising a click. */
+html:not(.js) .project-summary,
+html:not(.js) .project-toggle {
+    cursor: auto;
+}
+
+.nojs-note {
+    max-width: 640px;
+    padding: 14px 18px;
+    border: 1px dashed var(--line-color);
+    border-radius: var(--border-radius);
+    color: var(--text-secondary);
+    position: relative;
+    z-index: 2;
+}
+
+.nojs-note a { color: var(--primary-green); }
+
+html.js .nojs-note { display: none; }
 
 /* ===================================
    SKIP LINK
@@ -3199,12 +3263,13 @@ body.light-mode .journey-map-readout {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 0;
+    width: var(--w);
     transition: width 1.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.reveal.visible .impact-seg {
-    width: var(--w);
+/* Grows in as its panel is revealed; without JavaScript, just drawn. */
+html.js .reveal:not(.visible) .impact-seg {
+    width: 0;
 }
 
 .impact-seg b {
@@ -4060,13 +4125,6 @@ body.light-mode .journey-you-readout {
     flex-wrap: wrap;
 }
 
-/* Must out-specify the rule above: the script hides these when the browser
-   has no voice and no recording to fall back on, and a bare [hidden] loses
-   to any class-level display. */
-.listen-wrap[hidden] {
-    display: none;
-}
-
 .hero-cta + .listen-wrap {
     margin-top: -40px;   /* .hero-cta carries 60px of bottom margin */
     margin-bottom: 40px;
@@ -4145,8 +4203,6 @@ body.light-mode .journey-you-readout {
 body.light-mode .dispatch-bar {
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.16);
 }
-
-.dispatch-bar[hidden] { display: none; }
 
 .dispatch-row {
     display: flex;
@@ -4241,7 +4297,6 @@ body.light-mode .dispatch-bar {
     color: var(--text-secondary);
     opacity: 0.85;
 }
-.dispatch-voice-note[hidden] { display: none; }
 
 /* The recorded-voice button carries the narrator's real title, which is
    longer than "Moses" was. Let it truncate rather than break the bar. */
@@ -4331,8 +4386,6 @@ body.light-mode .dispatch-bar {
     text-transform: uppercase;
     transition: var(--transition);
 }
-
-.dispatch-voices button[hidden] { display: none; }
 
 .dispatch-voices button[aria-pressed="true"] {
     background: var(--accent-color);

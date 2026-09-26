@@ -11,7 +11,7 @@
     "fonts:build": "node scripts/build-fonts.js",
     "fonts:check": "node scripts/build-fonts.js --check",
     "smoke": "node scripts/smoke.js",
-    "test:unit": "node tests/bugs.test.js && node tests/resilience.test.js && node tests/carbon.test.js && node tests/voice.test.js && node tests/narration.test.js && node tests/content.test.js && node tests/portfolio.test.js && node tests/html.test.js && node tests/apps-script.test.js",
+    "test:unit": "node tests/bugs.test.js && node tests/resilience.test.js && node tests/nojs.test.js && node tests/carbon.test.js && node tests/voice.test.js && node tests/narration.test.js && node tests/content.test.js && node tests/portfolio.test.js && node tests/html.test.js && node tests/apps-script.test.js",
     "budget": "node scripts/check-budget.js",
     "mcp:verify": "node scripts/verify-mcp-pin.js",
     "map:build": "node scripts/generate-journey-map.js",

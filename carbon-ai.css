@@ -49,6 +49,28 @@
 
 * { box-sizing: border-box; }
 
+/* One rule for [hidden] on every page built on this sheet: the browser's
+   own loses to any class that sets display. */
+[hidden] { display: none !important; }
+
+/* Without JavaScript (no html.js, set in <head>) the calculator cannot run:
+   a note stands in for its controls and the ledger it renders. */
+html:not(.js) .ca-presets,
+html:not(.js) .ca-grid,
+html:not(.js) .ca-ledger-section {
+    display: none !important;
+}
+
+.nojs-note {
+    margin: 0 0 24px;
+    padding: 14px 18px;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    color: var(--text-secondary);
+}
+
+html.js .nojs-note { display: none; }
+
 /* Inline SVG icons (replaced the Font Awesome CDN) */
 .icon {
     display: inline-block;
@@ -241,7 +263,6 @@ a { color: var(--primary-green); }
     line-height: 1.5;
     color: var(--text-secondary);
 }
-.ca-notice[hidden] { display: none; }
 
 .ca-out {
     display: grid;

@@ -3,6 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- JavaScript is on, so the stylesheet may hide what script.js brings in.
+         If script.js fails to load (its onerror) or has not taken over in 4 s,
+         the class comes off and the page shows as it would without it. -->
+    <script>document.documentElement.classList.add('js');setTimeout(function(){if(!window.mksReady)document.documentElement.classList.remove('js')},4000)</script>
     <meta name="description" content="Moses Kolleh Sesay — Sustainability &amp; Climate Analyst. From mapping groundwater in Freetown to building sustainable AI frameworks in Amsterdam.">
     <meta name="author" content="Moses Kolleh Sesay">
     <title>Moses Kolleh Sesay | Sustainability &amp; Climate Analyst</title>
@@ -190,19 +194,19 @@
             </div>
             <div class="hero-stats">
                 <div class="hero-stat">
-                    <span class="hero-stat-number" data-target="164">0</span>
+                    <span class="hero-stat-number" data-target="164">164</span>
                     <span class="hero-stat-label">Water points delivered</span>
                 </div>
                 <div class="hero-stat">
-                    <span class="hero-stat-number" data-target="54">0</span>
+                    <span class="hero-stat-number" data-target="54">54</span>
                     <span class="hero-stat-label">Hazard systems documented</span>
                 </div>
                 <div class="hero-stat">
-                    <span class="hero-stat-number" data-target="3">0</span>
+                    <span class="hero-stat-number" data-target="3">3</span>
                     <span class="hero-stat-label">Continents worked on</span>
                 </div>
                 <div class="hero-stat">
-                    <span class="hero-stat-number" data-target="2">0</span>
+                    <span class="hero-stat-number" data-target="2">2</span>
                     <span class="hero-stat-label">Master's degrees</span>
                 </div>
             </div>
@@ -972,6 +976,7 @@
                 <h2 class="section-title">AI, <span class="highlight">Weighed</span></h2>
                 <p class="section-description">A live slice of my current research. Pick a model and a workload — see what one AI answer costs the planet, in units you can actually feel.</p>
             </div>
+            <p class="nojs-note">These calculators run in your browser, so they need JavaScript switched on. The method behind them, and its limits, are written out on the <a href="carbon-ai.html">EcoPrompt Coach</a> page.</p>
 
             <!-- You Draw It: predict AI's energy curve, then reveal the truth -->
             <div class="ydi reveal" id="ydi">
@@ -1495,6 +1500,6 @@
          games and the section-05 interactives live in modules/ and are
          fetched by script.js the first time each is needed — see its
          ON-DEMAND MODULES section. -->
-    <script src="script.js"></script>
+    <script src="script.js" onerror="document.documentElement.classList.remove('js')"></script>
 </body>
 </html>

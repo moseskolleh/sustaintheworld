@@ -168,6 +168,8 @@ async function visit(context, page, rel, origin) {
         await page.close();
     }
 
+    await checkWithoutJs(browser, origin);
+
     // The homepage's measured first view against the budget's estimate. A
     // little slack for HTTP overhead, which the estimate does not model.
     const home = results['index.html'];
@@ -272,4 +274,215 @@ async function exerciseHomepage(page, r, origin) {
 
     if (r.errors.length) r.errors.forEach(e => bad(e)); else ok('still no errors after using every feature');
     ok(`using every feature above fetched ${fmt(r.bytesSince())} more — modules, the map, a narration track, and every image scrolled past`);
+}
+
+// ------------------------------------------------------------------
+// Without JavaScript, before it, and when it arrives late
+// ------------------------------------------------------------------
+// <head> marks the page html.js and the stylesheet hides things only under
+// that mark. With JavaScript off the preloader used to cover the page for
+// good and every reveal sat at opacity 0, the no-JS contact form included.
+// Each way script.js can fail to run is loaded here for real.
+async function checkWithoutJs(browser, origin) {
+    console.log('  without JavaScript');
+
+    // What a reader can see: nothing covering the page, every reveal opaque,
+    // every [hidden] element gone, and no control on show that only a script
+    // could make do anything. A form's submit button works without one. The
+    // dossier titles are buttons only script.js can open and close, but they
+    // are the titles, and without it every dossier is already open.
+    const inspect = (page) => page.evaluate(() => {
+        const shown = (el) => {
+            const box = el.getBoundingClientRect();
+            return box.width > 0 && box.height > 0 && getComputedStyle(el).visibility !== 'hidden';
+        };
+        const pre = document.getElementById('preloader');
+        const reveals = Array.from(document.querySelectorAll('.reveal'));
+        return {
+            covered: !!pre && getComputedStyle(pre).display !== 'none',
+            reveals: reveals.length,
+            dim: reveals.filter(el => parseFloat(getComputedStyle(el).opacity) < 1).length,
+            leaks: Array.from(document.querySelectorAll('[hidden]')).filter(el => getComputedStyle(el).display !== 'none').map(el => '#' + el.id),
+            dead: Array.from(document.querySelectorAll('button, select, [role="button"]'))
+                .filter(el => shown(el) && !(el.type === 'submit' && el.form) && !el.classList.contains('project-toggle'))
+                .map(el => el.id ? '#' + el.id : `${el.tagName.toLowerCase()}.${el.className}`),
+            deadLinks: Array.from(document.querySelectorAll('a[href^="#"]'))
+                .filter(a => a.getAttribute('href').length > 1 && shown(a))
+                .filter((a) => {
+                    const t = document.getElementById(a.getAttribute('href').slice(1));
+                    return !t || !t.getClientRects().length;
+                })
+                .map(a => a.getAttribute('href'))
+        };
+    });
+    const report = (label, r) => {
+        if (r.covered) bad(`${label}: the preloader covers the page`);
+        if (r.dim) bad(`${label}: ${r.dim} of ${r.reveals} reveal blocks are not fully visible`);
+        if (r.leaks.length) bad(`${label}: [hidden] elements still displayed: ${r.leaks.join(', ')}`);
+        if (!r.covered && !r.dim && !r.leaks.length) ok(`${label}: nothing covered, ${r.reveals} reveal blocks visible, every [hidden] element gone`);
+    };
+
+    // (a) JavaScript disabled, every page — and the homepage at phone width
+    // too, which is where the menu button is.
+    const offline = PAGES.map(p => [p, { width: 1280, height: 800 }]).concat([['index.html', { width: 390, height: 844 }]]);
+    for (const [rel, viewport] of offline) {
+        const context = await browser.newContext({ javaScriptEnabled: false, viewport });
+        const page = await context.newPage();
+        await page.goto(`${origin}/${rel}`, { waitUntil: 'load' });
+        const label = `${rel} at ${viewport.width}px, JavaScript off`;
+        const r = await inspect(page);
+        report(label, r);
+        if (r.dead.length) bad(`${label}: controls that do nothing without JavaScript: ${r.dead.join(', ')}`);
+        else ok(`${label}: no control on show that needs JavaScript`);
+        if (r.deadLinks.length) bad(`${label}: in-page links to nothing on show: ${r.deadLinks.join(', ')}`);
+
+        if (rel === 'index.html') {
+            // The contact form is the one thing a reader without JavaScript can
+            // still do: it has to be there, and nothing may sit on top of it.
+            const submit = page.locator('#contactForm button[type="submit"]');
+            await submit.scrollIntoViewIfNeeded();
+            const onTop = await submit.evaluate((b) => {
+                const box = b.getBoundingClientRect();
+                const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+                return !!hit && (hit === b || b.contains(hit));
+            });
+            if (await page.locator('#contactForm').isVisible() && onTop) ok(`${label}: the contact form is visible and its submit button is on top`);
+            else bad(`${label}: the contact form is hidden or covered`);
+        }
+        await context.close();
+    }
+
+    // (b) JavaScript on, script.js blocked: its onerror takes the mark off and
+    // the page is shown as it would be without JavaScript.
+    {
+        const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+        await context.route('**/script.js', (route) => route.abort());
+        const page = await context.newPage();
+        const t0 = Date.now();
+        await page.goto(`${origin}/index.html`, { waitUntil: 'load' });
+        await page.waitForFunction(() => {
+            const pre = document.getElementById('preloader');
+            return !(pre && getComputedStyle(pre).display !== 'none') &&
+                Array.from(document.querySelectorAll('.reveal')).every(el => parseFloat(getComputedStyle(el).opacity) === 1);
+        }, null, { timeout: 6000 }).catch(() => null);
+        report(`index.html, script.js blocked (shown after ${((Date.now() - t0) / 1000).toFixed(1)} s)`, await inspect(page));
+        await context.close();
+    }
+
+    // (c) script.js late: 6 s, past the 4 s failsafe. The page is shown
+    // without it first; when it does arrive it takes over without hiding
+    // anything the reader has already seen, and without replaying the intro
+    // or the count-up.
+    {
+        const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+        await context.route('**/script.js', async (route) => {
+            await new Promise(res => setTimeout(res, 6000));
+            await route.continue();
+        });
+        const page = await context.newPage();
+        await page.goto(`${origin}/index.html`, { waitUntil: 'commit' });
+        const gaveUp = await page.waitForFunction(() => document.querySelector('footer') && !document.documentElement.classList.contains('js'),
+            null, { timeout: 5500 }).then(() => true, () => false);
+        await page.waitForTimeout(900);   // the reveals fade in over 0.7 s
+        if (gaveUp) report('index.html, script.js late — after the 4 s failsafe', await inspect(page));
+        else bad('index.html, script.js late: the failsafe did not take the html.js mark off');
+
+        const tookOver = await page.waitForFunction(() => window.mksReady === true, null, { timeout: 10000 }).then(() => true, () => false);
+        const after = await page.evaluate(() => ({
+            marked: document.documentElement.classList.contains('js'),
+            preloader: !!document.getElementById('preloader'),
+            dim: Array.from(document.querySelectorAll('.reveal')).filter(el => parseFloat(getComputedStyle(el).opacity) < 1).length,
+            counters: Array.from(document.querySelectorAll('.hero-stat-number')).map(c => `${c.textContent}/${c.getAttribute('data-target')}`)
+        }));
+        const asWritten = after.counters.every(c => c.split('/')[0] === c.split('/')[1]);
+        if (tookOver && after.marked && !after.preloader && !after.dim && asWritten) {
+            ok('index.html, script.js late — once it arrives: marked html.js again, nothing hidden again, no intro, counters as written');
+        } else {
+            bad(`index.html, script.js late — takeover: ready ${tookOver}, marked ${after.marked}, preloader ${after.preloader}, ${after.dim} reveals dimmed, counters ${after.counters.join(' ')}`);
+        }
+        await context.close();
+    }
+
+    // (d) A normal visit keeps its intro, and the counters count up to exact
+    // values. Under reduced motion or low-energy mode they never move. What
+    // the page looked like at DOMContentLoaded is captured by a listener
+    // registered before script.js's own, and every change to a counter after
+    // it is counted.
+    const capture = () => {
+        document.addEventListener('DOMContentLoaded', () => {
+            const pre = document.getElementById('preloader');
+            window.__atReady = {
+                intro: !!pre && getComputedStyle(pre).display === 'flex' && getComputedStyle(pre).position === 'fixed',
+                counters: Array.from(document.querySelectorAll('.hero-stat-number')).map(c => c.textContent),
+                changes: 0
+            };
+            new MutationObserver((list) => { window.__atReady.changes += list.length; })
+                .observe(document.querySelector('.hero-stats'), { subtree: true, childList: true, characterData: true });
+        });
+    };
+    const visits = [
+        ['normal', {}, null],
+        ['reduced motion', { reducedMotion: 'reduce' }, null],
+        ['low-energy mode', {}, () => { try { localStorage.setItem('eco-mode', 'on'); } catch (e) { /* storage blocked */ } }]
+    ];
+    await Promise.all(visits.map(async ([label, options, seed]) => {
+        const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, ...options });
+        if (seed) await context.addInitScript(seed);
+        await context.addInitScript(capture);
+        const page = await context.newPage();
+        await page.goto(`${origin}/index.html`, { waitUntil: 'load' });
+        // At 800px tall the figures sit just below the fold; they count when
+        // seen. A count-up takes about 1.8 s, a frame at a time.
+        await page.evaluate(() => document.querySelector('.hero-stats').scrollIntoView({ block: 'center' }));
+        if (label === 'normal') {
+            await page.waitForFunction(() => Array.from(document.querySelectorAll('.hero-stat-number'))
+                .every(c => c.textContent === c.getAttribute('data-target')), null, { timeout: 8000 }).catch(() => null);
+        } else {
+            await page.waitForTimeout(2600);
+        }
+        const r = await page.evaluate(() => ({
+            atReady: window.__atReady,
+            preloader: !!document.getElementById('preloader'),
+            marked: document.documentElement.classList.contains('js'),
+            ready: window.mksReady === true,
+            counters: Array.from(document.querySelectorAll('.hero-stat-number')).map(c => c.textContent),
+            targets: Array.from(document.querySelectorAll('.hero-stat-number')).map(c => c.getAttribute('data-target'))
+        }));
+        const tag = `index.html, ${label}`;
+        const exact = r.counters.join('|') === r.targets.join('|');
+        if (!r.ready || !r.marked) bad(`${tag}: script.js did not take over (ready ${r.ready}, marked ${r.marked})`);
+        if (r.preloader) bad(`${tag}: the preloader is still in the page after load`);
+        if (!exact) bad(`${tag}: counters ended at ${r.counters.join(', ')}, not ${r.targets.join(', ')}`);
+        if (label === 'normal') {
+            const intro = r.atReady && r.atReady.intro;
+            const fromZero = r.atReady && r.atReady.counters.every(c => c === '0');
+            if (!intro) bad(`${tag}: the intro no longer covers the first paint`);
+            if (!fromZero) bad(`${tag}: counters did not start from 0 (${r.atReady && r.atReady.counters.join(', ')})`);
+            if (intro && fromZero && exact && !r.preloader) ok(`${tag}: intro shown then lifted, counters count up to ${r.counters.join(', ')} with nothing appended`);
+        } else if (!r.atReady || r.atReady.counters.join('|') !== r.targets.join('|') || r.atReady.changes) {
+            bad(`${tag}: counters moved (${r.atReady && r.atReady.counters.join(', ')} at DOMContentLoaded, ${r.atReady && r.atReady.changes} changes after)`);
+        } else if (exact) {
+            ok(`${tag}: counters never move from ${r.counters.join(', ')}`);
+        }
+
+        // One [hidden] rule for every element: the receipt panel and the You
+        // Draw It legend used to show before they were wanted, because a
+        // class-level display beat the browser's own [hidden].
+        if (label === 'normal') {
+            await page.evaluate(() => document.getElementById('ecoprompt').scrollIntoView());
+            await page.waitForFunction(() => window.mksLoaded && window.mksLoaded.interactives, null, { timeout: 5000 }).catch(() => null);
+            const h = await page.evaluate(() => ({
+                leaks: Array.from(document.querySelectorAll('[hidden]')).filter(el => getComputedStyle(el).display !== 'none').map(el => '#' + (el.id || el.className)),
+                count: document.querySelectorAll('[hidden]').length,
+                named: ['receiptPanel', 'ydiLegend'].map((id) => {
+                    const el = document.getElementById(id);
+                    return !!el && el.hidden && getComputedStyle(el).display === 'none';
+                })
+            }));
+            if (h.leaks.length) bad(`${tag}: [hidden] elements still displayed: ${h.leaks.join(', ')}`);
+            else if (h.named.every(Boolean)) ok(`${tag}: all ${h.count} [hidden] elements are display:none, #receiptPanel and #ydiLegend included`);
+            else bad(`${tag}: #receiptPanel or #ydiLegend is missing or showing before it is wanted`);
+        }
+        await context.close();
+    }));
 }

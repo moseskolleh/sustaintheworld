@@ -18,7 +18,7 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 - **The spoken page**: a `listen` control on every section, and the choice of voice is itself the argument. The browser's own speech engine transfers **zero bytes**; the recorded narration (pre-rendered via Fish Audio, synthetic — see [Narration](#narration-the-spoken-page)) is fetched only on click and labelled with exactly what it transfers. Same words, two costs, visitor's call. Nothing ever autoplays
 - **Carbon-aware by construction**: images ship as optimized WebP, the three typefaces are self-hosted subsets, and a first view costs about **270 KB over the wire, fonts included**, against a 300 KB ceiling `npm test` enforces — a budget, not a number in a README, and one that `npm run smoke` checks against a real browser (see [Performance](#performance)). Everything a visit does not reach — the narration player, the field terminal, the dossier games, the section-05 interactives — is fetched only when it is used. No request leaves the site's own origin. A live footer badge weighs each visit in the browser (Resource Timing API × Sustainable Web Design model), counting network transfer only. A low-energy mode pauses all animation and honours `prefers-reduced-motion`
 - **[Case studies](case-studies.html), evidence-first**: the same six projects as **problem → method → artifact → result**. Every result carries the basis it rests on and says plainly whether you can check it from outside; every artifact says whether it is public, available on request, or held by the client. See [Content pipeline](#content-pipeline)
-- **Role-specific lenses**: `case-studies.html?lens=water`, `?lens=climate-risk`, `?lens=sustainable-ai` — shareable views that reframe the portfolio for one kind of role. They **reorder and frame, they never filter**: every case study stays on the page in every view, because a view that hides inconvenient work is a CV that lies by omission. Works with JavaScript off
+- **Role-specific lenses**: `case-studies.html?lens=water`, `?lens=climate-risk`, `?lens=sustainable-ai` — shareable views that reframe the portfolio for one kind of role. They **reorder and frame, they never filter**: every case study stays on the page in every view, because a view that hides inconvenient work is a CV that lies by omission. Without JavaScript the switcher steps aside and every case study shows in the default view
 - **[Research outputs](research.html)**: theses, reports, datasets, code and tools, each labelled public / on request / held by the client. No DOI, journal or conference is named anywhere, because none of this work has one — and a test fails the build if one ever appears without proof
 - **Borehole core-log experience timeline**: career history logged the way a geologist logs a core — depth is time, every layer is a chapter
 - **"AI, Weighed" live widget**: a homepage slice of the EcoPrompt Coach research — model × workload × grid → energy, carbon, water, in units people can feel
@@ -315,6 +315,13 @@ The suites, and the failure each one exists to prevent:
   to take the rest of the file with it); single-letter shortcuts must not fire
   while a `<select>`, button or contenteditable has focus; a failed recording
   with no speech engine must not leave a dead player.
+- **`nojs.test.js`** — the page before JavaScript, without it, and when it
+  arrives late: nothing is hidden unless `<head>` has marked the page
+  `html.js`, one global `[hidden]` rule instead of per-element patches, the
+  hero figures written as their real values, and counters that never append
+  a `+` or move under reduced motion or low-energy mode. `npm run smoke`
+  loads every page with JavaScript disabled, and the homepage with
+  `script.js` blocked and delayed.
 - **`carbon.test.js`** — negative, zero, `NaN` and absurd inputs, in the model
   and through the real page; the input/output token split; and the evidence
   ledger, which fails if any factor loses its source, range or review date.

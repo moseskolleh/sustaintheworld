@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- JavaScript is on (html.js): carbon-ai.css shows the calculator rather
+         than the note that stands in for it. -->
+    <script>document.documentElement.classList.add('js')</script>
     <title>AI, Weighed — EcoPrompt Coach | Moses Kolleh Sesay</title>
     <meta name="description" content="AI, Weighed (EcoPrompt Coach): visualize the energy, water, and carbon cost of LLM queries across named models and electricity grids.">
     <meta name="author" content="Moses Kolleh Sesay">
@@ -62,6 +65,8 @@
             <button type="button" data-preset="reasoning"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-brain"></use></svg> Reasoning workload</button>
             <button type="button" data-preset="edge"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-microchip"></use></svg> Edge / tiny model</button>
         </div>
+
+        <p class="nojs-note">This calculator runs in your browser, so it needs JavaScript switched on. The method it uses, and its limits, are written out below.</p>
 
         <section class="ca-grid">
             <div class="ca-card">
