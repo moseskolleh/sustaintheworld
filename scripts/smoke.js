@@ -232,15 +232,41 @@ async function visit(context, page, rel, origin) {
     console.log('\n  Smoke test passed\n');
 })().catch((e) => { console.error(e); server.close(); process.exit(1); });
 
+// Wait until the page has done its own deferred work: at least 1.6 s past
+// the load event (script.js's one post-load check runs at 1.5 s) and no
+// request started or finished for `quietMs`. Gives up after `maxMs` rather
+// than hang; whatever is still in flight then will show up in the check.
+async function quietNetwork(page, quietMs = 800, maxMs = 8000) {
+    let last = Date.now();
+    const bump = () => { last = Date.now(); };
+    const events = ['request', 'requestfinished', 'requestfailed'];
+    events.forEach((e) => page.on(e, bump));
+    const start = Date.now();
+    await page.waitForFunction(() => {
+        const nav = performance.getEntriesByType('navigation')[0];
+        return document.readyState === 'complete' && nav && nav.loadEventEnd > 0 &&
+            performance.now() - nav.loadEventEnd > 1600;
+    }, null, { timeout: maxMs, polling: 100 }).catch(() => null);
+    while (Date.now() - last < quietMs && Date.now() - start < maxMs) await page.waitForTimeout(100);
+    events.forEach((e) => page.off(e, bump));
+}
+
 // ------------------------------------------------------------------
 // The Assay: grades an ad in the page, and sends nothing while it does
 // ------------------------------------------------------------------
 async function exerciseAssay(page, r) {
     const sent = [];
     const onRequest = (q) => sent.push(q.url());
-    page.on('request', onRequest);
     await page.evaluate(() => document.getElementById('assay').scrollIntoView());
     await page.waitForFunction(() => window.mksAssay, null, { timeout: 5000 }).catch(() => null);
+    // Only the grading is watched. Scrolling here pulls in lazy images, and
+    // a browser with no speech voice asks the voice manifest once, 1.5 s
+    // after load — CI's headless Chrome has none, and scrolling through the
+    // features above can push load late enough that the check landed inside
+    // this window. Neither is the Assay's request, so let the page go quiet
+    // first: past that deferred check, and no request for 800 ms.
+    await quietNetwork(page);
+    page.on('request', onRequest);
     await page.fill('#assayInput', [
         'Senior ESG Reporting Consultant. Help clients prepare for CSRD and ESRS reporting.',
         '- Fluent Dutch and English',
