@@ -2,7 +2,7 @@
 // INTERACTIVES — the homepage widgets that respond to the visitor
 // ===================================================================
 // The "AI, Weighed" widget, the share helpers, The Assay, Anatomy of a
-// Prompt, You Draw It and The Receipt: about 77 KB of JavaScript that only
+// Prompt, You Draw It and The Receipt: about 81 KB of JavaScript that only
 // matters once someone scrolls to section 05 or opens the footer receipt.
 // Needs ai-carbon-data.js, which the loader fetches first.
 //
@@ -207,12 +207,15 @@ window.mksShare = (() => {
     // ASSAY-FACTS:END
 
     // Synonyms match whole words in any case, with an optional plural. A `re`
-    // is a regular expression instead, for the names only case or punctuation
-    // tells apart from ordinary words: "SAP", "R" (not "R&D"), "Excel".
+    // is a regular expression, alone or beside them, for the names only case
+    // or punctuation tells apart from ordinary words: "SAP", "R" (not "R&D"),
+    // "Excel", "LCA".
     const RULES = {
         minWords: 20,                                   // fewer, and there is nothing to grade honestly
-        high: { areas: 3, coverage: 0.6 },              // …and no hard gap at all
-        workable: { areas: 2, coverage: 0.4, hardGaps: 1 },
+        // `domain`: areas of this site's own field, not marked general below.
+        // An HR or ERP ad used to grade High on general ones alone.
+        high: { areas: 3, domain: 2, coverage: 0.6 },   // …and no hard gap at all
+        workable: { areas: 2, domain: 1, coverage: 0.4, hardGaps: 1 },
 
         // A line with one of these asks for something even if nothing below
         // recognises it, and an unanswered one counts against coverage — the
@@ -232,7 +235,7 @@ window.mksShare = (() => {
         hardHeading: '^(requirements?|required|must[- ]haves?|qualifications|what you bring|who you are|you have|your profile|profile|responsibilities|what you(\'ll| will) do)\\s*:?$',
 
         // Capability areas backed by delivered work, each with the evidence
-        // and where on the site it is.
+        // and where on the site it is. A `general` one counts, never alone.
         strengths: [
             { label: 'ESG analysis & integration',
               syn: ['esg', 'environmental social', 'environmental, social', 'sustainability analyst', 'sustainability strategy', 'materiality', 'double materiality'],
@@ -259,7 +262,7 @@ window.mksShare = (() => {
               syn: ['gis', 'qgis', 'arcgis', 'geospatial', 'spatial analysis', 'spatial data', 'remote sensing', 'cartography', 'hazard mapping', 'flood mapping', 'groundwater mapping'],
               ev: [{ t: 'GIS groundwater-potential maps of the Freetown Complex, validated by drilling', href: 'case-studies.html#groundwater' },
                    { t: 'Flood-risk assessment with GIS for Wuppertal', href: 'case-studies.html#wuppertal' }] },
-            { label: 'Data analysis & visualization',
+            { label: 'Data analysis & visualization', general: true,
               syn: ['python', 'data analysis', 'data analytics', 'pandas', 'sql', 'statistic', 'tableau', 'power bi', 'data visualization', 'data visualisation', 'r programming'],
               ev: [{ t: 'Python for the global river-export pollution analysis (MSc thesis)', href: '#skills' },
                    { t: 'Google Advanced Data Analytics certificate (2024)', href: '#education' }] },
@@ -271,19 +274,19 @@ window.mksShare = (() => {
               syn: ['pollution', 'water quality', 'contamination', 'nutrient', 'nitrogen', 'effluent', 'catchment', 'watershed', 'eutrophication', 'environmental modelling', 'environmental modeling'],
               ev: [{ t: 'MARINA-Multi pollution modelling across 10,226 sub-basins (MSc thesis)', href: 'case-studies.html#coastal' },
                    { t: 'Future storylines for African coastal water pollution', href: 'case-studies.html#coastal' }] },
-            { label: 'Stakeholder engagement & facilitation',
+            { label: 'Stakeholder engagement & facilitation', general: true,
               syn: ['stakeholder', 'facilitation', 'facilitate', 'workshop', 'engagement', 'cross-functional', 'interdisciplinary', 'capacity building', 'collaboration', 'community', 'communities'],
               ev: [{ t: 'Facilitated stakeholder workshops on flood vulnerability in Wuppertal', href: 'case-studies.html#wuppertal' },
                    { t: 'Tested the sustainable-AI prototype with managers and staff in public research sessions', href: 'case-studies.html#sustainable-ai' }] },
-            { label: 'Field operations & project delivery',
-              syn: ['project management', 'project delivery', 'project manager', 'field operations', 'operations management', 'programme management', 'program management', 'drilling', 'implementation'],
+            { label: 'Field operations & project delivery', general: true,
+              syn: ['project management', 'project delivery', 'project manager', 'field operations', 'operations management', 'programme management', 'program management', 'drilling'],
               ev: [{ t: 'Field Operations Manager: completion of 14 solar-powered boreholes, Sierra Leone', href: '#experience' },
                    { t: 'Operations Supervisor: 50 boreholes built and 100 hand-dug wells rehabilitated', href: '#experience' }] },
-            { label: 'International & cross-cultural work',
+            { label: 'International & cross-cultural work', general: true,
               syn: ['international', 'multicultural', 'cross-cultural', 'multilingual', 'global south', 'developing country', 'developing countries', 'emerging market', 'fieldwork', 'field work'],
               ev: [{ t: 'Studied or worked in Sierra Leone, China, Germany and the Netherlands', href: '#experience' },
                    { t: 'Full Chinese Government MOFCOM scholarship, Hunan University', href: '#education' }] },
-            { label: 'Applied research & methodology',
+            { label: 'Applied research & methodology', general: true,
               syn: ['research', 'researcher', 'thesis', 'peer-review', 'methodology', 'literature review', 'academic', 'msc'],
               ev: [{ t: 'MSc Environmental Sciences (Wageningen) and MSc Industrial Engineering (Hunan)', href: '#education' },
                    { t: 'Research outputs, with how to reproduce them', href: 'research.html' }] }
@@ -304,20 +307,32 @@ window.mksShare = (() => {
             { name: 'SQL', syn: ['sql', 'postgresql', 'mysql'] },
             { name: 'ArcGIS', syn: ['arcgis', 'esri'] },
             { name: 'Google Earth Engine', syn: ['earth engine'] },
-            { name: 'Life Cycle Assessment', re: '\\blife[- ]cycle (?:assessment|analysis)\\b|\\bLCAs?\\b' }],
+            { name: 'Life Cycle Assessment', re: '\\bLCAs?\\b', syn: ['life cycle assessment', 'life-cycle assessment', 'lifecycle assessment', 'life cycle analysis'] }],
 
-        // Languages other than English. content/profile.json records none
-        // today, so each one an ad asks for is a gap until it does.
+        // content/profile.json records no languages today, so each one an
+        // ad asks for is a gap until it does. English, the site's own, is not
+        // a gap, but its level is not stated either: until it is, it is one
+        // to confirm, and a line asking only for it is not graded.
         languages: ['German', 'Portuguese', 'Italian', 'Arabic', 'Japanese', 'Swedish', 'Danish', 'Norwegian', 'Polish',
             { name: 'Dutch', syn: ['dutch', 'nederlands', 'flemish'] },
             { name: 'French', syn: ['french', 'français', 'francais'] },
             { name: 'Spanish', syn: ['spanish', 'español', 'espanol'] },
-            { name: 'Mandarin', syn: ['mandarin', 'chinese'] }],
+            { name: 'Mandarin', syn: ['mandarin', 'chinese'] },
+            { name: 'English', syn: ['english'], confirm: 'Level of English' }],
         // "Dutch" on a line about a ministry is a nationality. On a line with
-        // one of these, or a line of four words or fewer, it is a language.
+        // one of these, or of four words or fewer, it is a language; a clause
+        // over four words needs its own ("…German partners, in fluent
+        // English" asks for English alone). A clause of languages only runs
+        // on past its comma: "German, French or Spanish at C1".
         languageCues: ['fluent', 'fluency', 'native', 'mother tongue', 'proficient', 'proficiency', 'speak',
             'speaking', 'speaker', 'spoken', 'written', 'verbal', 'language', 'bilingual', 'command of',
             'working knowledge', 'english', 'vloeiend'],
+        // Never when the next word starts with one of these, or is a name
+        // ("Dutch Tax Authority"): that is the employer, not the job.
+        nationalStems: ['minist', 'govern', 'federal', 'national', 'tax', 'authorit', 'agenc', 'municipal', 'compan',
+            'firm', 'office', 'client', 'customer', 'partner', 'market', 'organi', 'team', 'colleague', 'bank', 'law',
+            'legislat', 'regulat', 'polic', 'public', 'sector', 'business', 'cultur', 'passport', 'univers',
+            'region', 'cit', 'water', 'energy', 'stakeholder'],
         // Highest first: the first that matches a line is the level it asks
         // for. CEFR codes match in capitals only. No level stated means B2.
         levels: [
@@ -333,12 +348,16 @@ window.mksShare = (() => {
 
         // "5+ years", "minimum of 7 years", "at least three years", "3-5
         // years" (the lower bound). "5+" or "at least 5" is a requirement
-        // anywhere; a bare "3 years" only beside an experience cue, and never
-        // on a line about the contract or the calendar.
+        // anywhere; a bare "3 years", or "over 20 years", only beside an
+        // experience cue or under a requirements heading. Never on a line
+        // about the contract or the calendar, nor where the employer talks
+        // about itself ("For over 20 years, we have…"), not to the applicant.
         years: {
-            re: '(at least|minimum(?: of)?|min\\.?|over|more than)?\\s*\\b(\\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten|twelve|fifteen|twenty)\\s*(\\+|plus)?\\s*(?:(?:-|–|to)\\s*\\d{1,2}\\s*\\+?\\s*)?years?\\b',
+            re: '(at least|minimum(?: of)?|min\\.?)?\\s*\\b(\\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten|twelve|fifteen|twenty)\\s*(\\+|plus)?\\s*(?:(?:-|–|to)\\s*\\d{1,2}\\s*\\+?\\s*)?years?\\b',
             cue: ['experience', 'experienced', 'background', 'track record', 'working', 'similar role', 'relevant', 'professional', 'senior', 'industry', 'sector', 'field'],
             not: ['contract', 'duration', 'ago', 'fixed-term', 'fixed term', 'old', 'of age', 'per year'],
+            we: ['we', 'our', 'founded'],
+            you: ['you', 'candidate', 'applicant', 'someone', 'looking for', 'seek', 'expect', 'requir', 'need', 'ideal', 'must', 'should'],
             words: { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, twelve: 12, fifteen: 15, twenty: 20 }
         },
         // Years are counted from content/profile.json, professional roles
@@ -394,10 +413,30 @@ window.mksShare = (() => {
     const hit = (text, syns) => !!(syns && syns.length) &&
         rx('(?:^|[^\\w])(?:' + syns.map(esc).join('|') + ')(?:s|es)?(?!\\w)', 'i').test(text);
     const stemHit = (text, stems) => rx('\\b(?:' + stems.map(esc).join('|') + ')', 'i').test(text);
-    const matches = (text, rule) => (rule.re ? rx(rule.re, rule.flags).test(text) : hit(text, rule.syn));
+    const matches = (text, rule) => (!!rule.re && rx(rule.re, rule.flags).test(text)) || hit(text, rule.syn);
     const named = (x) => (typeof x === 'string' ? { name: x, syn: [x.toLowerCase()] } : x);
     const TOOLS = RULES.tools.map(named);
     const LANGUAGES = RULES.languages.map(named);
+    const LANG_ALT = LANGUAGES.reduce((a, l) => a.concat(l.syn), []).map(esc).join('|');
+    const langCue = (text) => hit(text, RULES.languageCues) || /\b[ABC][12]\b/.test(text);
+    const wordCount = (text) => text.trim().split(/\s+/).length;
+    const langOnly = (text) => !text.replace(rx('\\b(?:' + LANG_ALT + '|and|or)\\b|[\\s/&().-]', 'gi'), '');
+    const clauses = (line) => line.split(/[,;]/).reduce((out, c) => {
+        if (out.length && langOnly(out[out.length - 1])) out[out.length - 1] += ',' + c; else out.push(c);
+        return out;
+    }, []);
+    // A language, or a nationality? Past any list of languages ("German and
+    // French partners"), the next word decides.
+    const spoken = (clause, lang) => {
+        const at = rx('(?:^|[^\\w])(?:' + lang.syn.map(esc).join('|') + ')(?!\\w)', 'gi');
+        return Array.from(clause.matchAll(at)).some((m) => {
+            const rest = clause.slice(m.index + m[0].length)
+                .replace(rx('^(?:\\s*(?:,|/|&|and|or)\\s*(?:' + LANG_ALT + '))*', 'i'), '');
+            const [, next = '', after = ''] = rest.match(/^\s+(\S+)(?:\s+(\S+))?/) || [];
+            const name = /^[A-Z][a-z]/.test(next) && !langCue(next) && (/^[A-Z]/.test(after) || after === 'of');
+            return !stemHit(next, RULES.nationalStems) && !name;
+        });
+    };
     const listJoin = (a) => (a.length < 2 ? a.join('') : `${a.slice(0, -1).join(', ')} and ${a[a.length - 1]}`);
     const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
@@ -473,6 +512,7 @@ window.mksShare = (() => {
         const confirm = [];
         const toolEv = {};
         let softSection = false;
+        let reqSection = false;
         let asked = 0;
         let answered = 0;
 
@@ -482,8 +522,13 @@ window.mksShare = (() => {
             // itself, but a soft one makes every line under it soft.
             const heading = /:$/.test(line);
             if (heading || n <= 4) {
-                if (rx(RULES.softHeading, 'i').test(line)) { softSection = true; return; }
-                if (rx(RULES.hardHeading, 'i').test(line)) { softSection = false; return; }
+                if (rx(RULES.softHeading, 'i').test(line)) { softSection = true; reqSection = false; return; }
+                if (rx(RULES.hardHeading, 'i').test(line)) {
+                    // Under "Responsibilities", years are the job's.
+                    softSection = false;
+                    reqSection = !/^(?:respons|what you(?:'ll| will) do)/i.test(line);
+                    return;
+                }
                 if (heading) return;
             }
             const soft = softSection || hit(line, RULES.softCues);
@@ -517,27 +562,35 @@ window.mksShare = (() => {
                 need('tool:' + tool.name, tool.name, toolEv[tool.name], 'Not evidenced on this site. Ask Moses.');
             });
 
-            if (hit(line, RULES.languageCues) || /\b[ABC][12]\b/.test(line) || n <= 4) {
-                LANGUAGES.forEach((lang) => {
-                    if (!hit(line, lang.syn)) return;
-                    // The level beside this language, else the line's:
-                    // "Native German, business-level French" asks for two.
-                    const want = levelOf(line.split(/,|\/|\band\b/i).find(seg => hit(seg, lang.syn)) || '') || levelOf(line);
-                    const has = (facts.languages || []).find(l => hit(String(l.language), lang.syn));
-                    const hasLevel = has && levelOf(String(has.level));
-                    const ok = hasLevel && hasLevel.level >= (want ? want.level : RULES.defaultLevel);
-                    need(`lang:${lang.name}:${want ? want.level : ''}`, lang.name + (want ? ` (${want.label})` : ''),
-                        ok && [{ t: `${lang.name} at ${has.level}, as listed on this site` }],
-                        has ? `The level listed on this site is ${has.level}. Ask Moses.` : 'Not evidenced on this site. Ask Moses.');
+            if (n <= 4 || langCue(line)) {
+                clauses(line).forEach((clause) => {
+                    if (wordCount(clause) > 4 && !langCue(clause)) return;
+                    LANGUAGES.forEach((lang) => {
+                        if (!spoken(clause, lang)) return;
+                        // The level beside this language, else its clause's:
+                        // "Native German, business-level French" asks for two.
+                        const want = levelOf(clause.split(/\/|\band\b/i).find(seg => hit(seg, lang.syn)) || '') || levelOf(clause);
+                        const has = (facts.languages || []).find(l => hit(String(l.language), lang.syn));
+                        if (lang.confirm && !has) {
+                            toConfirm = true;
+                            if (!seen[lang.confirm]) confirm.push(seen[lang.confirm] = lang.confirm);
+                            return;
+                        }
+                        const hasLevel = has && levelOf(String(has.level));
+                        const ok = hasLevel && hasLevel.level >= (want ? want.level : RULES.defaultLevel);
+                        need(`lang:${lang.name}:${want ? want.level : ''}`, lang.name + (want ? ` (${want.label})` : ''),
+                            ok && [{ t: `${lang.name} at ${has.level}, as listed on this site` }],
+                            has ? `The level listed on this site is ${has.level}. Ask Moses.` : 'Not evidenced on this site. Ask Moses.');
+                    });
                 });
             }
 
             const Y = RULES.years;
-            if (!hit(line, Y.not)) {
+            if (!hit(line, Y.not) && !(hit(line, Y.we) && !stemHit(line, Y.you))) {
                 let years = 0;
                 for (const m of line.matchAll(rx(Y.re, 'gi'))) {
                     const count = Number(m[2]) || Y.words[m[2].toLowerCase()] || 0;
-                    if (m[1] || m[3] || hit(line, Y.cue)) years = Math.max(years, count);
+                    if (m[1] || m[3] || reqSection || hit(line, Y.cue)) years = Math.max(years, count);
                 }
                 if (years) {
                     const have = duration(exp.months);
@@ -572,16 +625,19 @@ window.mksShare = (() => {
 
         const hard = gaps.filter(g => g.hard);
         const areas = matched.length;
+        const domain = matched.filter(m => !m.general).length;
         const share = asked ? answered / asked : 0;
         const lines = `${answered} of ${plural(asked, 'requirement line')}`;
+        const fits = (bar) => areas >= bar.areas && domain >= bar.domain && share >= bar.coverage;
         let grade, cls, blurb;
-        if (!areas && !met.length) {
+        if (!domain) {
             grade = 'Different field'; cls = 'marginal';
-            blurb = 'Nothing here maps to the environmental, data or sustainability evidence on this site. Most likely a different field.';
-        } else if (!hard.length && areas >= RULES.high.areas && share >= RULES.high.coverage) {
+            blurb = (areas || met.length ? 'Only general skills match: nothing' : 'Nothing') +
+                ' here maps to the environmental, climate or sustainability work on this site. Most likely a different field.';
+        } else if (!hard.length && fits(RULES.high)) {
             grade = 'High-grade match'; cls = 'high';
             blurb = `${plural(areas, 'area')} of this ad map to delivered work on this site, answering ${lines}, with no hard gaps.`;
-        } else if (hard.length <= RULES.workable.hardGaps && areas >= RULES.workable.areas && share >= RULES.workable.coverage) {
+        } else if (hard.length <= RULES.workable.hardGaps && fits(RULES.workable)) {
             grade = 'Workable match'; cls = 'workable';
             blurb = `${plural(areas, 'area')} map to delivered work, answering ${lines}` +
                 (hard.length ? ', but one requirement is not evidenced here; it is listed first.' : '.');
@@ -589,10 +645,12 @@ window.mksShare = (() => {
             grade = 'Marginal match'; cls = 'marginal';
             blurb = hard.length > 1
                 ? `The work overlaps in ${plural(areas, 'area')}, but ${hard.length} hard requirements are not evidenced on this site. Read the gaps first.`
-                : `The overlap is thin: ${plural(areas, 'area')}, answering ${lines}` +
+                : (areas >= RULES.workable.areas
+                    ? `${plural(areas, 'area')} map to delivered work, but the site answers only ${lines}`
+                    : `Only ${plural(areas, 'area')} maps to delivered work, answering ${lines}`) +
                   (hard.length ? ', and one hard requirement is not evidenced here.' : '. Worth a conversation only if the rest can be learned on the job.');
         }
-        if (confirm.length) blurb += ` Still to confirm: ${listJoin(confirm.map(c => c.toLowerCase()))}.`;
+        if (confirm.length) blurb += ` Still to confirm: ${listJoin(confirm.map(c => c[0].toLowerCase() + c.slice(1)))}.`;
 
         return {
             status: 'graded', words, grade, cls, blurb, matched, met, confirm, hard,
@@ -658,6 +716,7 @@ window.mksShare = (() => {
         html += `<div class="assay-copy-wrap"><button type="button" class="btn btn-secondary btn-small assay-copy" data-analytics="assay-copy"><svg class="icon" aria-hidden="true"><use href="#i-copy"></use></svg> Copy this result</button></div>`;
         html += '<p class="assay-note">Deterministic matching against a hand-written evidence set and the facts on this site: no AI, no data sent anywhere. Anything the site does not show is a gap, not a guess. A starting point for a conversation, not a verdict.</p>';
         result.innerHTML = html;
+        document.dispatchEvent(new CustomEvent('mks:layout'));   // new links, for back to top to keep clear of
         if (clearBtn) clearBtn.hidden = false;
         if (typeof window.trackEvent === 'function') window.trackEvent('assay-' + a.cls);
     };
@@ -889,7 +948,7 @@ window.mksShare = (() => {
     svg.appendChild(mk('polyline', { points: knownPts, class: 'ydi-known-line' }));
     models.slice(0, KNOWN).forEach((m, i) => svg.appendChild(mk('circle', { cx: xAt(i), cy: yAt(m.wh), r: 4, class: 'ydi-known-dot' })));
 
-    // the illustrative straight-line guess + the measured line (both revealed later)
+    // the illustrative straight-line guess + the published estimates (both revealed later)
     const intuitLine = mk('polyline', { points: '', class: 'ydi-intuit-line' });
     svg.appendChild(intuitLine);
     const realLine = mk('polyline', { points: '', class: 'ydi-real-line' });
@@ -926,7 +985,7 @@ window.mksShare = (() => {
     const hit = mk('rect', { x: M.l, y: M.t, width: plotW, height: plotH, class: 'ydi-hit', fill: 'transparent' });
     hit.setAttribute('tabindex', '0');
     hit.setAttribute('role', 'application');
-    hit.setAttribute('aria-label', 'Draw your prediction: left/right arrows move between models, up/down arrows raise or lower the guessed energy, Enter reveals the real curve. The Reveal button and the data table below are equivalent.');
+    hit.setAttribute('aria-label', 'Draw your prediction: left/right arrows move between models, up/down arrows raise or lower the guessed energy, Enter reveals the research estimates. The Reveal button and the data table below are equivalent.');
     svg.appendChild(hit);
 
     const markInteracted = () => {
@@ -999,7 +1058,7 @@ window.mksShare = (() => {
         const reduce = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         realLine.setAttribute('points', models.map((m, i) => `${xAt(i)},${yAt(m.wh)}`).join(' '));
         svg.classList.add('revealed');
-        // Draw the measured line in, left to right.
+        // Draw the published estimates in, left to right.
         if (!reduce && realLine.getTotalLength) {
             const len = realLine.getTotalLength();
             realLine.style.strokeDasharray = String(len);
@@ -1039,12 +1098,12 @@ window.mksShare = (() => {
         let shape;
         if (guessPeak === n - 1 && rWh / Math.max(gWh, 0.001) < 1.6) shape = 'You nailed the shape — you saw the frontier spike.';
         else if (guessPeak === n - 1) shape = 'You saw the spike, but under-scaled how steep it gets.';
-        else if (spread < 0.1) shape = 'You drew it nearly flat — the real curve hides a cliff at the frontier.';
+        else if (spread < 0.1) shape = 'You drew it nearly flat — the research estimates hide a cliff at the frontier.';
         else shape = 'You underestimated the frontier — the reasoning model is the outlier.';
         if (verdictEl) { verdictEl.innerHTML = `<span class="ydi-shape">${shape}</span> ${msg}`; verdictEl.hidden = false; }
         cardData = { shape: shape, factor: factorFrontier };
         // Third line: a straight-line guess that misses the reasoning spike —
-        // drawn, not measured, so the legend and the data table say illustrative.
+        // drawn, not sourced, so the legend and the data table say illustrative.
         const intuitEnd = 0.55;
         intuitLine.setAttribute('points', models.map((m, i) => `${xAt(i)},${yAt(tiny + (i / (n - 1)) * (intuitEnd - tiny))}`).join(' '));
         // Callout on the frontier spike.
@@ -1138,7 +1197,7 @@ window.mksShare = (() => {
     // --- accessible, non-visual data table ---
     if (tableEl) {
         const rows = models.map(m => `<tr><td>${m.label}</td><td>${m.wh} Wh</td></tr>`).join('');
-        tableEl.innerHTML = `<table><caption>Measured energy per 1,000-token answer by model (order-of-magnitude estimates). The chart's straight-line guess is illustrative — not a measured figure — so it is not listed here.</caption><thead><tr><th>Model</th><th>Wh per answer</th></tr></thead><tbody>${rows}</tbody></table>`;
+        tableEl.innerHTML = `<table><caption>Estimated energy per 1,000-token answer by model: published estimates, to an order of magnitude. The chart's straight-line guess is illustrative — from no source — so it is not listed here.</caption><thead><tr><th>Model</th><th>Wh per answer</th></tr></thead><tbody>${rows}</tbody></table>`;
     }
 })();
 

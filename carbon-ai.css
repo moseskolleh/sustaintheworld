@@ -54,10 +54,12 @@
 [hidden] { display: none !important; }
 
 /* Without JavaScript (no html.js, set in <head>) the calculator cannot run:
-   a note stands in for its controls and the ledger it renders. */
+   a note stands in for its controls and the ledger it renders, and copy
+   that points at either (or at the homepage's calculators) goes with them. */
 html:not(.js) .ca-presets,
 html:not(.js) .ca-grid,
-html:not(.js) .ca-ledger-section {
+html:not(.js) .ca-ledger-section,
+html:not(.js) .ca-needs-js {
     display: none !important;
 }
 

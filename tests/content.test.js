@@ -286,16 +286,21 @@ const fieldText = plain(fieldReport);
         `Figures: the footer and the Receipt quote the field report's real size (${quoted.join(', ')} KB quoted, ${reportKB} KB measured)`
     );
 
-    // "About" gets five kilobytes either way; past that the sentence is stale.
+    // Every place that quotes the first view quotes the budget's own figure,
+    // rounded. Five kilobytes of slack let the footer and the lens say 275
+    // while the README said 277: the disagreement this was meant to stop.
     // The sustainable-AI lens quotes the same figure as evidence.
     const wireKB = measured.criticalWire / KB;
+    const readme = read('README.md');
     const firstView = [
         ['footer', index.match(/first view now costs about (\d+)(?:&nbsp;| )KB/)],
-        ['sustainable-AI lens', read('content/lenses.json').match(/first view of ~(\d+) KB/)]
+        ['sustainable-AI lens', read('content/lenses.json').match(/first view of ~(\d+) KB/)],
+        ['README summary', readme.match(/a first view costs about \*\*(\d+) KB over the wire/)],
+        ['README budget table', readme.match(/\| First view of the homepage[^|]*\| ~(\d+) KB \|/)]
     ];
     firstView.forEach(([where, m]) => assert(
-        !!m && Math.abs(+m[1] - wireKB) <= 5,
-        `Figures: the ${where}'s first-view weight is within 5 KB of the budget's measure (${m && m[1]} KB quoted, ${wireKB.toFixed(1)} KB measured)`
+        !!m && +m[1] === Math.round(wireKB),
+        `Figures: the ${where} quotes the budget's first-view measure (${m && m[1]} KB quoted, ${Math.round(wireKB)} KB measured — run npm run budget)`
     ));
 }
 
@@ -327,6 +332,25 @@ const fieldText = plain(fieldReport);
         });
     });
     assert(found.length === 0, `Figures: no claim without a basis is back (${found.join('; ') || 'none'})`);
+}
+
+// --- Tools: the field report names none the homepage does not show -------
+// The field report is "the same content" as text. It kept Power BI after
+// the homepage dropped it for want of evidence, so the Assay answered a
+// Power BI requirement "Not evidenced on this site" while this page listed
+// it. Every named tool the Assay knows is held to the Assay's own test:
+// shown on the homepage, or not listed here (owner checklist E4).
+{
+    const { run } = require('./harness.js');
+    const { window } = run('dark', { before: (w) => { w.console.log = () => {}; } });
+    const A = window.mksAssay;
+    const toolkit = plain((read('field-report.html').match(/<h2>Toolkit<\/h2>\s*<p>([\s\S]*?)<\/p>/) || [])[1] || '');
+    const tools = A.RULES.tools.map(t => (typeof t === 'string' ? t : t.name));
+    const a = A.analyse(`Requirements: ${toolkit}`, { now: new Date(2026, 8, 26) });
+    const named = a.met.concat(a.gaps).map(x => x.label).filter(l => tools.includes(l));
+    const unshown = a.gaps.map(g => g.label).filter(l => tools.includes(l));
+    assert(named.length >= 6, `Tools: the field report's toolkit is found and read (${named.join(', ')})`);
+    assert(unshown.length === 0, `Tools: every tool the field report lists is one the homepage shows, so the Assay matches it (not shown: ${unshown.join(', ') || 'none'})`);
 }
 
 // --- Figures: illustrative numbers say so --------------------------------
@@ -366,7 +390,11 @@ const fieldText = plain(fieldReport);
     const legend = doc.querySelector('.ydi-leg-intuit');
     assert(!!legend && /illustrative/.test(legend.textContent), `Illustrative: the You Draw It legend labels the guess line (${legend && legend.textContent})`);
     const caption = doc.querySelector('#ydiTable caption');
-    assert(!!caption && /illustrative — not a measured figure/.test(caption.textContent), 'Illustrative: the You Draw It data table says the guess line is not measured');
+    assert(!!caption && /illustrative — from no source/.test(caption.textContent), 'Illustrative: the You Draw It data table says the guess line has no source');
+    // The plotted models are a preprint's order-of-magnitude estimates, not
+    // measurements of a deployment (ai-carbon-data.js): nothing calls them measured.
+    const ydiText = ['.ydi-lede', '.ydi-leg-real', '#ydiReveal', '#ydiTable caption'].map(s => (doc.querySelector(s) || { textContent: '' }).textContent).join(' | ');
+    assert(!/\bmeasured\b|real curve/i.test(ydiText.replace(/illustrative — from no source/, '')), `Illustrative: You Draw It calls the research figures estimates, not measurements (${ydiText})`);
 
     // --- One boundary for embodied carbon on both pages ---
     // Anatomy of a Prompt used to add a Scope 3 figure from a constant with no

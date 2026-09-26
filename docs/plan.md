@@ -556,58 +556,81 @@ rule makes that cheap.
 ## Progress
 
 What branch `claude/plan-implementation-soh954` implements so far, step by step,
-checked against the code and the test runs on 2026-09-26 (`npm test`: 784
+checked against the code and the test runs on 2026-09-26 (`npm test`: 844
 passing in twelve suites; `npm run smoke`: passes). ✓ done · ◐ partial, with
 the reason · ✗ waiting on Moses. Everything Moses has to supply is listed, with
 where it goes, in [owner-checklist.md](owner-checklist.md).
 
 **Phase 0 — wave 1.** Not done as a phase yet: step 9 waits on Moses, and
-steps 1 and 4 have the leftovers named below. Its "done when" tests are green:
-`npm test`, and smoke with the new no-JavaScript and skip-link checks.
+step 4 has the leftover named below, which is his too. Its "done when" tests
+are green: `npm test`, and smoke with the new no-JavaScript and skip-link
+checks. The wave's review listed 30 findings, some of them twice; all are
+fixed, and what they changed is folded into the steps below.
 
-1. ◐ **Works without JavaScript.** The `html.js` line is in `<head>`; the
+1. ✓ **Works without JavaScript.** The `html.js` line is in `<head>`; the
    preloader, `.reveal`, collapsed dossiers and empty bars are hidden only
    under it; the hero stats are written as 164, 54, 3 and 2; a 4 s failsafe
-   (and an `onerror` on `script.js`) drops the class if the script never
-   takes over. Smoke loads every page with JavaScript off, and the homepage
-   with `script.js` blocked and late. Left: the six dossier title buttons
-   still say `aria-expanded="false"` while shown open without JavaScript, and
-   below 1280px there is no nav menu without JavaScript (the hamburger is
-   hidden rather than dead; the content and the skip link still work).
+   (and an `onerror` on `script.js`, and on carbon-ai.html's two scripts)
+   drops the class if the script never takes over. Below 1280px the nav
+   links wrap under the logo without JavaScript, all twelve on show; the
+   dossier titles ship `aria-expanded="true"`, as they are shown, and
+   script.js closes them. A late `script.js` keeps the six dossiers open and
+   puts back the line being read (they used to fold shut under the reader).
+   Copy that points at what only JavaScript draws hides with it. Smoke loads
+   every page with JavaScript off (the homepage at 390, 1024 and 1280px),
+   and the homepage with `script.js` blocked and late.
 2. ✓ **One global `[hidden]` rule** in `style.css` and `carbon-ai.css`; the
    eight local patches are gone, and the receipt panel and chart legend hide.
 3. ✓ **In-page links behave like links**: `pushState`, focus on the target,
    Back and Forward land again, the skip link's next Tab is inside `<main>`
-   (smoke). Known gap, older than this branch: a first jump past section 05
-   before its module has loaded can land short, because the "AI, Weighed"
-   widget and Anatomy grow when filled (measured at about 294px at
-   1280×800); reserving their height in CSS would fix it.
+   (smoke). Back to the entry before any jump returns focus to the link that
+   left it. A first jump into or past section 05 used to stop 250–320px short
+   (318px for Skills at 1280×800) as the widgets it fetched grew above the
+   target; the jump now lands again while the page settles, until the reader
+   scrolls or types, and smoke holds the landing to the nav bar.
 4. ◐ **Claims without a basis.** Off the pages: "10,000+ people", 95%, 15%,
    "certified across", Power BI in the toolkit's proof list, "advised", the
    `+` on exact counts, and lines that went beyond the case studies. The 30%
    baseline and the You Draw It curve are labelled illustrative;
-   `tests/content.test.js` guards both. Left: the CV PDF still carries four of the removed claims (✗
-   Moses, or Phase 3.7), and `field-report.html` still lists Power BI among
-   skills. ✗ Sources for the 30%, a people-reached count and a method for 95%
-   and 15%, if they exist.
+   `tests/content.test.js` guards both. Power BI is off the field report too,
+   and the test fails if it names a tool the homepage does not show. The
+   hero says "continents studied and worked on", the groundwater method
+   informed the siting that followed rather than all 164 water points, and
+   You Draw It calls its figures published estimates, not measurements.
+   Left: the CV PDF still carries four of the removed claims (✗ Moses, or
+   Phase 3.7). ✗ Sources for the 30%, a people-reached count and a method for
+   95% and 15%, if they exist.
 5. ✓ **Contradictions resolved**: embodied carbon excluded on both pages,
-   thesis periods agree everywhere, Wuppertal says "Team of six", © 2026, nav
-   numbers dropped. ✗ Moses to confirm the periods and whether he led the
-   Wuppertal team.
+   thesis periods agree everywhere, Wuppertal says "Team of six" and "worked
+   in", not "led", on every page, © 2026, nav numbers dropped. ✗ Moses to
+   confirm the periods and whether he led the Wuppertal team.
 6. ✓ **Nothing floats over content**: the theme switch is in the nav bar;
-   back to top waits one screen and steps aside for controls beneath it.
+   back to top waits one screen and steps aside for every control in its
+   corner (it used to watch four whole regions, so it covered the dossier
+   titles and selects, and hid over the last screen).
 7. ✓ **The Assay is honest**: gap rules for languages, years, named tools,
    consulting-firm and director level, financial modelling, PhD and law;
-   right to work, visa, clearance, licence and relocation listed to confirm;
-   a hard gap caps the grade; fewer than 20 words is not graded. The Dutch /
-   Big Four / SAP ad grades "Marginal match" with 4 gaps. ✗ Languages and
-   levels, which roles were paid, and right to work.
+   right to work, visa, clearance, licence, relocation and the level of
+   English listed to confirm; a hard gap caps the grade; fewer than 20 words
+   is not graded. General areas (stakeholders, data, delivery, international,
+   research) never make a grade alone: Workable needs one area of his field,
+   High two, and HR, ERP, marketing and IT ads grade "Different field". An
+   employer's history ("For over 20 years, we…") or a "Dutch Ministry" is not
+   a requirement. The Dutch / Big Four / SAP ad grades "Marginal match" with
+   4 gaps. ✗ Languages and levels, which roles were paid, and right to work.
 8. ✓ **carbon-ai display bugs**: one formatter, no exponents, no rounded-away
-   zeros, unit switching; no clipped dropdowns at 320, 390 or 1440px.
+   zeros, unit switching on the value as shown (0.9999 km is "1.0 km", not
+   "1,000 m"); no clipped dropdowns at 320, 390 or 1440px.
 9. ✗ **Live contact-form check**: owner checklist C1 to C3.
 10. ✓ **Stale docs**: suite count and budget figures from real runs,
     `check-budget.js` headroom comment, `DEPLOYMENT_GUIDE.md` against
-    `Code.gs`, the `profile.json` comment.
+    `Code.gs`, the `profile.json` comment. The footer, the lens and the README
+    now have to quote the budget's first-view figure exactly (279 KB), not
+    within 5 KB of it. The review's fixes cost 1.7 KB of first view, all in
+    the core (the jump that lands again, back to top watching each control,
+    the late start, Back's focus, the no-JavaScript nav), and left the
+    on-demand total about 100 bytes under its 72 KB ceiling: the next thing
+    added there has to take something of equal weight out.
 
 **Phase 1** — not started.
 
@@ -615,7 +638,10 @@ steps 1 and 4 have the leftovers named below. Its "done when" tests are green:
 items and the hero still has three buttons. 2.5 ✓ one Listen control in the
 nav, the browser voice by default at 0 bytes; the open player covers 13.3% of
 a 390×844 screen (15.5% with the introduction offered), smoke fails it above
-20%, and it never covers the send button. Steps 1 (✗ Moses supplies the
+20%, and it never covers the send button. With no voice, the control and
+its focus stay put while the player's manifest answers, and the manifest is
+revalidated rather than read blind from the cache, so the day Moses records,
+returning visitors see it. Steps 1 (✗ Moses supplies the
 at-a-glance facts), 3, 4, 6, 7, 8 and 9 — not started.
 
 **Phase 3** — not started (3.5 and 3.10 ✗ Moses). The core-log depths

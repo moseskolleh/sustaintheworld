@@ -121,7 +121,8 @@ https://script.google.com/macros/s/AKfycbzgyqRUmu0d2UFjb0WxbYyoDbO8F9jVnlvIQnNAf
     `"languages": [{ "language": "Dutch", "level": "B1" }]`.
   - *Unlocks:* the Assay stops treating every non-English language as a gap.
     Today every such requirement reads "Not evidenced on this site. Ask
-    Moses." Later, the at-a-glance strip (Phase 2.1) and `knowsLanguage` in
+    Moses.", and an English requirement is listed as "Level of English" to
+    confirm with you; with English in the list it is matched instead. Later, the at-a-glance strip (Phase 2.1) and `knowsLanguage` in
     the structured data (Phase 5.4).
   - *Check:* `npm run build:content` copies it into `modules/interactives.js`;
     `npm test` rejects a level that is not A1–C2 or "native". Paste an ad of
@@ -210,12 +211,14 @@ https://script.google.com/macros/s/AKfycbzgyqRUmu0d2UFjb0WxbYyoDbO8F9jVnlvIQnNAf
 - [ ] **E4. Evidence for Power BI** (a project, certificate or public repository).
   - *Why:* wave 1 dropped Power BI from the homepage's proof-attached toolkit
     because nothing on the site supports it; Tableau stays, backed by the
-    Masterschool training. It still appears in `field-report.html`'s skills
-    line, and the Assay now lists a Power BI requirement as a gap.
+    Masterschool training. It is off `field-report.html`'s skills line too,
+    and the Assay lists a Power BI requirement as a gap.
   - *Where:* the evidence goes in `content/research.json` (an output) or on
     the education entry it belongs to; then the homepage toolkit can link it.
-  - *Unlocks:* Power BI back in the toolkit and matched in the Assay. Without
-    evidence, it should also come off the field report's skills line.
+  - *Unlocks:* Power BI back in the toolkit, on the field report's skills
+    line, and matched in the Assay. `tests/content.test.js` fails if the field
+    report names a tool the homepage does not show, so the two go back
+    together.
   - *Check:* the toolkit's Power BI proof links somewhere that shows it.
 
 - [ ] **E5. Evidence that the Trinidad and Tobago factsheet informed national policy.**
@@ -250,11 +253,11 @@ already on the site; confirm it or give the right value.
   `content/profile.json` → `experience[4].teamSize` and
   `experience[1].programmeWeeks`.
 - [ ] **K3. Wuppertal: did you formally lead the six-person team?** The case
-  study's role says "Interdisciplinary team of six", its method says "Led a
-  six-person interdisciplinary team", and the CV claims neither. The homepage
-  badge now says "Team of six". The method line is in `content/projects.json`
-  → `wuppertal` → `method[0]`. If you led it, the badge can say so again; if
-  not, `method[0]` changes to match.
+  study's role says "Interdisciplinary team of six", and the CV claims
+  neither way. Until you say, every page says "Worked in a six-person
+  interdisciplinary team": the homepage badge ("Team of six") and dossier
+  bullet, the field report, and `content/projects.json` → `wuppertal` →
+  `method[0]`. If you led it, all four can say so again.
 - [ ] **K4. Thesis periods.** The site now uses, everywhere: coastal thesis
   2023–2024 (Wageningen) and soft-path thesis 2020–2021 (Hunan, defended May
   2021). `content/projects.json` → `coastal.period` and
@@ -262,8 +265,8 @@ already on the site; confirm it or give the right value.
 
 *Check for K1, K2 and K4:* change the value in `content/`, run
 `npm run build:content`, and `npm test` names every page that still disagrees.
-K3 has no test behind it: the homepage badge, the case study's role and its
-`method[0]` are changed together, by hand.
+K3 has no test behind it: the homepage badge and dossier bullet, the field
+report, and the case study's `method[0]` are changed together, by hand.
 
 ---
 

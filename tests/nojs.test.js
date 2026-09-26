@@ -84,6 +84,17 @@ function rules(css) {
 }
 
 // ===================================================================
+// The dossiers are open without JavaScript, and their titles say so
+// ===================================================================
+{
+    // Only script.js collapses a dossier, so the markup's state is the open
+    // one; "collapsed" above content on show misled a screen reader.
+    const toggles = html.match(/<button\b[^>]*class="project-toggle[^"]*"[^>]*>/g) || [];
+    assert(toggles.length === 6 && toggles.every(t => /aria-expanded="true"/.test(t)),
+        `Dossiers: the six title buttons ship aria-expanded="true", as shown without JavaScript (${toggles.filter(t => !/aria-expanded="true"/.test(t)).length} do not)`);
+}
+
+// ===================================================================
 // One [hidden] rule, and nothing hidden only because JavaScript is expected
 // ===================================================================
 ['style.css', 'carbon-ai.css', 'content.css'].forEach((sheet) => {
@@ -130,6 +141,11 @@ function rules(css) {
 {
     const src = read('carbon-ai.html');
     assert(/class="nojs-note"/.test(src), 'carbon-ai.html: a note stands in for the calculator without JavaScript');
+    // A calculator whose scripts never arrived showed blank selects and
+    // dashes, with the note hidden because JavaScript was on.
+    const tags = src.match(/<script\b[^>]*\bsrc=[^>]*>/g) || [];
+    assert(tags.length === 2 && tags.every(t => /onerror=["'][^"']*classList\.remove\('js'\)/.test(t)),
+        `carbon-ai.html: each script that fails to load brings the note back (onerror on ${tags.filter(t => /onerror/.test(t)).length} of ${tags.length})`);
     assert(/class="nojs-note"/.test(html), 'index.html: a note stands in for the section-05 calculators without JavaScript');
 }
 
@@ -151,7 +167,7 @@ function fakes(window, { reduce = false, markJs = true, eco = null } = {}) {
         media: q,
         addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}
     });
-    if (markJs) window.document.documentElement.classList.add('js');
+    window.document.documentElement.classList.toggle('js', markJs);
     if (eco) window.localStorage.setItem('eco-mode', eco);
     return observers;
 }
@@ -227,13 +243,27 @@ async function takeoverCase(label, markJs) {
     assert(errors.length === 0, `${label}: no errors`);
     assert(window.mksReady === true, `${label}: script.js reports ready`);
     assert(doc.documentElement.classList.contains('js'), `${label}: the page is marked html.js once script.js has run`);
+    const cards = Array.from(doc.querySelectorAll('.project-card')).map((card) => {
+        const details = card.querySelector('.project-details');
+        return { open: card.classList.contains('expanded'), inert: !!details.inert, said: card.querySelector('.project-toggle').getAttribute('aria-expanded') };
+    });
     if (markJs) {
         assert(reveals.some(el => !el.classList.contains('visible')), `${label}: reveals still wait to scroll into view`);
+        assert(cards.length === 6 && cards.every(c => !c.open && c.inert && c.said === 'false'),
+            `${label}: every dossier starts closed, inert, and says so (${cards.map(c => `${c.open ? 'open' : 'closed'}/${c.said}`).join(' ')})`);
     } else {
         // A late start: <head> already showed everything. Putting the mark
         // back must not hide any of it again, and the intro must not replay.
         assert(reveals.length > 0 && reveals.every(el => el.classList.contains('visible')), `${label}: every reveal is marked done before the mark goes back (${reveals.filter(el => !el.classList.contains('visible')).length} not)`);
         assert(!doc.getElementById('preloader'), `${label}: the intro does not replay over a page already on screen`);
+        // The six dossiers were open without the mark; html.js collapses any
+        // that is not .expanded. They used to fold shut under the reader.
+        assert(cards.length === 6 && cards.every(c => c.open && !c.inert && c.said === 'true'),
+            `${label}: every dossier the reader was shown stays open, and says so (${cards.map(c => `${c.open ? 'open' : 'closed'}/${c.said}`).join(' ')})`);
+        // Closing one closes that one, not the other five as well.
+        doc.querySelector('.project-toggle').click();
+        const open = Array.from(doc.querySelectorAll('.project-card.expanded')).length;
+        assert(open === 5, `${label}: closing one dossier leaves the other five open (${open} open)`);
     }
     await tick(0);   // let the counters' microtask run before the window goes
     window.close();

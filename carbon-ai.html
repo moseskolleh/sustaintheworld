@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- JavaScript is on (html.js): carbon-ai.css shows the calculator rather
-         than the note that stands in for it. -->
+         than the note that stands in for it. Either script failing to load
+         takes the mark off again (their onerror), so the note is back. -->
     <script>document.documentElement.classList.add('js')</script>
     <title>AI, Weighed — EcoPrompt Coach | Moses Kolleh Sesay</title>
     <meta name="description" content="AI, Weighed (EcoPrompt Coach): visualize the energy, water, and carbon cost of LLM queries across named models and electricity grids.">
@@ -195,8 +196,8 @@
             <div class="ca-disclaimer">
                 <strong>Caveat:</strong> covers <em>inference only</em>. Training is amortised across millions of
                 queries and is not modelled here. Embodied carbon of the hardware (Scope 3, capital goods) is
-                excluded, here and in <a href="index.html#anatomy">Anatomy of a Prompt</a> on the homepage: no per-query factor for it has a
-                source good enough for the ledger below. Water counts on-site
+                excluded, here<span class="ca-needs-js"> and in <a href="index.html#anatomy">Anatomy of a Prompt</a> on the homepage</span>: no
+                per-query factor for it has a source good enough to use. Water counts on-site
                 cooling only, not the water used to generate the electricity. Use as a relative
                 comparator, not an absolute audit. The full prototype lives at
                 <a href="https://github.com/moseskolleh/promptcoach" target="_blank" rel="noopener">github.com/moseskolleh/promptcoach</a>.
@@ -235,7 +236,7 @@
         </section>
     </main>
 
-    <script src="ai-carbon-data.js"></script>
-    <script src="carbon-ai.js"></script>
+    <script src="ai-carbon-data.js" onerror="document.documentElement.classList.remove('js')"></script>
+    <script src="carbon-ai.js" onerror="document.documentElement.classList.remove('js')"></script>
 </body>
 </html>

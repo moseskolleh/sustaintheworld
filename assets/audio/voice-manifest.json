@@ -1,7 +1,7 @@
 {
   "$comment": [
     "The recordings the page may play. That is at most one track: `intro`, Moses Kolleh Sesay's own spoken introduction, written here by `npm run voice:intro -- <file>`.",
-    "Until he records it, `tracks` is empty and the page offers no recording. The browser voice reads the sections either way, and transfers nothing.",
+    "Until he records it, `tracks` is empty and the page offers no recording. The browser voice reads the sections either way (an offline one transfers nothing).",
     "The ten stock text-to-speech section tracks once listed here were retired in September 2026; assets/audio/README.md says why."
   ],
   "tracks": {}
