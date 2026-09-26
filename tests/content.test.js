@@ -322,7 +322,9 @@ const fieldText = plain(fieldReport);
         { re: /15% efficiency|efficiency by 15%/i, why: 'an efficiency gain with no baseline behind it' },
         { re: /advised the (?:UN|United Nations)/i, why: 'the UN role was an internship: "supported", as everywhere else' },
         { re: /certified across/i, why: 'there is one ESG certificate, not a set of frameworks' },
-        { re: /well above local averages|against roughly 30%/i, why: 'leans on the blind-drilling baseline, which has no recorded source' }
+        { re: /well above local averages|against roughly 30%/i, why: 'leans on the blind-drilling baseline, which has no recorded source' },
+        { re: /if a skill is listed, there's a project behind it/i, why: 'Life Cycle Assessment, Carbon Markets and Circular Economy are listed with no project behind them' },
+        { re: /anywhere in the E\.?U\b/i, why: 'relocation and EU right to work are not stated on the site (owner checklist F2, F3)' }
     ];
     const found = [];
     Object.entries(pages).forEach(([page, text]) => {
@@ -332,6 +334,11 @@ const fieldText = plain(fieldReport);
         });
     });
     assert(found.length === 0, `Figures: no claim without a basis is back (${found.join('; ') || 'none'})`);
+
+    // The skills script reads out what the section only lists as a chip:
+    // nothing on the site is a life cycle assessment Moses did.
+    const skills = (SCRIPTS.find(x => x.id === 'skills') || { text: '' }).text;
+    assert(!/life cycle|\bLCA\b/i.test(skills), 'Figures: the skills narration names no skill without a project behind it (life cycle assessment)');
 }
 
 // --- Tools: the field report names none the homepage does not show -------
@@ -396,6 +403,39 @@ const fieldText = plain(fieldReport);
     const ydiText = ['.ydi-lede', '.ydi-leg-real', '#ydiReveal', '#ydiTable caption'].map(s => (doc.querySelector(s) || { textContent: '' }).textContent).join(' | ');
     assert(!/\bmeasured\b|real curve/i.test(ydiText.replace(/illustrative — from no source/, '')), `Illustrative: You Draw It calls the research figures estimates, not measurements (${ydiText})`);
 
+    // The verdict after Reveal is the sentence a visitor reads as the
+    // result. It used to say "It's actually 1.20 Wh — you underestimated the
+    // frontier by 1.7×" to a guess inside the estimate's own range.
+    const R1 = window.AICarbonData.MODELS['deepseek-r1'];
+    const hit = doc.querySelector('#ydiSvg .ydi-hit');
+    const press = (k) => hit.dispatchEvent(new window.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+    const guessed = () => +((hit.getAttribute('aria-valuetext') || '').match(/guess ([\d.]+) Wh/) || [])[1];
+    const verdictFor = (wh) => {
+        for (let i = 0; i < 12; i++) press('ArrowRight');   // to the frontier model
+        for (let i = 0; i < 40 && guessed() > wh; i++) press('ArrowDown');
+        for (let i = 0; i < 40 && guessed() < wh; i++) press('ArrowUp');
+        const at = guessed();
+        doc.getElementById('ydiReveal').click();
+        const said = text('ydiVerdict');
+        doc.getElementById('ydiReset').click();
+        return { at, said };
+    };
+    const inside = verdictFor(0.7);
+    assert(inside.at >= R1.range[0] && inside.at <= R1.range[1] && /within that range/.test(inside.said) && !/underestimat|overestimat/.test(inside.said),
+        `Estimates: a guess inside the published range is told so, not that it missed (${inside.at} Wh: ${inside.said})`);
+    assert(inside.said.includes(`The published estimate is about ${R1.energyPer1kTokens_Wh} Wh (${R1.range[0]}–${R1.range[1]} Wh)`),
+        'Estimates: the verdict gives the central estimate with its range');
+    const below = verdictFor(0.3);
+    assert(below.at < R1.range[0] && /underestimated the frontier/.test(below.said), `Estimates: a guess below the range is an underestimate (${below.at} Wh: ${below.said})`);
+    const zero = verdictFor(0);
+    assert(/near zero/.test(zero.said), 'Estimates: a guess of nothing says so');
+    const said = [inside, below, zero].map(v => v.said).join(' ');
+    assert(!/\bactually\b|\d\.\d×/.test(said) && /50–1,250× across the ranges/.test(said),
+        'Estimates: no verdict calls an estimate the actual value or grades it to a decimal, and the gap between models comes with its range');
+    // The share card is drawn on a canvas jsdom cannot read, so its words are held in the source.
+    const ydiSrc = read('modules/interactives.js').split('YOU DRAW IT')[1].split('THE RECEIPT')[0];
+    assert(!/\bactually\b|really costs|reveal the truth/i.test(ydiSrc), 'Estimates: nothing in You Draw It, the share card included, calls an estimate the true cost');
+
     // --- One boundary for embodied carbon on both pages ---
     // Anatomy of a Prompt used to add a Scope 3 figure from a constant with no
     // source, while the full coach said it excluded embodied carbon.
@@ -404,10 +444,20 @@ const fieldText = plain(fieldReport);
     assert(!/\d\s*g\s*<\/strong>\s*Scope 3/.test(doc.getElementById('anatomySummary').innerHTML), 'Boundary: the Anatomy summary gives no Scope 3 figure');
     const coach = plain(read('carbon-ai.html'));
     assert(
-        /Embodied carbon of the hardware \(Scope 3, capital goods\) is excluded, here and in Anatomy of a Prompt/.test(coach)
-            && /neither page quantifies it/.test(indexText),
+        /Embodied carbon of the hardware is excluded, here and in Anatomy of a Prompt/.test(coach)
+            && /which neither page quantifies/.test(indexText),
         'Boundary: the coach and Anatomy both state that embodied carbon is excluded'
     );
+    // Scope 2 and capital goods are the lines of whoever runs the model. An
+    // organisation buying answers from a hosted one reports the carbon in
+    // its Scope 3, category 1, and the widget's "per analyst-year" is that
+    // organisation, so the page has to say whose report the lines are on.
+    const anatomyFoot = plain(doc.querySelector('.anatomy-foot').innerHTML);
+    assert(/whoever runs the model/.test(text('anatomySummary')) && /whoever runs the model/.test(anatomyFoot),
+        'Boundary: Anatomy names whose report its Scope 2 and Scope 3 lines are on');
+    assert(/hosted model[^.]*Scope 3, category 1 \(purchased services\)/.test(anatomyFoot) && /category 1/.test(text('anatomySummary')),
+        'Boundary: and says where the carbon goes for a buyer of a hosted model, in the foot and in the copied figure');
+    assert(!/Scope 3, capital goods/.test(coach), 'Boundary: the coach does not put the operator\'s capital-goods label on the reader');
 }
 
 // --- Staleness ----------------------------------------------------------

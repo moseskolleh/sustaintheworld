@@ -121,6 +121,43 @@ const countScrolls = (window) => {
             `Motion: a jump glides, but not in low-energy mode, Back included (${seen.join(', ')})`);
     }
 
+    // --- A jump lands again while the page grows under it ---
+    // The observer's first report comes a frame after the jump and was
+    // skipped as "only the current size". When section 05's module grew the
+    // page inside that frame, the one report that carried the growth was
+    // thrown away, and a shared /#assay link stopped 250-440px short.
+    {
+        const observers = [];
+        let bodyHeight = 20000;
+        const { window } = run('dark', {
+            before: (w) => {
+                w.ResizeObserver = class {
+                    constructor(cb) { this.cb = cb; this.on = false; observers.push(this); }
+                    observe(el) { this.on = el === w.document.body; }
+                    unobserve() {}
+                    disconnect() { this.on = false; }
+                };
+                w.document.body.getBoundingClientRect = () => ({ top: 0, left: 0, right: 1280, bottom: bodyHeight, width: 1280, height: bodyHeight });
+            }
+        });
+        const doc = window.document;
+        const scrolled = countScrolls(window);
+        const report = () => observers.filter(o => o.on).forEach(o => o.cb([{ target: doc.body }], o));
+
+        click(window, doc.querySelector('.nav-menu a[href="#skills"]'));
+        assert(scrolled.skills === 1, 'Hold: the jump lands once');
+        bodyHeight = 20400;   // the module grew the page before the first report
+        report();
+        assert(scrolled.skills === 2, `Hold: the first report, already carrying the growth, lands the jump again (${scrolled.skills - 1} landings after it)`);
+        report();
+        assert(scrolled.skills === 2, 'Hold: a report of the same height lands nothing');
+        bodyHeight = 20700;
+        report();
+        assert(scrolled.skills === 3, 'Hold: each later growth lands it again');
+        window.dispatchEvent(new window.Event('wheel'));
+        assert(observers.every(o => !o.on), 'Hold: the reader\'s own scroll lets go of it');
+    }
+
     // --- Back into a collapsed dossier opens it again ---
     {
         const { window } = run('dark');

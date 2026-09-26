@@ -54,7 +54,28 @@ const H = Math.ceil(geo.bounds(region)[1][1]);
 projection.clipExtent([[0, 0], [W, H]]);
 
 // round coordinates to shrink the path string (1px ≈ 0.16°, invisible here)
-const fmt = (d) => d.replace(/\d+\.\d+/g, (m) => Math.round(+m));
+const fmt = (d) => straight(d.replace(/\d+\.\d+/g, (m) => Math.round(+m)));
+
+// Parallels are straight in this projection, and once rounded a stretch of
+// coastline or meridian can be too: a point on the line between its
+// neighbours draws nothing, and the graticule alone carried hundreds.
+function straight(d) {
+    return d.replace(/M[^M]*/g, (sub) => {
+        const closed = sub.endsWith('Z');
+        const pts = sub.replace(/^M|Z$/g, '').split('L').map(p => p.split(',').map(Number));
+        // Against the last point kept, not the one before in the input: two
+        // repeats of a corner would otherwise each vouch for the other.
+        const kept = [pts[0]];
+        pts.forEach((p, i) => {
+            if (i === 0) return;
+            const a = kept[kept.length - 1], b = pts[i + 1];
+            const onLine = b && (p[0] - a[0]) * (b[1] - a[1]) === (p[1] - a[1]) * (b[0] - a[0]) &&
+                (p[0] - a[0]) * (p[0] - b[0]) <= 0 && (p[1] - a[1]) * (p[1] - b[1]) <= 0;
+            if (!onLine) kept.push(p);
+        });
+        return 'M' + kept.map(p => p.join(',')).join('L') + (closed ? 'Z' : '');
+    });
+}
 
 // Variable-resolution land: keep 50m detail where the map zooms deepest
 // (the Rhine delta), simplify progressively harder with distance, and drop

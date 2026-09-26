@@ -263,6 +263,16 @@ already on the site; confirm it or give the right value.
   2021). `content/projects.json` → `coastal.period` and
   `water-management.period`.
 
+- [ ] **K5. Whose report the AI footprint is on.** Anatomy of a Prompt now
+  says its Scope 2 and Scope 3 (capital goods) lines are those of whoever
+  runs the model, and that an organisation buying answers from a hosted
+  model reports the carbon as Scope 3, category 1 (purchased services). The
+  Ministry of Finance project is still described, in your words, as mapping
+  "Scope 2 electricity, Scope 3 hardware, and data-centre water"
+  (`content/projects.json` → `sustainable-ai` → `method[0]`, the homepage
+  dossier and experience entry, the field report). If the ministry's own
+  boundary was the hosted-service one, say so and those lines can name it.
+
 *Check for K1, K2 and K4:* change the value in `content/`, run
 `npm run build:content`, and `npm test` names every page that still disagrees.
 K3 has no test behind it: the homepage badge and dossier bullet, the field

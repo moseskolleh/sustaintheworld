@@ -146,7 +146,12 @@ const slowFetch = (window, delay, body, asked) => {
 
         assert(doc.querySelectorAll('.listen-btn').length === 1, 'Docked: exactly one listen control on the page');
         assert(!!wrap && !wrap.hidden, 'Docked: with a voice available, the control is shown');
-        assert(wrap.previousElementSibling === doc.getElementById('navMenu'), 'Docked: it sits in the nav, straight after the menu');
+        // Shown once a voice turns up, often after the first paint. As the
+        // last item in the bar it pushed the theme switch and the menu button
+        // 56px left when it did, and took the menu button's spot; first after
+        // the logo, it takes only the free space there.
+        assert(wrap.parentElement.classList.contains('nav-container') && wrap.previousElementSibling === doc.querySelector('.nav-logo'),
+            'Docked: it sits in the nav bar, first after the logo, where showing it moves nothing');
         assert(bar.previousElementSibling === wrap, 'Docked: the player comes right after it, so it is next in Tab order');
         assert(btn.getAttribute('aria-expanded') === 'false' && btn.getAttribute('aria-controls') === 'dispatchBar', 'Docked: the control is a disclosure for the player, closed on load');
 
@@ -371,6 +376,10 @@ const slowFetch = (window, delay, body, asked) => {
         const voice = await say('voice');
         const moses = await say('voice moses');
         const co2 = await say('co2');
+        const help = await say('help');
+        const helpLine = (help.match(/voice {6}.*?(?= {2}theme)/) || [''])[0];
+        assert(voices === null ? !/voice about/.test(help) && /where the browser has a voice/.test(help) : /try 'voice about'/.test(help),
+            `Terminal, ${kind}: 'help' suggests 'voice about' only where there is a voice to read it (${helpLine.trim() || help.slice(0, 80)})`);
         if (voices === null) {
             assert(/no speech voice/.test(voice) && !/streams|vendor/.test(voice), `Terminal, ${kind}: 'voice' says there is none, not that it streams (${voice.trim().slice(-80)})`);
             assert(/not recorded/.test(moses) && !/voice about/.test(moses), 'Terminal, no voice: \'voice moses\' does not suggest a voice that is not there');

@@ -346,16 +346,19 @@ function focusTarget(target) {
 
 // Section 05's widgets grow when their module arrives, and a jump into or
 // past it is what fetches it: a first jump to Skills stopped 318px short. So
-// for a few seconds the jump lands again whenever the page changes size,
+// for a few seconds `land` runs again whenever the page changes height,
 // until the reader scrolls, taps or types: then where it sits is theirs.
+// The height is taken now: the observer's first report comes a frame late,
+// and growth in that frame was once taken for the start (250-440px short).
 let releaseHold = () => {};
-function holdTarget(target, behavior) {
+function hold(land) {
     releaseHold();
     if (!('ResizeObserver' in window)) return;
-    let first = true;
+    const height = () => document.body.getBoundingClientRect().height;
+    let last = height();
     const ro = new ResizeObserver(() => {
-        if (first) { first = false; return; }   // its first call is only the current size
-        target.scrollIntoView({ behavior, block: 'start' });
+        const now = height();
+        if (now !== last) { last = now; land(); }
     });
     const HANDS = ['wheel', 'touchstart', 'pointerdown', 'keydown'];
     const release = () => {
@@ -383,9 +386,10 @@ function jumpTo(target, behavior, focus, wait) {
         fade.style.transition = '';
     }
     const land = () => {
-        target.scrollIntoView({ behavior, block: 'start' });
+        const put = () => target.scrollIntoView({ behavior, block: 'start' });
+        put();
         if (focus) focusTarget(target);
-        holdTarget(target, behavior);
+        hold(put);
     };
     if (revealTarget(target)) setTimeout(land, 240);
     else if (wait) setTimeout(land, 0); else land();
@@ -573,13 +577,26 @@ const navLinks = Array.from(document.querySelectorAll('.nav-link'));
 const counters = Array.from(document.querySelectorAll('.hero-stat-number'));
 const countersMove = () => !lateStart && scrollMotion() === 'smooth';
 
+// The stats sit below the fold, so until a scroll a zeroed counter was all a
+// screen reader, Find or Reader mode met: "0 Master's degrees". While the
+// digits move they are hidden from those, and a still copy is read instead.
+const still = (counter, on) => {
+    if (on) {
+        counter.setAttribute('aria-hidden', 'true');
+        counter.insertAdjacentHTML('afterend', `<span class="sr-only">${counter.dataset.target}</span>`);
+    } else if (counter.hasAttribute('aria-hidden')) {
+        counter.removeAttribute('aria-hidden');
+        counter.nextElementSibling.remove();
+    }
+};
+
 const animateCounters = () => {
     counters.forEach(counter => {
         const target = parseInt(counter.getAttribute('data-target'), 10);
         if (isNaN(target)) return;
         if (!countersMove()) {
             // Only differs if low-energy mode came on after it was zeroed.
-            if (counter.textContent !== String(target)) counter.textContent = String(target);
+            if (counter.textContent !== String(target)) { counter.textContent = String(target); still(counter, false); }
             return;
         }
         const duration = 1800;
@@ -593,6 +610,7 @@ const animateCounters = () => {
                 requestAnimationFrame(updateCounter);
             } else {
                 counter.textContent = String(target);
+                still(counter, false);
             }
         };
 
@@ -617,7 +635,7 @@ if (statsSection && 'IntersectionObserver' in window) {
     // Zeroed before the next paint, only if they will count up from it. The
     // microtask waits for low-energy mode, restored further down this file.
     Promise.resolve().then(() => {
-        if (countersMove()) counters.forEach(counter => { counter.textContent = '0'; });
+        if (countersMove()) counters.forEach(counter => { still(counter, true); counter.textContent = '0'; });
     });
 }
 
@@ -1498,15 +1516,23 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
 // failsafe can stand down. On a late start every reveal is marked done
 // first, as the dossiers were kept open: putting the mark back must not hide
 // what the reader has seen, nor move it, though it brings back widgets
-// above them. The line a third of the way down is put back where it was.
+// above them. The line a third of the way down is put back where it was,
+// and held there while they fill in: that was left to scroll anchoring,
+// which Safari lacks (without it the line slid up to 2,800px).
 if (lateStart) {
     document.querySelectorAll('.reveal').forEach(el => el.classList.add('visible'));
-    const line = typeof document.elementFromPoint === 'function' ? document.elementFromPoint(innerWidth / 2, innerHeight / 3) : null;
-    const was = line ? line.getBoundingClientRect().top : 0;
+    // The line and what holds it: a note standing in for a widget goes with
+    // the mark, and then what held it stays put instead.
+    const trail = [];
+    let line = typeof document.elementFromPoint === 'function' ? document.elementFromPoint(innerWidth / 2, innerHeight / 3) : null;
+    for (; line && line !== document.body; line = line.parentElement) trail.push([line, line.getBoundingClientRect().top]);
     document.documentElement.classList.add('js');
-    if (line && line.getClientRects().length) {
-        window.scrollTo({ top: window.pageYOffset + line.getBoundingClientRect().top - was, behavior: 'instant' });
-    }
+    const keep = () => {
+        const [el, was] = trail.find(([e]) => e.isConnected && e.getClientRects().length) || [];
+        const moved = el ? el.getBoundingClientRect().top - was : 0;
+        if (Math.abs(moved) >= 1) window.scrollTo({ top: window.pageYOffset + moved, behavior: 'instant' });
+    };
+    if (trail.length) { keep(); hold(keep); }
 }
 window.mksReady = true;
 
