@@ -2667,7 +2667,8 @@ html.js .reveal.visible {
    WITHOUT JAVASCRIPT
    =================================== */
 /* What only script.js can make work is taken away when it cannot run,
-   rather than left as controls that do nothing. */
+   rather than left as controls that do nothing — and a .needs-js phrase
+   that describes one ("Watch the route unfold") goes with it. */
 html:not(.js) .theme-toggle,
 html:not(.js) .listen-btn,
 html:not(.js) .play-index,
@@ -2682,7 +2683,8 @@ html:not(.js) .nav-toggle,
 html:not(.js) .carbon-badge,
 html:not(.js) .receipt-btn,
 html:not(.js) .eco-mode-toggle,
-html:not(.js) .terminal-toggle {
+html:not(.js) .terminal-toggle,
+html:not(.js) .needs-js {
     display: none !important;
 }
 
@@ -2773,6 +2775,46 @@ html.js .nojs-note { display: none; }
     .nav-menu {
         padding: 20px 32px;
         gap: 12px;
+    }
+}
+
+/* Without JavaScript the drawer above can never open, and the menu button
+   is gone (it could not open it). So below 1280px the bar stops floating
+   and the links wrap under the logo, every one of them reachable. */
+@media (max-width: 1279px) {
+    html:not(.js) {
+        scroll-padding-top: 0;
+    }
+
+    html:not(.js) .navbar {
+        position: relative;
+    }
+
+    html:not(.js) .nav-container {
+        height: auto;
+        min-height: 72px;
+        flex-wrap: wrap;
+        padding-top: 14px;
+        padding-bottom: 14px;
+    }
+
+    html:not(.js) .nav-menu {
+        position: static;
+        visibility: visible;
+        flex-direction: row;
+        flex-wrap: wrap;
+        width: 100%;
+        height: auto;
+        padding: 0;
+        gap: 6px 18px;
+        background: none;
+        border-left: 0;
+        overflow: visible;
+        transition: none;
+    }
+
+    html:not(.js) .hero {
+        padding-top: 56px;
     }
 }
 

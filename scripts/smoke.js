@@ -232,15 +232,41 @@ async function visit(context, page, rel, origin) {
     console.log('\n  Smoke test passed\n');
 })().catch((e) => { console.error(e); server.close(); process.exit(1); });
 
+// Wait until the page has done its own deferred work: at least 1.6 s past
+// the load event (script.js's one post-load check runs at 1.5 s) and no
+// request started or finished for `quietMs`. Gives up after `maxMs` rather
+// than hang; whatever is still in flight then will show up in the check.
+async function quietNetwork(page, quietMs = 800, maxMs = 8000) {
+    let last = Date.now();
+    const bump = () => { last = Date.now(); };
+    const events = ['request', 'requestfinished', 'requestfailed'];
+    events.forEach((e) => page.on(e, bump));
+    const start = Date.now();
+    await page.waitForFunction(() => {
+        const nav = performance.getEntriesByType('navigation')[0];
+        return document.readyState === 'complete' && nav && nav.loadEventEnd > 0 &&
+            performance.now() - nav.loadEventEnd > 1600;
+    }, null, { timeout: maxMs, polling: 100 }).catch(() => null);
+    while (Date.now() - last < quietMs && Date.now() - start < maxMs) await page.waitForTimeout(100);
+    events.forEach((e) => page.off(e, bump));
+}
+
 // ------------------------------------------------------------------
 // The Assay: grades an ad in the page, and sends nothing while it does
 // ------------------------------------------------------------------
 async function exerciseAssay(page, r) {
     const sent = [];
     const onRequest = (q) => sent.push(q.url());
-    page.on('request', onRequest);
     await page.evaluate(() => document.getElementById('assay').scrollIntoView());
     await page.waitForFunction(() => window.mksAssay, null, { timeout: 5000 }).catch(() => null);
+    // Only the grading is watched. Scrolling here pulls in lazy images, and
+    // a browser with no speech voice asks the voice manifest once, 1.5 s
+    // after load — CI's headless Chrome has none, and scrolling through the
+    // features above can push load late enough that the check landed inside
+    // this window. Neither is the Assay's request, so let the page go quiet
+    // first: past that deferred check, and no request for 800 ms.
+    await quietNetwork(page);
+    page.on('request', onRequest);
     await page.fill('#assayInput', [
         'Senior ESG Reporting Consultant. Help clients prepare for CSRD and ESRS reporting.',
         '- Fluent Dutch and English',
@@ -345,6 +371,20 @@ async function exerciseNavigation(browser, origin) {
     if (back.hash === '#about' && back.focus === 'about') ok('Back after two nav links returns to #about, focus with it');
     else bad(`Back after two nav links: address ${back.hash || 'with no fragment'}, focus on "${back.focus}"`);
 
+    // Back twice more, past the skip link's #main to the entry before any
+    // jump: focus goes back to the link that left it, the skip link. It used
+    // to stay on the last target, so the next Tab jumped thousands of pixels
+    // down from a page back at its top.
+    await page.goBack();
+    await page.waitForTimeout(300);
+    await page.goBack();
+    await page.waitForTimeout(300);
+    const start = await page.evaluate(() => ({ hash: location.hash, y: Math.round(scrollY), on: document.activeElement.className || document.activeElement.id || document.activeElement.tagName }));
+    await page.keyboard.press('Tab');
+    const then = await page.evaluate(() => Math.round(scrollY));
+    if (start.hash === '' && start.on === 'skip-link' && Math.abs(then - start.y) < 200) ok(`Back to the first entry returns focus to the link that left it (.${start.on}), and the next Tab stays near the top`);
+    else bad(`Back to the first entry: address ${start.hash || 'with no fragment'}, focus on "${start.on}", the next Tab scrolled from ${start.y}px to ${then}px`);
+
     // The theme switch on a phone: in the bar, clear of its neighbours, and
     // working without opening the menu.
     if (!(await page.$('.nav-container > #themeToggle'))) bad('theme switch: no #themeToggle in the nav bar');
@@ -371,6 +411,34 @@ async function exerciseNavigation(browser, origin) {
         else bad(`theme switch: after a tap, light=${flipped.light}, theme-color ${flipped.chrome}, name "${flipped.name}"`);
     }
     await desk.close();
+
+    // A first jump into or past section 05 fetches its module, and the
+    // widgets it fills grow above the target. The jump used to land once and
+    // leave the target 250-320px down the screen. Where it sits 2.5 s later:
+    const landings = [
+        [1280, 800, '.nav-menu a[href="#skills"]', 'skills', 'nav link to Skills'],
+        [1280, 800, '.play-index a[href="#anatomy"]', 'anatomy', 'play-index link "weigh one prompt"'],
+        [390, 844, '.play-index a[href="#anatomy"]', 'anatomy', 'play-index link "weigh one prompt"']
+    ];
+    for (const [width, height, sel, id, what] of landings) {
+        for (const reducedMotion of ['reduce', 'no-preference']) {
+            const ctx = await browser.newContext({ viewport: { width, height }, reducedMotion });
+            const pg = await ctx.newPage();
+            await pg.goto(`${origin}/index.html`, { waitUntil: 'load' });
+            await pg.waitForTimeout(600);
+            await pg.evaluate((s) => document.querySelector(s).click(), sel);
+            await pg.waitForTimeout(2500);
+            const r = await pg.evaluate((i) => ({
+                top: Math.round(document.getElementById(i).getBoundingClientRect().top),
+                bar: Math.round(document.getElementById('navbar').getBoundingClientRect().bottom),
+                loaded: !!(window.mksLoaded && window.mksLoaded.interactives)
+            }), id);
+            const tag = `first jump by the ${what} at ${width}px${reducedMotion === 'reduce' ? ', reduced motion' : ''}`;
+            if (Math.abs(r.top - r.bar) <= 4) ok(`${tag}: #${id} lands under the nav bar and stays (${r.top}px, bar ends at ${r.bar}px)`);
+            else bad(`${tag}: #${id} sits at ${r.top}px, the nav bar ends at ${r.bar}px (module loaded: ${r.loaded})`);
+            await ctx.close();
+        }
+    }
 
     // Without script the switch could not switch anything, so it must not show.
     const noScript = await browser.newContext({ viewport: { width: 390, height: 800 }, javaScriptEnabled: false });
@@ -401,13 +469,24 @@ async function exerciseNavigation(browser, origin) {
     // Everything below loads on the way down first, so nothing moves mid-check.
     await p.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
     await p.waitForTimeout(800);
-    const GUARDED = ['.hero-availability', '.hero-cta .btn', '.btn-submit', '.carbon-badge', '.receipt-btn', '.footer-fieldreport a', '.eco-mode-toggle', '.terminal-toggle'];
+    // The controls in between used to be sat on: the calculator's selects, a
+    // sample chip, the dossier titles, the toolkit's proof links.
+    const GUARDED = ['.hero-availability', '.hero-cta .btn', '#ecoModel', '#ecoPreset', '.assay-sample', '.project-toggle', '.toolkit-proof', '.feature-next',
+        '.btn-submit', '.carbon-badge', '.receipt-btn', '.footer-fieldreport a', '.eco-mode-toggle', '.terminal-toggle'];
     const covered = [];
     let passes = 0;
     for (const sel of GUARDED) {
         const n = await p.$$eval(sel, (els) => els.length);
         if (!n) { bad(`back to top: nothing matches ${sel} any more — update the guarded list`); continue; }
         for (let i = 0; i < n; i++) {
+            // A control inside a closed dossier is hidden: open it first.
+            const opened = await p.evaluate(({ sel, i }) => {
+                const card = document.querySelectorAll(sel)[i].closest('.project-details') && document.querySelectorAll(sel)[i].closest('.project-card');
+                if (!card || card.classList.contains('expanded')) return false;
+                card.querySelector('.project-toggle').click();
+                return true;
+            }, { sel, i });
+            if (opened) await p.waitForTimeout(800);
             for (const at of [1, 0.5, 0]) {
                 await p.evaluate(({ sel, i, at }) => {
                     const r = document.querySelectorAll(sel)[i].getBoundingClientRect();
@@ -432,7 +511,18 @@ async function exerciseNavigation(browser, origin) {
         }
     }
     if (covered.length) Array.from(new Set(covered)).forEach((c) => bad(`back to top covers ${c} at 390x844`));
-    else ok(`back to top: covers none of the hero's line and buttons, the send button or the footer's controls (${passes} crossings checked at 390x844)`);
+    else ok(`back to top: covers none of the controls it floats past, hero to footer (${passes} crossings checked at 390x844)`);
+
+    // The last screen is where a way back up is most wanted, and nothing
+    // there is under the button's corner. The whole footer used to hide it.
+    for (const size of [{ width: 390, height: 844 }, { width: 1280, height: 800 }]) {
+        await p.setViewportSize(size);
+        await p.waitForTimeout(300);   // the band is re-cut for the new size
+        await p.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
+        await p.waitForTimeout(300);
+        if (await shown()) ok(`back to top: shown at the very bottom of the page at ${size.width}x${size.height}`);
+        else bad(`back to top: hidden at the very bottom of the page at ${size.width}x${size.height}`);
+    }
     await phone.close();
 }
 
@@ -684,11 +774,14 @@ async function exerciseNarration(browser, origin) {
     const manifest = { tracks: { intro: {
         file: 'assets/audio/intro.mp3', bytes: mp3.length, grams: 0.013, seconds: 5, voiceKind: 'recorded', voiceTitle: 'Moses Kolleh Sesay'
     } } };
-    const withIntro = async (voice) => {
+    const withIntro = async (voice, latency = 0) => {
         const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
         await context.addInitScript(voice ? STAND_IN_VOICE : NO_VOICE);
         const hits = [];
-        await context.route('**/assets/audio/voice-manifest.json', (route) => route.fulfill({ json: manifest }));
+        await context.route('**/assets/audio/voice-manifest.json', async (route) => {
+            if (latency) await new Promise((r) => setTimeout(r, latency));
+            route.fulfill({ json: manifest });
+        });
         await context.route('**/assets/audio/intro.mp3', (route) => { hits.push(route.request().url()); route.fulfill({ contentType: 'audio/mpeg', body: mp3 }); });
         const page = await context.newPage();
         watch(page);
@@ -722,12 +815,32 @@ async function exerciseNarration(browser, origin) {
     }
 
     // No voice at all, but a recording: the control appears for him alone.
+    // Then pressed by keyboard, with the manifest slow to answer the player:
+    // the player used to hide the control while it waited, focus and all.
     {
-        const { context, page, hits } = await withIntro(false);
+        const { context, page, hits } = await withIntro(false, 300);
         const shown = await page.waitForFunction(() => !document.getElementById('navListen').hidden, null, { timeout: 6000 })
             .then(() => true, () => false);
         if (shown && hits.length === 0) ok('no voice but a recording: the control appears (and still fetches nothing)');
         else bad(`no voice but a recording: the control ${shown ? 'appeared but fetched audio early' : 'never appeared'}`);
+        if (shown) {
+            await page.evaluate(() => {
+                window.__listenHidden = 0;
+                new MutationObserver(() => { if (document.getElementById('navListen').hidden) window.__listenHidden++; })
+                    .observe(document.getElementById('navListen'), { attributes: true, attributeFilter: ['hidden'] });
+            });
+            await page.focus('#listenBtn');
+            await page.keyboard.press('Enter');
+            const played = await page.waitForFunction(() => window.FieldDispatch && window.FieldDispatch.state().playing === 'intro', null, { timeout: 5000 })
+                .then(() => page.waitForTimeout(500)).then(() => true, () => false);
+            const after = await page.evaluate(() => ({
+                focus: document.activeElement === document.getElementById('listenBtn') || document.getElementById('dispatchBar').contains(document.activeElement),
+                on: document.activeElement.id || document.activeElement.tagName,
+                blinked: window.__listenHidden
+            }));
+            if (played && after.focus && !after.blinked) ok('no voice but a recording: Enter on Listen plays him, and the control and focus stay put');
+            else bad(`no voice but a recording, Enter on Listen: playing ${played}, focus on ${after.on}, the control hid ${after.blinked} time(s)`);
+        }
         await context.close();
     }
 
@@ -780,9 +893,10 @@ async function checkWithoutJs(browser, origin) {
         if (!r.covered && !r.dim && !r.leaks.length) ok(`${label}: nothing covered, ${r.reveals} reveal blocks visible, every [hidden] element gone`);
     };
 
-    // (a) JavaScript disabled, every page — and the homepage at phone width
-    // too, which is where the menu button is.
-    const offline = PAGES.map(p => [p, { width: 1280, height: 800 }]).concat([['index.html', { width: 390, height: 844 }]]);
+    // (a) JavaScript disabled, every page — and the homepage at phone and
+    // tablet width too, where the menu button is.
+    const offline = PAGES.map(p => [p, { width: 1280, height: 800 }])
+        .concat([['index.html', { width: 390, height: 844 }], ['index.html', { width: 1024, height: 768 }]]);
     for (const [rel, viewport] of offline) {
         const context = await browser.newContext({ javaScriptEnabled: false, viewport });
         const page = await context.newPage();
@@ -793,8 +907,37 @@ async function checkWithoutJs(browser, origin) {
         if (r.dead.length) bad(`${label}: controls that do nothing without JavaScript: ${r.dead.join(', ')}`);
         else ok(`${label}: no control on show that needs JavaScript`);
         if (r.deadLinks.length) bad(`${label}: in-page links to nothing on show: ${r.deadLinks.join(', ')}`);
+        // Nor copy on show that points at what JavaScript would have drawn:
+        // the journey map, carbon-ai's ledger, the homepage's Anatomy.
+        const pointing = await page.evaluate(() => {
+            const out = (document.body.innerText.match(/Watch the route unfold|the ledger below/gi) || []);
+            document.querySelectorAll('a[href$="index.html#anatomy"]').forEach((a) => { if (a.getClientRects().length) out.push('a link to index.html#anatomy'); });
+            return out;
+        });
+        if (pointing.length) bad(`${label}: copy on show points at what needs JavaScript: ${pointing.join(', ')}`);
 
         if (rel === 'index.html') {
+            // The menu button only script.js can work, so without it every nav
+            // link has to be on show at every width. Below 1280px there used
+            // to be none, and research.html had no other link on the page.
+            const nav = await page.evaluate(() => {
+                const links = Array.from(document.querySelectorAll('#navMenu a'));
+                const seen = links.filter((a) => {
+                    const r = a.getBoundingClientRect();
+                    return r.width > 0 && r.left >= 0 && r.right <= innerWidth && getComputedStyle(a).visibility === 'visible';
+                });
+                return { seen: seen.length, of: links.length, research: seen.some(a => a.getAttribute('href') === 'research.html') };
+            });
+            if (nav.of && nav.seen === nav.of && nav.research) ok(`${label}: all ${nav.of} nav links on show, Research included`);
+            else bad(`${label}: ${nav.seen} of ${nav.of} nav links on show${nav.research ? '' : ', Research not among them'}`);
+
+            // No control on show says "collapsed" over content it cannot hide.
+            const closed = await page.evaluate(() => Array.from(document.querySelectorAll('[aria-expanded="false"]'))
+                .filter(el => el.getBoundingClientRect().width > 0 && getComputedStyle(el).visibility !== 'hidden')
+                .map(el => el.textContent.trim().slice(0, 30) || el.id));
+            if (closed.length) bad(`${label}: controls announced as collapsed with nothing to expand: ${closed.join(', ')}`);
+            else ok(`${label}: no control on show is announced as collapsed`);
+
             // The contact form is the one thing a reader without JavaScript can
             // still do: it has to be there, and nothing may sit on top of it.
             const submit = page.locator('#contactForm button[type="submit"]');
@@ -827,6 +970,22 @@ async function checkWithoutJs(browser, origin) {
         await context.close();
     }
 
+    // (b2) The same on carbon-ai.html: its calculator's script blocked brings
+    // back the note that stands in for it, not blank selects and dashes.
+    {
+        const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+        await context.route('**/carbon-ai.js', (route) => route.abort());
+        const page = await context.newPage();
+        await page.goto(`${origin}/carbon-ai.html`, { waitUntil: 'load' });
+        const r = await page.evaluate(() => ({
+            note: !!document.querySelector('.nojs-note') && getComputedStyle(document.querySelector('.nojs-note')).display !== 'none',
+            grid: !!document.querySelector('.ca-grid') && getComputedStyle(document.querySelector('.ca-grid')).display !== 'none'
+        }));
+        if (r.note && !r.grid) ok('carbon-ai.html, carbon-ai.js blocked: the note is shown in place of an empty calculator');
+        else bad(`carbon-ai.html, carbon-ai.js blocked: note shown ${r.note}, empty calculator shown ${r.grid}`);
+        await context.close();
+    }
+
     // (c) script.js late: 6 s, past the 4 s failsafe. The page is shown
     // without it first; when it does arrive it takes over without hiding
     // anything the reader has already seen, and without replaying the intro
@@ -845,7 +1004,27 @@ async function checkWithoutJs(browser, origin) {
         if (gaveUp) report('index.html, script.js late — after the 4 s failsafe', await inspect(page));
         else bad('index.html, script.js late: the failsafe did not take the html.js mark off');
 
+        // A reader who has scrolled into the third dossier by then: what they
+        // are reading, and how tall each dossier is. The six used to fold
+        // shut under them when the mark went back.
+        const reading = () => page.evaluate(() => {
+            const line = window.__line || (window.__line = document.elementFromPoint(innerWidth / 2, innerHeight / 3));
+            return {
+                top: Math.round(line.getBoundingClientRect().top),
+                what: line.textContent.replace(/\s+/g, ' ').trim().slice(0, 40),
+                dossiers: Array.from(document.querySelectorAll('.project-details')).map(d => (getComputedStyle(d).visibility === 'visible' ? Math.round(d.getBoundingClientRect().height) : 0)),
+                said: Array.from(document.querySelectorAll('.project-toggle')).map(t => t.getAttribute('aria-expanded'))
+            };
+        });
+        await page.evaluate(() => {
+            const d = document.querySelectorAll('.project-details')[2];
+            scrollTo({ top: d.getBoundingClientRect().top + scrollY + 150, behavior: 'instant' });
+        });
+        await page.waitForTimeout(200);
+        const seen = await reading();
+
         const tookOver = await page.waitForFunction(() => window.mksReady === true, null, { timeout: 10000 }).then(() => true, () => false);
+        await page.waitForTimeout(1200);   // the dossiers' games arrive and fill in
         const after = await page.evaluate(() => ({
             marked: document.documentElement.classList.contains('js'),
             preloader: !!document.getElementById('preloader'),
@@ -858,6 +1037,15 @@ async function checkWithoutJs(browser, origin) {
         } else {
             bad(`index.html, script.js late — takeover: ready ${tookOver}, marked ${after.marked}, preloader ${after.preloader}, ${after.dim} reveals dimmed, counters ${after.counters.join(' ')}`);
         }
+        const now = await reading();
+        const shrunk = now.dossiers.filter((h, i) => h < seen.dossiers[i] - 1);
+        if (seen.dossiers.every(h => h > 100) && !shrunk.length && now.said.every(v => v === 'true')) {
+            ok(`index.html, script.js late — all six dossiers stay open through the takeover, and say so (${now.dossiers.join(', ')}px)`);
+        } else {
+            bad(`index.html, script.js late — dossiers ${seen.dossiers.join(', ')}px before the takeover, ${now.dossiers.join(', ')}px after, aria-expanded ${now.said.join(' ')}`);
+        }
+        if (Math.abs(now.top - seen.top) <= 4) ok(`index.html, script.js late — the line being read stays put ("${seen.what}" at ${seen.top}px, then ${now.top}px)`);
+        else bad(`index.html, script.js late — the line being read ("${seen.what}") moved from ${seen.top}px to ${now.top}px`);
         await context.close();
     }
 

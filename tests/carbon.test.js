@@ -430,7 +430,13 @@ const ROUNDED_TO_NOTHING = /^0(\.0+)?$|\b0\.0+ /;
         [3.6, 'min', '3.6 min', 'minutes stay minutes'],
         [0.012, 'min', '0.7 s', 'under a minute is seconds'],
         [90, 'min', '1.5 h', 'over an hour is hours'],
-        [12345, 'km', '12,345 km', 'large distances are grouped']
+        [12345, 'km', '12,345 km', 'large distances are grouped'],
+        // The unit is picked on the value as shown, not as it is.
+        [0.9999, 'km', '1.0 km', 'just under a kilometre is 1.0 km, not "1,000 m"'],
+        [0.99999, 'km', '1.0 km', 'nor, closer still, "1,000 m"'],
+        [59.99, 'min', '1.0 h', 'just under an hour is 1.0 h, not "60.0 min"'],
+        [0.0009999, 'km', '1.0 m', 'just under a metre is 1.0 m, not "100 cm"'],
+        [0.95, 'km', '950 m', 'what does not round up stays in the smaller unit']
     ].forEach(([v, ladder, expected, why]) => {
         const got = formatQuantity(v, ladder);
         assert(got === expected, `Units: ${why} (${v} ${ladder} → "${got}")`);

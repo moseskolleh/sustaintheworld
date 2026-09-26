@@ -14,7 +14,7 @@
 //
 // Run with: node tests/narration.test.js
 
-const { run } = require('./harness.js');
+const { run, ROOT } = require('./harness.js');
 
 let failures = 0;
 function assert(cond, msg) {
@@ -310,6 +310,85 @@ const slowFetch = (window, delay, body, asked) => {
         click(window, doc.getElementById('listenBtn'));
         await wait(30);
         assert(played.length === 1 && window.FieldDispatch.state().playing === 'intro', 'No voice, recording: Listen plays him rather than failing');
+    }
+
+    // --- No voice, and the player arriving before its manifest answers -----
+    // The core shows the control once its own look at the manifest finds
+    // the recording; the first press then loads the player, whose own fetch
+    // is still on its way. The player used to hide the control then, the
+    // one just pressed, and focus fell to <body>.
+    for (const [body, what] of [[WITH_INTRO, 'a recording'], [EMPTY, 'no recording']]) {
+        const asked = [];
+        const { window } = run('dark', {
+            speech: 'none',
+            before: (w) => {
+                fakeAudio(w, [], 5);
+                w.fetch = (url, opts) => {
+                    asked.push(opts && opts.cache);
+                    return new Promise((resolve) => setTimeout(() => resolve({ ok: true, json: async () => body }), 40));
+                };
+                w.document.getElementById('navListen').hidden = false;   // as the core leaves it
+                w.document.getElementById('listenBtn').focus();
+            }
+        });
+        const doc = window.document;
+        const wrap = doc.getElementById('navListen');
+        assert(!wrap.hidden && doc.activeElement === doc.getElementById('listenBtn'),
+            `No voice, ${what}: while the manifest is on its way the control stays, focus on it`);
+        await wait(80);
+        assert(wrap.hidden === (body === EMPTY), `No voice, ${what}: once the manifest answers, the control is ${body === EMPTY ? 'hidden' : 'kept'}`);
+        assert(asked.length > 0 && asked.every(c => c === 'no-cache'),
+            `No voice, ${what}: the manifest is revalidated, never read blind from the cache (${asked.join(', ')})`);
+    }
+    // --- The field terminal says what the voice is, and never more ---------
+    // With no voice at all it used to say the missing voice "streams the
+    // audio from its vendor", suggest 'voice about' (which could only fail),
+    // and tell `co2` that narration "transfers nothing" whatever the voice.
+    for (const [kind, voices] of [['no voice', null], ['an offline voice', true], ['a streamed voice', false]]) {
+        const { window } = run('dark', {
+            speech: voices === null ? 'none' : undefined,
+            before: (w) => {
+                slowFetch(w, 0, EMPTY);
+                if (voices === null) return;
+                w.speechSynthesis = {
+                    getVoices: () => [{ name: 'Stand-in', lang: 'en-GB', localService: voices, default: true }],
+                    speak() {}, cancel() {}, pause() {}, resume() {}, speaking: false, paused: false, pending: false,
+                    addEventListener() {}, removeEventListener() {}
+                };
+                w.SpeechSynthesisUtterance = function (text) { this.text = text; };
+            }
+        });
+        const doc = window.document;
+        window.FieldTerminal.open();
+        const say = async (cmd) => {
+            const input = doc.getElementById('ftInput');
+            const before = doc.querySelector('.ft-screen').textContent.length;
+            input.value = cmd;
+            input.closest('form').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+            await wait(20);
+            return doc.querySelector('.ft-screen').textContent.slice(before);
+        };
+        const voice = await say('voice');
+        const moses = await say('voice moses');
+        const co2 = await say('co2');
+        if (voices === null) {
+            assert(/no speech voice/.test(voice) && !/streams|vendor/.test(voice), `Terminal, ${kind}: 'voice' says there is none, not that it streams (${voice.trim().slice(-80)})`);
+            assert(/not recorded/.test(moses) && !/voice about/.test(moses), 'Terminal, no voice: \'voice moses\' does not suggest a voice that is not there');
+            assert(/no speech voice/.test(co2) && !/transfers nothing/.test(co2), 'Terminal, no voice: \'co2\' says the sections are not read aloud');
+        } else if (voices) {
+            assert(/installed on your device/.test(voice) && /voice about/.test(moses), `Terminal, ${kind}: 'voice' names it as local, and 'voice moses' offers it meanwhile`);
+            assert(/transfers nothing/.test(co2), `Terminal, ${kind}: 'co2' says it adds nothing`);
+        } else {
+            assert(/streams/.test(voice), `Terminal, ${kind}: 'voice' says it streams`);
+            assert(!/transfers nothing/.test(co2) && /cannot see/.test(co2), `Terminal, ${kind}: 'co2' does not call it zero (${co2.trim().slice(-80)})`);
+        }
+    }
+
+    {
+        // The core's own look, 1.5 s after load, is held to the same rule.
+        const core = require('fs').readFileSync(require('path').join(ROOT, 'script.js'), 'utf8');
+        const calls = core.match(/fetch\('assets\/audio\/voice-manifest\.json'[^)]*\)/g) || [];
+        assert(calls.length === 1 && /cache: 'no-cache'/.test(calls[0]), `Core: its manifest check revalidates too (${calls.join(' ') || 'no call found'})`);
     }
 })().then(() => {
     if (failures > 0) {

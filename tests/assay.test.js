@@ -49,6 +49,9 @@ assert(!!A && typeof A.analyse === 'function', 'Setup: the Assay exposes its ana
 assert(errors.length === 0, `Setup: the page boots without errors (${errors.map(String).join('; ') || 'none'})`);
 const analyse = (text, opts) => A.analyse(text, Object.assign({ now: NOW }, opts));
 
+// The water sample on the page, as its button pastes it.
+const SAMPLE_WATER = 'WASH Programme Officer — manage borehole drilling and groundwater projects, run hydrogeology surveys, produce GIS maps, and coordinate community water delivery in developing countries.';
+
 // The ads, as a recruiter would paste them.
 const ADS = {
     dutch: [
@@ -216,10 +219,102 @@ function resolves(href) {
         const wrong = a.gaps.filter(isWrong).map(g => g.label);
         assert(wrong.length === 0, `No false gap: ${why} (${wrong.join(', ') || 'none'})`);
     });
+
+    // The employer describing itself, where an ad does: at the top. Each of
+    // these used to be a hard gap that cut a High-grade fit to Workable.
+    const language = g => /^(Dutch|German|French)\b/.test(g.label);
+    const years = g => /years? of experience/.test(g.label);
+    [
+        ['For over 20 years, we have helped governments make better decisions.', years, 'the firm\'s own history is not an experience requirement'],
+        ['We have been active in the water sector for 25 years.', years, '"we … for 25 years" is the employer, not the applicant'],
+        ['Our team has over 15 years of industry experience.', years, 'the team\'s experience is not the applicant\'s'],
+        ['Dutch Ministry of Finance', language, 'a four-word line naming a Dutch ministry is not a language requirement'],
+        ['Employer: Dutch Tax Authority', language, 'a Dutch authority is not a language requirement'],
+        ['Client: German Federal Ministry', language, 'a German ministry is not a language requirement'],
+        ['Location: Amsterdam, Dutch office', language, 'a Dutch office is not a language requirement'],
+        ['You will work with German and French partners, in fluent English.', language, '"fluent" belongs to English, not to the partners\' nationalities']
+    ].forEach(([line, isWrong, why]) => {
+        const a = analyse(line + '\n' + ADS.ai);
+        const wrong = a.gaps.filter(isWrong).map(g => g.label);
+        assert(wrong.length === 0 && a.cls === 'high', `No false gap: ${why} (${wrong.join(', ') || 'none'}; "${a.grade}")`);
+    });
+    // …while the same words addressed to the applicant still ask.
+    const asked = analyse('We are looking for someone with 5+ years of experience.\n' + ADS.ai);
+    assert(asked.hard.some(g => /^5\+ years/.test(g.label)), 'Years: "we are looking for someone with 5+ years" is still a requirement');
+    const plusGerman = analyse(ADS.ai + '\nFluent English required, German a plus');
+    assert(plusGerman.gaps.some(g => g.label === 'German' && !g.hard), `Languages: "…, German a plus" is still a soft German gap (${plusGerman.gaps.map(g => g.label).join(', ')})`);
+    const listed = analyse(ADS.ai + '\nDutch, fluent');
+    assert(listed.hard.some(g => g.label === 'Dutch (C1 / fluent)'), 'Languages: "Dutch, fluent" asks for fluent Dutch');
     const yearsOnly = analyse(base + 'At least three years of experience in sustainability research.');
     assert(yearsOnly.hard.some(g => /^3\+ years/.test(g.label)), 'Years: "at least three years" is read as 3+');
     const range = analyse(base + '3-5 years of relevant experience.');
     assert(range.gaps.some(g => /^3\+ years/.test(g.label)), 'Years: "3-5 years" asks for the lower bound');
+}
+
+// ===================================================================
+// English: the site's own language, its level not stated
+// ===================================================================
+{
+    // An English line used to count as a requirement nothing answered, so
+    // one "Excellent English." flipped a good fit down a grade and the
+    // summary called five matched areas "thin".
+    const ad = SAMPLE_WATER + ' Requirements: 3+ years of experience in WASH. Must have the right to work in the Netherlands. Excellent English.';
+    const a = analyse(ad);
+    const without = analyse(ad.replace(' Excellent English.', ''));
+    assert(a.coverage.asked === without.coverage.asked && a.grade === without.grade,
+        `English: "Excellent English." is not graded (${a.coverage.answered}/${a.coverage.asked} "${a.grade}" vs ${without.coverage.answered}/${without.coverage.asked} "${without.grade}")`);
+    assert(a.confirm.includes('Level of English') && a.gaps.every(g => !/English/.test(g.label)),
+        `English: listed to confirm with Moses, never a gap (${a.confirm.join(', ')})`);
+    assert(/level of English/.test(a.blurb), `English: the summary names it as still to confirm, capitalised (${a.blurb})`);
+    const wash = analyse(ADS.wash + '\n- Excellent written and spoken English');
+    assert(wash.cls === 'high' && wash.coverage.asked === analyse(ADS.wash).coverage.asked,
+        `English: a fitting ad with an English line keeps its grade and its coverage (${wash.grade}, ${wash.coverage.answered}/${wash.coverage.asked})`);
+    const stated = analyse(ad, { facts: Object.assign({}, A.FACTS, { languages: [{ language: 'English', level: 'C2' }] }) });
+    assert(stated.met.some(m => /^English/.test(m.label)) && !stated.confirm.includes('Level of English'),
+        'English: once profile.json states a level, it is matched like any other language');
+
+    const thin = analyse(SAMPLE_WATER + ' Excellent negotiation skills. Strong sales experience.');
+    assert(thin.cls === 'marginal' && thin.matched.length >= 2 && !/\bthin\b/.test(thin.blurb) && /answers only 1 of 3/.test(thin.blurb),
+        `Summary: a Marginal grade with several matched areas says what is unanswered, not that the overlap is "thin" (${thin.blurb})`);
+}
+
+// ===================================================================
+// Another field: general skills alone are not a fit
+// ===================================================================
+{
+    // Five of the areas (stakeholders, data, delivery, international,
+    // research) are in almost every office job. An HR and an ERP ad used to
+    // grade "High-grade match" on them alone, with the "looks like a fit"
+    // button and a copyable result saying so.
+    const OFF_FIELD = {
+        hr: 'HR Business Partner. You will support managers with workforce planning and employee engagement. Requirements: strong stakeholder management, experience facilitating workshops, a research mindset and data analysis skills in Excel. International environment.',
+        erp: 'ERP Implementation Consultant. You will lead the implementation of our finance platform for international clients. Requirements: experience with data analysis and statistics, strong stakeholder engagement and workshop facilitation skills, and research skills to document requirements. You manage project delivery across multiple communities of users.',
+        marketing: ['Marketing Manager', 'We are a fast-growing international consumer brand.', 'Responsibilities:',
+            '- Develop and deliver integrated marketing campaigns', '- Manage cross-functional collaboration with product and sales',
+            '- Analyse campaign performance using data analytics tools', '- Lead community engagement on social channels', 'Requirements:',
+            '- Bachelor\'s degree in marketing', '- Experience with project management', '- Strong analytical skills and a research mindset',
+            '- Excellent written and verbal communication'].join('\n'),
+        itpm: ['IT Project Manager', 'You will lead the implementation of a new CRM system for our international client base.', 'Requirements:',
+            '- Proven project management experience (PRINCE2 or Agile)', '- Strong stakeholder engagement across departments',
+            '- Experience in data analysis and reporting', '- Excellent communication and collaboration skills'].join('\n')
+    };
+    Object.entries(OFF_FIELD).forEach(([key, ad]) => {
+        const a = analyse(ad);
+        assert(a.grade === 'Different field', `Another field (${key}): graded "Different field", not a fit (got "${a.grade}": ${a.blurb})`);
+        assert(a.matched.every(m => m.general), `Another field (${key}): only general areas matched (${a.matched.map(m => m.label).join(', ')})`);
+    });
+    const input = doc.getElementById('assayInput');
+    const result = doc.getElementById('assayResult');
+    input.value = OFF_FIELD.hr;
+    doc.getElementById('assayRun').click();
+    assert(!result.querySelector('[data-analytics="assay-contact"]'), 'Another field: no "looks like a fit" button');
+
+    // One domain area is enough for Workable, two for High: an ad in the
+    // field, but only at its edge, is not the top grade.
+    const edge = analyse('Data Analyst. You will build dashboards in Python and SQL, run statistical data analysis, work with stakeholders across the business and present research findings. Some GIS work on customer locations. Requirements: experience in data analysis, strong stakeholder skills, a research background.');
+    assert(edge.cls !== 'high', `One domain area (GIS) among general ones: not the top grade (got "${edge.grade}")`);
+    assert(A.RULES.high.domain >= 2 && A.RULES.workable.domain >= 1, 'Rules: High needs two domain areas, Workable one');
+    assert(!A.RULES.strengths.some(s => s.syn.includes('implementation')), 'Rules: the bare word "implementation" is not field operations');
 }
 
 // ===================================================================

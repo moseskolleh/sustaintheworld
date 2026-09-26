@@ -47,6 +47,7 @@
 
     let manifest = null;       // null until we know whether a recording exists
     let manifestLoad = null;   // the one fetch, shared by everyone who asks
+    let manifestKnown = false; // …and whether that fetch has answered yet
     let rate = 1;
     let current = null;        // { id, sentences, index }
     let audioEl = null;
@@ -102,15 +103,17 @@
     // ---------------------------------------------------------------
     // The manifest says whether Moses has recorded his introduction yet.
     // Fetched once, on demand. Until he has, it lists no tracks and the
-    // offer to hear him simply never appears.
+    // offer to hear him simply never appears. With no-cache the browser
+    // checks its copy, so a cached empty manifest cannot hide a new recording.
     // ---------------------------------------------------------------
     const loadManifest = () => manifestLoad || (manifestLoad = (async () => {
         try {
-            const res = await fetch('assets/audio/voice-manifest.json', { cache: 'force-cache' });
+            const res = await fetch('assets/audio/voice-manifest.json', { cache: 'no-cache' });
             if (res.ok) manifest = await res.json();
         } catch (e) {
             manifest = null; // no manifest — the browser voice still works
         }
+        manifestKnown = true;
         return manifest;
     })());
 
@@ -276,10 +279,12 @@
         }
     };
 
+    // Hidden only once it is known that nothing can speak. Before the
+    // manifest had answered, that hid the button being pressed, and its focus.
     function updateAvailability() {
         const usable = canSpeak() || !!introTrack();
-        if (listenWrap) listenWrap.hidden = !usable;
-        if (!usable && current) stop();
+        if (listenWrap && (usable || manifestKnown)) listenWrap.hidden = !usable;
+        if (!usable && manifestKnown && current) stop();
     }
 
     // ---------------------------------------------------------------
@@ -602,6 +607,7 @@
             return {
                 playing: current ? current.id : null,
                 voice: chosenVoice ? `${chosenVoice.name} (${chosenVoice.lang})` : 'none available',
+                voiced: !!chosenVoice,
                 local: voiceIsLocal,
                 intro: t ? { bytes: t.bytes, seconds: t.seconds || null, readBy: t.voiceTitle || INTRO.readBy } : null,
                 ids: SCRIPTS.map(s => s.id)

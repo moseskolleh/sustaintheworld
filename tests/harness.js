@@ -98,6 +98,11 @@ function run(theme, options) {
         delete window.SpeechSynthesisUtterance;
     }
 
+    // What index.html's <head> does before any of it: mark the page html.js.
+    // Without the mark, script.js sees a late start (the failsafe took the
+    // mark off), which a test asks for with `before` removing it.
+    window.document.documentElement.classList.add('js');
+
     if (typeof opts.before === 'function') opts.before(window);
 
     // Execute the site scripts in the window context, in the order the

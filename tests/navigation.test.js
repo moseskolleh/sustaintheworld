@@ -204,17 +204,26 @@ const countScrolls = (window) => {
         await scrollTo(820);
         assert(btn.classList.contains('visible'), 'Back to top: shown after one full screen');
 
-        const band = observers.find(o => o.els.some(el => el.classList.contains('contact-form')));
-        const watched = (sel) => band && band.els.includes(doc.querySelector(sel));
-        assert(!!band && ['.hero-availability', '.hero-cta', '.contact-form', '.footer'].every(watched),
-            'Back to top: it watches the availability line, the hero buttons, the contact form and the footer');
-        const form = doc.querySelector('.contact-form');
-        band.cb([{ target: form, isIntersecting: true }]);
+        // The live observer: the last one made (it is made again when the
+        // window changes size, since its root is cut to the button's corner).
+        const band = observers.filter(o => o.els.length).pop();
+        const watched = (sel) => !!band && Array.from(doc.querySelectorAll(sel)).every(el => band.els.includes(el));
+        const CONTROLS = ['.hero-availability', '.hero-cta a', '.contact-form input', '.contact-form textarea', '.btn-submit',
+            '.project-toggle', '#ecoModel', '.assay-sample', '.toolkit-proof', '.carbon-badge', '.receipt-btn', '.eco-mode-toggle', '.terminal-toggle'];
+        const missing = CONTROLS.filter(sel => !doc.querySelector(sel) || !watched(sel));
+        assert(!!band && missing.length === 0, `Back to top: it watches every control it could sit on, from the hero to the footer (not watched: ${missing.join(', ') || 'none'})`);
+        assert(!!band && !band.els.some(el => el.classList.contains('footer') || el.classList.contains('contact-form')),
+            'Back to top: it watches the controls, not whole regions: the footer kept it hidden over the last screen');
+        const margin = String(band && band.opts.rootMargin || '').split(/\s+/);
+        assert(margin.length === 4 && /^-\d+px$/.test(margin[0]) && /^-\d+px$/.test(margin[3]),
+            `Back to top: its band is cut to the button's corner, not the whole width of the screen (${band && band.opts.rootMargin})`);
+        const toggle = doc.querySelector('.project-toggle');
+        band.cb([{ target: toggle, isIntersecting: true }]);
         await wait(20);
-        assert(!btn.classList.contains('visible'), 'Back to top: it steps aside while the contact form passes beneath it');
-        band.cb([{ target: form, isIntersecting: false }]);
+        assert(!btn.classList.contains('visible'), 'Back to top: it steps aside while a dossier title passes beneath it');
+        band.cb([{ target: toggle, isIntersecting: false }]);
         await wait(20);
-        assert(btn.classList.contains('visible'), 'Back to top: and comes back once the form has passed');
+        assert(btn.classList.contains('visible'), 'Back to top: and comes back once it has passed');
 
         btn.click();
         assert(doc.activeElement === doc.getElementById('home'), 'Back to top: focus goes to the top of the page, not down with the hidden button');

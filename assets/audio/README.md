@@ -23,7 +23,9 @@ anywhere.
 
 **Until he records it, `voice-manifest.json` lists no tracks** and the page
 offers no recording. The sections are read by the visitor's own browser voice
-either way, which transfers nothing. The manifest stays in place, empty, so
+either way: an offline voice transfers nothing, and a streamed one (Chrome's
+default on some platforms) sends audio of a size no page can see, so the
+player says "streamed, size unknown" rather than 0 KB. The manifest stays in place, empty, so
 the player's one request for it never 404s.
 
 ## What happened to the ten section tracks

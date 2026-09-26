@@ -78,11 +78,16 @@
             print(badge ? badge.textContent : 'the scale is still warming up — scroll to the footer.');
             print('methodology: Resource Timing API × Sustainable Web Design model.');
             print('this counts network transfer only — not the energy your device spends rendering it.');
+            // As the player's label: an offline voice adds nothing, a
+            // streamed one an amount no page can see.
             const fd = window.FieldDispatch;
             if (fd) {
-                print(fd.state().playing === 'intro'
+                const st = fd.state();
+                print(st.playing === 'intro'
                     ? 'narration: Moses\'s own recording — one file, and the player printed its transfer weight before you pressed play.'
-                    : 'narration: your browser\'s own voice. it transfers nothing, so it adds nothing to the figure above — though your device still does the work.');
+                    : !st.voiced ? 'narration: this browser has no speech voice, so the sections are not read aloud, and add nothing.'
+                    : st.local ? 'narration: your browser\'s own voice, installed on your device. it transfers nothing, so it adds nothing to the figure above — though your device still does the work.'
+                    : 'narration: your browser\'s voice streams its audio from the vendor, in amounts this page cannot see — so the figure above leaves it out.');
             }
         },
         drill: (args, done) => {
@@ -143,6 +148,10 @@
                 print('usage: voice <section> — one of: ' + state.ids.join(', '));
                 print('       voice moses     — Moses introduces himself, in his own voice, once he has recorded it');
                 print('       voice stop      — shut it up');
+                if (!state.voiced) {
+                    print('this browser has no speech voice, so the sections cannot be read aloud here.');
+                    return;
+                }
                 print(`sections are read by your browser's voice — ${state.voice}.`);
                 print(state.local
                     ? 'that voice is installed on your device. it transfers nothing over the network.'
@@ -155,7 +164,7 @@
             if (arg === 'moses' || arg === 'intro' || arg === 'recorded') {
                 fd.playIntro().then((ok) => {
                     if (ok) close();
-                    else print('Moses has not recorded his introduction yet — try \'voice about\' for the browser voice.', 'ft-err');
+                    else print('Moses has not recorded his introduction yet' + (state.voiced ? ' — try \'voice about\' for the browser voice.' : '.'), 'ft-err');
                 });
                 return;
             }

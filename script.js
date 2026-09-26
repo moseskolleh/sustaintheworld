@@ -140,9 +140,13 @@ const mksLoad = (() => {
         if (inflight[name]) return inflight[name];
         const files = MODULES[name];
         if (!files) return Promise.reject(new Error(`unknown module: ${name}`));
+        // A module that has filled its part of the page has moved what is below.
         inflight[name] = files
             .reduce((p, src) => p.then(() => (loaded[src] ? null : inject(src))), Promise.resolve())
-            .then(() => { loaded[name] = true; }, (err) => { delete inflight[name]; throw err; });
+            .then(() => {
+                loaded[name] = true;
+                document.dispatchEvent(new CustomEvent('mks:layout'));
+            }, (err) => { delete inflight[name]; throw err; });
         return inflight[name];
     };
 })();
@@ -340,13 +344,48 @@ function focusTarget(target) {
     target.focus({ preventScroll: true });
 }
 
+// Section 05's widgets grow when their module arrives, and a jump into or
+// past it is what fetches it: a first jump to Skills stopped 318px short. So
+// for a few seconds the jump lands again whenever the page changes size,
+// until the reader scrolls, taps or types: then where it sits is theirs.
+let releaseHold = () => {};
+function holdTarget(target, behavior) {
+    releaseHold();
+    if (!('ResizeObserver' in window)) return;
+    let first = true;
+    const ro = new ResizeObserver(() => {
+        if (first) { first = false; return; }   // its first call is only the current size
+        target.scrollIntoView({ behavior, block: 'start' });
+    });
+    const HANDS = ['wheel', 'touchstart', 'pointerdown', 'keydown'];
+    const release = () => {
+        ro.disconnect();
+        clearTimeout(timer);
+        HANDS.forEach(t => window.removeEventListener(t, release, true));
+        if (releaseHold === release) releaseHold = () => {};
+    };
+    const timer = setTimeout(release, 4000);
+    HANDS.forEach(t => window.addEventListener(t, release, { capture: true, passive: true }));
+    ro.observe(document.body);
+    releaseHold = release;
+}
+
 // Fetch what the target needs, open the dossier or receipt around it (and
-// give that a moment to push things into place), then scroll and focus.
+// give that a moment to push things into place), then scroll and focus. A
+// target waiting to fade in is shown at once: it sits 26px low until then.
 function jumpTo(target, behavior, focus, wait) {
     mksLoadFor(target);
+    const fade = target.closest('.reveal:not(.visible)');
+    if (fade) {
+        fade.style.transition = 'none';
+        fade.classList.add('visible');
+        void fade.offsetWidth;   // commit it before the transition returns
+        fade.style.transition = '';
+    }
     const land = () => {
         target.scrollIntoView({ behavior, block: 'start' });
         if (focus) focusTarget(target);
+        holdTarget(target, behavior);
     };
     if (revealTarget(target)) setTimeout(land, 240);
     else if (wait) setTimeout(land, 0); else land();
@@ -358,7 +397,8 @@ let jumpedTo = null;
 
 // In-page links used to scroll and stop there: the address never changed,
 // so Back left the site, and focus stayed on the link. Now they navigate.
-document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+const inPageLinks = Array.from(document.querySelectorAll('a[href^="#"]'));
+inPageLinks.forEach((anchor, index) => {
     anchor.addEventListener('click', function (e) {
         const href = this.getAttribute('href');
         // Bare "#" hrefs (e.g. project expand toggles) are not real targets;
@@ -369,10 +409,14 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         const target = document.querySelector(href);
         if (!target) return;
         e.preventDefault();
-        // The same link twice is one entry. Safari throws past 100 pushes
-        // in 30 seconds, which should cost the entry, not the jump.
+        // The same link twice is one entry; the entry left notes the link,
+        // for Back to focus. Safari throws past 100 history calls in 30 s,
+        // which should cost the entry, not the jump.
         if (location.hash !== href) {
-            try { history.pushState(null, '', href); } catch (err) { /* jump anyway */ }
+            try {
+                history.replaceState(Object.assign({}, history.state, { mksFrom: index }), '');
+                history.pushState(null, '', href);
+            } catch (err) { /* jump anyway */ }
         }
         jumpedTo = location.href;
         jumpTo(target, scrollMotion(), true, false);
@@ -386,7 +430,21 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
 function handleHashReveal(e) {
     if (location.href === jumpedTo) return;
     jumpedTo = location.href;
-    if (!location.hash || location.hash === '#') return;
+    if (!location.hash || location.hash === '#') {
+        // Back before any jump: focus returns to the link that jumped (in
+        // the closed menu, to the top of the page, as natively), not left
+        // on the last target, thousands of pixels away.
+        if (!e) return;
+        releaseHold();
+        const from = e.state && inPageLinks[e.state.mksFrom];
+        if (from) from.focus({ preventScroll: true });
+        if (!from || document.activeElement !== from) {
+            document.body.tabIndex = -1;
+            document.body.focus({ preventScroll: true });
+            document.body.removeAttribute('tabindex');
+        }
+        return;
+    }
     let target;
     try { target = document.querySelector(location.hash); } catch (err) { return; }
     if (target) jumpTo(target, scrollMotion(), !!e, true);
@@ -465,22 +523,33 @@ const navLinks = Array.from(document.querySelectorAll('.nav-link'));
         ticking = true;
         requestAnimationFrame(update);
     };
-    const relayout = () => { measure(); onScroll(); };
-
     // Back to top floats bottom right. It waits for a full screen of scroll
-    // (the hero's buttons are above it by then) and steps aside while a
-    // control it would cover is in the bottom quarter of the screen, or
-    // about to be: the observer does that geometry off the scroll path.
-    if (scrollTopBtn && 'IntersectionObserver' in window) {
-        const band = new IntersectionObserver((entries) => {
-            entries.forEach(en => {
-                if (en.isIntersecting) underfoot.add(en.target); else underfoot.delete(en.target);
-            });
-            onScroll();
-        }, { rootMargin: '-75% 0px 10% 0px' });
-        document.querySelectorAll('.hero-availability, .hero-cta, .contact-form, .footer')
-            .forEach(el => band.observe(el));
-    }
+    // (the hero's buttons are above it by then) and steps aside while any
+    // control is in its corner or about to be: the observer's root is cut to
+    // 140px up, 100px in and 10% below, and does that geometry off the scroll
+    // path. Watching four whole regions, it sat on the dossier titles, and
+    // the footer hid it on the last screen. A module's new controls are
+    // picked up when the layout moves.
+    const CONTROLS = 'a[href], button, select, input, textarea, .hero-availability, .carbon-badge';
+    let band = null;
+    const watch = () => {
+        if (!scrollTopBtn || !('IntersectionObserver' in window)) return;
+        const size = innerWidth + 'x' + innerHeight;
+        if (!band || band.size !== size) {
+            if (band) band.io.disconnect();
+            underfoot.clear();
+            band = { size, io: new IntersectionObserver((entries) => {
+                entries.forEach(en => {
+                    if (en.isIntersecting) underfoot.add(en.target); else underfoot.delete(en.target);
+                });
+                onScroll();
+            }, { rootMargin: `${140 - innerHeight}px 0px 10% ${100 - innerWidth}px` }) };
+        }
+        document.querySelectorAll(CONTROLS).forEach((el) => {
+            if (el !== scrollTopBtn && !(navbar && navbar.contains(el))) band.io.observe(el);
+        });
+    };
+    const relayout = () => { measure(); watch(); onScroll(); };
 
     window.addEventListener('scroll', onScroll, { passive: true });
     let resizeTimer;
@@ -733,9 +802,19 @@ document.querySelectorAll('.project-card').forEach((card, i) => {
     // Disclosure semantics + keep collapsed content non-interactive. `inert`
     // (with the CSS visibility:hidden fallback) takes the hidden galleries and
     // mini-games out of the tab order and the accessibility tree until opened.
+    // The markup says open (aria-expanded="true"), as it is without
+    // JavaScript. It is closed here on a normal start; after a late one the
+    // reader has seen it, maybe mid-dossier, so it stays open, games fetched.
     if (!details.id) details.id = `project-details-${i + 1}`;
     toggle.setAttribute('aria-controls', details.id);
-    details.inert = true;
+    if (lateStart) {
+        card.classList.add('expanded');
+        details.style.maxHeight = details.scrollHeight + 'px';
+        if (details.querySelector('.dossier-widget, #floodSlider')) mksLoad('dossier').catch(mksLoadWarn);
+    } else {
+        details.inert = true;
+        toggle.setAttribute('aria-expanded', 'false');
+    }
 
     // What is inside can grow after the dossier opens — a mini-game logs
     // every drill, late images arrive — and a max-height measured at opening
@@ -763,10 +842,13 @@ document.querySelectorAll('.project-card').forEach((card, i) => {
 
         const isExpanded = card.classList.contains('expanded');
 
-        // Collapse any other open dossier so the reader keeps their bearings
-        document.querySelectorAll('.project-card.expanded').forEach(open => {
-            if (open !== card) collapse(open);
-        });
+        // Opening one closes any other, so the reader keeps their bearings.
+        // Closing one closes just that (after a late start all six are open).
+        if (!isExpanded) {
+            document.querySelectorAll('.project-card.expanded').forEach(open => {
+                if (open !== card) collapse(open);
+            });
+        }
 
         const remeasure = () => {
             if (card.classList.contains('expanded')) {
@@ -1414,10 +1496,17 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
 // ===================================
 // Everything the stylesheet's html.js rules wait on has run, so the <head>
 // failsafe can stand down. On a late start every reveal is marked done
-// first: putting the mark back must not hide what the reader has seen.
+// first, as the dossiers were kept open: putting the mark back must not hide
+// what the reader has seen, nor move it, though it brings back widgets
+// above them. The line a third of the way down is put back where it was.
 if (lateStart) {
     document.querySelectorAll('.reveal').forEach(el => el.classList.add('visible'));
+    const line = typeof document.elementFromPoint === 'function' ? document.elementFromPoint(innerWidth / 2, innerHeight / 3) : null;
+    const was = line ? line.getBoundingClientRect().top : 0;
     document.documentElement.classList.add('js');
+    if (line && line.getClientRects().length) {
+        window.scrollTo({ top: window.pageYOffset + line.getBoundingClientRect().top - was, behavior: 'instant' });
+    }
 }
 window.mksReady = true;
 
@@ -1471,7 +1560,8 @@ window.mksReady = true;
 // speech-dispatcher) accepts an utterance and silently drops it, and a
 // button that loads a player to say nothing is worse than no button. The one
 // other thing that can speak is Moses's own recorded introduction, so a
-// browser with no voice asks the manifest once, well after the first view.
+// browser with no voice asks the manifest once, well after the first view
+// (no-cache: a cached empty one must not hide a new recording).
 (() => {
     const wrap = document.getElementById('navListen');
     const btn = document.getElementById('listenBtn');
@@ -1491,7 +1581,7 @@ window.mksReady = true;
         }
         window.addEventListener('load', () => setTimeout(() => {
             if (!wrap.hidden || typeof window.fetch !== 'function') return;
-            fetch('assets/audio/voice-manifest.json', { cache: 'force-cache' })
+            fetch('assets/audio/voice-manifest.json', { cache: 'no-cache' })
                 .then(r => (r.ok ? r.json() : null))
                 .then(m => { if (m && m.tracks && m.tracks.intro) show(); })
                 .catch(() => { /* no recording: the button stays hidden */ });

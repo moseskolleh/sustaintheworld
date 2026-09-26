@@ -418,15 +418,17 @@
         min: [{ unit: 'h', per: 1 / 60, digits: 1 }, { unit: 'min', per: 1, digits: 1 }, { unit: 's', per: 60, digits: 1 }]
     };
 
-    /** A value in the largest unit of its ladder in which it is at least 1. */
+    /** A value in the largest unit of its ladder in which it shows as at
+     *  least 1: 0.9999 km is "1.0 km", not "1,000 m". */
     function formatQuantity(value, ladderName) {
         const ladder = UNIT_LADDERS[ladderName];
         if (!ladder) throw new Error(`formatQuantity: no unit ladder called "${ladderName}"`);
         if (typeof value !== 'number' || !isFinite(value)) return '—';
-        const step = ladder.find(s => value * s.per >= 1) || ladder[ladder.length - 1];
-        const v = value * step.per;
         // "250.0 m" is precision nobody asked for; three figures are plenty.
-        return `${formatNumber(v, v >= 100 ? 0 : step.digits)} ${step.unit}`;
+        const places = (v, step) => (v >= 100 ? 0 : step.digits);
+        const step = ladder.find(s => Number((value * s.per).toFixed(places(value * s.per, s))) >= 1) || ladder[ladder.length - 1];
+        const v = value * step.per;
+        return `${formatNumber(v, places(v, step))} ${step.unit}`;
     }
 
     return {
