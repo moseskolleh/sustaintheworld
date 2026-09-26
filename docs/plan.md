@@ -552,3 +552,85 @@ share of visits that reach Contact and the number of lens-link visits that reach
 case study should both rise. Contact submissions and CV downloads are the outcomes.
 If a change doesn't move its number within a quarter, cut it; the "one in, one out"
 rule makes that cheap.
+
+## Progress
+
+What branch `claude/plan-implementation-soh954` implements so far, step by step,
+checked against the code and the test runs on 2026-09-26 (`npm test`: 784
+passing in twelve suites; `npm run smoke`: passes). ✓ done · ◐ partial, with
+the reason · ✗ waiting on Moses. Everything Moses has to supply is listed, with
+where it goes, in [owner-checklist.md](owner-checklist.md).
+
+**Phase 0 — wave 1.** Not done as a phase yet: step 9 waits on Moses, and
+steps 1 and 4 have the leftovers named below. Its "done when" tests are green:
+`npm test`, and smoke with the new no-JavaScript and skip-link checks.
+
+1. ◐ **Works without JavaScript.** The `html.js` line is in `<head>`; the
+   preloader, `.reveal`, collapsed dossiers and empty bars are hidden only
+   under it; the hero stats are written as 164, 54, 3 and 2; a 4 s failsafe
+   (and an `onerror` on `script.js`) drops the class if the script never
+   takes over. Smoke loads every page with JavaScript off, and the homepage
+   with `script.js` blocked and late. Left: the six dossier title buttons
+   still say `aria-expanded="false"` while shown open without JavaScript, and
+   below 1280px there is no nav menu without JavaScript (the hamburger is
+   hidden rather than dead; the content and the skip link still work).
+2. ✓ **One global `[hidden]` rule** in `style.css` and `carbon-ai.css`; the
+   eight local patches are gone, and the receipt panel and chart legend hide.
+3. ✓ **In-page links behave like links**: `pushState`, focus on the target,
+   Back and Forward land again, the skip link's next Tab is inside `<main>`
+   (smoke). Known gap, older than this branch: a first jump past section 05
+   before its module has loaded can land short, because the "AI, Weighed"
+   widget and Anatomy grow when filled (measured at about 294px at
+   1280×800); reserving their height in CSS would fix it.
+4. ◐ **Claims without a basis.** Off the pages: "10,000+ people", 95%, 15%,
+   "certified across", Power BI in the toolkit's proof list, "advised", the
+   `+` on exact counts, and lines that went beyond the case studies. The 30%
+   baseline and the You Draw It curve are labelled illustrative;
+   `tests/content.test.js` guards both. Left: the CV PDF still carries four of the removed claims (✗
+   Moses, or Phase 3.7), and `field-report.html` still lists Power BI among
+   skills. ✗ Sources for the 30%, a people-reached count and a method for 95%
+   and 15%, if they exist.
+5. ✓ **Contradictions resolved**: embodied carbon excluded on both pages,
+   thesis periods agree everywhere, Wuppertal says "Team of six", © 2026, nav
+   numbers dropped. ✗ Moses to confirm the periods and whether he led the
+   Wuppertal team.
+6. ✓ **Nothing floats over content**: the theme switch is in the nav bar;
+   back to top waits one screen and steps aside for controls beneath it.
+7. ✓ **The Assay is honest**: gap rules for languages, years, named tools,
+   consulting-firm and director level, financial modelling, PhD and law;
+   right to work, visa, clearance, licence and relocation listed to confirm;
+   a hard gap caps the grade; fewer than 20 words is not graded. The Dutch /
+   Big Four / SAP ad grades "Marginal match" with 4 gaps. ✗ Languages and
+   levels, which roles were paid, and right to work.
+8. ✓ **carbon-ai display bugs**: one formatter, no exponents, no rounded-away
+   zeros, unit switching; no clipped dropdowns at 320, 390 or 1440px.
+9. ✗ **Live contact-form check**: owner checklist C1 to C3.
+10. ✓ **Stale docs**: suite count and budget figures from real runs,
+    `check-budget.js` headroom comment, `DEPLOYMENT_GUIDE.md` against
+    `Code.gs`, the `profile.json` comment.
+
+**Phase 1** — not started.
+
+**Phase 2.** 2.2 ◐ the nav numbers are gone (Phase 0.5), but it still has 12
+items and the hero still has three buttons. 2.5 ✓ one Listen control in the
+nav, the browser voice by default at 0 bytes; the open player covers 13.3% of
+a 390×844 screen (15.5% with the introduction offered), smoke fails it above
+20%, and it never covers the send button. Steps 1 (✗ Moses supplies the
+at-a-glance facts), 3, 4, 6, 7, 8 and 9 — not started.
+
+**Phase 3** — not started (3.5 and 3.10 ✗ Moses). The core-log depths
+(3.9) are still hard-coded.
+
+**Phase 4.** 4.3 ◐ the ten stock-voice tracks (4.13 MB) are retired; the
+`intro` script (193 words, opening "Kushe") is in `content/narration.json`;
+`npm run voice:intro` installs a take; the audio budget is 800 KB; Fish
+Audio renders only with `--sections`. ✗ Moses's approval of the wording and
+his recording. 4.1 not started: the Assay's rules are plain data, ready to
+move to `content/brief.json`. 4.2 and 4.4 not started.
+
+**Phase 5** — not started (5.2, 5.5 and 5.6 ✗ Moses).
+
+**Phase 6.** 6.3 ◐ the counters respect reduced motion and low-energy mode;
+the rest of the step is not started. Other steps not started.
+
+**Phase 7** — not started.

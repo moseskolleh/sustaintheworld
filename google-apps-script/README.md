@@ -12,14 +12,16 @@ Automatically capture form responses and store them in Google Sheets using Googl
 
 1. Read the **`DEPLOYMENT_GUIDE.md`** for detailed instructions
 2. Deploy the `Code.gs` script as a web app
-3. Use `test-form.html` to test your deployment
+3. Use `test-form.html` to send a test submission, then check the sheet (it
+   posts in `no-cors` mode, so it cannot see whether the row landed)
 4. Integrate the URL into your website or application
 
 ## ✨ Features
 
 - ✅ Writes to a **configured** spreadsheet and tab, creating headers on first use
 - ✅ Captures timestamp, name, email, subject, message and source
-- ✅ Accepts JSON payloads and returns a JSON status
+- ✅ Emails the owner once per submission, with the visitor as reply-to (never copied)
+- ✅ Accepts a JSON string (answered with a JSON status) or a plain form post from a browser without JavaScript (answered with a short page and a link back)
 - ✅ Escapes spreadsheet formulas so submissions can never execute
 - ✅ Serialises writes with `LockService`, so concurrent submissions cannot collide
 - ✅ Per-submitter rate limiting, plus an optional Cloudflare Turnstile check
@@ -47,7 +49,7 @@ Run `testConfiguration()` from the editor to check them, and
 <form action="YOUR_WEB_APP_URL" method="POST">
   <input name="name" required>
   <input name="email" type="email" required>
-  <input name="subject" required>
+  <input name="subject">
   <textarea name="message" required></textarea>
   <button type="submit">Submit</button>
 </form>
@@ -55,9 +57,10 @@ Run `testConfiguration()` from the editor to check them, and
 
 ### JavaScript
 ```javascript
+// No Content-Type header: a JSON content type needs a CORS preflight, which
+// Apps Script cannot answer. A plain string body avoids it.
 fetch('YOUR_WEB_APP_URL', {
   method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
     name: 'John Doe',
     email: 'john@example.com',
@@ -69,8 +72,9 @@ fetch('YOUR_WEB_APP_URL', {
 
 ### cURL
 ```bash
-curl -X POST "YOUR_WEB_APP_URL" \
-  -H "Content-Type: application/json" \
+# -L follows Apps Script's redirect to the result; do not add -X POST
+curl -L "YOUR_WEB_APP_URL" \
+  -H "Content-Type: text/plain;charset=utf-8" \
   -d '{"name":"John","email":"john@example.com","subject":"Test","message":"Test message"}'
 ```
 
@@ -89,9 +93,10 @@ contact form — so the script treats every payload as hostile.
 - **Fixed target**: the sheet is opened by id and name, never
   `getActiveSheet()`.
 - **Rate limiting**: limits are per-submitter (keyed on a hash of the email, so
-  the throttle cache stores no personal data). The endpoint-wide counter is a
-  much higher circuit breaker — one visitor can no longer lock out everyone
-  else, which the previous global-only limiter allowed with a double-click.
+  the throttle cache stores no personal data): one message per 15 seconds and
+  5 per hour. The endpoint-wide counter is a much higher circuit breaker (200
+  an hour) — one visitor can no longer lock out everyone else, which the
+  previous global-only limiter allowed with a double-click.
 - **Honeypot**: a hidden `website` field; anything that fills it gets a success
   response and no record.
 - **Turnstile**: optional per-visitor challenge, verified server-side, failing
@@ -99,8 +104,9 @@ contact form — so the script treats every payload as hostile.
 - **Error messages**: failures return a generic message to the caller and log
   the detail. Returning `error.toString()` leaked spreadsheet ids to anyone who
   could make the script throw.
-- Deployment access still matters: prefer "Anyone with Google account" if you
-  do not need anonymous submissions.
+- Deployment access still matters. The portfolio's form needs "Anyone",
+  because its visitors are not signed in to Google; "Anyone with Google
+  account" suits only a form whose users all are.
 
 ## 📚 Documentation
 
@@ -112,7 +118,12 @@ See **`DEPLOYMENT_GUIDE.md`** for complete documentation including:
 
 ## 🌐 Integration with SustainTheWorld Website
 
-This script can be integrated with the main website's contact form to automatically capture and store all form submissions in a centralized Google Sheet.
+The portfolio's contact form already posts here: `GOOGLE_APPS_SCRIPT_URL` in
+`script.js` (with JavaScript) and the form's `action` in `index.html` (without
+it) both hold the deployment's URL and must match it. `tests/apps-script.test.js`
+runs this script against stand-ins for Google's services; it cannot see the
+live deployment. To check that, follow items C1 to C3 in
+[`docs/owner-checklist.md`](../docs/owner-checklist.md).
 
 ## 📞 Support
 

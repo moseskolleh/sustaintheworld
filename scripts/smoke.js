@@ -14,8 +14,17 @@
 //   - a request that fails, or that leaves this origin at all
 //   - an on-demand module that does not arrive when its feature is used
 //   - a first view heavier than scripts/check-budget.js claims
+//   - a page that, with JavaScript off (or script.js blocked or late), is
+//     covered, leaves content invisible, shows a [hidden] element or a
+//     control only a script could drive, or hides the contact form
+//   - a skip link, nav link or Back that does not land where it says; a
+//     theme switch or nav item off the bar; back to top over a control
+//   - more than one listen control, a player that covers more than 20% of
+//     a phone screen or the send button, or a recording fetched unasked
+//   - an Assay that grades a mismatched ad well, or sends anything
+//   - a clipped dropdown or an unreadable number on carbon-ai.html
 //
-// The last one matters most. check-budget.js estimates the first view from
+// The first-view weight matters most. check-budget.js estimates it from
 // the HTML; this measures it. Before the two were compared, the estimate was
 // 234 KB and the truth was over 500 KB — the fonts were not counted, and the
 // hero slideshow was quietly fetching its second 150 KB image on every visit.

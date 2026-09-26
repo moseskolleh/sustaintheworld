@@ -81,7 +81,7 @@ git commit -m "Add Moses's recorded introduction" && git push
 Until September 2026 the site shipped ten section tracks rendered by Fish Audio
 in a stock voice. They were retired: they repeated claims the page had since
 dropped, every copy edit made them stale and cost credits to re-render (a full
-render is about 7,700 of a free plan's 8,000), and a stock voice reading
+render is about 7,850 of a free plan's 8,000), and a stock voice reading
 first-person lines was never Moses — which the section below on picking a voice
 already said. The page now reads sections with the browser voice, and its
 player plays no section tracks.
@@ -242,8 +242,9 @@ before anything runs:
 npm run voice -- --sections --dry-run
 ```
 
-The full page is **~7,708 credits**. The free plan grants **8,000 per cycle**, so
-one complete render uses about 96% of a free month and leaves almost nothing for
+The full page is **~7,850 credits** (the dry run above prints the exact figure:
+7,848 in September 2026). The free plan grants **8,000 per cycle**, so
+one complete render uses about 98% of a free month and leaves almost nothing for
 corrections. Check your balance and per-call limit first — ask the Fish Audio
 connector for `get_credit_balance`, or look at the dashboard.
 
