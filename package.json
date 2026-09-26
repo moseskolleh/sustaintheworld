@@ -11,15 +11,16 @@
     "fonts:build": "node scripts/build-fonts.js",
     "fonts:check": "node scripts/build-fonts.js --check",
     "smoke": "node scripts/smoke.js",
-    "test:unit": "node tests/bugs.test.js && node tests/resilience.test.js && node tests/carbon.test.js && node tests/voice.test.js && node tests/narration.test.js && node tests/content.test.js && node tests/portfolio.test.js && node tests/html.test.js && node tests/apps-script.test.js",
+    "test:unit": "node tests/bugs.test.js && node tests/resilience.test.js && node tests/nojs.test.js && node tests/carbon.test.js && node tests/assay.test.js && node tests/voice.test.js && node tests/narration.test.js && node tests/content.test.js && node tests/portfolio.test.js && node tests/html.test.js && node tests/apps-script.test.js && node tests/navigation.test.js",
     "budget": "node scripts/check-budget.js",
     "mcp:verify": "node scripts/verify-mcp-pin.js",
     "map:build": "node scripts/generate-journey-map.js",
     "map:check": "node scripts/generate-journey-map.js --check",
     "voice": "node scripts/generate-voice.js",
+    "voice:intro": "node scripts/voice-intro.js",
     "voice:assemble": "node scripts/assemble-voice.js",
     "voice:mock": "node scripts/mock-fish-audio.js",
-    "voice:check": "FISH_AUDIO_API_BASE=http://127.0.0.1:8199 FISH_AUDIO_API_KEY=mock FISH_AUDIO_FORMAT=wav node scripts/generate-voice.js --force"
+    "voice:check": "FISH_AUDIO_API_BASE=http://127.0.0.1:8199 FISH_AUDIO_API_KEY=mock FISH_AUDIO_FORMAT=wav node scripts/generate-voice.js --sections --force"
   },
   "devDependencies": {
     "d3-geo": "3.1.1",

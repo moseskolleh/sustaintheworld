@@ -35,7 +35,7 @@
       "bestFor": "Roles in water resource management, WASH programming, hydrogeology, or utility planning — especially where field delivery and analysis have to meet.",
       "evidence": [
         "164 water points delivered — 100 wells rehabilitated, 50 boreholes, 14 solar-powered",
-        "70% aquifer strike rate against roughly 30% for blind siting",
+        "70% aquifer strike rate on survey-sited boreholes, from field records",
         "10,226 sub-basins modelled for river pollution export",
         "MSc thesis proposing soft-path alternatives to hard water infrastructure"
       ]
@@ -65,7 +65,7 @@
         "Sustainable-AI framework and prototype for the Dutch Ministry of Finance",
         "EcoPrompt Coach — a public tool with a full evidence ledger behind every factor",
         "Framework framed against CSRD/ESRS disclosure logic",
-        "This site: a first view of ~270 KB with its fonts, budgeted and enforced in CI"
+        "This site: a first view of ~275 KB with its fonts, budgeted and enforced in CI"
       ]
     }
   ]

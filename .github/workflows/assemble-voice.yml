@@ -1,20 +1,20 @@
 name: Assemble voice narration
 
-# Stitches the pre-rendered Fish Audio chunks listed in
+# Stitches pre-rendered Fish Audio chunks listed in
 # scripts/voice-chunks.json into assets/audio/*.mp3 plus the manifest,
-# and commits the result back to the branch it was dispatched on.
-# Runs here because the runners have ffmpeg and open egress to the
-# Fish Audio CDN. Triggers only when the chunk map or the assembler
-# change — narration is a deliberate act, and the result commit
-# (assets/audio only) cannot re-trigger it.
+# and commits the result back to the branch it was run on. Runs here
+# because the runners have ffmpeg and open egress to the Fish Audio CDN.
+#
+# Manual only. It used to run on every push that touched the chunk map
+# or the assembler; the section tracks it built are retired, the map is
+# empty, and rendered narration should never follow from an unrelated
+# edit. With an empty map the assembler changes nothing and there is
+# nothing to commit. Whatever it does build must pass the audio budget
+# before it is committed — the site ships at most Moses's own recorded
+# introduction (scripts/check-budget.js).
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - scripts/voice-chunks.json
-      - scripts/assemble-voice.js
-      - .github/workflows/assemble-voice.yml
 
 permissions:
   contents: write
@@ -27,9 +27,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: Count the sections to assemble
+        id: plan
+        run: node -e "const p = require('./scripts/voice-chunks.json'); console.log('sections=' + (p.sections || []).length)" >> "$GITHUB_OUTPUT"
       - name: Install ffmpeg
+        if: steps.plan.outputs.sections != '0'
         run: sudo apt-get update -q && sudo apt-get install -y -q ffmpeg
       - run: node scripts/assemble-voice.js
+      - name: Hold the result to the audio budget
+        run: node scripts/check-budget.js
       - name: Commit the narration
         run: |
           git config user.name "github-actions[bot]"

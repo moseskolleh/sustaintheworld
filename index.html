@@ -3,6 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- JavaScript is on, so the stylesheet may hide what script.js brings in.
+         If script.js fails to load (its onerror) or has not taken over in 4 s,
+         the class comes off and the page shows as it would without it. -->
+    <script>document.documentElement.classList.add('js');setTimeout(function(){if(!window.mksReady)document.documentElement.classList.remove('js')},4000)</script>
     <meta name="description" content="Moses Kolleh Sesay — Sustainability &amp; Climate Analyst. From mapping groundwater in Freetown to building sustainable AI frameworks in Amsterdam.">
     <meta name="author" content="Moses Kolleh Sesay">
     <title>Moses Kolleh Sesay | Sustainability &amp; Climate Analyst</title>
@@ -133,25 +137,38 @@
                 </svg>
                 <span class="logo-text">MK<span class="logo-accent">S</span></span>
             </a>
+            <!-- Hidden until script.js wires it up: without the script it
+                 could not switch anything, so it does not show. -->
+            <button type="button" class="theme-toggle" id="themeToggle" aria-label="Switch to light theme" hidden>
+                <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-moon"></use></svg>
+            </button>
             <button type="button" class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="navMenu">
                 <span></span>
                 <span></span>
                 <span></span>
             </button>
             <ul class="nav-menu" id="navMenu">
-                <li><a href="#journey" class="nav-link"><span class="nav-num">01</span>Journey</a></li>
-                <li><a href="#about" class="nav-link"><span class="nav-num">02</span>About</a></li>
-                <li><a href="#experience" class="nav-link"><span class="nav-num">03</span>Experience</a></li>
-                <li><a href="#projects" class="nav-link"><span class="nav-num">04</span>Projects</a></li>
-                <li><a href="case-studies.html" class="nav-link" data-analytics="nav-case-studies"><span class="nav-num">05</span>Case studies</a></li>
-                <li><a href="research.html" class="nav-link" data-analytics="nav-research"><span class="nav-num">06</span>Research</a></li>
-                <li><a href="#ecoprompt" class="nav-link"><span class="nav-num">07</span>AI, Weighed</a></li>
-                <li><a href="#skills" class="nav-link"><span class="nav-num">08</span>Skills</a></li>
-                <li><a href="#education" class="nav-link"><span class="nav-num">09</span>Education</a></li>
-                <li><a href="#notes" class="nav-link"><span class="nav-num">10</span>Notes</a></li>
+                <li><a href="#journey" class="nav-link">Journey</a></li>
+                <li><a href="#about" class="nav-link">About</a></li>
+                <li><a href="#experience" class="nav-link">Experience</a></li>
+                <li><a href="#projects" class="nav-link">Projects</a></li>
+                <li><a href="case-studies.html" class="nav-link" data-analytics="nav-case-studies">Case studies</a></li>
+                <li><a href="research.html" class="nav-link" data-analytics="nav-research">Research</a></li>
+                <li><a href="#ecoprompt" class="nav-link">AI, Weighed</a></li>
+                <li><a href="#skills" class="nav-link">Skills</a></li>
+                <li><a href="#education" class="nav-link">Education</a></li>
+                <li><a href="#notes" class="nav-link">Notes</a></li>
                 <li><a href="assets/Moses_Kolleh_Sesay_CV.pdf" class="nav-link nav-cv" download data-analytics="cv-download-nav"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-file-arrow-down"></use></svg> CV</a></li>
                 <li><a href="#contact" class="nav-link contact-btn" data-analytics="contact-nav">Contact</a></li>
             </ul>
+            <!-- Shown by script.js once something can speak; the player goes
+                 right after it, next in Tab order. -->
+            <div class="nav-listen" id="navListen" hidden>
+                <button type="button" class="listen-btn" id="listenBtn" aria-expanded="false" title="Listen to this page" data-analytics="listen">
+                    <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-waveform"></use></svg>
+                    <span class="listen-word">Listen<span class="sr-only"> to this page</span></span>
+                </button>
+            </div>
         </div>
     </nav>
 
@@ -190,19 +207,19 @@
             </div>
             <div class="hero-stats">
                 <div class="hero-stat">
-                    <span class="hero-stat-number" data-target="164">0</span>
+                    <span class="hero-stat-number" data-target="164">164</span>
                     <span class="hero-stat-label">Water points delivered</span>
                 </div>
                 <div class="hero-stat">
-                    <span class="hero-stat-number" data-target="54">0</span>
+                    <span class="hero-stat-number" data-target="54">54</span>
                     <span class="hero-stat-label">Hazard systems documented</span>
                 </div>
                 <div class="hero-stat">
-                    <span class="hero-stat-number" data-target="3">0</span>
+                    <span class="hero-stat-number" data-target="3">3</span>
                     <span class="hero-stat-label">Continents worked on</span>
                 </div>
                 <div class="hero-stat">
-                    <span class="hero-stat-number" data-target="2">0</span>
+                    <span class="hero-stat-number" data-target="2">2</span>
                     <span class="hero-stat-label">Master's degrees</span>
                 </div>
             </div>
@@ -276,7 +293,7 @@
                             <span class="journey-coords">51.97° N, 5.67° E</span>
                             <h3>Wageningen, Netherlands</h3>
                             <span class="journey-years">2021 — 2024</span>
-                            <p>MSc Environmental Sciences. Modelled river export of pollutants across <strong>10,000+ sub-basins worldwide</strong> and wrote future storylines for Africa's coastal waters.</p>
+                            <p>MSc Environmental Sciences. Modelled river export of pollutants across <strong>10,226 sub-basins worldwide</strong> and wrote future storylines for Africa's coastal waters.</p>
                         </div>
                     </li>
                     <li class="journey-stop reveal" data-stop="4">
@@ -324,8 +341,8 @@
                     <p>
                         With dual master's degrees in <strong>Environmental Sciences</strong> (Wageningen) and
                         <strong>Industrial Engineering</strong> (Hunan), I sit at the intersection of field
-                        experience and analytical rigour: managing water projects that reached
-                        <strong>10,000+ people</strong>, reviewing disaster-loss data for the UN, and building
+                        experience and analytical rigour: managing water projects that delivered
+                        <strong>164 water points</strong>, reviewing disaster-loss data for the UN, and building
                         ESG and climate-risk analyses that decision-makers can act on.
                     </p>
                     <p>
@@ -353,7 +370,7 @@
                         <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-water"></use></svg>
                         <div>
                             <h3>Water systems</h3>
-                            <p>10,000+ people served through water projects</p>
+                            <p>164 water points delivered across Sierra Leone</p>
                         </div>
                     </div>
                     <div class="fact-card">
@@ -366,8 +383,8 @@
                     <div class="fact-card">
                         <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-leaf"></use></svg>
                         <div>
-                            <h3>ESG specialist</h3>
-                            <p>Certified across major sustainability frameworks</p>
+                            <h3>ESG certified</h3>
+                            <p>ESG Specialist Program, Corporate Finance Institute (2024)</p>
                         </div>
                     </div>
                 </div>
@@ -440,7 +457,7 @@
                         <ul>
                             <li>Audited disaster-loss data for Caribbean countries feeding the Sendai Framework Monitor</li>
                             <li>Documented 54 global hazard information systems, expanding regional and hazard-type coverage by 25%</li>
-                            <li>Wrote the disaster and climate-risk factsheet for Trinidad and Tobago that informed national planning</li>
+                            <li>Wrote the disaster and climate-risk factsheet for Trinidad and Tobago, produced for national policy use</li>
                         </ul>
                         <div class="tags">
                             <span>UN Sendai Framework</span>
@@ -460,7 +477,7 @@
                         <ul>
                             <li>Led completion of 14 solar-powered boreholes with storage tanks across Sierra Leone</li>
                             <li>Hit a 70% aquifer-detection rate with electrical-resistivity surveys and pumping tests</li>
-                            <li>Improved project execution efficiency by 15% using Excel and QGIS</li>
+                            <li>Streamlined the borehole design process in Excel and QGIS</li>
                             <li>Trained local staff on sustainable water-system maintenance</li>
                         </ul>
                         <div class="tags">
@@ -479,7 +496,7 @@
                         <h3>Operations Supervisor</h3>
                         <h4>Sierra Drilling and Water Supply Enterprise · Freetown, Sierra Leone</h4>
                         <ul>
-                            <li>Managed a team of 23, achieving a 95% project completion rate</li>
+                            <li>Managed a drilling team of 23</li>
                             <li>Constructed 50 boreholes and rehabilitated 100 hand-dug wells</li>
                             <li>Used Excel and QGIS for project management and optimisation</li>
                         </ul>
@@ -627,7 +644,7 @@
                                     <ul>
                                         <li>Pinned down the critical socioeconomic factors behind coastal pollution</li>
                                         <li>Delivered scenario storylines that turn model output into policy conversations</li>
-                                        <li>Contributed to global understanding of water pollution patterns</li>
+                                        <li>Examined and defended at Wageningen University &amp; Research; the thesis is available on request</li>
                                     </ul>
                                 </div>
                             </div>
@@ -658,7 +675,7 @@
                         <div class="project-head">
                             <div class="project-meta">
                                 <span class="mono-label">2023 · Wuppertal, DE</span>
-                                <span class="project-status">Team Lead</span>
+                                <span class="project-status">Team of six</span>
                             </div>
                             <h3><button type="button" class="project-toggle view-details-btn" aria-expanded="false">Flood-Resilient Wuppertal</button></h3>
                             <p>"Preventing the Schwebebahn from becoming a boat" — an academic consultancy for the Municipality of Wuppertal on flood risk and climate adaptation.</p>
@@ -771,8 +788,8 @@
                                 <div class="story-block">
                                     <h4><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trophy"></use></svg> Results &amp; impact</h4>
                                     <ul>
-                                        <li>Improved disaster-data quality and accessibility for the Caribbean region</li>
-                                        <li>Delivered a national risk framework supporting Sendai Framework goals</li>
+                                        <li>Caribbean loss records cross-checked against external datasets before they fed the Sendai Framework Monitor</li>
+                                        <li>A risk-management factsheet for Trinidad and Tobago, produced for national policy use</li>
                                     </ul>
                                 </div>
                             </div>
@@ -806,7 +823,7 @@
                                 <span class="project-status">MSc Thesis</span>
                             </div>
                             <h3><button type="button" class="project-toggle view-details-btn" aria-expanded="false">Soft Path Water Management</button></h3>
-                            <p>"Thinking beyond cement, steel and pipes" — a soft-path framework for water security in Freetown, written 12,000 km from home.</p>
+                            <p>"Thinking beyond cement, steel and pipes" — a soft-path framework for water security in Freetown, written nearly 13,000 km from home.</p>
                             <div class="project-tech">
                                 <span>Water Management</span><span>Systems Analysis</span><span>Community Design</span>
                             </div>
@@ -832,8 +849,8 @@
                                 <div class="story-block">
                                     <h4><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trophy"></use></svg> Results &amp; impact</h4>
                                     <ul>
-                                        <li>A cost-effective, community-centred alternative to pipe-and-pump thinking</li>
-                                        <li>A scalable model for fast-growing cities across the Global South</li>
+                                        <li>A community-centred alternative to pipe-and-pump thinking, scoped for fast-growing cities in the Global South</li>
+                                        <li>A proposal that passed examination, not a deployed system &mdash; no city has implemented it, and no cost saving is claimed</li>
                                         <li>Successfully defended at Hunan University, May 2021</li>
                                     </ul>
                                 </div>
@@ -876,7 +893,7 @@
                                 <span class="project-status">BSc Dissertation</span>
                             </div>
                             <h3><button type="button" class="project-toggle view-details-btn" aria-expanded="false">Groundwater Potential Mapping</button></h3>
-                            <p>Geophysics that became drinking water: mapping aquifers in the Freetown Complex, then proving it in the field with a 70% strike rate.</p>
+                            <p>Geophysics that became drinking water: mapping aquifers in the Freetown Complex, then testing the maps in the field — a 70% strike rate.</p>
                             <div class="project-tech">
                                 <span>Geophysics</span><span>GIS</span><span>Hydrogeology</span>
                             </div>
@@ -902,9 +919,9 @@
                                 <div class="story-block">
                                     <h4><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trophy"></use></svg> Results &amp; impact</h4>
                                     <ul>
-                                        <li>70% aquifer strike rate in subsequent drilling — well above local averages</li>
-                                        <li>Groundwater potential maps now underpinning local water development</li>
-                                        <li>This research later guided the 164 water points I helped deliver</li>
+                                        <li>70% aquifer strike rate in subsequent drilling, from field records rather than a controlled trial</li>
+                                        <li>Groundwater-potential maps used in the siting work that followed</li>
+                                        <li>The method informed the siting of the 164 water points I helped deliver</li>
                                     </ul>
                                 </div>
                             </div>
@@ -942,7 +959,7 @@
                             </div>
                             <div class="dossier-widget strike" id="strikeWidget">
                                 <h4><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-tint"></use></svg> Seven in ten: what reading the ground is worth <span class="try-tag">try it</span></h4>
-                                <p class="dossier-widget-intro">Every borehole is a bet a community pays for. Drag the strike rate from blind drilling in hard rock up to what reading the resistivity curve first delivers — and watch the dry holes turn to water.</p>
+                                <p class="dossier-widget-intro">Every borehole is a bet a community pays for. Drag the strike rate from an illustrative blind-drilling rate up to what reading the resistivity curve first delivered — and watch the dry holes turn to water.</p>
                                 <div class="strike-waffle" id="strikeWaffle" aria-hidden="true"></div>
                                 <p class="strike-counter" id="strikeCounter"></p>
                                 <div class="strike-control">
@@ -951,8 +968,8 @@
                                     <output class="strike-out" id="strikeOut" for="strikeSlider">70%</output>
                                 </div>
                                 <datalist id="strikeTicks"><option value="30"></option><option value="70"></option></datalist>
-                                <div class="strike-anchors" aria-hidden="true"><span>Blind drilling · 30%</span><span class="strike-anchor-win">Reading the curve · 70%</span></div>
-                                <p class="strike-foot">Baseline &asymp; blind drilling in the Freetown hard-rock complex; 70% is my field-proven rate reading electrical resistivity first — part of the 164 water points I helped deliver.</p>
+                                <div class="strike-anchors" aria-hidden="true"><span>Blind drilling · ~30%, illustrative</span><span class="strike-anchor-win">Reading the curve · 70%</span></div>
+                                <p class="strike-foot">70% is my strike rate in the field records, reading electrical resistivity first &mdash; part of the 164 water points I helped deliver. The 30% blind-drilling baseline is illustrative &mdash; not a measured figure.</p>
                                 <a class="feature-next" href="#ecoprompt">Next &rarr; the AI side: what one answer costs the planet</a>
                             </div>
                         </div>
@@ -972,6 +989,7 @@
                 <h2 class="section-title">AI, <span class="highlight">Weighed</span></h2>
                 <p class="section-description">A live slice of my current research. Pick a model and a workload — see what one AI answer costs the planet, in units you can actually feel.</p>
             </div>
+            <p class="nojs-note">These calculators run in your browser, so they need JavaScript switched on. The method behind them, and its limits, are written out on the <a href="carbon-ai.html">EcoPrompt Coach</a> page.</p>
 
             <!-- You Draw It: predict AI's energy curve, then reveal the truth -->
             <div class="ydi reveal" id="ydi">
@@ -987,7 +1005,7 @@
                 <div class="ydi-legend" id="ydiLegend" hidden aria-hidden="true">
                     <span class="ydi-leg ydi-leg-guess">your guess</span>
                     <span class="ydi-leg ydi-leg-real">measured</span>
-                    <span class="ydi-leg ydi-leg-intuit">what people expect</span>
+                    <span class="ydi-leg ydi-leg-intuit">a straight-line guess (illustrative)</span>
                 </div>
                 <div class="ydi-controls">
                     <button class="btn btn-primary btn-small" id="ydiReveal" type="button" data-analytics="ydi-reveal">Reveal the real curve</button>
@@ -1053,11 +1071,11 @@
                         <button type="button" class="anatomy-scale-btn" data-scale="year" aria-pressed="false">per analyst-year</button>
                     </div>
                 </div>
-                <p class="anatomy-scenario mono-label">Everyday chat · ~1k tokens · drag the grid from the Netherlands to Norway and watch Scope 2 cross under Scope 3</p>
-                <div class="anatomy-svg-wrap" tabindex="0" role="region" aria-label="Anatomy of an AI answer, flow diagram (scrolls sideways on small screens)"><svg class="anatomy-svg" id="anatomySvg" viewBox="0 0 720 320" role="img" aria-label="Flow diagram splitting one AI answer into Scope 2 grid electricity, Scope 3 embodied hardware, and data-centre cooling water, each mapped to its ESRS disclosure line. A text summary follows."></svg></div>
+                <p class="anatomy-scenario mono-label">Everyday chat · ~1k tokens · switch the grid from the Netherlands to Norway and watch Scope 2 fall</p>
+                <div class="anatomy-svg-wrap" tabindex="0" role="region" aria-label="Anatomy of an AI answer, flow diagram (scrolls sideways on small screens)"><svg class="anatomy-svg" id="anatomySvg" viewBox="0 0 720 320" role="img" aria-label="Flow diagram splitting one AI answer into Scope 2 grid electricity, Scope 3 embodied hardware (not quantified), and data-centre cooling water, each mapped to its ESRS disclosure line. A text summary follows."></svg></div>
                 <p class="anatomy-summary" id="anatomySummary"></p>
                 <button type="button" class="anatomy-copy btn btn-secondary btn-small" id="anatomyCopy" data-analytics="anatomy-copy"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-copy"></use></svg> Copy figure</button>
-                <p class="anatomy-foot">Scope 2 follows the grid; on a clean grid the hardware's embodied carbon (Scope 3) can outweigh it. Embodied carbon per query is the roughest term here — an order-of-magnitude amortisation, shown to prove the line exists, not to pin it down. Water maps to ESRS E3. Energy, grid and water come from the same shared model behind &ldquo;AI, Weighed&rdquo;.</p>
+                <p class="anatomy-foot">Boundary: inference only, as in the full coach. Scope 2 is grid electricity, data-centre overhead included; cooling water maps to ESRS E3. Embodied hardware carbon belongs on Scope 3 (capital goods), but no per-query factor for it is sourced well enough for the evidence ledger, so neither page quantifies it. Energy, grid and water come from the same shared model behind &ldquo;AI, Weighed&rdquo;.</p>
                 <a class="feature-next" href="#assay">Next &rarr; does my record fit your role?</a>
             </div>
         </div>
@@ -1088,8 +1106,8 @@
                             <a class="toolkit-proof" href="#education">Masterschool data analytics — real business cases <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-arrow-right"></use></svg></a>
                         </li>
                         <li class="toolkit-item">
-                            <span class="toolkit-name">Tableau &amp; Power BI <span class="toolkit-sub">visual analytics</span></span>
-                            <a class="toolkit-proof" href="#education">Climate-risk and ESG reporting dashboards <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-arrow-right"></use></svg></a>
+                            <span class="toolkit-name">Tableau <span class="toolkit-sub">visual analytics</span></span>
+                            <a class="toolkit-proof" href="#education">Masterschool data analytics — Tableau on real business cases <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-arrow-right"></use></svg></a>
                         </li>
                         <li class="toolkit-item">
                             <span class="toolkit-name">Machine Learning <span class="toolkit-sub">regression · classification</span></span>
@@ -1157,9 +1175,9 @@
                             <div class="impact-legend mono-label"><span>7 of every 10 boreholes hit water — in geology where drilling is a gamble</span></div>
                         </div>
                         <div class="impact-row impact-row-inline">
-                            <div class="impact-fact"><span class="impact-fact-num">10,000+</span><span class="mono-label">people reached by these water systems</span></div>
+                            <div class="impact-fact"><span class="impact-fact-num">10,226</span><span class="mono-label">sub-basins modelled for river pollution export</span></div>
                             <div class="impact-fact"><span class="impact-fact-num">54</span><span class="mono-label">hazard information systems documented for the UN</span></div>
-                            <div class="impact-fact"><span class="impact-fact-num">95%</span><span class="mono-label">project completion rate leading a team of 23</span></div>
+                            <div class="impact-fact"><span class="impact-fact-num">23</span><span class="mono-label">people on the drilling team I managed</span></div>
                         </div>
                     </div>
                 </div>
@@ -1342,7 +1360,7 @@
                 <div class="assay-head">
                     <span class="mono-label">Before you decide</span><span class="try-tag">try it</span>
                     <h3 class="assay-title">Does my record fit your role?</h3>
-                    <p class="assay-lede">Paste a job description below. This grades the fit and maps each requirement to the evidence that backs it &mdash; <strong>entirely in your browser</strong>. The text never leaves this page, and no AI model is downloaded to do it. Doing this in a few kilobytes instead of a gigabyte model is, more or less, the whole point of my work.</p>
+                    <p class="assay-lede">Paste a job description below. This grades the fit, maps each requirement to the evidence that backs it, and lists the ones this site has no evidence for &mdash; <strong>entirely in your browser</strong>. The text never leaves this page, and no AI model is downloaded to do it. Doing this in a few kilobytes instead of a gigabyte model is, more or less, the whole point of my work.</p>
                 </div>
                 <div class="assay-io">
                     <label class="mono-label" for="assayInput">Job description</label>
@@ -1436,7 +1454,7 @@
             <div class="footer-content">
                 <div class="footer-logo">MK<span class="logo-accent">S</span></div>
                 <p class="footer-coords mono-label">52.3676° N, 4.9041° E — Amsterdam</p>
-                <p>&copy; <span class="current-year">2025</span> Moses Kolleh Sesay. All rights reserved.</p>
+                <p>&copy; <span class="current-year">2026</span> Moses Kolleh Sesay. All rights reserved.</p>
                 <p class="footer-tagline">From bedrock to cloud — building a sustainable future with data.</p>
 
                 <div class="carbon-badge" id="carbonBadge">
@@ -1450,8 +1468,8 @@
                     (&asymp;0.36&nbsp;g CO&#8322;e per MB, global average grid). Comparison point: the median web page ships &asymp;2.5&nbsp;MB
                     (<a href="https://httparchive.org/reports/page-weight" target="_blank" rel="noopener">HTTP Archive</a>).
                     A leading &ldquo;+&rdquo; means a third-party file served without timing headers couldn&rsquo;t be measured, so the true figure is a touch higher &mdash; never lower.
-                    Before this redesign, this page shipped ~25&nbsp;MB of images. A first view now costs about 270&nbsp;KB over the wire, fonts included &mdash; text compressed, one hero image, everything else loaded only if you go looking for it. That figure is a budget the test suite enforces, not a claim in a README.
-                    Want the logical extreme? The <a href="field-report.html">text-only field report</a> is the whole portfolio in 8&nbsp;KB.</p>
+                    Before this redesign, this page shipped ~25&nbsp;MB of images. A first view now costs about 275&nbsp;KB over the wire, fonts included &mdash; text compressed, one hero image, everything else loaded only if you go looking for it. That figure is a budget the test suite enforces, not a claim in a README.
+                    Want the logical extreme? The <a href="field-report.html">text-only field report</a> is the whole portfolio in 9&nbsp;KB.</p>
                 </div>
 
                 <!-- The Receipt: this page prints its own itemised carbon bill -->
@@ -1462,7 +1480,7 @@
                     <canvas id="receiptCanvas" width="720" height="10" aria-hidden="true" hidden></canvas>
                 </div>
 
-                <p class="footer-fieldreport mono-label"><a href="field-report.html">prefer plain text? read the 8 KB field report — &asymp;0.003 g CO&#8322;e</a></p>
+                <p class="footer-fieldreport mono-label"><a href="field-report.html">prefer plain text? read the 9 KB field report — &asymp;0.003 g CO&#8322;e</a></p>
                 <button type="button" class="eco-mode-toggle" id="ecoModeToggle" aria-pressed="false">
                     <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-leaf"></use></svg> <span id="ecoModeLabel">Low-energy mode: off</span>
                 </button>
@@ -1495,6 +1513,6 @@
          games and the section-05 interactives live in modules/ and are
          fetched by script.js the first time each is needed — see its
          ON-DEMAND MODULES section. -->
-    <script src="script.js"></script>
+    <script src="script.js" onerror="document.documentElement.classList.remove('js')"></script>
 </body>
 </html>

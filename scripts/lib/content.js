@@ -115,6 +115,31 @@ function checkAvailability(label, entry) {
     return problems;
 }
 
+// A language level the Assay can compare with what a job ad asks for.
+// "Good" or "fluent" means different things to different readers; a CEFR
+// level (or "native") means the same thing to all of them.
+const LANGUAGE_LEVEL = /^(?:[ABC][12]|native)$/;
+
+/**
+ * profile.languages is optional: absent or null, the Assay treats every
+ * non-English language an ad asks for as a gap. Present, each entry must
+ * say which language and at what level, or it would be a claim the Assay
+ * cannot weigh.
+ */
+function checkLanguages(languages) {
+    if (languages === undefined || languages === null) return [];
+    if (!Array.isArray(languages)) return ['profile: languages must be a list of { "language", "level" } entries, or null'];
+    const problems = [];
+    languages.forEach((l, i) => {
+        const at = `profile: language ${i + 1}${l && l.language ? ` ("${l.language}")` : ''}`;
+        if (!l || typeof l.language !== 'string' || !l.language.trim()) problems.push(`${at}: no language named`);
+        if (!l || !LANGUAGE_LEVEL.test(String(l.level))) {
+            problems.push(`${at}: level "${l && l.level}" is not a CEFR level (A1–C2) or "native"`);
+        }
+    });
+    return problems;
+}
+
 /**
  * Reads everything and returns it validated, or throws with every problem
  * listed at once — one run of the build should tell you all of them.
@@ -208,6 +233,23 @@ function loadAll() {
     narration.scripts.forEach((s) => {
         if (!s.id || !s.label || !s.text) problems.push(`narration "${s.id || '?'}": missing id, label or text`);
     });
+    // The introduction is read by Moses himself, so it has a shape to keep:
+    // one 60-90 second take, which at a measured pace is 150-220 words, and
+    // it opens with the greeting the recording is known by.
+    const intro = narration.intro;
+    if (intro) {
+        if (intro.id !== 'intro' || !intro.label || !intro.readBy || !intro.text) {
+            problems.push('narration intro: needs id "intro", a label, readBy and text');
+        } else {
+            const words = intro.text.trim().split(/\s+/).length;
+            if (words < 150 || words > 220) problems.push(`narration intro: ${words} words; a 60-90 s take is 150-220`);
+            if (!/^Kushe\b/.test(intro.text)) problems.push('narration intro: must open with "Kushe"');
+            if (intro.readBy !== profile.person.name) problems.push(`narration intro: readBy "${intro.readBy}" is not ${profile.person.name}`);
+        }
+    }
+
+    // --- languages (optional) ------------------------------------------
+    problems.push(...checkLanguages(profile.languages));
 
     if (problems.length) {
         throw new Error(`content failed validation:\n  - ${problems.join('\n  - ')}`);
@@ -234,5 +276,6 @@ module.exports = {
     loadAll,
     urlProblem,
     checkAvailability,
+    checkLanguages,
     orderForLens
 };

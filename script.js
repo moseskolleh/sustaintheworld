@@ -87,11 +87,12 @@ window.mksStorage = safeStorage;
 
 // A smooth scroll is motion. The stylesheet turns it off for reduced
 // motion, but scrollIntoView({ behavior: 'smooth' }) does not ask the
-// stylesheet, so every scripted scroll asks here instead.
+// stylesheet, so every scripted scroll asks here instead. 'instant', since
+// 'auto' defers to the stylesheet, which still glides in low-energy mode.
 const scrollMotion = () => (
     (document.body && document.body.classList.contains('eco-mode')) ||
     (typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches)
-) ? 'auto' : 'smooth';
+) ? 'instant' : 'smooth';
 window.mksScrollMotion = scrollMotion;
 
 // ===================================
@@ -111,11 +112,13 @@ window.mksScrollMotion = scrollMotion;
 // SyntaxError) and reach the core only through window.mks*. Each marks
 // itself in window.mksLoaded when it has run, which is also how the jsdom
 // harness — which evaluates them directly — tells the loader they are here.
+// A module's own stylesheet is listed first, so it has arrived before the
+// script builds anything it styles.
 const MODULES = {
     interactives: ['ai-carbon-data.js', 'modules/interactives.js'],
     dossier: ['modules/dossier.js'],
     terminal: ['modules/terminal.js'],
-    dispatch: ['voice-scripts.js', 'modules/dispatch.js']
+    dispatch: ['modules/dispatch.css', 'voice-scripts.js', 'modules/dispatch.js']
 };
 
 const mksLoad = (() => {
@@ -123,9 +126,10 @@ const mksLoad = (() => {
     const inflight = {};
 
     const inject = (src) => new Promise((resolve, reject) => {
-        const s = document.createElement('script');
-        s.src = src;
-        s.async = false;   // keep the order a module's dependencies were listed in
+        const css = /\.css$/.test(src);
+        const s = document.createElement(css ? 'link' : 'script');
+        if (css) { s.rel = 'stylesheet'; s.href = src; }
+        else { s.src = src; s.async = false; }   // keep the order a module's dependencies were listed in
         s.onload = () => { loaded[src] = true; resolve(); };
         s.onerror = () => { s.remove(); reject(new Error(`could not load ${src}`)); };
         document.head.appendChild(s);
@@ -159,6 +163,15 @@ function mksLoadFor(target) {
 }
 
 // ===================================
+// WITHOUT JAVASCRIPT, AND LATE
+// ===================================
+// The stylesheet hides nothing unless <head> marked the page html.js, and
+// <head> takes the mark off if this file has not set mksReady within 4 s.
+// Arriving after that is a slow network, not a failure: the reader has
+// already been shown the page, so nothing is hidden again or replayed.
+const lateStart = !document.documentElement.classList.contains('js');
+
+// ===================================
 // PRELOADER
 // ===================================
 (() => {
@@ -171,8 +184,9 @@ function mksLoadFor(target) {
 
     // Reduced-motion visitors, and anyone who has already seen the intro this
     // session, skip it entirely — no fake loading bar in front of static HTML.
+    // So does a late start: the page is already on screen.
     const seen = safeStorage.session.get('mks-intro-seen');
-    if (reduce || seen) { wipe(); return; }
+    if (reduce || seen || lateStart) { wipe(); return; }
     safeStorage.session.set('mks-intro-seen', '1');
 
     const coordsEl = document.getElementById('preloaderCoords');
@@ -317,35 +331,69 @@ function revealTarget(target) {
     return expanded;
 }
 
+// Focus is what makes a jump real to a keyboard or a screen reader: without
+// it the next Tab starts from the link that was pressed, so the skip link
+// skipped nothing. A section gets tabindex="-1" (focusable, never a Tab
+// stop) only when it needs one. preventScroll: the scroll is the caller's.
+function focusTarget(target) {
+    if (target.tabIndex < 0 && !target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
+    target.focus({ preventScroll: true });
+}
+
+// Fetch what the target needs, open the dossier or receipt around it (and
+// give that a moment to push things into place), then scroll and focus.
+function jumpTo(target, behavior, focus, wait) {
+    mksLoadFor(target);
+    const land = () => {
+        target.scrollIntoView({ behavior, block: 'start' });
+        if (focus) focusTarget(target);
+    };
+    if (revealTarget(target)) setTimeout(land, 240);
+    else if (wait) setTimeout(land, 0); else land();
+}
+
+// The address each jump was handled for: Back and Forward fire popstate
+// and, when the fragment changes, hashchange too. The second is dropped.
+let jumpedTo = null;
+
+// In-page links used to scroll and stop there: the address never changed,
+// so Back left the site, and focus stayed on the link. Now they navigate.
 document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     anchor.addEventListener('click', function (e) {
         const href = this.getAttribute('href');
         // Bare "#" hrefs (e.g. project expand toggles) are not real targets;
         // querySelector('#') would throw SyntaxError, so bail out.
         if (!href || href === '#') return;
+        // A modified click asks for a new tab or window: the browser's job.
+        if (e.button || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
         const target = document.querySelector(href);
         if (!target) return;
         e.preventDefault();
-        mksLoadFor(target);
-        const didExpand = revealTarget(target);
-        const scroll = () => target.scrollIntoView({ behavior: scrollMotion(), block: 'start' });
-        if (didExpand) setTimeout(scroll, 180); else scroll();
+        // The same link twice is one entry. Safari throws past 100 pushes
+        // in 30 seconds, which should cost the entry, not the jump.
+        if (location.hash !== href) {
+            try { history.pushState(null, '', href); } catch (err) { /* jump anyway */ }
+        }
+        jumpedTo = location.href;
+        jumpTo(target, scrollMotion(), true, false);
         setMenuOpen(false);
     });
 });
 
-// Direct hits (a shared link, back/forward) also open the collapsed feature.
-function handleHashReveal() {
+// Direct hits (a shared link, Back and Forward, a typed fragment) land the
+// same way, a task later so the browser's own scroll restoring comes first.
+// A shared link on arrival is not focused: nobody has pressed anything yet.
+function handleHashReveal(e) {
+    if (location.href === jumpedTo) return;
+    jumpedTo = location.href;
     if (!location.hash || location.hash === '#') return;
     let target;
-    try { target = document.querySelector(location.hash); } catch (e) { return; }
-    if (!target) return;
-    mksLoadFor(target);
-    const didExpand = revealTarget(target);
-    setTimeout(() => target.scrollIntoView({ behavior: 'auto', block: 'start' }), didExpand ? 240 : 0);
+    try { target = document.querySelector(location.hash); } catch (err) { return; }
+    if (target) jumpTo(target, scrollMotion(), !!e, true);
 }
+window.addEventListener('popstate', handleHashReveal);
 window.addEventListener('hashchange', handleHashReveal);
-if (location.hash) window.addEventListener('load', () => setTimeout(handleHashReveal, 320));
+if (location.hash) window.addEventListener('load', () => setTimeout(() => handleHashReveal(null), 320));
 
 function setMenuOpen(open) {
     if (!navToggle || !navMenu) return;
@@ -391,6 +439,7 @@ const navLinks = Array.from(document.querySelectorAll('.nav-link'));
 
 (() => {
     let sectionTops = [];
+    const underfoot = new Set();   // keep-clear elements in the button's band
     const measure = () => {
         sectionTops = sections.map(s => ({ id: s.id, top: s.offsetTop - 220 }));
     };
@@ -405,7 +454,7 @@ const navLinks = Array.from(document.querySelectorAll('.nav-link'));
             if (y >= sectionTops[i].top) current = sectionTops[i].id;
         }
         if (navbar) navbar.classList.toggle('scrolled', y > 100);
-        if (scrollTopBtn) scrollTopBtn.classList.toggle('visible', y > 400);
+        if (scrollTopBtn) scrollTopBtn.classList.toggle('visible', y > window.innerHeight && !underfoot.size);
         if (scrollProgress) scrollProgress.style.width = (docHeight > 0 ? (y / docHeight) * 100 : 0) + '%';
         navLinks.forEach(link => {
             link.classList.toggle('active', link.getAttribute('href') === `#${current}`);
@@ -417,6 +466,21 @@ const navLinks = Array.from(document.querySelectorAll('.nav-link'));
         requestAnimationFrame(update);
     };
     const relayout = () => { measure(); onScroll(); };
+
+    // Back to top floats bottom right. It waits for a full screen of scroll
+    // (the hero's buttons are above it by then) and steps aside while a
+    // control it would cover is in the bottom quarter of the screen, or
+    // about to be: the observer does that geometry off the scroll path.
+    if (scrollTopBtn && 'IntersectionObserver' in window) {
+        const band = new IntersectionObserver((entries) => {
+            entries.forEach(en => {
+                if (en.isIntersecting) underfoot.add(en.target); else underfoot.delete(en.target);
+            });
+            onScroll();
+        }, { rootMargin: '-75% 0px 10% 0px' });
+        document.querySelectorAll('.hero-availability, .hero-cta, .contact-form, .footer')
+            .forEach(el => band.observe(el));
+    }
 
     window.addEventListener('scroll', onScroll, { passive: true });
     let resizeTimer;
@@ -434,9 +498,21 @@ const navLinks = Array.from(document.querySelectorAll('.nav-link'));
 // ===================================
 // ANIMATED COUNTERS (hero stats)
 // ===================================
+// The real figures are in the HTML, so a reader without JavaScript sees 164,
+// not 0 — and they are exact counts, so nothing is appended. Counting up is
+// motion: not under reduced motion, low-energy mode or a late start.
+const counters = Array.from(document.querySelectorAll('.hero-stat-number'));
+const countersMove = () => !lateStart && scrollMotion() === 'smooth';
+
 const animateCounters = () => {
-    document.querySelectorAll('.hero-stat-number').forEach(counter => {
-        const target = parseInt(counter.getAttribute('data-target'));
+    counters.forEach(counter => {
+        const target = parseInt(counter.getAttribute('data-target'), 10);
+        if (isNaN(target)) return;
+        if (!countersMove()) {
+            // Only differs if low-energy mode came on after it was zeroed.
+            if (counter.textContent !== String(target)) counter.textContent = String(target);
+            return;
+        }
         const duration = 1800;
         const increment = target / (duration / 16);
         let current = 0;
@@ -447,7 +523,7 @@ const animateCounters = () => {
                 counter.textContent = Math.ceil(current);
                 requestAnimationFrame(updateCounter);
             } else {
-                counter.textContent = target + '+';
+                counter.textContent = String(target);
             }
         };
 
@@ -468,6 +544,12 @@ if (statsSection && 'IntersectionObserver' in window) {
         });
     }, observerOptions);
     counterObserver.observe(statsSection);
+
+    // Zeroed before the next paint, only if they will count up from it. The
+    // microtask waits for low-energy mode, restored further down this file.
+    Promise.resolve().then(() => {
+        if (countersMove()) counters.forEach(counter => { counter.textContent = '0'; });
+    });
 }
 
 // ===================================
@@ -806,10 +888,13 @@ window.addEventListener('resize', () => {
 // ===================================
 // SCROLL TO TOP BUTTON
 // ===================================
-// Its visibility is handled by the shared scroll handler above.
+// Its visibility is handled by the shared scroll handler above. It hides as
+// the page rises, so focus moves to the top rather than vanish with it.
 if (scrollTopBtn) {
     scrollTopBtn.addEventListener('click', () => {
         window.scrollTo({ top: 0, behavior: scrollMotion() });
+        const home = document.getElementById('home');
+        if (home) focusTarget(home);
     });
 }
 
@@ -903,21 +988,26 @@ if (contactForm) {
 // ===================================
 // THEME TOGGLE
 // ===================================
-const createThemeToggle = () => {
-    const toggle = document.createElement('button');
-    const startsLight = document.body.classList.contains('light-mode');
-    toggle.innerHTML = `<svg class="icon" aria-hidden="true" focusable="false"><use href="#i-${startsLight ? 'sun' : 'moon'}"></use></svg>`;
-    toggle.className = 'theme-toggle';
-    toggle.setAttribute('aria-label', 'Toggle light/dark mode');
-
-    document.body.appendChild(toggle);
+// A button in the nav bar (it used to float over the hero on a phone). It
+// ships hidden, since without script it cannot switch anything. Its name
+// says what pressing it does, which also tells the current theme.
+const initThemeToggle = () => {
+    const toggle = document.getElementById('themeToggle');
+    if (!toggle) return;
+    const sync = () => {
+        const isLightMode = document.body.classList.contains('light-mode');
+        const use = toggle.querySelector('use');
+        if (use) use.setAttribute('href', `#i-${isLightMode ? 'sun' : 'moon'}`);
+        toggle.setAttribute('aria-label', isLightMode ? 'Switch to dark theme' : 'Switch to light theme');
+    };
+    sync();
+    toggle.hidden = false;
 
     toggle.addEventListener('click', () => {
         document.body.classList.toggle('light-mode');
         const isLightMode = document.body.classList.contains('light-mode');
-        const use = toggle.querySelector('use');
-        if (use) use.setAttribute('href', `#i-${isLightMode ? 'sun' : 'moon'}`);
         safeStorage.local.set('theme', isLightMode ? 'light' : 'dark');
+        sync();
         syncThemeColor();
     });
 };
@@ -939,7 +1029,7 @@ const currentTheme = safeStorage.local.get('theme', 'dark');
 if (currentTheme === 'light') {
     document.body.classList.add('light-mode');
 }
-createThemeToggle();
+initThemeToggle();
 syncThemeColor();
 
 // ===================================
@@ -1062,9 +1152,6 @@ document.querySelectorAll('.current-year').forEach(el => {
         if (window.mksLoaded.interactives) return;
         const btn = e.target && e.target.closest ? e.target.closest('button') : null;
         if (!btn || !btn.closest(INTERACTIVE_HOSTS)) return;
-        // The section's listen control lives in the same host but belongs to
-        // the narration player, which handles its own first press.
-        if (btn.classList.contains('listen-btn')) return;
         e.preventDefault();
         if (waiting.has(btn)) return;
         waiting.add(btn);
@@ -1323,6 +1410,18 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
 })();
 
 // ===================================
+// TAKEN OVER
+// ===================================
+// Everything the stylesheet's html.js rules wait on has run, so the <head>
+// failsafe can stand down. On a late start every reveal is marked done
+// first: putting the mark back must not hide what the reader has seen.
+if (lateStart) {
+    document.querySelectorAll('.reveal').forEach(el => el.classList.add('visible'));
+    document.documentElement.classList.add('js');
+}
+window.mksReady = true;
+
+// ===================================
 // CONVERSION ANALYTICS (privacy-first, provider-agnostic)
 // ===================================
 // A tiny dispatcher that fires named events on the key conversion actions
@@ -1356,63 +1455,62 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
 })();
 
 // ===================================
-// THE SPOKEN PAGE — the listen controls
+// THE SPOKEN PAGE — one listen control, in the nav
 // ===================================
-// The player behind them (modules/dispatch.js plus the scripts it reads) is
-// about 40 KB that only a visitor who presses one of these needs. So the core
-// renders the controls — one on the hero, one in every section header — and
-// the first press fetches the player, which takes them over: same buttons in
-// the same places, now with the transfer cost of each voice printed beside
-// them. A section header without a narration script would get a dead button
-// here, which is why tests/bugs.test.js holds the two lists to each other.
+// The player behind it (modules/dispatch.js, its stylesheet and the scripts
+// it reads) is about 16 KB gzipped that only a visitor who presses Listen
+// needs. So the core only decides whether to show the button; the first
+// press fetches the player, which reads the section in view and moves
+// between sections itself.
+//
+// There used to be ten of these, one in every section header: eight-plus
+// extra Tab stops for a feature most visits never use. One is enough.
+//
+// The button stays hidden unless something can actually speak. A speech
+// engine that reports no voices (headless browsers, Linux without
+// speech-dispatcher) accepts an utterance and silently drops it, and a
+// button that loads a player to say nothing is worse than no button. The one
+// other thing that can speak is Moses's own recorded introduction, so a
+// browser with no voice asks the manifest once, well after the first view.
 (() => {
-    const canSynth = typeof window.speechSynthesis !== 'undefined' &&
-        typeof window.SpeechSynthesisUtterance === 'function';
-    if (!canSynth && typeof window.Audio !== 'function') return;
+    const wrap = document.getElementById('navListen');
+    const btn = document.getElementById('listenBtn');
+    if (!wrap || !btn) return;
 
-    const mounts = [];
-    const cta = document.querySelector('.hero-cta');
-    if (cta) mounts.push({ id: 'hero', label: 'the introduction', insert: (el) => cta.insertAdjacentElement('afterend', el) });
-    document.querySelectorAll('section[id]').forEach(section => {
-        const header = section.querySelector('.section-header');
-        if (!header) return;
-        const title = header.querySelector('h2');
-        mounts.push({
-            id: section.id,
-            label: title ? title.textContent.replace(/\s+/g, ' ').trim() : section.id,
-            insert: (el) => header.appendChild(el)
-        });
-    });
+    const synth = window.speechSynthesis;
+    const canSynth = typeof synth !== 'undefined' && typeof window.SpeechSynthesisUtterance === 'function';
+    const hasVoice = () => canSynth && (synth.getVoices() || []).length > 0;
+    const show = () => { wrap.hidden = false; };
 
-    mounts.forEach(({ id, label, insert }) => {
-        const wrap = document.createElement('div');
-        wrap.className = 'listen-wrap';
-        wrap.dataset.voiceId = id;
-        wrap.innerHTML = `
-            <button class="listen-btn mono-label" type="button" data-voice="${id}"
-                    aria-pressed="false" data-analytics="listen-${id}">
-                <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg>
-                <span>listen<span class="sr-only"> to ${label}</span></span>
-            </button>
-            <span class="listen-cost mono-label"></span>`;
-        const btn = wrap.querySelector('.listen-btn');
-        btn.addEventListener('click', () => {
-            btn.disabled = true;
-            btn.classList.add('is-loading');
-            mksLoad('dispatch').then(() => {
-                const fd = window.FieldDispatch;
-                if (!fd || !fd.play(id)) return;
-                // The player replaced this button with its own; keep the
-                // keyboard where the visitor left it.
-                const live = document.querySelector(`.listen-btn[data-voice="${id}"]`);
-                if (live && live !== btn) live.focus();
-            }).catch((err) => {
-                btn.disabled = false;
-                btn.classList.remove('is-loading');
-                mksLoadWarn(err);
-            });
+    if (hasVoice()) {
+        show();
+    } else {
+        // Chrome's first getVoices() is routinely empty; the list arrives later.
+        if (canSynth && typeof synth.addEventListener === 'function') {
+            synth.addEventListener('voiceschanged', () => { if (hasVoice()) show(); });
+        }
+        window.addEventListener('load', () => setTimeout(() => {
+            if (!wrap.hidden || typeof window.fetch !== 'function') return;
+            fetch('assets/audio/voice-manifest.json', { cache: 'force-cache' })
+                .then(r => (r.ok ? r.json() : null))
+                .then(m => { if (m && m.tracks && m.tracks.intro) show(); })
+                .catch(() => { /* no recording: the button stays hidden */ });
+        }, 1500));
+    }
+
+    // Every press goes through the player once it is here; the first one
+    // also fetches it. A second press while it is on its way is the same
+    // request, not a close.
+    btn.addEventListener('click', () => {
+        if (btn.getAttribute('aria-busy') === 'true') return;
+        btn.setAttribute('aria-busy', 'true');
+        mksLoad('dispatch').then(() => {
+            btn.removeAttribute('aria-busy');
+            if (window.FieldDispatch) window.FieldDispatch.toggle();
+        }, (err) => {
+            btn.removeAttribute('aria-busy');
+            mksLoadWarn(err);
         });
-        insert(wrap);
     });
 })();
 

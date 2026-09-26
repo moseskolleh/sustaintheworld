@@ -272,35 +272,43 @@ if (typeof document !== 'undefined') {
             return;
         }
 
+        // Option text is kept to about 30 characters: a closed select cannot
+        // wrap, and "Hyperscaler fleet average (~1.1 L/kWh — Google 2024)"
+        // was cut off at every width from a 320px phone to a 1440px desktop.
+        // The rest of what an option used to say goes in the hint beneath
+        // it, which can wrap, and now carries the range as well.
+        const HINTS = [
+            [modelSelect, MODELS, (m) => `${m.provider} · ${m.energyPer1kTokens_Wh} Wh per 1,000 tokens, plausible range ${m.range[0]}–${m.range[1]}`],
+            [regionSelect, REGIONS, (r) => `${r.intensity} gCO₂e per kWh, annual average · hourly range ${r.range[0]}–${r.range[1]}`],
+            [wueSelect, WUE_PROFILES, (w) => w.label]
+        ];
         Object.entries(MODELS).forEach(([key, m]) => {
-            const o = document.createElement('option');
-            o.value = key;
-            o.textContent = `${m.label} (${m.provider}) — ${m.energyPer1kTokens_Wh} Wh/1k tok`;
-            modelSelect.appendChild(o);
+            modelSelect.add(new Option(`${m.label} · ${m.energyPer1kTokens_Wh} Wh/1k`, key));
         });
         Object.entries(REGIONS).forEach(([key, r]) => {
-            const o = document.createElement('option');
-            o.value = key;
-            o.textContent = `${r.label} — ${r.intensity} gCO₂e/kWh`;
-            regionSelect.appendChild(o);
+            regionSelect.add(new Option(`${r.label} · ${r.intensity} g/kWh`, key));
         });
         Object.entries(WUE_PROFILES).forEach(([key, w]) => {
-            const o = document.createElement('option');
-            o.value = key;
-            o.textContent = w.label;
-            wueSelect.appendChild(o);
+            wueSelect.add(new Option(`${w.short} · ${w.wue_L_per_kWh} L/kWh`, key));
+        });
+        // Each select names its hint in aria-describedby, so a screen reader
+        // reads the same detail a sighted visitor sees under it.
+        const renderHints = () => HINTS.forEach(([select, table, text]) => {
+            const hint = document.getElementById(select.getAttribute('aria-describedby') || '');
+            if (hint && table[select.value]) hint.textContent = text(table[select.value]);
         });
         modelSelect.value = 'gpt-4o';
         regionSelect.value = 'nl';
         wueSelect.value = 'avg';
 
-        const fmt = (n, digits = 2) => {
-            if (!isFinite(n)) return '—';
-            if (n === 0) return '0';
-            if (Math.abs(n) < 0.01) return n.toExponential(2);
-            if (Math.abs(n) >= 1000) return n.toLocaleString('en-US', { maximumFractionDigits: 0 });
-            return n.toFixed(digits);
-        };
+        // Every number on the page goes through the shared formatter in
+        // ai-carbon-data.js, the same one the homepage widget uses. The
+        // local one printed "9.46e-4 km" and "0.0 smartphone charges".
+        // Measured outputs keep two significant figures down to a millionth,
+        // so a small model on a clean grid still differs from a smaller one;
+        // the everyday comparisons stop at their own precision and say "<".
+        const fmt = (n, digits = 2) => _AICD.formatNumber(n, digits, 6);
+        const approx = (n, digits) => _AICD.formatNumber(n, digits, digits + 1);
 
         // Raw field values, straight from the DOM and deliberately unclamped —
         // sanitize() is the single place that decides what is usable, so the
@@ -346,6 +354,7 @@ if (typeof document !== 'undefined') {
             const checked = sanitize(raw);
             const params = checked.params;
             showNotices(checked.notices);
+            renderHints();
             const r = calculate(params);
 
             $('#outEnergy').textContent = fmt(r.energyPerQuery_Wh, 3);
@@ -354,12 +363,14 @@ if (typeof document !== 'undefined') {
             $('#outAnnualCarbon').textContent = fmt(r.annualCarbon_kg, 1);
             $('#outAnnualWater').textContent = fmt(r.annualWater_L, 1);
 
-            $('#equivLed').textContent = fmt(r.ledMinutes, 1);
-            $('#equivCoffee').textContent = fmt(r.coffeeCups, 3);
-            $('#equivKm').textContent = fmt(r.kmDriven, 3);
-            $('#equivPhone').textContent = fmt(r.phoneCharges, 1);
-            $('#equivTrees').textContent = fmt(r.treesPerYear, 1);
-            $('#equivBottles').textContent = fmt(r.waterBottles, 2);
+            // Time and distance change unit rather than grow decimals: a
+            // default query is 95 cm of driving, not 0.00095 km.
+            $('#equivLed').textContent = _AICD.formatQuantity(r.ledMinutes, 'min');
+            $('#equivCoffee').textContent = approx(r.coffeeCups, 2);
+            $('#equivKm').textContent = _AICD.formatQuantity(r.kmDriven, 'km');
+            $('#equivPhone').textContent = approx(r.phoneCharges, 1);
+            $('#equivTrees').textContent = approx(r.treesPerYear, 1);
+            $('#equivBottles').textContent = approx(r.waterBottles, 2);
 
             renderChart(params);
             renderTips(params);

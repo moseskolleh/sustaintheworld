@@ -2,26 +2,41 @@
 // ===================================================================
 // GENERATE VOICE — build-time narration via the Fish Audio TTS API
 //
-// Renders every script in voice-scripts.js to assets/audio/<id>.mp3 and
-// writes a manifest recording each file's real byte size, so the page can
-// tell visitors exactly what pressing play will cost them.
+// Renders the section scripts in voice-scripts.js to assets/audio/<id>.mp3
+// and writes a manifest recording each file's real byte size — but only
+// when asked to with --sections.
+//
+// WHY IT IS OPT-IN. The site no longer plays recorded section tracks. The
+// ten it had were a stock text-to-speech voice reading first-person lines;
+// they repeated claims the page had since dropped, and because a track must
+// match its script, every copy edit on the homepage was a re-render billed
+// in Fish Audio credits. The sections are now read by the visitor's own
+// browser voice (0 bytes), and the one recording the site plays is Moses's
+// own introduction, installed with `npm run voice:intro`. This pipeline stays
+// for anyone who wants rendered sections anyway; it just never runs, or
+// spends, because a sentence on the page changed. The audio budget in
+// scripts/check-budget.js (800 KB, sized for the introduction) is what would
+// have to be raised, deliberately, to ship section tracks again.
 //
 // The API key is used HERE and nowhere else. It never reaches the browser,
 // never appears in the shipped site, and never runs in CI. What ships is the
 // rendered .mp3 files, which the page plays with a plain <audio> element.
 //
-//     cp .env.example .env                       # paste the key in
-//     npm run voice -- --audition id1,id2,id3    # compare candidate voices on real copy
-//     npm run voice -- --clone path/to/you.mp3   # clone your voice, then render everything
-//     npm run voice                              # re-render only what changed
-//     npm run voice -- --force                   # re-render everything
-//     npm run voice -- --only hero,about         # re-render specific sections
-//     npm run voice -- --dry-run                 # show the plan, spend nothing
+//     npm run voice                                     # explains the above, spends nothing
+//     npm run voice -- --dry-run                        # …and what --sections would cost
+//     cp .env.example .env                              # paste the key in
+//     npm run voice -- --audition id1,id2,id3           # compare candidate voices on real copy
+//     npm run voice -- --sections --dry-run             # show the plan, spend nothing
+//     npm run voice -- --sections                       # render what changed
+//     npm run voice -- --sections --force               # re-render everything
+//     npm run voice -- --sections --only hero,about     # re-render specific sections
+//     npm run voice -- --clone path/to/you.mp3          # clone a voice model (add --sections to render)
 //
-// Voice cloning. `--clone <file>` uploads a sample of your own voice, creates
-// a Fish Audio voice model from it, saves the returned id into .env as
-// FISH_AUDIO_VOICE_ID, and then narrates every section in that voice. Do it
-// once; after that plain `npm run voice` reuses the id.
+// Voice cloning. `--clone <file>` uploads a voice sample, creates a Fish
+// Audio voice model from it and saves the returned id into .env as
+// FISH_AUDIO_VOICE_ID. With --sections it then narrates every section in
+// that voice. A clone is still synthetic speech: it is not a recording, and
+// the page's player will not present it as one.
 //
 // Cost control. Scripts are hashed; unchanged text is skipped on re-runs, so
 // fixing one sentence re-renders one file rather than the whole page.
@@ -95,6 +110,9 @@ const flagValue = f => {
 
 const FORCE = hasFlag('--force');
 const DRY_RUN = hasFlag('--dry-run');
+// Rendering section tracks costs credits and ships nothing the page plays,
+// so it happens only when asked for by name.
+const SECTIONS = hasFlag('--sections');
 const ONLY = (flagValue('--only') || '').split(',').map(s => s.trim()).filter(Boolean);
 const CLONE_FROM = flagValue('--clone');
 const CLONE_TITLE = flagValue('--clone-title') || 'Moses Kolleh Sesay — portfolio narration';
@@ -390,7 +408,7 @@ async function runAudition(apiKey) {
     VOICE_ID = saved;
     console.log(`\n  listen to ${path.relative(ROOT, AUDITION_DIR)}/ and pick one, then:`);
     console.log('    add FISH_AUDIO_VOICE_ID=<the winner> to .env');
-    console.log('    npm run voice\n');
+    console.log('    npm run voice -- --sections --dry-run\n');
     return failed;
 }
 
@@ -403,6 +421,25 @@ async function main() {
 
     const { SCRIPTS } = require(path.join(ROOT, 'voice-scripts.js'));
     const apiKey = process.env.FISH_AUDIO_API_KEY;
+
+    // Nothing asked for that costs anything: say what the command does now,
+    // and what the opt-in would cost, and leave every file alone.
+    if (!SECTIONS && !AUDITION.length && !CLONE_FROM) {
+        const bytes = SCRIPTS.reduce((n, s) => n + utf8Len(s.text), 0);
+        console.log('\n  section narration is off: the page reads its sections with the visitor\'s own');
+        console.log('  browser voice, and the one recording it plays is Moses\'s introduction');
+        console.log('  (npm run voice:intro -- <file>). Nothing was rendered and nothing was spent.');
+        if (ONLY.length) console.log('\n  --only picks which sections to render; it needs --sections as well.');
+        console.log('\n  to render section tracks with Fish Audio anyway:');
+        console.log('    npm run voice -- --sections --dry-run    # the plan and the bill, spends nothing');
+        console.log('    npm run voice -- --sections              # render them');
+        if (DRY_RUN) {
+            console.log(`\n  a first --sections render is ${SCRIPTS.length} scripts, ${bytes.toLocaleString()} bytes of text:`);
+            console.log(`  ~${bytes.toLocaleString()} credits at 1 per UTF-8 byte.`);
+        }
+        console.log('\n  rendered 0 · spent 0\n');
+        return;
+    }
 
     if (!apiKey && !DRY_RUN) {
         console.error('\n  FISH_AUDIO_API_KEY is not set.\n');
@@ -439,9 +476,16 @@ async function main() {
         }
     }
 
+    // Cloning on its own stops here: the voice model exists, and rendering
+    // sections with it is a separate, deliberate step.
+    if (!SECTIONS) {
+        console.log('\n  to render the sections in that voice: npm run voice -- --sections --dry-run, then without --dry-run\n');
+        return;
+    }
+
     if (!VOICE_ID && !DRY_RUN) {
         console.log('\n  note: no FISH_AUDIO_VOICE_ID set, so this renders in the API default voice.');
-        console.log('  to narrate in your own voice: npm run voice -- --clone path/to/your-sample.mp3');
+        console.log('  to use a voice model: npm run voice -- --clone path/to/sample.mp3');
     }
 
     let manifest = { voiceId: VOICE_ID, model: MODEL, bitrate: BITRATE, format: FORMAT, tracks: {} };
@@ -451,6 +495,10 @@ async function main() {
             if (prev && prev.tracks) manifest = prev;
         } catch (e) { /* corrupt manifest — start fresh */ }
     }
+    // Section tracks only. Moses's recorded introduction shares the manifest
+    // (tracks.intro) and is not this script's to count, re-render or remove.
+    const sectionIds = () => Object.keys(manifest.tracks).filter(id => id !== 'intro');
+
     // Compare against what the existing manifest was rendered under BEFORE
     // overwriting the header, so a config change can be named out loud
     // instead of showing up as ten mysteriously stale tracks.
@@ -479,7 +527,7 @@ async function main() {
     // A run that invalidates everything is almost always a settings mistake —
     // an unset FISH_AUDIO_VOICE_ID, a changed bitrate — not ten rewritten
     // scripts. Say which field moved, before anything is billed.
-    if (drift.length && Object.keys(manifest.tracks).length) {
+    if (drift.length && sectionIds().length) {
         console.log('\n  ⚠ this run does not match how the existing narration was rendered:');
         drift.forEach(d => console.log(`      ${d.field}: manifest has "${d.was}", this run uses "${d.now}"`));
         console.log('    every affected track counts as stale and will be re-rendered and re-billed.');
@@ -543,7 +591,7 @@ async function main() {
         fs.writeFileSync(MANIFEST, JSON.stringify(manifest, null, 2) + '\n');
     }
 
-    const totalBytes = Object.values(manifest.tracks).reduce((n, t) => n + t.bytes, 0);
+    const totalBytes = sectionIds().reduce((n, id) => n + manifest.tracks[id].bytes, 0);
     console.log(`\n  rendered ${rendered} · skipped ${skipped}${failed ? ` · failed ${failed}` : ''}`);
     // Fish Audio bills 1 credit per UTF-8 byte of text, so the spend is known
     // before a single call goes out. Worth seeing on a free plan, where the
@@ -554,8 +602,9 @@ async function main() {
         console.log(`  cost ~${creditsSpent.toLocaleString()} credits`);
     }
     if (totalBytes) {
-        console.log(`  full narration: ${kb(totalBytes)} across ${Object.keys(manifest.tracks).length} tracks (${grams(totalBytes).toFixed(2)} g if someone played all of it)`);
-        console.log('  none of it is downloaded until a visitor presses play.');
+        console.log(`  section narration: ${kb(totalBytes)} across ${sectionIds().length} tracks (${grams(totalBytes).toFixed(2)} g if someone played all of it)`);
+        console.log('  the homepage player does not play section tracks (it reads sections with the browser');
+        console.log('  voice), and committing them would exceed the audio budget in scripts/check-budget.js.');
     }
     if (!DRY_RUN) console.log(`  manifest: ${path.relative(ROOT, MANIFEST)}`);
     console.log('');

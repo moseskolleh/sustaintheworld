@@ -49,6 +49,28 @@
 
 * { box-sizing: border-box; }
 
+/* One rule for [hidden] on every page built on this sheet: the browser's
+   own loses to any class that sets display. */
+[hidden] { display: none !important; }
+
+/* Without JavaScript (no html.js, set in <head>) the calculator cannot run:
+   a note stands in for its controls and the ledger it renders. */
+html:not(.js) .ca-presets,
+html:not(.js) .ca-grid,
+html:not(.js) .ca-ledger-section {
+    display: none !important;
+}
+
+.nojs-note {
+    margin: 0 0 24px;
+    padding: 14px 18px;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    color: var(--text-secondary);
+}
+
+html.js .nojs-note { display: none; }
+
 /* Inline SVG icons (replaced the Font Awesome CDN) */
 .icon {
     display: inline-block;
@@ -193,6 +215,11 @@ a { color: var(--primary-green); }
     border-radius: 12px;
     padding: 24px;
 }
+/* Leaves a select 254px on a 320px phone, not 222px: enough for every option. */
+@media (max-width: 420px) {
+    .ca-shell { padding-left: 16px; padding-right: 16px; }
+    .ca-card { padding: 16px; }
+}
 .ca-card h2 {
     margin: 0 0 16px;
     font-size: 1.1rem;
@@ -228,6 +255,19 @@ a { color: var(--primary-green); }
     outline-offset: 1px;
 }
 
+/* A select gets the card's width under its label: in half a card it was
+   103px on a phone and 249px at 1440px, and clipped its options at both. */
+.ca-field-select {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+}
+.ca-hint {
+    margin: 0;
+    font-size: 0.75rem;
+    line-height: 1.45;
+    color: var(--text-secondary);
+}
+
 /* Shown when a typed value is outside the range the model can be evaluated
    on, so the reading on screen is never quietly answering a different
    question than the one in the input box. */
@@ -241,7 +281,6 @@ a { color: var(--primary-green); }
     line-height: 1.5;
     color: var(--text-secondary);
 }
-.ca-notice[hidden] { display: none; }
 
 .ca-out {
     display: grid;
@@ -271,6 +310,8 @@ a { color: var(--primary-green); }
     font-weight: 700;
     color: var(--primary-green);
     font-variant-numeric: tabular-nums;
+    /* A trillion-scale reading wraps rather than spills. */
+    overflow-wrap: anywhere;
 }
 .ca-out-cell .ca-unit {
     font-size: 0.7rem;
@@ -308,6 +349,11 @@ a { color: var(--primary-green); }
     color: var(--primary-green);
     font-weight: 600;
     font-variant-numeric: tabular-nums;
+}
+/* The value and its unit ("95 cm") stay together; the label wraps instead. */
+.ca-equiv li > span:last-child {
+    white-space: nowrap;
+    padding-left: 12px;
 }
 .ca-equiv li span:first-child i {
     width: 18px;

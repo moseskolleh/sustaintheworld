@@ -287,22 +287,22 @@
     // ---------------------------------------------------------------
     const WUE_PROFILES = {
         'low':  {
-            label: 'Best-in-class site (~0.5 L/kWh)', wue_L_per_kWh: 0.5, range: [0.2, 0.8],
+            label: 'Best-in-class site (~0.5 L/kWh)', short: 'Best-in-class site', wue_L_per_kWh: 0.5, range: [0.2, 0.8],
             source: 'google2024', vintage: '2023–2024', updated: REVIEWED_ON,
             note: 'Achieved by individual air-cooled or reclaimed-water sites in favourable climates. Not representative of any provider fleet-wide.'
         },
         'fleet': {
-            label: 'Hyperscaler fleet average (~1.1 L/kWh — Google 2024)', wue_L_per_kWh: 1.1, range: [0.8, 1.6],
+            label: 'Hyperscaler fleet average (~1.1 L/kWh — Google 2024)', short: 'Hyperscaler fleet', wue_L_per_kWh: 1.1, range: [0.8, 1.6],
             source: 'google2024', vintage: '2023 data, published 2024', updated: REVIEWED_ON,
             note: 'Google\'s disclosed fleet-wide WUE. Use this one when the question is "what does a big provider cost", not the best-site figure.'
         },
         'avg':  {
-            label: 'Industry typical (~1.8 L/kWh)', wue_L_per_kWh: 1.8, range: [1.2, 2.6],
+            label: 'Industry typical (~1.8 L/kWh)', short: 'Industry typical', wue_L_per_kWh: 1.8, range: [1.2, 2.6],
             source: 'uptime2023', vintage: '2023', updated: REVIEWED_ON,
             note: 'Across all commercial data centres, not just the efficient ones. The default here, because most inference does not run in a flagship facility.'
         },
         'high': {
-            label: 'Older / inland facility (~5.0 L/kWh)', wue_L_per_kWh: 5.0, range: [3.0, 9.0],
+            label: 'Older / inland facility (~5.0 L/kWh)', short: 'Older / inland site', wue_L_per_kWh: 5.0, range: [3.0, 9.0],
             source: 'uptime2023', vintage: '2023', updated: REVIEWED_ON,
             note: 'Evaporative cooling in a hot, dry region — the worst realistic case, and the one where water matters more than carbon.'
         }
@@ -373,6 +373,62 @@
     const HOMEPAGE_MODELS = ['gpt-4o', 'gpt-4o-mini', 'claude-37-sonnet', 'gemini-20-flash', 'llama-33-70b', 'llama-32-1b', 'deepseek-r1'];
     const HOMEPAGE_REGIONS = ['no', 'fr', 'nl', 'us-avg', 'cn', 'in'];
 
+    // ---------------------------------------------------------------
+    // Number formatting — the one formatter both pages print through.
+    //
+    // The tool's own fell back to exponents, so a default query drove a car
+    // "9.46e-4 km", and a value under its displayed precision printed as
+    // "0.0 smartphone charges", which reads as free. Now: never an exponent;
+    // below 1, two significant figures up to `maxDigits` decimals and "<"
+    // past that; thousands grouped and millions in words.
+    // ---------------------------------------------------------------
+    const BIG = new Intl.NumberFormat('en-US', { notation: 'compact', compactDisplay: 'long', maximumFractionDigits: 1 });
+
+    /**
+     * @param {number} n          a non-negative quantity
+     * @param {number} digits     decimals to show from 1 to 999 (default 2)
+     * @param {number} maxDigits  most decimals a value below 1 may use
+     *                            before it becomes "< 0.0…1" (default digits)
+     */
+    function formatNumber(n, digits, maxDigits) {
+        const d = digits === undefined ? 2 : digits;
+        const max = Math.max(d, maxDigits === undefined ? d : maxDigits);
+        if (typeof n !== 'number' || !isFinite(n)) return '—';
+        if (n < 0) return '−' + formatNumber(-n, d, max);
+        if (n === 0) return '0';
+        if (n >= 999999.5) return BIG.format(n);                       // "46.8 trillion"
+        if (n >= 1) {
+            const fixed = n.toFixed(d);
+            return Number(fixed) >= 1000 ? Math.round(n).toLocaleString('en-US') : fixed;
+        }
+        if (n < Math.pow(10, -max)) return '< ' + Math.pow(10, -max).toFixed(max);
+        const places = Math.min(max, Math.max(d, 1 - Math.floor(Math.log10(n))));
+        let s = n.toFixed(places);
+        // The extra places are there for the significant figures, not for
+        // trailing zeros: 0.0020 says no more than 0.002.
+        while (s.length > s.indexOf('.') + 1 + d && s.endsWith('0')) s = s.slice(0, -1);
+        return s.endsWith('.') ? s.slice(0, -1) : s;
+    }
+
+    // 95 cm of driving means something; 0.00095 km does not. Each ladder runs
+    // from the largest unit down; `per` is how many of it make one of the
+    // unit the value comes in.
+    const UNIT_LADDERS = {
+        km:  [{ unit: 'km', per: 1, digits: 1 }, { unit: 'm', per: 1e3, digits: 1 }, { unit: 'cm', per: 1e5, digits: 0 }],
+        min: [{ unit: 'h', per: 1 / 60, digits: 1 }, { unit: 'min', per: 1, digits: 1 }, { unit: 's', per: 60, digits: 1 }]
+    };
+
+    /** A value in the largest unit of its ladder in which it is at least 1. */
+    function formatQuantity(value, ladderName) {
+        const ladder = UNIT_LADDERS[ladderName];
+        if (!ladder) throw new Error(`formatQuantity: no unit ladder called "${ladderName}"`);
+        if (typeof value !== 'number' || !isFinite(value)) return '—';
+        const step = ladder.find(s => value * s.per >= 1) || ladder[ladder.length - 1];
+        const v = value * step.per;
+        // "250.0 m" is precision nobody asked for; three figures are plenty.
+        return `${formatNumber(v, v >= 100 ? 0 : step.digits)} ${step.unit}`;
+    }
+
     return {
         REVIEWED_ON,
         SOURCES,
@@ -388,6 +444,9 @@
         energyForQuery,
         ledger,
         HOMEPAGE_MODELS,
-        HOMEPAGE_REGIONS
+        HOMEPAGE_REGIONS,
+        formatNumber,
+        formatQuantity,
+        UNIT_LADDERS
     };
 });

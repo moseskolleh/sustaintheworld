@@ -37,9 +37,10 @@ function assert(cond, msg) {
 
     // Each of these is defined at a different point in script.js. If an early
     // throw aborted the file, the later ones are the ones that go missing.
-    assert(!!doc.querySelector('.theme-toggle'), 'Storage blocked: the theme toggle still mounts');
+    // The switch is in the markup, hidden until the script shows it.
+    assert(doc.querySelector('.theme-toggle').hidden === false, 'Storage blocked: the script still shows the theme toggle');
     assert(!!doc.getElementById('dispatchBar'), 'Storage blocked: the narration player still mounts (defined late in the file)');
-    assert(doc.querySelectorAll('.listen-btn').length > 0, 'Storage blocked: listen buttons still render');
+    assert(doc.querySelectorAll('.listen-btn').length === 1, 'Storage blocked: the listen control is still there');
     assert(!!doc.getElementById('terminalToggle'), 'Storage blocked: the field terminal is still wired');
     assert(typeof window.FieldDispatch === 'object' && window.FieldDispatch !== null, 'Storage blocked: FieldDispatch is still exported');
 
@@ -182,10 +183,10 @@ function assert(cond, msg) {
     assert(speechErrors.length === 0, `No speech engine: nothing throws on load (${speechErrors.map(String).join('; ')})`);
 
     // Without an engine and without a manifest fetch resolving in jsdom, the
-    // listen controls must stay hidden rather than offering a dead button.
-    const wraps = Array.from(doc.querySelectorAll('.listen-wrap'));
-    assert(wraps.length > 0, 'No speech engine: the listen controls are still built');
-    assert(wraps.every(w => w.hidden), 'No speech engine and no recording: the listen controls stay hidden');
+    // listen control must stay hidden rather than offering a dead button.
+    const wrap = doc.getElementById('navListen');
+    assert(!!wrap, 'No speech engine: the listen control is in the page');
+    assert(wrap.hidden, 'No speech engine and no recording: the listen control stays hidden');
 
     const bar = doc.getElementById('dispatchBar');
     assert(!!bar && bar.hidden, 'No speech engine: the player is not left showing');
@@ -203,11 +204,13 @@ function assert(cond, msg) {
         'Fallback: runSynth refuses to run when there is no speech engine'
     );
 
-    const errorHandler = src.slice(src.indexOf("audioEl.addEventListener('error'"), src.indexOf("audioEl.addEventListener('error'") + 900);
-    assert(
-        /canSpeak\(\)|canSynth/.test(errorHandler),
-        'Fallback: a failed recording checks for a speech engine before switching to it'
-    );
+    // Moses's recording is his words in his voice. If it will not load, the
+    // browser voice does not stand in for him: the player says so and
+    // offers a retry.
+    const at = src.indexOf("audioEl.addEventListener('error'");
+    const errorHandler = src.slice(at, src.indexOf('});', at));
+    assert(at > -1 && /failPlayback\(/.test(errorHandler) && !/runSynth/.test(errorHandler),
+        'Fallback: a recording that fails is reported with a retry, never replaced by the browser voice');
 }
 
 // The behaviour itself: ask for narration on a browser with no speech engine
@@ -229,7 +232,6 @@ function finish() {
     const doc = window.document;
     const fd = window.FieldDispatch;
 
-    fd.setMode('human', false);
     fd.play('hero');
 
     setTimeout(() => {

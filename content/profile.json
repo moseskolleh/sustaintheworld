@@ -43,6 +43,8 @@
     "GIS"
   ],
 
+  "$languages": "Optional and deliberately absent: add \"languages\": [{ \"language\": \"Dutch\", \"level\": \"B1\" }], named in English with a CEFR level (A1-C2) or \"native\", once Moses states them. Until then the Assay on the homepage lists every non-English language a job ad asks for as a gap rather than guessing. npm run build:content copies it into modules/interactives.js.",
+
   "links": {
     "site": "https://moseskolleh.github.io/sustaintheworld/",
     "github": "https://github.com/moseskolleh",
@@ -62,6 +64,8 @@
     "displayDates": "Sept 2025 — Present"
   },
 
+  "$figures": "A figure on a page needs a basis in content/. A case-study result carries its own; a record fact about a role or a degree (a team's headcount, a programme's length, a grade) sits on the entry it describes, here, and tests/content.test.js holds the pages to it. An outcome rate (a completion percentage, an efficiency gain, people reached) is not a record fact: it needs a method, and without one it stays off the site.",
+
   "experience": [
     {
       "title": "Researcher — Sustainable Artificial Intelligence",
@@ -75,7 +79,8 @@
       "organization": "OnePointFive (opf.degree)",
       "displayDates": "Mar 2025 — Apr 2025",
       "start": "2025-03",
-      "end": "2025-04"
+      "end": "2025-04",
+      "programmeWeeks": 8
     },
     {
       "title": "Climate Change Adaptation Intern",
@@ -96,7 +101,8 @@
       "organization": "Sierra Drilling and Water Supply Enterprise",
       "displayDates": "Sept 2018 — Apr 2019",
       "start": "2018-09",
-      "end": "2019-04"
+      "end": "2019-04",
+      "teamSize": 23
     }
   ],
 
@@ -105,7 +111,8 @@
       "degree": "MSc Environmental Sciences",
       "institution": "Wageningen University & Research",
       "displayDates": "2021 — 2024",
-      "textEditionDates": "2021–2024"
+      "textEditionDates": "2021–2024",
+      "grade": "7.8/10 (Dutch scale)"
     },
     {
       "degree": "MSc Industrial Engineering",
@@ -151,10 +158,10 @@
 
   "$pages": "Drives sitemap.xml. lastmod is set by hand when a page's content changes — a build timestamp would claim every page changed on every deploy, which is the fastest way to teach a crawler to ignore the field.",
   "pages": [
-    { "path": "index.html", "loc": "https://moseskolleh.github.io/sustaintheworld/", "lastmod": "2026-08-05", "changefreq": "monthly", "priority": "1.0" },
-    { "path": "case-studies.html", "loc": "https://moseskolleh.github.io/sustaintheworld/case-studies.html", "lastmod": "2026-08-05", "changefreq": "monthly", "priority": "0.9" },
+    { "path": "index.html", "loc": "https://moseskolleh.github.io/sustaintheworld/", "lastmod": "2026-09-26", "changefreq": "monthly", "priority": "1.0" },
+    { "path": "case-studies.html", "loc": "https://moseskolleh.github.io/sustaintheworld/case-studies.html", "lastmod": "2026-09-26", "changefreq": "monthly", "priority": "0.9" },
     { "path": "research.html", "loc": "https://moseskolleh.github.io/sustaintheworld/research.html", "lastmod": "2026-08-05", "changefreq": "monthly", "priority": "0.8" },
-    { "path": "carbon-ai.html", "loc": "https://moseskolleh.github.io/sustaintheworld/carbon-ai.html", "lastmod": "2026-08-05", "changefreq": "monthly", "priority": "0.8" },
-    { "path": "field-report.html", "loc": "https://moseskolleh.github.io/sustaintheworld/field-report.html", "lastmod": "2026-08-05", "changefreq": "monthly", "priority": "0.3" }
+    { "path": "carbon-ai.html", "loc": "https://moseskolleh.github.io/sustaintheworld/carbon-ai.html", "lastmod": "2026-09-26", "changefreq": "monthly", "priority": "0.8" },
+    { "path": "field-report.html", "loc": "https://moseskolleh.github.io/sustaintheworld/field-report.html", "lastmod": "2026-09-26", "changefreq": "monthly", "priority": "0.3" }
   ]
 }

@@ -11,11 +11,23 @@
     "acronyms, numbers spelled out, no bullet lists — and must stay factually",
     "identical to the section it narrates.",
     "",
-    "CHANGING ANY TEXT HERE COSTS MONEY. Track signatures are content-addressed,",
-    "so an edited script is a re-render on the next npm run voice — about one Fish",
-    "Audio credit per UTF-8 byte of that section. npm run voice -- --dry-run shows",
-    "the bill before you pay it. Unchanged sections are free."
+    "`scripts` are read aloud by the visitor's own browser voice, so editing one",
+    "costs nothing. No audio is rendered from them unless someone opts in with",
+    "npm run voice -- --sections (Fish Audio, about one credit per UTF-8 byte;",
+    "add --dry-run to see the bill first). The site plays no such recordings.",
+    "",
+    "`intro` is different: it is the script Moses reads aloud and records in his",
+    "own voice (npm run voice:intro). The player shows it as the captions for",
+    "that recording, so once he has recorded it, change it only to match what he",
+    "actually said. tests/voice.test.js fails if the two drift apart."
   ],
+  "intro": {
+    "$comment": "THE SCRIPT FOR MOSES TO READ. One take, 60-90 seconds, in his own voice, opening with 'Kushe'. Every fact in it is already on the site (the hero narration, content/profile.json, content/projects.json); nothing new is claimed. Reword freely when recording, then make this text match the take before running npm run voice:intro. The browser voice never reads it.",
+    "id": "intro",
+    "label": "Moses introduces himself",
+    "readBy": "Moses Kolleh Sesay",
+    "text": "Kushe. I'm Moses Kolleh Sesay, a sustainability and climate analyst based in Amsterdam. I trained as a geologist in Sierra Leone, where my dissertation mapped groundwater in the hard rock around Freetown. In the field, I worked on drilling projects that delivered a hundred and sixty-four water points, and reading the ground before drilling took our strike rate to seven holes in ten. That taught me the rule I still work by: collect the data before the drill bit, not after. Since then I have earned two master's degrees, in industrial engineering at Hunan University in China and in environmental sciences at Wageningen in the Netherlands. I modelled river pollution across more than ten thousand sub-basins, and at the United Nations in Bonn I documented fifty-four hazard information systems. Today I research sustainable A.I. at the Digital Society School in Amsterdam, with the Dutch Ministry of Finance, weighing what generative A.I. costs in electricity, hardware and water against what it gives back. Each of these has a case study on this site, with its evidence and its limits. If your work touches climate, water or A.I., I would like to hear from you."
+  },
   "scripts": [
     {
       "id": "hero",
@@ -30,7 +42,7 @@
     {
       "id": "about",
       "label": "the about section",
-      "text": "I grew up where water scarcity isn't a statistic — it's a morning routine. That's why everything I do starts from the same question: how do we make environmental decisions that actually hold up in the real world? I hold two master's degrees — environmental sciences from Wageningen, and industrial engineering from Hunan. That puts me at the intersection of field experience and analytical rigour. I've managed water projects that reached more than ten thousand people, reviewed disaster-loss data for the United Nations, and built climate-risk and E.S.G. analyses that decision-makers can actually act on. Today my focus is sustainable A.I. — making sure the tools we use to solve the climate crisis don't quietly become part of it."
+      "text": "I grew up where water scarcity isn't a statistic — it's a morning routine. That's why everything I do starts from the same question: how do we make environmental decisions that actually hold up in the real world? I hold two master's degrees — environmental sciences from Wageningen, and industrial engineering from Hunan. That puts me at the intersection of field experience and analytical rigour. I've managed water projects that delivered a hundred and sixty-four water points, reviewed disaster-loss data for the United Nations, and built climate-risk and E.S.G. analyses that decision-makers can actually act on. Today my focus is sustainable A.I. — making sure the tools we use to solve the climate crisis don't quietly become part of it."
     },
     {
       "id": "experience",
@@ -45,17 +57,17 @@
     {
       "id": "ecoprompt",
       "label": "the A.I. carbon widget",
-      "text": "This is a live slice of my current research. Pick a model and a workload, and see what a single A.I. answer costs the planet — in energy, in carbon, and in water, in units you can actually feel. But before the numbers: have a guess. The three smallest models are already plotted for you. Drag across the chart to predict the rest, from mid-size models up to a frontier reasoning model — then reveal what the research actually measured. Most people guess a straight line. It isn't one. That gap between what people expect and what the research measured is, more or less, my entire job."
+      "text": "This is a live slice of my current research. Pick a model and a workload, and see what a single A.I. answer costs the planet — in energy, in carbon, and in water, in units you can actually feel. But before the numbers: have a guess. The three smallest models are already plotted for you. Drag across the chart to predict the rest, from mid-size models up to a frontier reasoning model — then reveal what the research actually measured. A straight line is the natural guess. It isn't one. The gap between that guess and what the research measured is, more or less, my entire job."
     },
     {
       "id": "skills",
       "label": "the skills section",
-      "text": "No made-up percentages here. Every tool comes with the receipt of where it earned its place. Python — for the global river-export pollution analysis behind my master's thesis. Q.G.I.S. and Arc.G.I.S. — for groundwater maps that struck water seven times out of ten. S.Q.L. — from real business cases in my data analytics training. Tableau and Power B.I. — for climate-risk and E.S.G. reporting dashboards. Machine learning, from the Google Advanced Data Analytics certificate. And JavaScript — which built the live widget sitting further up this very page. Alongside those: E.S.G. analysis, greenhouse gas accounting across scopes one to three, life cycle assessment, climate risk assessment, and water resource management. If a skill is listed, there's a project behind it. Click through and check."
+      "text": "No made-up percentages here. Every tool comes with the receipt of where it earned its place. Python — for the global river-export pollution analysis behind my master's thesis. Q.G.I.S. and Arc.G.I.S. — for groundwater maps that struck water seven times out of ten. S.Q.L. — from real business cases in my data analytics training. Tableau — on those same business cases. Machine learning, from the Google Advanced Data Analytics certificate. And JavaScript — which built the live widget sitting further up this very page. Alongside those: E.S.G. analysis, greenhouse gas accounting across scopes one to three, life cycle assessment, climate risk assessment, and water resource management. If a skill is listed, there's a project behind it. Click through and check."
     },
     {
       "id": "education",
       "label": "the education section",
-      "text": "Three degrees, on three continents. A master's in environmental sciences from Wageningen University in the Netherlands, from twenty twenty-one to twenty twenty-four, specialising in human-environment interaction and water systems under global change. My thesis examined the socioeconomic drivers of river export of pollutants worldwide. I studied there as a Wageningen African Scholarship Programme scholar. Before that, a master's in industrial engineering from Hunan University in Changsha, China, on a full Chinese Government scholarship, with a thesis on soft path water management using Freetown as the case study. And underneath both, where it began: a bachelor's with honours in geology from the University of Sierra Leone. First class honours, top of the class, with a dissertation on groundwater potential mapping. Since then: certified as an E.S.G. specialist, and through the Google data analytics programmes."
+      "text": "Three degrees, on three continents. A master's in environmental sciences from Wageningen University in the Netherlands, from twenty twenty-one to twenty twenty-four, specialising in human-environment interaction and water systems under global change. My thesis examined the socioeconomic drivers of river export of pollutants worldwide. I studied there as a Wageningen African Scholarship Programme scholar. Before that, a master's in industrial engineering from Hunan University in Changsha, China, on a full Chinese Government scholarship, with a thesis on soft path water management using Freetown as the case study. And underneath both, where it began: a bachelor's with honours in geology from the University of Sierra Leone. First class honours, top of the class, with a dissertation on groundwater potential mapping. Since then, four certificates: the Corporate Finance Institute's E.S.G. Specialist Program, Google's Advanced Data Analytics, data analytics training at Masterschool, and the U.N. System Staff College's course on disaster risk reduction and climate change adaptation."
     },
     {
       "id": "notes",

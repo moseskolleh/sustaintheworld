@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- JavaScript is on (html.js): carbon-ai.css shows the calculator rather
+         than the note that stands in for it. -->
+    <script>document.documentElement.classList.add('js')</script>
     <title>AI, Weighed — EcoPrompt Coach | Moses Kolleh Sesay</title>
     <meta name="description" content="AI, Weighed (EcoPrompt Coach): visualize the energy, water, and carbon cost of LLM queries across named models and electricity grids.">
     <meta name="author" content="Moses Kolleh Sesay">
@@ -63,20 +66,28 @@
             <button type="button" data-preset="edge"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-microchip"></use></svg> Edge / tiny model</button>
         </div>
 
+        <p class="nojs-note">This calculator runs in your browser, so it needs JavaScript switched on. The method it uses, and its limits, are written out below.</p>
+
         <section class="ca-grid">
             <div class="ca-card">
                 <h2>Inputs</h2>
-                <div class="ca-field">
+                <!-- A closed select cannot wrap, so its options stay short
+                     enough for a 320px phone and the detail they used to
+                     carry (and clip) is spelled out in the line beneath. -->
+                <div class="ca-field ca-field-select">
                     <label for="modelSelect">Model</label>
-                    <select id="modelSelect"></select>
+                    <select id="modelSelect" aria-describedby="modelHint"></select>
+                    <p class="ca-hint" id="modelHint"></p>
                 </div>
-                <div class="ca-field">
+                <div class="ca-field ca-field-select">
                     <label for="regionSelect">Grid region</label>
-                    <select id="regionSelect"></select>
+                    <select id="regionSelect" aria-describedby="regionHint"></select>
+                    <p class="ca-hint" id="regionHint"></p>
                 </div>
-                <div class="ca-field">
+                <div class="ca-field ca-field-select">
                     <label for="wueSelect">Water profile (WUE)</label>
-                    <select id="wueSelect"></select>
+                    <select id="wueSelect" aria-describedby="wueHint"></select>
+                    <p class="ca-hint" id="wueHint"></p>
                 </div>
                 <div class="ca-field">
                     <label for="inputTokens">Input tokens / query</label>
@@ -134,9 +145,9 @@
                 <div class="ca-equiv">
                     <h3>Relatable conversions</h3>
                     <ul>
-                        <li><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-lightbulb"></use></svg> LED bulb runtime</span><span><span id="equivLed">—</span> min</span></li>
+                        <li><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-lightbulb"></use></svg> LED bulb runtime</span><span id="equivLed">—</span></li>
                         <li><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-mug-hot"></use></svg> Cups of coffee brewed</span><span><span id="equivCoffee">—</span></span></li>
-                        <li><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-car"></use></svg> Driving a gasoline car</span><span><span id="equivKm">—</span> km</span></li>
+                        <li><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-car"></use></svg> Driving a gasoline car</span><span id="equivKm">—</span></li>
                         <li><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-mobile-screen"></use></svg> Smartphone charges</span><span><span id="equivPhone">—</span></span></li>
                         <li><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-bottle-water"></use></svg> 500 mL water bottles</span><span><span id="equivBottles">—</span></span></li>
                         <li><span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-tree"></use></svg> Mature trees needed (annual offset)</span><span><span id="equivTrees">—</span></span></li>
@@ -183,7 +194,9 @@
             </p>
             <div class="ca-disclaimer">
                 <strong>Caveat:</strong> covers <em>inference only</em>. Training is amortised across millions of
-                queries and is not modelled here. Embodied carbon of GPUs is excluded. Water counts on-site
+                queries and is not modelled here. Embodied carbon of the hardware (Scope 3, capital goods) is
+                excluded, here and in <a href="index.html#anatomy">Anatomy of a Prompt</a> on the homepage: no per-query factor for it has a
+                source good enough for the ledger below. Water counts on-site
                 cooling only, not the water used to generate the electricity. Use as a relative
                 comparator, not an absolute audit. The full prototype lives at
                 <a href="https://github.com/moseskolleh/promptcoach" target="_blank" rel="noopener">github.com/moseskolleh/promptcoach</a>.
