@@ -35,7 +35,7 @@ Fish Audio library. They were retired, for three reasons:
 - **They repeated claims the page no longer makes.** Audio cannot be fixed
   with a text edit; it has to be rendered again.
 - **Every copy edit made them stale, and re-rendering costs money.** A full
-  render is about 7,700 Fish Audio credits against a free allowance of 8,000,
+  render is about 7,850 Fish Audio credits against a free allowance of 8,000,
   and a track has to match its script, so each change to the homepage was a
   bill.
 - **A stock voice reading first-person lines was never Moses.** The page said
@@ -62,7 +62,10 @@ for the browser voice it excludes the cost of synthesising speech. Every
 figure in the player says "transfer" for that reason: the browser voice moves
 zero bytes, which is genuinely zero *transfer* emissions, but it is not free.
 
-Nothing in this directory is fetched until a visitor presses play.
+The recording is fetched only when a visitor asks to hear it. The manifest
+(under 1 KB) is fetched when the player first opens, or once, 1.5 s after
+the page has loaded, in a browser with no speech voice, to learn whether
+there is a recording to offer.
 
 `.wav` files are gitignored: they are the throwaway output of
 `npm run voice:check`, which renders against the local mock server.

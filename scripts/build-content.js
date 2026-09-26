@@ -23,7 +23,7 @@
 //                       markers: what the fit-check may say about Moses
 //
 // STILL HAND-AUTHORED: index.html and field-report.html. They are long-form
-// editorial pages, and templating 130 KB of hand-tuned markup to remove
+// editorial pages, and templating over 130 KB of hand-tuned markup to remove
 // duplication that a test already catches would trade a small problem for a
 // large one. tests/content.test.js holds them to content/ instead.
 //

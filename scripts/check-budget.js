@@ -44,10 +44,13 @@ const KB = 1024;
 const MB = 1024 * 1024;
 
 // ------------------------------------------------------------------
-// Budgets. Each carries roughly 15–30% headroom over the current figure, so
-// ordinary edits do not trip it but a new hero image or an unoptimised
-// screenshot does. Raising one is a deliberate act: update the README in the
-// same commit, because the README quotes these.
+// Budgets. The headroom is not uniform: the report prints each figure as a
+// share of its ceiling, and in September 2026 that ran from 76% (the field
+// report) to 97% (the on-demand total), with the audio budget at 0% until
+// Moses records his introduction. To make room, remove something of
+// equal weight rather than raise a ceiling (docs/plan.md, "Stop doing").
+// When a ceiling does change, the README quotes these, so update it in the
+// same commit.
 // ------------------------------------------------------------------
 const BUDGETS = {
     criticalWire: {
