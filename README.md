@@ -323,8 +323,15 @@ The suites, and the failure each one exists to prevent:
   loads every page with JavaScript disabled, and the homepage with
   `script.js` blocked and delayed.
 - **`carbon.test.js`** — negative, zero, `NaN` and absurd inputs, in the model
-  and through the real page; the input/output token split; and the evidence
-  ledger, which fails if any factor loses its source, range or review date.
+  and through the real page; the input/output token split; the evidence
+  ledger, which fails if any factor loses its source, range or review date;
+  and the one number formatter both AI pages share: no exponent notation and
+  no "0.0" for something that is not zero, from 1e-14 to 1e24.
+- **`assay.test.js`** — the paste-a-job-ad fit check: an ad asking for fluent
+  Dutch, 5+ years at a Big Four firm and SAP gets every one of those as a gap
+  and not the top grade; ads that do fit still grade well, with evidence
+  links that resolve; a scrap of text is not graded; and no gap line states a
+  number, role or degree that `content/profile.json` does not hold.
 - **`voice.test.js`** — runs the real generator in dry-run against the
   committed narration and fails if it plans to spend a single credit.
 - **`content.test.js`** — the pages must agree with `content/profile.json`
@@ -352,7 +359,7 @@ Everything derived now comes from `content/`:
 
 | Source | Feeds |
 |---|---|
-| `content/profile.json` | JSON-LD, `sitemap.xml`, the facts `content.test.js` holds every page to |
+| `content/profile.json` | JSON-LD, `sitemap.xml`, the Assay's facts block in `modules/interactives.js`, the facts `content.test.js` holds every page to |
 | `content/projects.json` | `case-studies.html` |
 | `content/lenses.json` | the role-specific views |
 | `content/research.json` | `research.html` |
@@ -455,7 +462,7 @@ every run of `npm test`, and the build fails when they are exceeded.
 | Budget | Measured | Ceiling |
 |---|---|---|
 | First view of the homepage, over the wire (fonts included) | ~272 KB | 300 KB |
-| Everything a full visit adds on demand (modules, scripts, map) | ~57 KB | 72 KB |
+| Everything a full visit adds on demand (modules, scripts, map) | ~68 KB | 72 KB |
 | Case studies page, over the wire (fonts included) | ~92 KB | 120 KB |
 | Research outputs page, over the wire (fonts included) | ~87 KB | 110 KB |
 | Text-only field report, whole page | ~9 KB | 12 KB |
@@ -491,7 +498,7 @@ each file the moment it is first needed:
 
 | Module | Loads when | Gzipped |
 |---|---|---|
-| `modules/interactives.js` (+ `ai-carbon-data.js`) | section 05 or the footer receipt comes within a screen of the viewport, or a deep link lands there | ~23 KB |
+| `modules/interactives.js` (+ `ai-carbon-data.js`) | section 05 or the footer receipt comes within a screen of the viewport, or a deep link lands there | ~32 KB |
 | `modules/dispatch.js` (+ `voice-scripts.js`) | the first press of a `listen` control, or `voice` in the terminal | ~13 KB |
 | `modules/dossier.js` | a project dossier with a mini-game is opened | ~6 KB |
 | `modules/terminal.js` | the backtick key or the footer button | ~5 KB |

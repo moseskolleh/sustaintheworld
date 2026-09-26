@@ -163,6 +163,8 @@ async function visit(context, page, rel, origin) {
         ok(`arrival: ${fmt(r.arrivalBytes)} over the wire in ${r.arrival.length} requests`);
 
         if (rel === 'index.html') await exerciseHomepage(page, r, origin);
+        if (rel === 'index.html') await exerciseAssay(page, r);
+        if (rel === 'carbon-ai.html') await exerciseCarbonTool(page, r);
 
         if (SCREENS) await page.screenshot({ path: path.join(ROOT, '.smoke', rel.replace('.html', '.png')) });
         await page.close();
@@ -210,6 +212,81 @@ async function visit(context, page, rel, origin) {
     if (failures) { console.log(`\n  ${failures} problem(s)\n`); process.exit(1); }
     console.log('\n  Smoke test passed\n');
 })().catch((e) => { console.error(e); server.close(); process.exit(1); });
+
+// ------------------------------------------------------------------
+// The Assay: grades an ad in the page, and sends nothing while it does
+// ------------------------------------------------------------------
+async function exerciseAssay(page, r) {
+    const sent = [];
+    const onRequest = (q) => sent.push(q.url());
+    page.on('request', onRequest);
+    await page.evaluate(() => document.getElementById('assay').scrollIntoView());
+    await page.waitForFunction(() => window.mksAssay, null, { timeout: 5000 }).catch(() => null);
+    await page.fill('#assayInput', [
+        'Senior ESG Reporting Consultant. Help clients prepare for CSRD and ESRS reporting.',
+        '- Fluent Dutch and English',
+        '- 5+ years of experience at a Big Four firm',
+        '- Hands-on experience with SAP',
+        '- Strong knowledge of GHG accounting and stakeholder engagement'
+    ].join('\n'));
+    await page.click('#assayRun');
+    await page.waitForTimeout(300);
+    page.off('request', onRequest);
+
+    const out = await page.evaluate(() => {
+        const result = document.getElementById('assayResult');
+        const tag = result.querySelector('.assay-grade-tag');
+        const gaps = Array.from(result.querySelectorAll('.assay-row-gap')).filter(el => el.getBoundingClientRect().height > 0);
+        return { grade: tag && tag.textContent, gaps: gaps.length };
+    });
+    if (out.grade && out.grade !== 'High-grade match' && out.gaps >= 4) ok(`the Assay grades the Dutch / Big Four / SAP ad "${out.grade}" with ${out.gaps} visible gaps`);
+    else bad(`the Assay graded the Dutch / Big Four / SAP ad "${out.grade}" with ${out.gaps} visible gaps`);
+    if (sent.length === 0) ok('the Assay sent nothing while grading'); else bad(`the Assay made requests while grading: ${sent.join(', ')}`);
+    if (r.errors.length) r.errors.forEach(e => bad(e));
+}
+
+// ------------------------------------------------------------------
+// carbon-ai.html: numbers a person can read, selects that do not clip
+// ------------------------------------------------------------------
+async function exerciseCarbonTool(page, r) {
+    // A closed select cannot wrap, so the widest option has to fit inside
+    // the box, less its padding and the arrow. It clipped at every width
+    // from a 320px phone to a 1440px desktop.
+    for (const width of [320, 390, 1440]) {
+        await page.setViewportSize({ width, height: 900 });
+        await page.evaluate(() => document.fonts.ready);
+        const clipped = await page.evaluate(() => {
+            const ctx = document.createElement('canvas').getContext('2d');
+            const out = [];
+            document.querySelectorAll('select').forEach((sel) => {
+                const cs = getComputedStyle(sel);
+                ctx.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+                const room = sel.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - 20;
+                Array.from(sel.options).forEach((o) => {
+                    if (ctx.measureText(o.textContent).width > room) out.push(`#${sel.id} "${o.textContent}"`);
+                });
+            });
+            if (document.documentElement.scrollWidth > innerWidth) out.push(`the page scrolls sideways (${document.documentElement.scrollWidth}px)`);
+            return out;
+        });
+        if (clipped.length) clipped.forEach(c => bad(`carbon-ai.html at ${width}px: ${c} is cut off`));
+        else ok(`carbon-ai.html at ${width}px: every select option fits, nothing scrolls sideways`);
+    }
+
+    // Every preset, every number: no exponent, no "0.0" for something that
+    // is not zero.
+    const presets = await page.$$eval('[data-preset]', (b) => b.map(x => x.getAttribute('data-preset')));
+    const problems = [];
+    for (const preset of presets) {
+        await page.click(`[data-preset="${preset}"]`);
+        const values = await page.$$eval('.ca-num, .ca-equiv li > span:last-child, .bar-value', (els) => els.map(e => e.textContent.trim()));
+        values.filter(v => /\d[eE][-+]?\d/.test(v) || /^0\.0+\b/.test(v)).forEach(v => problems.push(`${preset}: "${v}"`));
+    }
+    if (problems.length) problems.forEach(p => bad(`carbon-ai.html prints ${p}`));
+    else ok(`carbon-ai.html: ${presets.length} presets, no exponent notation and no rounded-away zero`);
+    await page.setViewportSize({ width: 1280, height: 800 });
+    if (r.errors.length) r.errors.forEach(e => bad(e));
+}
 
 // ------------------------------------------------------------------
 // The homepage's on-demand features, each used once

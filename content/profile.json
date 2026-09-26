@@ -43,6 +43,8 @@
     "GIS"
   ],
 
+  "$languages": "Optional and deliberately absent: add \"languages\": [{ \"language\": \"Dutch\", \"level\": \"B1\" }], named in English with a CEFR level (A1-C2) or \"native\", once Moses states them. Until then the Assay on the homepage lists every non-English language a job ad asks for as a gap rather than guessing. npm run build:content copies it into modules/interactives.js.",
+
   "links": {
     "site": "https://moseskolleh.github.io/sustaintheworld/",
     "github": "https://github.com/moseskolleh",

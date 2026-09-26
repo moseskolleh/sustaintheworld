@@ -380,8 +380,135 @@ function checkResult(label, params) {
     assert(nan.length === 0, `Page: no output renders NaN or Infinity (${nan.join(', ') || 'none'})`);
 }
 
+// --- Number formatting ----------------------------------------------------
+// The default scenario on carbon-ai.html drove a car "9.46e-4 km" and made
+// "0.0 smartphone charges", which reads as free. Every number on both pages
+// now goes through one formatter in ai-carbon-data.js; this holds it to
+// tiny, ordinary and absurd values alike.
+const EXPONENT = /\d[eE][-+]?\d/;
+const ROUNDED_TO_NOTHING = /^0(\.0+)?$|\b0\.0+ /;
+{
+    const { formatNumber, formatQuantity } = require('../ai-carbon-data.js');
+    const cases = [
+        // [value, digits, maxDigits, expected, why]
+        [0, 2, 2, '0', 'zero is zero'],
+        [0.6, 3, 6, '0.600', 'ordinary values keep their decimals'],
+        [5.8692, 1, 6, '5.9', 'ordinary values round to their digits'],
+        [0.000946, 2, 6, '0.00095', 'tiny values keep two significant figures'],
+        [0.000082, 2, 6, '0.000082', 'a small model on a clean grid is tiny, not free'],
+        [0.002, 3, 6, '0.002', 'no trailing zeros past the significant figures'],
+        [1e-7, 2, 6, '< 0.000001', 'below the precision it says "<", not 0'],
+        [0.0201, 1, 2, '0.02', 'an everyday comparison below 0.1'],
+        [0.034, 1, 1, '< 0.1', 'a comparison that would round to 0.0 says "< 0.1"'],
+        [999.96, 1, 1, '1,000', 'rounding up to a thousand is grouped'],
+        [52511.2, 1, 6, '52,511', 'thousands are grouped'],
+        [2.5e6, 0, 0, '2.5 million', 'millions in words'],
+        [4.68e13, 1, 6, '46.8 trillion', 'the top of the input range is readable'],
+        [NaN, 2, 2, '—', 'NaN is a dash, not "NaN"'],
+        [Infinity, 2, 2, '—', 'Infinity is a dash']
+    ];
+    cases.forEach(([n, d, max, expected, why]) => {
+        const got = formatNumber(n, d, max);
+        assert(got === expected, `Format: ${why} (${n} → "${got}", expected "${expected}")`);
+    });
+
+    const bad = [];
+    for (let e = -14; e <= 24; e += 0.25) {
+        const n = 1.37 * Math.pow(10, e);
+        [[0, 0], [1, 2], [2, 3], [3, 6]].forEach(([d, max]) => {
+            const s = formatNumber(n, d, max);
+            if (EXPONENT.test(s) || ROUNDED_TO_NOTHING.test(s)) bad.push(`${n} → ${s}`);
+        });
+    }
+    assert(bad.length === 0, `Format: from 1e-14 to 1e24, never exponent notation and never a rounded zero (${bad.slice(0, 3).join('; ') || 'none'})`);
+
+    [
+        [0.000946, 'km', '95 cm', 'the reported "9.46e-4 km" becomes centimetres'],
+        [0.5, 'km', '500 m', 'under a kilometre is metres'],
+        [1.24, 'km', '1.2 km', 'a kilometre or more stays in km'],
+        [4.8e-7, 'km', '< 1 cm', 'below a centimetre says so'],
+        [3.6, 'min', '3.6 min', 'minutes stay minutes'],
+        [0.012, 'min', '0.7 s', 'under a minute is seconds'],
+        [90, 'min', '1.5 h', 'over an hour is hours'],
+        [12345, 'km', '12,345 km', 'large distances are grouped']
+    ].forEach(([v, ladder, expected, why]) => {
+        const got = formatQuantity(v, ladder);
+        assert(got === expected, `Units: ${why} (${v} ${ladder} → "${got}")`);
+    });
+}
+
+// --- The tool page shows those numbers ------------------------------------
+{
+    const fs = require('fs');
+    const path = require('path');
+    const { JSDOM } = require('jsdom');
+    const ROOT = path.join(__dirname, '..');
+    const dom = new JSDOM(fs.readFileSync(path.join(ROOT, 'carbon-ai.html'), 'utf8'), { runScripts: 'outside-only', url: 'https://example.com/' });
+    const { window } = dom;
+    window.eval(fs.readFileSync(path.join(ROOT, 'ai-carbon-data.js'), 'utf8'));
+    window.eval(fs.readFileSync(path.join(ROOT, 'carbon-ai.js'), 'utf8'));
+    window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
+    const doc = window.document;
+    const shown = () => Array.from(doc.querySelectorAll('.ca-num, .ca-equiv li > span:last-child, .bar-value'))
+        .map(el => `${el.id || el.className}: ${el.textContent.trim()}`);
+    const check = (label) => {
+        const values = shown();
+        const exp = values.filter(v => EXPONENT.test(v));
+        const zero = values.filter(v => ROUNDED_TO_NOTHING.test(v.split(': ')[1]));
+        assert(exp.length === 0, `Page, ${label}: no exponent notation anywhere (${exp.join('; ') || 'none'})`);
+        assert(zero.length === 0, `Page, ${label}: nothing non-zero shown as 0.0 (${zero.join('; ') || 'none'})`);
+    };
+
+    // The scenario the page opens with is the one that was reported.
+    assert(doc.getElementById('equivKm').textContent === '95 cm', `Page: the default drive reads "95 cm", not "9.46e-4 km" (${doc.getElementById('equivKm').textContent})`);
+    assert(doc.getElementById('equivPhone').textContent === '0.02', `Page: the default phone charges read "0.02", not "0.0" (${doc.getElementById('equivPhone').textContent})`);
+    check('default scenario');
+
+    doc.querySelector('[data-preset="edge"]').click();
+    check('smallest model on the cleanest grid');
+    assert(/^< /.test(doc.getElementById('equivPhone').textContent), `Page: a near-zero comparison says "<" (${doc.getElementById('equivPhone').textContent})`);
+
+    const set = (id, v) => { const el = doc.getElementById(id); el.value = String(v); el.dispatchEvent(new window.Event('input', { bubbles: true })); };
+    set('inputTokens', 1e7); set('outputTokens', 1e7); set('queriesPerDay', 1e9); set('pue', 3);
+    check('the largest scenario the inputs allow');
+
+    // The closed selects cannot wrap, so their options must be short enough
+    // for a 320px phone; the detail they used to carry is in the hint.
+    ['modelSelect', 'regionSelect', 'wueSelect'].forEach((id) => {
+        const sel = doc.getElementById(id);
+        const longest = Array.from(sel.options).reduce((a, o) => (o.textContent.length > a.length ? o.textContent : a), '');
+        assert(longest.length <= 32, `Page: #${id} options fit a phone (longest ${longest.length} chars: "${longest}")`);
+        const hint = doc.getElementById(sel.getAttribute('aria-describedby'));
+        assert(hint && hint.textContent.trim().length > 0, `Page: #${id} describes the choice beneath it (${hint && hint.textContent})`);
+    });
+}
+
+// --- The homepage widget prints through the same formatter ---------------
+{
+    const { run } = require('./harness.js');
+    const { window, errors } = run('dark');
+    const doc = window.document;
+    const data = window.AICarbonData;
+    const text = () => ['ecoEnergy', 'ecoCarbon', 'ecoWater', 'ecoEquiv'].map(id => doc.getElementById(id).textContent).join(' | ') +
+        ' | ' + Array.from(doc.querySelectorAll('.eco-bar-val')).map(e => e.textContent).join(' ');
+    assert(errors.length === 0, `Homepage: "AI, Weighed" renders without errors (${errors.map(String).join('; ') || 'none'})`);
+    assert(!EXPONENT.test(text()), `Homepage: the default reading has no exponent notation (${text().slice(0, 120)})`);
+
+    // The smallest model on the cleanest grid: tiny, never zero, never 1e-5.
+    const model = doc.getElementById('ecoModel');
+    const grid = doc.getElementById('ecoGrid');
+    model.value = String(data.HOMEPAGE_MODELS.indexOf('llama-32-1b'));
+    grid.value = String(data.HOMEPAGE_REGIONS.indexOf('no'));
+    model.dispatchEvent(new window.Event('change'));
+    const small = text();
+    assert(!EXPONENT.test(small) && !/(^|\s)0(\.0+)?(\s|$)/.test(small), `Homepage: a tiny reading is neither exponent nor zero (${small.slice(0, 160)})`);
+    assert(/\d (s|min|h)\b/.test(doc.getElementById('ecoEquiv').textContent) && /\d (cm|m|km)\b|< 1 cm/.test(doc.getElementById('ecoEquiv').textContent),
+        `Homepage: the comparisons carry their own units (${doc.getElementById('ecoEquiv').textContent})`);
+}
+
 if (failures > 0) {
     console.log(`\n${failures} assertion(s) failed`);
     process.exit(1);
 }
 console.log('\nAll assertions passed');
+process.exit(0);   // the homepage harness leaves timers running
