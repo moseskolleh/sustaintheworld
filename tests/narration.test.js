@@ -159,9 +159,12 @@ const slowFetch = (window, delay, body, asked) => {
             node.getBoundingClientRect = () => ({ top: i < aboutAt ? -2000 : (i === aboutAt ? 80 : 1600 + i * 900), bottom: 0, left: 0, right: 0, width: 0, height: 0 });
         });
 
+        // The player hangs below the nav bar, so jumps have to clear it too.
+        bar.getBoundingClientRect = () => ({ top: 80, bottom: 180, left: 8, right: 382, width: 374, height: 100 });
         click(window, btn);
         await wait(30);
         assert(!bar.hidden && btn.getAttribute('aria-expanded') === 'true', 'Docked: a press opens the player');
+        assert(doc.documentElement.style.scrollPaddingTop === '188px', `Docked: while open, jumps and Tab stops land below the player (scroll-padding-top ${doc.documentElement.style.scrollPaddingTop || 'unset'})`);
         assert(window.FieldDispatch.state().playing === 'about', `Docked: it reads the section in view (${window.FieldDispatch.state().playing})`);
         assert(/03 \/ 10 · the about section/i.test(bar.querySelector('.dispatch-title').textContent), `Docked: the player says which section, and where it is (${bar.querySelector('.dispatch-title').textContent})`);
         assert(/0 KB transferred/.test(bar.querySelector('.dispatch-weight').textContent), 'Docked: the browser voice is labelled 0 KB transferred');
@@ -190,6 +193,7 @@ const slowFetch = (window, delay, body, asked) => {
         bar.querySelector('.dispatch-rate').focus();
         bar.querySelector('.dispatch-rate').dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
         assert(bar.hidden && btn.getAttribute('aria-expanded') === 'false', 'Close: Escape inside the player closes it');
+        assert(doc.documentElement.style.scrollPaddingTop === '', 'Close: jumps go back to clearing the nav bar alone (style.css)');
         assert(doc.activeElement === btn, 'Close: focus returns to the Listen button, not the top of the page');
 
         click(window, btn);

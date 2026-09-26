@@ -2731,7 +2731,7 @@ html.js .nojs-note { display: none; }
    RESPONSIVE
    =================================== */
 /* Below 1280px the bar's ~1,270px do not fit on one line, so the
-   hamburger takes over (the theme switch stays in the bar). */
+   hamburger takes over (the theme switch and Listen stay in the bar). */
 @media (max-width: 1279px) {
     .nav-toggle {
         display: flex;
@@ -2901,8 +2901,11 @@ html.js .nojs-note { display: none; }
     overflow: hidden;
 }
 
+/* The SVG's box, held before it arrives: the empty frame grew ~250px on
+   a phone's first scroll, moving everything below it. */
 .journey-map-frame {
     overflow: hidden;
+    aspect-ratio: 1000 / 726;
 }
 
 .journey-map-frame svg {
@@ -4176,17 +4179,11 @@ body.light-mode .journey-you-readout {
     50%      { opacity: 0.35; }
 }
 
-/* The bar's free space belongs after the logo, so whatever sits on the
-   right of it (the menu button, this control) stays together there. */
-.nav-container > .nav-logo {
-    margin-right: auto;
-}
-
 /* Where room is short — a phone's nav bar, and beside the full menu on a
    desktop — the word steps aside and the waveform carries it. It is
    clipped, not removed, so a screen reader still hears "Listen to this
    page", and the tooltip says it for a mouse. */
-@media (max-width: 480px), (min-width: 1260px) {
+@media (max-width: 480px), (min-width: 1280px) {
     .listen-btn {
         padding: 0;
     }
@@ -4201,25 +4198,18 @@ body.light-mode .journey-you-readout {
     }
 }
 
-/* Beside the full menu every pixel counts: the ten links, CV and Contact
-   filled the bar before this control existed. The gaps give up the ~50px
-   it needs, rather than letting it drop off the right edge between the
-   breakpoints (scripts/smoke.js checks it is on screen at every width). */
-@media (min-width: 1260px) {
+/* Beside the full menu every pixel counts: the rest of the bar leaves
+   ~12px of 1280. This control sits closer to Contact, and below 1330px the
+   links give up 4px a gap (scripts/smoke.js checks it fits at every width). */
+@media (min-width: 1280px) {
     .nav-listen {
         margin-left: -8px;
     }
 }
 
-@media (min-width: 1260px) and (max-width: 1479px) {
+@media (min-width: 1280px) and (max-width: 1329px) {
     .nav-menu {
-        gap: 14px;
-    }
-}
-
-@media (min-width: 1480px) {
-    .nav-menu {
-        gap: 16px;
+        gap: 12px;
     }
 }
 

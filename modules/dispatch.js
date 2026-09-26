@@ -258,9 +258,18 @@
     // it says whether the player is open, and closing the player hands the
     // keyboard back to it instead of dropping focus onto the page.
     // ---------------------------------------------------------------
+    // style.css keeps jumps and Tab stops 72px clear of the nav bar; while
+    // the player hangs below it they clear the player too. Measured, since
+    // the offer changes its height.
+    const clearPlayer = () => {
+        document.documentElement.style.scrollPaddingTop = bar.hidden ? '' : `${Math.ceil(bar.getBoundingClientRect().bottom) + 8}px`;
+    };
+    if (typeof ResizeObserver === 'function') new ResizeObserver(clearPlayer).observe(bar);
+
     const showBar = (visible) => {
         if (!visible && bar.contains(document.activeElement) && listenBtn && !listenWrap.hidden) listenBtn.focus();
         bar.hidden = !visible;
+        clearPlayer();
         if (listenBtn) {
             listenBtn.setAttribute('aria-expanded', String(visible));
             listenBtn.classList.toggle('is-playing', visible && !!current);

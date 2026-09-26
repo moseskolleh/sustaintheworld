@@ -566,21 +566,36 @@ async function exerciseNarration(browser, origin) {
         const count = await page.$$eval('.listen-btn', (els) => els.length);
         if (count === 1) ok('exactly one listen control on the page'); else bad(`${count} listen controls — there should be one`);
 
-        // On screen at every width, and clear of the logo and the menu button.
+        // On screen at every width, inside the bar, and clear of the logo,
+        // the theme switch and the menu button. The tightest width is the
+        // first with the full menu, so that one is found and checked too:
+        // the bar used to run 14px past its edge there.
+        const settle = () => page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+        const fullMenu = async (w) => {
+            await page.setViewportSize({ width: w, height: 844 });
+            await settle();
+            return page.evaluate(() => getComputedStyle(document.getElementById('navToggle')).display === 'none');
+        };
+        let lo = 1000, hi = 1920;
+        while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (await fullMenu(mid)) hi = mid; else lo = mid; }
         const off = [];
-        for (const w of [320, 360, 390, 430, 768].concat(Array.from({ length: 47 }, (_, i) => 1000 + i * 20))) {
+        for (const w of new Set([320, 360, 390, 430, 768, lo, hi].concat(Array.from({ length: 47 }, (_, i) => 1000 + i * 20)))) {
             await page.setViewportSize({ width: w, height: 844 });
             // Two frames, so anything the breakpoint change set moving has settled.
-            await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+            await settle();
             const r = await page.evaluate(() => {
                 const box = (el) => (el && getComputedStyle(el).display !== 'none' ? el.getBoundingClientRect() : null);
                 const b = box(document.getElementById('listenBtn'));
                 if (!b || !b.width) return 'not shown';
                 const hit = (o) => o && o.width && !(o.right <= b.left || o.left >= b.right || o.bottom <= b.top || o.top >= b.bottom);
                 if (b.left < 0 || b.right > innerWidth) return 'off screen';
+                const bar = document.querySelector('.nav-container');
+                const edge = bar.getBoundingClientRect().right - parseFloat(getComputedStyle(bar).paddingRight);
+                if (b.right > edge + 0.5) return `${Math.round(b.right - edge)}px past the bar's edge`;
                 if (hit(box(document.querySelector('.nav-logo'))) || hit(box(document.getElementById('navToggle')))) return 'overlapping the logo or menu button';
+                if (hit(box(document.getElementById('themeToggle')))) return 'overlapping the theme switch';
                 const last = box(document.querySelector('.nav-menu .contact-btn'));
-                if (innerWidth >= 1260 && hit(last)) return 'overlapping Contact';
+                if (getComputedStyle(document.getElementById('navToggle')).display === 'none' && hit(last)) return 'overlapping Contact';
                 return null;
             });
             if (r) off.push(`${w}px: ${r}`);
@@ -627,6 +642,19 @@ async function exerciseNarration(browser, origin) {
         }
         if (covered.length) bad(`the open player covers the contact form's submit button (scrolled to ${covered.join(', ')})`);
         else ok('the open player never sits over the contact form\'s submit button');
+
+        // A nav link followed with the player open lands its heading below
+        // the player: style.css pads jumps for the nav bar alone.
+        await page.emulateMedia({ reducedMotion: 'reduce' });
+        await page.evaluate(() => document.querySelector('.nav-menu a[href="#experience"]').click());
+        await page.waitForTimeout(400);
+        const landed = await page.evaluate(() => ({
+            heading: Math.round(document.querySelector('#experience .section-title').getBoundingClientRect().top),
+            player: Math.round(document.getElementById('dispatchBar').getBoundingClientRect().bottom)
+        }));
+        if (landed.heading >= landed.player) ok(`a nav jump with the player open lands its heading below it (${landed.heading}px, player ends at ${landed.player}px)`);
+        else bad(`a nav jump with the player open hides its heading under the player (${landed.heading}px, player ends at ${landed.player}px)`);
+        await page.emulateMedia({ reducedMotion: null });
 
         // The keyboard: the player is next in Tab order, and Escape hands
         // focus back to the control.
