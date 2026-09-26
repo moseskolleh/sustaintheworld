@@ -2,10 +2,14 @@
 // ===================================================================
 // VOICE SIGNATURE — the single definition of "is this track current?"
 //
-// Two programs write assets/audio/voice-manifest.json:
+// Two programs can write section tracks into
+// assets/audio/voice-manifest.json, both only when someone opts in:
 //
 //   scripts/generate-voice.js   renders from the Fish Audio TTS API
 //   scripts/assemble-voice.js   stitches chunks rendered over MCP
+//
+// (A third, scripts/voice-intro.js, writes Moses's recorded introduction;
+// it uses textSignature below and nothing else here.)
 //
 // They have to agree, byte for byte, on how a track's signature is
 // computed. When they did not, `npm run voice` considered every
@@ -33,7 +37,7 @@
 //             raises the cap from 500 to 15000 — silently invalidated
 //             every track on the next run. It is recorded in the manifest
 //             for provenance and reported as drift, never as staleness.
-//             `npm run voice -- --force` re-renders regardless.
+//             `npm run voice -- --sections --force` re-renders regardless.
 // ===================================================================
 
 const crypto = require('crypto');
@@ -109,6 +113,15 @@ function configDrift(manifest, config) {
         .map(field => ({ field, was: was[field], now: now[field] }));
 }
 
+/**
+ * The signature of a script's words alone. Moses's introduction is a
+ * recording, not a render — no model, voice or bitrate made it — so only the
+ * text it was read from identifies it. scripts/voice-intro.js stores this as
+ * `scriptHash`, and tests/voice.test.js fails if the script changes after the
+ * take without the recording being re-installed: the captions are that text.
+ */
+const textSignature = text => signature(text, {});
+
 /** Grams CO₂e for a transferred payload, Sustainable Web Design model. */
 const grams = bytes => (bytes / (1024 * 1024)) * GRAMS_PER_MB;
 
@@ -119,6 +132,7 @@ module.exports = {
     normaliseConfig,
     manifestConfig,
     signature,
+    textSignature,
     isCurrent,
     configDrift,
     grams

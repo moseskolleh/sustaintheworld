@@ -74,10 +74,15 @@ const BUDGETS = {
         max: 3.5 * MB,
         readme: 'the full gallery, only reached by opening every project'
     },
-    allAudio: {
-        label: 'Every narration track (only if someone played all of them)',
-        max: 4.5 * MB,
-        readme: 'nothing here is fetched until a visitor presses play'
+    // The only audio the site ships is Moses's own recorded introduction:
+    // one 60–90 s take, and 90 s of mono MP3 at 64 kbps is about 720 KB.
+    // Every audio file in the repository counts against it, so the ten
+    // stock-voice section tracks this replaced (4.13 MB, retired with their
+    // 4.5 MB budget) cannot drift back in unbudgeted. 0 KB until he records.
+    introAudio: {
+        label: "Recorded narration: Moses's introduction, the one audio file the site ships",
+        max: 800 * KB,
+        readme: 'fetched only when a visitor asks to hear him'
     },
     fieldReport: {
         label: 'Text-only field report, whole page',
@@ -167,12 +172,13 @@ function criticalAssets(page = 'index.html') {
 }
 
 // What script.js fetches later, feature by feature. The module list is read
-// from the directory, so a new module is counted the moment it exists.
+// from the directory, so a new module — or a module's stylesheet — is
+// counted the moment it exists.
 function onDemandAssets() {
     const files = [];
     const modulesDir = path.join(ROOT, 'modules');
     if (fs.existsSync(modulesDir)) {
-        fs.readdirSync(modulesDir).filter(f => f.endsWith('.js')).sort()
+        fs.readdirSync(modulesDir).filter(f => /\.(js|css)$/.test(f)).sort()
             .forEach(f => files.push(`modules/${f}`));
     }
     ['voice-scripts.js', 'ai-carbon-data.js', 'assets/journey-map.svg', 'assets/audio/voice-manifest.json']
@@ -210,7 +216,7 @@ function measure() {
         researchWire: pageWire('research.html'),
         largestImage: images.reduce((n, f) => Math.max(n, sizeOf(f) || 0), 0),
         allImages: images.reduce((n, f) => n + (sizeOf(f) || 0), 0),
-        allAudio: audio.reduce((n, f) => n + (sizeOf(f) || 0), 0),
+        introAudio: audio.reduce((n, f) => n + (sizeOf(f) || 0), 0),
         // Uncompressed, because that is the number the footer quotes and the one a
         // reader can verify by saving the page.
         fieldReport: sizeOf('field-report.html') || 0

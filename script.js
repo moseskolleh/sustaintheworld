@@ -112,11 +112,13 @@ window.mksScrollMotion = scrollMotion;
 // SyntaxError) and reach the core only through window.mks*. Each marks
 // itself in window.mksLoaded when it has run, which is also how the jsdom
 // harness — which evaluates them directly — tells the loader they are here.
+// A module's own stylesheet is listed first, so it has arrived before the
+// script builds anything it styles.
 const MODULES = {
     interactives: ['ai-carbon-data.js', 'modules/interactives.js'],
     dossier: ['modules/dossier.js'],
     terminal: ['modules/terminal.js'],
-    dispatch: ['voice-scripts.js', 'modules/dispatch.js']
+    dispatch: ['modules/dispatch.css', 'voice-scripts.js', 'modules/dispatch.js']
 };
 
 const mksLoad = (() => {
@@ -124,9 +126,10 @@ const mksLoad = (() => {
     const inflight = {};
 
     const inject = (src) => new Promise((resolve, reject) => {
-        const s = document.createElement('script');
-        s.src = src;
-        s.async = false;   // keep the order a module's dependencies were listed in
+        const css = /\.css$/.test(src);
+        const s = document.createElement(css ? 'link' : 'script');
+        if (css) { s.rel = 'stylesheet'; s.href = src; }
+        else { s.src = src; s.async = false; }   // keep the order a module's dependencies were listed in
         s.onload = () => { loaded[src] = true; resolve(); };
         s.onerror = () => { s.remove(); reject(new Error(`could not load ${src}`)); };
         document.head.appendChild(s);
@@ -1149,9 +1152,6 @@ document.querySelectorAll('.current-year').forEach(el => {
         if (window.mksLoaded.interactives) return;
         const btn = e.target && e.target.closest ? e.target.closest('button') : null;
         if (!btn || !btn.closest(INTERACTIVE_HOSTS)) return;
-        // The section's listen control lives in the same host but belongs to
-        // the narration player, which handles its own first press.
-        if (btn.classList.contains('listen-btn')) return;
         e.preventDefault();
         if (waiting.has(btn)) return;
         waiting.add(btn);
@@ -1455,63 +1455,62 @@ window.mksReady = true;
 })();
 
 // ===================================
-// THE SPOKEN PAGE — the listen controls
+// THE SPOKEN PAGE — one listen control, in the nav
 // ===================================
-// The player behind them (modules/dispatch.js plus the scripts it reads) is
-// about 40 KB that only a visitor who presses one of these needs. So the core
-// renders the controls — one on the hero, one in every section header — and
-// the first press fetches the player, which takes them over: same buttons in
-// the same places, now with the transfer cost of each voice printed beside
-// them. A section header without a narration script would get a dead button
-// here, which is why tests/bugs.test.js holds the two lists to each other.
+// The player behind it (modules/dispatch.js, its stylesheet and the scripts
+// it reads) is about 16 KB gzipped that only a visitor who presses Listen
+// needs. So the core only decides whether to show the button; the first
+// press fetches the player, which reads the section in view and moves
+// between sections itself.
+//
+// There used to be ten of these, one in every section header: eight-plus
+// extra Tab stops for a feature most visits never use. One is enough.
+//
+// The button stays hidden unless something can actually speak. A speech
+// engine that reports no voices (headless browsers, Linux without
+// speech-dispatcher) accepts an utterance and silently drops it, and a
+// button that loads a player to say nothing is worse than no button. The one
+// other thing that can speak is Moses's own recorded introduction, so a
+// browser with no voice asks the manifest once, well after the first view.
 (() => {
-    const canSynth = typeof window.speechSynthesis !== 'undefined' &&
-        typeof window.SpeechSynthesisUtterance === 'function';
-    if (!canSynth && typeof window.Audio !== 'function') return;
+    const wrap = document.getElementById('navListen');
+    const btn = document.getElementById('listenBtn');
+    if (!wrap || !btn) return;
 
-    const mounts = [];
-    const cta = document.querySelector('.hero-cta');
-    if (cta) mounts.push({ id: 'hero', label: 'the introduction', insert: (el) => cta.insertAdjacentElement('afterend', el) });
-    document.querySelectorAll('section[id]').forEach(section => {
-        const header = section.querySelector('.section-header');
-        if (!header) return;
-        const title = header.querySelector('h2');
-        mounts.push({
-            id: section.id,
-            label: title ? title.textContent.replace(/\s+/g, ' ').trim() : section.id,
-            insert: (el) => header.appendChild(el)
-        });
-    });
+    const synth = window.speechSynthesis;
+    const canSynth = typeof synth !== 'undefined' && typeof window.SpeechSynthesisUtterance === 'function';
+    const hasVoice = () => canSynth && (synth.getVoices() || []).length > 0;
+    const show = () => { wrap.hidden = false; };
 
-    mounts.forEach(({ id, label, insert }) => {
-        const wrap = document.createElement('div');
-        wrap.className = 'listen-wrap';
-        wrap.dataset.voiceId = id;
-        wrap.innerHTML = `
-            <button class="listen-btn mono-label" type="button" data-voice="${id}"
-                    aria-pressed="false" data-analytics="listen-${id}">
-                <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-play"></use></svg>
-                <span>listen<span class="sr-only"> to ${label}</span></span>
-            </button>
-            <span class="listen-cost mono-label"></span>`;
-        const btn = wrap.querySelector('.listen-btn');
-        btn.addEventListener('click', () => {
-            btn.disabled = true;
-            btn.classList.add('is-loading');
-            mksLoad('dispatch').then(() => {
-                const fd = window.FieldDispatch;
-                if (!fd || !fd.play(id)) return;
-                // The player replaced this button with its own; keep the
-                // keyboard where the visitor left it.
-                const live = document.querySelector(`.listen-btn[data-voice="${id}"]`);
-                if (live && live !== btn) live.focus();
-            }).catch((err) => {
-                btn.disabled = false;
-                btn.classList.remove('is-loading');
-                mksLoadWarn(err);
-            });
+    if (hasVoice()) {
+        show();
+    } else {
+        // Chrome's first getVoices() is routinely empty; the list arrives later.
+        if (canSynth && typeof synth.addEventListener === 'function') {
+            synth.addEventListener('voiceschanged', () => { if (hasVoice()) show(); });
+        }
+        window.addEventListener('load', () => setTimeout(() => {
+            if (!wrap.hidden || typeof window.fetch !== 'function') return;
+            fetch('assets/audio/voice-manifest.json', { cache: 'force-cache' })
+                .then(r => (r.ok ? r.json() : null))
+                .then(m => { if (m && m.tracks && m.tracks.intro) show(); })
+                .catch(() => { /* no recording: the button stays hidden */ });
+        }, 1500));
+    }
+
+    // Every press goes through the player once it is here; the first one
+    // also fetches it. A second press while it is on its way is the same
+    // request, not a close.
+    btn.addEventListener('click', () => {
+        if (btn.getAttribute('aria-busy') === 'true') return;
+        btn.setAttribute('aria-busy', 'true');
+        mksLoad('dispatch').then(() => {
+            btn.removeAttribute('aria-busy');
+            if (window.FieldDispatch) window.FieldDispatch.toggle();
+        }, (err) => {
+            btn.removeAttribute('aria-busy');
+            mksLoadWarn(err);
         });
-        insert(wrap);
     });
 })();
 

@@ -1,79 +1,68 @@
 # assets/audio
 
-Generated narration. Do not edit by hand.
+The recordings the page may play. Do not edit by hand.
 
-Each `<section>.mp3` here is rendered from the matching script in
-[`voice-scripts.js`](../../voice-scripts.js) by
-[`scripts/generate-voice.js`](../../scripts/generate-voice.js):
+There is at most one: **`intro.mp3`, Moses Kolleh Sesay introducing himself
+in his own voice**, a single 60–90 second take opening with "Kushe". He reads
+it from the `intro` script in [`content/narration.json`](../../content/narration.json),
+and the player shows that script as its captions.
 
 ```bash
-cp .env.example .env                              # paste your Fish Audio key in
-npm run voice -- --clone path/to/your-voice.mp3   # clone your voice, render everything
-npm run voice                                     # later: re-render only what changed
+npm run voice:intro -- path/to/take.mp3               # copy it in, measure it, write the manifest entry
+npm run voice:intro -- path/to/take.mp3 --seconds 78  # if the length cannot be read from the file
 ```
 
-## Whose voice this is
+[`scripts/voice-intro.js`](../../scripts/voice-intro.js) copies the take to
+`intro.mp3`, measures its bytes and duration (ffprobe if installed, otherwise
+from the MP3's own frame headers, otherwise `--seconds`), and writes the
+`intro` entry in `voice-manifest.json`: `file`, `bytes`, `grams`, `seconds`,
+`voiceKind: "recorded"`, `voiceTitle: "Moses Kolleh Sesay"` and the hash of
+the script it was read from. It is his own voice, recorded by him, so no voice
+model, API key or third-party consent is involved, and nothing is uploaded
+anywhere.
 
-**The narration is synthetic.** It is *Spiritual African Narrator*
-(`650ec6ce2dda4f1faf86fae5d591ca32`), a stock text-to-speech voice from the
-Fish Audio voice library, used under that library's terms. It is **not** a
-recording of Moses Kolleh Sesay, and it is not a clone of anyone's voice — no
-personal voice sample was ever uploaded, so no third party's consent is
-involved.
+**Until he records it, `voice-manifest.json` lists no tracks** and the page
+offers no recording. The sections are read by the visitor's own browser voice
+either way, which transfers nothing. The manifest stays in place, empty, so
+the player's one request for it never 404s.
 
-The player used to label this option "Moses", which invited exactly the wrong
-inference. It now shows the voice's real title and says in the player that it
-is synthetic. `voice-manifest.json` carries `voiceTitle`, `voiceKind` and
-`voiceProvider` so the page never has to hardcode a name again.
+## What happened to the ten section tracks
 
-To narrate in a real voice instead, run `npm run voice -- --clone <sample>`
-with a recording you have the right to use. That makes `voiceKind` `human`,
-and the page's wording follows.
+Until September 2026 this directory held ten section tracks, 4.13 MB in all,
+read by *Spiritual African Narrator*, a stock text-to-speech voice from the
+Fish Audio library. They were retired, for three reasons:
 
-## How the current tracks were made
+- **They repeated claims the page no longer makes.** Audio cannot be fixed
+  with a text edit; it has to be rendered again.
+- **Every copy edit made them stale, and re-rendering costs money.** A full
+  render is about 7,700 Fish Audio credits against a free allowance of 8,000,
+  and a track has to match its script, so each change to the homepage was a
+  bill.
+- **A stock voice reading first-person lines was never Moses.** The page said
+  so honestly, but "I grew up where water scarcity isn't a statistic" in a
+  stranger's synthetic voice is a different proposition from him saying it.
 
-Through the Fish Audio MCP connection (free tier, 500-byte calls), one
-sentence-group at a time, then stitched back into whole sections by
-[`scripts/assemble-voice.js`](../../scripts/assemble-voice.js) from the chunk
-URLs recorded in
-[`scripts/voice-chunks.json`](../../scripts/voice-chunks.json).
-
-Both generators compute track signatures through one shared module,
-[`scripts/lib/voice-signature.js`](../../scripts/lib/voice-signature.js), so
-either can take over from the other. Before that module existed they hashed
-different field lists, and `npm run voice` treated every assembled track as
-stale — a dry run offered to re-render all ten sections, roughly 7,700 credits
-for audio that already existed. `tests/voice.test.js` now runs the real
-generator in dry-run against the committed manifest and fails if it plans to
-spend anything.
-
-`npm run voice:assemble -- --from-disk` rewrites the manifest from the mp3
-files already here, downloading nothing — for when the audio is right but the
-manifest needs restating.
+The pipeline that made them is still in the repository for anyone who wants
+rendered sections (see [docs/narration-setup.md](../../docs/narration-setup.md)).
+It runs only when asked with `npm run voice -- --sections`, and the page's
+player no longer plays section tracks. The audio budget in
+[`scripts/check-budget.js`](../../scripts/check-budget.js) is 800 KB, sized
+for the one introduction, so section tracks cannot come back without a
+deliberate decision to raise it.
 
 ## What the numbers mean
 
-`voice-manifest.json` records each track's real byte size and the grams of
-CO₂e attributable to **transferring** it, using the same Sustainable Web
-Design constant (0.36 g CO₂e per MB) as the footer badge.
+The manifest records the recording's real byte size and the grams of CO₂e
+attributable to **transferring** it, using the same Sustainable Web Design
+constant (0.36 g CO₂e per MB) as the footer badge.
 
 That figure covers network transfer and nothing else. It excludes the energy
-your device spends decoding the audio and driving a speaker, and for the
-browser voice it excludes the cost of synthesising speech. Every figure in the
-player says "transfer" for that reason: the browser voice moves zero bytes,
-which is genuinely zero *transfer* emissions — but it is not free.
-
-## Without these files
-
-**The page works without any of them.** Until the manifest exists, the listen
-controls use the browser's own speech engine, which transfers nothing. Once
-the manifest is here, the recorded narration becomes the default and the
-browser voice stays one click away.
-
-If neither a recording nor a speech engine is available, the controls stay
-hidden rather than offering a button that does nothing.
+the listener's device spends decoding the audio and driving a speaker, and
+for the browser voice it excludes the cost of synthesising speech. Every
+figure in the player says "transfer" for that reason: the browser voice moves
+zero bytes, which is genuinely zero *transfer* emissions, but it is not free.
 
 Nothing in this directory is fetched until a visitor presses play.
 
-`.wav` files are gitignored — they are the throwaway output of
+`.wav` files are gitignored: they are the throwaway output of
 `npm run voice:check`, which renders against the local mock server.

@@ -80,9 +80,8 @@
             print('this counts network transfer only — not the energy your device spends rendering it.');
             const fd = window.FieldDispatch;
             if (fd) {
-                const st = fd.state();
-                print(st.mode === 'human'
-                    ? `narration: ${st.voiceTitle || 'recorded voice'} — each section is a file, and the player prints its transfer weight before you press play.`
+                print(fd.state().playing === 'intro'
+                    ? 'narration: Moses\'s own recording — one file, and the player printed its transfer weight before you pressed play.'
                     : 'narration: your browser\'s own voice. it transfers nothing, so it adds nothing to the figure above — though your device still does the work.');
             }
         },
@@ -142,37 +141,22 @@
 
             if (!arg) {
                 print('usage: voice <section> — one of: ' + state.ids.join(', '));
+                print('       voice moses     — Moses introduces himself, in his own voice, once he has recorded it');
                 print('       voice stop      — shut it up');
-                print('       voice recorded  — switch to the recorded narration, if it has been rendered');
-                print('       voice browser   — switch back to your browser\'s own voice (0 bytes)');
-                print(`current: ${state.mode === 'human' ? (state.voiceTitle || 'recorded narration') : 'browser voice — ' + state.voice}`);
-                if (state.mode === 'human' && state.voiceKind && state.voiceKind !== 'human') {
-                    print('note: that is a synthetic text-to-speech voice, not a recording of Moses.');
-                }
-                if (state.mode !== 'human') {
-                    print(state.local
-                        ? 'that voice is installed on your device. it transfers nothing over the network.'
-                        : 'heads up: your browser has no offline voice, so it streams the audio from its vendor.');
-                }
+                print(`sections are read by your browser's voice — ${state.voice}.`);
+                print(state.local
+                    ? 'that voice is installed on your device. it transfers nothing over the network.'
+                    : 'heads up: your browser has no offline voice, so it streams the audio from its vendor.');
                 return;
             }
             if (arg === 'stop') { fd.stop(); print('narration stopped.'); return; }
-            // 'moses' still works as an alias — it was the documented word —
-            // but it is no longer what the command prints back, because the
-            // recorded narration is not Moses's voice.
-            if (arg === 'recorded' || arg === 'human' || arg === 'moses') {
-                fd.loadManifest().then(() => {
-                    if (!fd.hasRecorded()) { print('the recorded narration has not been rendered yet — staying on the browser voice.', 'ft-err'); return; }
-                    fd.setMode('human', true);
-                    const now = fd.state();
-                    print(`voice: ${now.voiceTitle || 'recorded narration'}${now.voiceKind && now.voiceKind !== 'human' ? ' (synthetic)' : ''}.`);
-                    print('each section is a file now — the player shows what it transfers.');
+            // The one recording on the site is Moses's own, so 'moses' now
+            // means exactly what it says. 'intro' and 'recorded' reach it too.
+            if (arg === 'moses' || arg === 'intro' || arg === 'recorded') {
+                fd.playIntro().then((ok) => {
+                    if (ok) close();
+                    else print('Moses has not recorded his introduction yet — try \'voice about\' for the browser voice.', 'ft-err');
                 });
-                return;
-            }
-            if (arg === 'browser' || arg === 'synth') {
-                fd.setMode('synth', true);
-                print('voice: your browser\'s. nothing crosses the wire — though your device still does the work.');
                 return;
             }
             if (fd.play(arg)) { close(); return; }

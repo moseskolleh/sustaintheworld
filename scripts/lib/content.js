@@ -233,6 +233,20 @@ function loadAll() {
     narration.scripts.forEach((s) => {
         if (!s.id || !s.label || !s.text) problems.push(`narration "${s.id || '?'}": missing id, label or text`);
     });
+    // The introduction is read by Moses himself, so it has a shape to keep:
+    // one 60-90 second take, which at a measured pace is 150-220 words, and
+    // it opens with the greeting the recording is known by.
+    const intro = narration.intro;
+    if (intro) {
+        if (intro.id !== 'intro' || !intro.label || !intro.readBy || !intro.text) {
+            problems.push('narration intro: needs id "intro", a label, readBy and text');
+        } else {
+            const words = intro.text.trim().split(/\s+/).length;
+            if (words < 150 || words > 220) problems.push(`narration intro: ${words} words; a 60-90 s take is 150-220`);
+            if (!/^Kushe\b/.test(intro.text)) problems.push('narration intro: must open with "Kushe"');
+            if (intro.readBy !== profile.person.name) problems.push(`narration intro: readBy "${intro.readBy}" is not ${profile.person.name}`);
+        }
+    }
 
     // --- languages (optional) ------------------------------------------
     problems.push(...checkLanguages(profile.languages));

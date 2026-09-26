@@ -14,18 +14,24 @@
 // acronyms, numbers spelled out, no bullet lists — and must stay factually
 // identical to the section it narrates.
 //
-// CHANGING ANY TEXT HERE COSTS MONEY. Track signatures are content-addressed,
-// so an edited script is a re-render on the next npm run voice — about one Fish
-// Audio credit per UTF-8 byte of that section. npm run voice -- --dry-run shows
-// the bill before you pay it. Unchanged sections are free.
+// `scripts` are read aloud by the visitor's own browser voice, so editing one
+// costs nothing. No audio is rendered from them unless someone opts in with
+// npm run voice -- --sections (Fish Audio, about one credit per UTF-8 byte;
+// add --dry-run to see the bill first). The site plays no such recordings.
+//
+// `intro` is different: it is the script Moses reads aloud and records in his
+// own voice (npm run voice:intro). The player shows it as the captions for
+// that recording, so once he has recorded it, change it only to match what he
+// actually said. tests/voice.test.js fails if the two drift apart.
 // ===================================================================
 (function (root, factory) {
     const data = factory();
     root.VoiceScripts = data;
     if (typeof module !== 'undefined' && module.exports) module.exports = data;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
-    // `id` doubles as the audio filename: assets/audio/<id>.mp3
-    // `label` is the accessible name of the play button for that section.
+    // `id` is the section's element id (the hero's is #home), and the
+    // file name if anyone opts in to rendering it: assets/audio/<id>.mp3
+    // `label` is how the player names that section.
     const SCRIPTS = [
         {
             id: "hero",
@@ -79,6 +85,15 @@
         }
     ];
 
+    // The captions for Moses's recorded introduction, which he reads from
+    // this text. Never spoken by the browser voice.
+    const INTRO = {
+        id: "intro",
+        label: "Moses introduces himself",
+        readBy: "Moses Kolleh Sesay",
+        text: "Kushe. I'm Moses Kolleh Sesay, a sustainability and climate analyst based in Amsterdam. I trained as a geologist in Sierra Leone, where my dissertation mapped groundwater in the hard rock around Freetown. In the field, I worked on drilling projects that delivered a hundred and sixty-four water points, and reading the ground before drilling took our strike rate to seven holes in ten. That taught me the rule I still work by: collect the data before the drill bit, not after. Since then I have earned two master's degrees, in industrial engineering at Hunan University in China and in environmental sciences at Wageningen in the Netherlands. I modelled river pollution across more than ten thousand sub-basins, and at the United Nations in Bonn I documented fifty-four hazard information systems. Today I research sustainable A.I. at the Digital Society School in Amsterdam, with the Dutch Ministry of Finance, weighing what generative A.I. costs in electricity, hardware and water against what it gives back. Each of these has a case study on this site, with its evidence and its limits. If your work touches climate, water or A.I., I would like to hear from you."
+    };
+
     // Sentence splitting, shared by the player (for utterances and captions)
     // and available to the generator.
     //
@@ -115,5 +130,5 @@
     const byId = {};
     SCRIPTS.forEach(s => { byId[s.id] = s; });
 
-    return { SCRIPTS, byId, splitSentences };
+    return { SCRIPTS, byId, splitSentences, INTRO };
 });

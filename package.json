@@ -17,9 +17,10 @@
     "map:build": "node scripts/generate-journey-map.js",
     "map:check": "node scripts/generate-journey-map.js --check",
     "voice": "node scripts/generate-voice.js",
+    "voice:intro": "node scripts/voice-intro.js",
     "voice:assemble": "node scripts/assemble-voice.js",
     "voice:mock": "node scripts/mock-fish-audio.js",
-    "voice:check": "FISH_AUDIO_API_BASE=http://127.0.0.1:8199 FISH_AUDIO_API_KEY=mock FISH_AUDIO_FORMAT=wav node scripts/generate-voice.js --force"
+    "voice:check": "FISH_AUDIO_API_BASE=http://127.0.0.1:8199 FISH_AUDIO_API_KEY=mock FISH_AUDIO_FORMAT=wav node scripts/generate-voice.js --sections --force"
   },
   "devDependencies": {
     "d3-geo": "3.1.1",

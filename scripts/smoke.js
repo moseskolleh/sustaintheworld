@@ -214,6 +214,8 @@ async function visit(context, page, rel, origin) {
         await page.close();
     }
 
+    await exerciseNarration(browser, origin);
+
     await browser.close();
     server.close();
 
@@ -443,19 +445,20 @@ async function exerciseHomepage(page, r, origin) {
     const mapSvg = await page.$('#journeyMapFrame svg');
     if (mapSvg) ok(`journey map arrived on first scroll (+${fmt(r.bytesSince())})`); else bad('journey map did not load after scrolling');
 
-    // The first "listen" press fetches the player and swaps the controls.
-    const listen = await page.$('.listen-btn');
-    if (listen) {
-        await listen.click();
-        await page.waitForFunction(() => window.mksLoaded && window.mksLoaded.dispatch, null, { timeout: 5000 }).catch(() => null);
-        const l = await loadedNow();
-        if (l.dispatch) ok('narration player loaded on the first listen press'); else bad('narration player did not load on listen');
-        const bar = await page.$('#dispatchBar');
-        if (bar) ok('the player mounted'); else bad('no #dispatchBar after loading the player');
-        await page.evaluate(() => window.FieldDispatch && window.FieldDispatch.stop());
-    } else {
-        ok('no listen control in headless Chromium (no speech voice and the recording is fetched on demand) — skipped');
-    }
+    // The manifest lists no recording, so the listen control is there only
+    // if this browser has a speech voice. Headless Chromium has none; a
+    // branded Chrome may. Either way it must not offer a button that says
+    // nothing. (It is exercised with a stand-in voice in exerciseNarration.)
+    const listening = await page.evaluate(() => {
+        const wrap = document.getElementById('navListen');
+        const voices = window.speechSynthesis ? (window.speechSynthesis.getVoices() || []).length : 0;
+        return { state: wrap ? (wrap.hidden ? 'hidden' : 'shown') : 'missing', voices };
+    });
+    if (listening.state === (listening.voices ? 'shown' : 'hidden')) {
+        ok(listening.voices
+            ? `listen control shown: this browser has ${listening.voices} speech voice(s)`
+            : 'no voice and no recording: the listen control stays hidden');
+    } else bad(`listen control is ${listening.state} in a browser with ${listening.voices} speech voice(s) and no recording`);
 
     // Opening the groundwater dossier fetches the games.
     const summary = await page.$('.project-card[data-project="groundwater"] .project-toggle');
@@ -487,7 +490,211 @@ async function exerciseHomepage(page, r, origin) {
     await page.keyboard.press('Escape');
 
     if (r.errors.length) r.errors.forEach(e => bad(e)); else ok('still no errors after using every feature');
-    ok(`using every feature above fetched ${fmt(r.bytesSince())} more — modules, the map, a narration track, and every image scrolled past`);
+    ok(`using every feature above fetched ${fmt(r.bytesSince())} more — modules, the map, and every image scrolled past`);
+}
+
+// ------------------------------------------------------------------
+// The spoken page: one listen control, docked in the nav
+// ------------------------------------------------------------------
+// Headless Chromium has no speech voice, and the player rightly will not
+// offer to read with none, so these pages get a stand-in engine that
+// accepts every utterance and never finishes one: the player stays open to
+// be measured. What is checked is what a listener would meet:
+//
+//   - exactly one control, on screen at every width, without the menu
+//   - pressing it reads with the browser voice and fetches no audio at all
+//   - the open player is small on a phone (it used to cover ~45% of one)
+//     and never sits over the contact form's button
+//   - Moses's recorded introduction, once the manifest lists it, is offered
+//     with its weight and fetched only when pressed
+const STAND_IN_VOICE = () => {
+    const spoken = (window.__spoken = []);
+    const synth = {
+        getVoices: () => [{ name: 'Smoke', lang: 'en-GB', localService: true, default: true, voiceURI: 'smoke' }],
+        speak(u) { spoken.push(u.text); },
+        cancel() {}, pause() {}, resume() {},
+        get speaking() { return spoken.length > 0; }, get paused() { return false; }, get pending() { return false; },
+        addEventListener() {}, removeEventListener() {}
+    };
+    Object.defineProperty(window, 'speechSynthesis', { value: synth, configurable: true });
+    window.SpeechSynthesisUtterance = function (text) { this.text = text; };
+};
+
+// Silent MPEG-1 Layer III frames (mono, 64 kbps, 44.1 kHz): a real,
+// decodable MP3 of about five seconds, standing in for Moses's take.
+const silentMp3 = () => {
+    const frame = Buffer.alloc(208);
+    frame[0] = 0xff; frame[1] = 0xfb; frame[2] = 0x50; frame[3] = 0xc4;
+    return Buffer.concat(Array.from({ length: 192 }, () => frame));
+};
+
+// The opposite: a speech engine with no voices, as headless Chromium and
+// Linux builds without speech-dispatcher have — made certain here, since a
+// branded Chrome may bring voices of its own.
+const NO_VOICE = () => {
+    const synth = {
+        getVoices: () => [], speak() {}, cancel() {}, pause() {}, resume() {},
+        speaking: false, paused: false, pending: false, addEventListener() {}, removeEventListener() {}
+    };
+    Object.defineProperty(window, 'speechSynthesis', { value: synth, configurable: true });
+};
+
+const PLAYER_CEILING = 0.20;   // share of a 390×844 viewport the open player may cover
+
+async function exerciseNarration(browser, origin) {
+    console.log('  narration (a stand-in speech voice)');
+    const errors = [];
+    const watch = (page) => {
+        page.on('console', (m) => { if (m.type() === 'error') errors.push(`console.error: ${m.text()}`); });
+        page.on('pageerror', (e) => errors.push(`uncaught: ${e.message}`));
+    };
+    const coverage = (page) => page.evaluate(() => {
+        const r = document.getElementById('dispatchBar').getBoundingClientRect();
+        return (r.width * r.height) / (innerWidth * innerHeight);
+    });
+
+    // --- the browser voice ------------------------------------------------
+    {
+        const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+        await context.addInitScript(STAND_IN_VOICE);
+        const page = await context.newPage();
+        watch(page);
+        const audio = [];
+        page.on('request', (req) => { if (req.resourceType() === 'media' || /\.(mp3|wav|ogg|opus|m4a)(\?|$)/.test(req.url())) audio.push(req.url()); });
+        await page.goto(`${origin}/index.html`, { waitUntil: 'load' });
+
+        const count = await page.$$eval('.listen-btn', (els) => els.length);
+        if (count === 1) ok('exactly one listen control on the page'); else bad(`${count} listen controls — there should be one`);
+
+        // On screen at every width, and clear of the logo and the menu button.
+        const off = [];
+        for (const w of [320, 360, 390, 430, 768].concat(Array.from({ length: 47 }, (_, i) => 1000 + i * 20))) {
+            await page.setViewportSize({ width: w, height: 844 });
+            // Two frames, so anything the breakpoint change set moving has settled.
+            await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+            const r = await page.evaluate(() => {
+                const box = (el) => (el && getComputedStyle(el).display !== 'none' ? el.getBoundingClientRect() : null);
+                const b = box(document.getElementById('listenBtn'));
+                if (!b || !b.width) return 'not shown';
+                const hit = (o) => o && o.width && !(o.right <= b.left || o.left >= b.right || o.bottom <= b.top || o.top >= b.bottom);
+                if (b.left < 0 || b.right > innerWidth) return 'off screen';
+                if (hit(box(document.querySelector('.nav-logo'))) || hit(box(document.getElementById('navToggle')))) return 'overlapping the logo or menu button';
+                const last = box(document.querySelector('.nav-menu .contact-btn'));
+                if (innerWidth >= 1260 && hit(last)) return 'overlapping Contact';
+                return null;
+            });
+            if (r) off.push(`${w}px: ${r}`);
+        }
+        if (off.length) off.forEach((o) => bad(`listen control ${o}`));
+        else ok('listen control visible in the nav at every width, 320–1920px, without opening the menu');
+
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.evaluate(() => document.getElementById('about').scrollIntoView({ behavior: 'instant' }));
+        await page.click('#listenBtn');
+        const opened = await page.waitForFunction(() => window.mksLoaded && window.mksLoaded.dispatch &&
+            !document.getElementById('dispatchBar').hidden, null, { timeout: 5000 }).then(() => true, () => false);
+        if (!opened) { bad('pressing Listen did not open the player'); await context.close(); return; }
+
+        const st = await page.evaluate(() => ({
+            playing: window.FieldDispatch.state().playing,
+            spoke: window.__spoken.length,
+            weight: document.querySelector('.dispatch-weight').textContent,
+            styled: getComputedStyle(document.getElementById('dispatchBar')).position,
+            expanded: document.getElementById('listenBtn').getAttribute('aria-expanded')
+        }));
+        if (st.playing === 'about' && st.spoke > 0) ok('Listen reads the section in view with the browser voice');
+        else bad(`Listen should read the section in view (#about) — got ${st.playing}, ${st.spoke} utterances`);
+        if (!audio.length && /0 KB transferred/.test(st.weight)) ok(`the browser voice fetched no audio — "${st.weight}"`);
+        else bad(`the browser voice fetched audio: ${audio.join(', ') || st.weight}`);
+        if (st.styled === 'absolute') ok('the player\'s stylesheet arrived with it'); else bad('the player is unstyled — modules/dispatch.css did not load');
+        if (st.expanded === 'true') ok('the control reports the player open'); else bad('aria-expanded did not follow the player');
+
+        const share = await coverage(page);
+        if (share <= PLAYER_CEILING) ok(`open player covers ${(share * 100).toFixed(1)}% of a 390×844 screen (ceiling ${PLAYER_CEILING * 100}%)`);
+        else bad(`open player covers ${(share * 100).toFixed(1)}% of a 390×844 screen — ceiling ${PLAYER_CEILING * 100}%`);
+
+        // The contact form's button, reached the way a reader reaches it.
+        const covered = [];
+        for (const block of ['end', 'center']) {
+            const r = await page.evaluate((b) => {
+                const submit = document.querySelector('#contactForm [type="submit"]');
+                submit.scrollIntoView({ block: b, behavior: 'instant' });
+                const s = submit.getBoundingClientRect();
+                const p = document.getElementById('dispatchBar').getBoundingClientRect();
+                return !(p.bottom <= s.top || p.top >= s.bottom || p.right <= s.left || p.left >= s.right);
+            }, block);
+            if (r) covered.push(block);
+        }
+        if (covered.length) bad(`the open player covers the contact form's submit button (scrolled to ${covered.join(', ')})`);
+        else ok('the open player never sits over the contact form\'s submit button');
+
+        // The keyboard: the player is next in Tab order, and Escape hands
+        // focus back to the control.
+        await page.focus('#listenBtn');
+        await page.keyboard.press('Tab');
+        const into = await page.evaluate(() => document.activeElement && document.activeElement.className);
+        await page.keyboard.press('Escape');
+        const back = await page.evaluate(() => ({ id: document.activeElement && document.activeElement.id, hidden: document.getElementById('dispatchBar').hidden }));
+        if (/dispatch-play/.test(into || '') && back.hidden && back.id === 'listenBtn') ok('Tab goes from Listen into the player; Escape closes it and returns focus');
+        else bad(`keyboard: Tab reached "${into}", Escape left focus on #${back.id} (player hidden: ${back.hidden})`);
+
+        await context.close();
+    }
+
+    // --- Moses's recorded introduction ------------------------------------
+    // Served in place of the real manifest, as if he had run voice:intro.
+    const mp3 = silentMp3();
+    const manifest = { tracks: { intro: {
+        file: 'assets/audio/intro.mp3', bytes: mp3.length, grams: 0.013, seconds: 5, voiceKind: 'recorded', voiceTitle: 'Moses Kolleh Sesay'
+    } } };
+    const withIntro = async (voice) => {
+        const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+        await context.addInitScript(voice ? STAND_IN_VOICE : NO_VOICE);
+        const hits = [];
+        await context.route('**/assets/audio/voice-manifest.json', (route) => route.fulfill({ json: manifest }));
+        await context.route('**/assets/audio/intro.mp3', (route) => { hits.push(route.request().url()); route.fulfill({ contentType: 'audio/mpeg', body: mp3 }); });
+        const page = await context.newPage();
+        watch(page);
+        await page.goto(`${origin}/index.html`, { waitUntil: 'load' });
+        return { context, page, hits };
+    };
+
+    {
+        const { context, page, hits } = await withIntro(true);
+        await page.click('#listenBtn');
+        const offered = await page.waitForFunction(() => {
+            const o = document.querySelector('.dispatch-offer');
+            return o && !o.hidden && document.querySelector('.dispatch-intro').textContent;
+        }, null, { timeout: 5000 }).then((h) => h.jsonValue(), () => null);
+        const kb = Math.round(mp3.length / 1024);
+        if (offered === `Hear Moses introduce himself · ${kb} KB`) ok(`the player offers "${offered}"`);
+        else bad(`with an intro in the manifest, the offer read "${offered}"`);
+
+        const share = await coverage(page);
+        if (share <= PLAYER_CEILING) ok(`…and with the offer showing, still covers only ${(share * 100).toFixed(1)}% of the screen`);
+        else bad(`with the intro offer, the player covers ${(share * 100).toFixed(1)}% — ceiling ${PLAYER_CEILING * 100}%`);
+
+        if (hits.length === 0) ok('the recording is not fetched before it is asked for');
+        else bad(`the recording was fetched before anyone asked (${hits.length} requests)`);
+        await page.click('.dispatch-intro');
+        const fetched = await page.waitForFunction(() => window.FieldDispatch.state().playing === 'intro', null, { timeout: 5000 })
+            .then(() => page.waitForTimeout(500)).then(() => hits.length > 0, () => false);
+        if (fetched) ok('pressing it fetches assets/audio/intro.mp3 and plays Moses');
+        else bad('pressing the offer did not fetch the recording');
+        await context.close();
+    }
+
+    // No voice at all, but a recording: the control appears for him alone.
+    {
+        const { context, page, hits } = await withIntro(false);
+        const shown = await page.waitForFunction(() => !document.getElementById('navListen').hidden, null, { timeout: 6000 })
+            .then(() => true, () => false);
+        if (shown && hits.length === 0) ok('no voice but a recording: the control appears (and still fetches nothing)');
+        else bad(`no voice but a recording: the control ${shown ? 'appeared but fetched audio early' : 'never appeared'}`);
+        await context.close();
+    }
+
+    if (errors.length) errors.forEach((e) => bad(e)); else ok('no console errors, no uncaught exceptions');
 }
 
 // ------------------------------------------------------------------

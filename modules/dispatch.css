@@ -1,0 +1,231 @@
+/* ===================================================================
+   FIELD DISPATCH — the narration player
+   Loaded with modules/dispatch.js on the first press of Listen, not with
+   the page: most visits never open the player, so they never pay for its
+   styles. script.js's loader puts this in before the script runs, so the
+   player is never seen unstyled. Everything is driven by the theme tokens
+   in style.css, so light mode needs only a softer shadow.
+
+   Nothing the player hides carries a class-level display: [hidden] has to
+   win, and any author display rule beats the browser's own.
+   =================================================================== */
+
+/* --- the player, just under the nav -------------------------------- */
+/* Positioned against the fixed .navbar, so it docks under the bar at any
+   nav height and scrolls with nothing. At the top it cannot sit over the
+   contact form's button the way a bottom-docked player did on a phone.
+   z-index -1 inside the navbar's stacking context keeps it above the page
+   while letting the phone menu's drawer slide over it. */
+.dispatch-bar {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 24px;
+    z-index: -1;
+    width: min(440px, calc(100% - 16px));
+    background: var(--card-bg);
+    border: 1px solid var(--line-color);
+    border-radius: var(--border-radius);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+    padding: 9px 11px 8px;
+}
+
+body.light-mode .dispatch-bar {
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
+}
+
+.dispatch-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.dispatch-play,
+.dispatch-rate,
+.dispatch-close,
+.dispatch-step,
+.dispatch-intro {
+    background: transparent;
+    border: 1px solid var(--line-color);
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-radius: 999px;
+    transition: color 0.3s ease, border-color 0.3s ease, background-color 0.3s ease;
+    flex-shrink: 0;
+}
+
+.dispatch-play {
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    color: var(--accent-color);
+}
+
+.dispatch-play .icon {
+    width: 13px;
+    height: 13px;
+    fill: currentColor;
+}
+
+.dispatch-close {
+    width: 32px;
+    height: 32px;
+    font-size: 1.1rem;
+    line-height: 1;
+    display: grid;
+    place-items: center;
+}
+
+/* One chevron, turned to point back or on. */
+.dispatch-step {
+    width: 34px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+}
+
+.dispatch-step .icon {
+    width: 11px;
+    height: 11px;
+    fill: currentColor;
+    transform: rotate(90deg);
+}
+
+.dispatch-step[data-step="1"] .icon {
+    transform: rotate(-90deg);
+}
+
+.dispatch-step[aria-disabled="true"] {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.dispatch-rate {
+    height: 28px;
+    min-width: 44px;
+    padding: 0 10px;
+    font-size: 0.66rem;
+}
+
+.dispatch-play:hover,
+.dispatch-rate:hover,
+.dispatch-close:hover,
+.dispatch-step:hover:not([aria-disabled="true"]),
+.dispatch-intro:hover,
+.dispatch-play:focus-visible,
+.dispatch-rate:focus-visible,
+.dispatch-close:focus-visible,
+.dispatch-step:focus-visible,
+.dispatch-intro:focus-visible {
+    color: var(--accent-color);
+    border-color: var(--accent-color);
+    background: var(--line-soft);
+}
+
+.dispatch-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.dispatch-title {
+    display: block;
+    font-size: 0.62rem;
+    color: var(--accent-color);
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Two lines of caption, then clip — the player must not grow as it reads. */
+.dispatch-caption {
+    margin: 0;
+    font-size: 0.8rem;
+    line-height: 1.35;
+    color: var(--text-primary);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Neither engine could play. The bar stays up carrying the reason, and the
+   play button becomes a retry — the failure has to look different from
+   ordinary playback, or it reads as "paused". */
+.dispatch-bar.dispatch-failed {
+    border-color: var(--accent-amber);
+}
+.dispatch-bar.dispatch-failed .dispatch-caption {
+    color: var(--accent-amber);
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+}
+.dispatch-bar.dispatch-failed .dispatch-progress { opacity: 0.35; }
+
+.dispatch-progress {
+    height: 2px;
+    background: var(--line-soft);
+    border-radius: 2px;
+    margin: 8px 0 7px;
+    overflow: hidden;
+}
+
+.dispatch-progress span {
+    display: block;
+    height: 100%;
+    width: 0;
+    background: var(--accent-color);
+    transition: width 0.25s linear;
+}
+
+.dispatch-foot {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Who is reading and what it weighs, in one line. */
+.dispatch-weight {
+    flex: 1;
+    min-width: 0;
+    text-align: right;
+    font-size: 0.62rem;
+    line-height: 1.3;
+    color: var(--text-dim);
+}
+
+/* Only there once Moses has recorded his introduction. */
+.dispatch-offer {
+    margin: 7px 0 0;
+}
+
+.dispatch-intro {
+    width: 100%;
+    min-height: 28px;
+    padding: 3px 12px;
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--accent-color);
+}
+
+/* --- restraint ----------------------------------------------------- */
+body.eco-mode .dispatch-progress span {
+    transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dispatch-progress span { transition: none; }
+}
+
+/* --- narrow screens ------------------------------------------------ */
+/* Full width under the nav, 8px in from each edge. */
+@media (max-width: 600px) {
+    .dispatch-bar {
+        left: 8px;
+        right: 8px;
+        width: auto;
+    }
+}

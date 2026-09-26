@@ -143,13 +143,14 @@ function assert(cond, msg) {
 // earlier version used a bare-digit sentinel, which chewed through the real
 // numbers in the copy ("164 water points"). Both halves are asserted here.
 {
-    const { SCRIPTS, splitSentences } = require('../voice-scripts.js');
+    const { SCRIPTS, INTRO, splitSentences } = require('../voice-scripts.js');
 
     assert(SCRIPTS.length > 0, 'Bug4 setup: voice scripts are defined');
 
+    // Moses's introduction is split the same way, for its captions.
     let lossy = [];
     let fragmented = [];
-    SCRIPTS.forEach((script) => {
+    SCRIPTS.concat(INTRO ? [INTRO] : []).forEach((script) => {
         const parts = splitSentences(script.text);
         const norm = (s) => s.replace(/\s+/g, ' ').trim();
         if (norm(parts.join(' ')) !== norm(script.text)) lossy.push(script.id);
@@ -171,41 +172,38 @@ function assert(cond, msg) {
     );
 }
 
-// --- Bug 5: every narration script must have somewhere to mount ---
-// A script whose id does not match a section leaves its listen button
-// silently unrendered, which is invisible until someone goes looking for it.
+// --- Bug 5: every narration script must name a section the player can find ---
+// The one listen control reads the section in view and steps between them,
+// finding each by its script's id (the hero's element is #home). A script
+// whose id matches no section could never be reached; a section with no
+// script would be skipped by "next" without a word.
 {
     const { window } = run('dark');
     const doc = window.document;
     const { SCRIPTS } = require('../voice-scripts.js');
 
     const orphans = SCRIPTS.filter((s) => {
-        if (s.id === 'hero') return !doc.querySelector('.hero-cta');
+        if (s.id === 'hero') return !doc.getElementById('home');
         const section = doc.getElementById(s.id);
         return !(section && section.querySelector('.section-header'));
     }).map((s) => s.id);
 
-    assert(orphans.length === 0, `Bug5: every voice script has a mount point (orphans: ${orphans.join(', ') || 'none'})`);
+    assert(orphans.length === 0, `Bug5: every voice script names a section on the page (orphans: ${orphans.join(', ') || 'none'})`);
 
-    // The reverse holds too. The player loads on demand, so until someone
-    // presses "listen" the core renders a stand-in control in every section
-    // header. A header for a section with no narration script would get a
-    // button that loads the player and then reads nothing.
     const headed = Array.from(doc.querySelectorAll('section[id]'))
         .filter((s) => s.querySelector('.section-header'))
         .map((s) => s.id);
     const scripted = new Set(SCRIPTS.map((s) => s.id));
     const unscripted = headed.filter((id) => !scripted.has(id));
-    assert(unscripted.length === 0, `Bug5: every section header has a narration script behind its listen control (missing: ${unscripted.join(', ') || 'none'})`);
+    assert(unscripted.length === 0, `Bug5: every section header has a narration script the player can read (missing: ${unscripted.join(', ') || 'none'})`);
 
+    // Ten per-section controls used to add eight-plus Tab stops. One now.
     const buttons = doc.querySelectorAll('.listen-btn');
-    assert(
-        buttons.length === SCRIPTS.length,
-        `Bug5: one listen button per script (expected ${SCRIPTS.length}, found ${buttons.length})`
-    );
+    assert(buttons.length === 1, `Bug5: exactly one listen control (found ${buttons.length})`);
+    assert(!!buttons[0] && !!buttons[0].closest('#navbar'), 'Bug5: the listen control is docked in the nav');
 
-    // The sprite must carry the icons the buttons and player reference.
-    ['i-play', 'i-pause'].forEach((id) => {
+    // The sprite must carry the icons the control and player reference.
+    ['i-play', 'i-pause', 'i-waveform', 'i-chevron-down'].forEach((id) => {
         assert(!!doc.getElementById(id), `Bug5: sprite defines #${id}`);
     });
 }
@@ -223,10 +221,11 @@ function assert(cond, msg) {
 
     const playing = doc.querySelectorAll('.listen-btn.is-playing');
     assert(playing.length === 0, 'Bug6: no section is narrating on load');
+    assert(window.FieldDispatch.state().playing === null, 'Bug6: the player has nothing playing on load');
 
-    const pressed = Array.from(doc.querySelectorAll('.listen-btn'))
-        .filter((b) => b.getAttribute('aria-pressed') !== 'false');
-    assert(pressed.length === 0, 'Bug6: every listen button reports aria-pressed="false" on load');
+    const open = Array.from(doc.querySelectorAll('.listen-btn'))
+        .filter((b) => b.getAttribute('aria-expanded') !== 'false');
+    assert(open.length === 0, 'Bug6: the listen control reports aria-expanded="false" on load');
 }
 
 // --- Bug 8: "AI, Weighed" spends the split each workload's label promises ---

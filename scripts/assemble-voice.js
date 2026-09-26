@@ -16,6 +16,13 @@
 // Runs in CI (GitHub's runners have ffmpeg preinstalled and open
 // egress; the Claude sandbox that rendered the chunks cannot reach the
 // audio CDN itself). Locally:  node scripts/assemble-voice.js
+//
+// The chunk map is empty now. The ten stock-voice section tracks it
+// described were retired (see scripts/generate-voice.js for why), and an
+// empty or missing map is a normal state: the script says so and exits
+// cleanly, writing nothing. When it does assemble, it merges into the
+// existing manifest, so Moses's recorded introduction (tracks.intro) is
+// never dropped by a section run.
 // ===================================================================
 
 const fs = require('fs');
@@ -75,7 +82,11 @@ function concat(chunkFiles, outFile, bitrate) {
 const FROM_DISK = process.argv.slice(2).includes('--from-disk');
 
 async function main() {
-    const plan = JSON.parse(fs.readFileSync(CHUNKS, 'utf8'));
+    const plan = fs.existsSync(CHUNKS) ? JSON.parse(fs.readFileSync(CHUNKS, 'utf8')) : {};
+    if (!Array.isArray(plan.sections) || !plan.sections.length) {
+        console.log(`\n  nothing to assemble: ${path.relative(ROOT, CHUNKS)} lists no sections. No files were changed.\n`);
+        return;
+    }
     const { SCRIPTS } = require(path.join(ROOT, 'voice-scripts.js'));
     const byId = Object.fromEntries(SCRIPTS.map(s => [s.id, s]));
 
@@ -94,7 +105,14 @@ async function main() {
     fs.mkdirSync(OUT_DIR, { recursive: true });
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'voice-chunks-'));
 
+    // Whatever else the manifest holds — the $comment, Moses's introduction —
+    // is kept. Only the section-render header and section tracks are restated.
+    let previous = {};
+    try { previous = JSON.parse(fs.readFileSync(MANIFEST, 'utf8')) || {}; } catch (e) { /* none yet */ }
+    const kept = Object.fromEntries(Object.entries(previous.tracks || {}).filter(([id]) => id === 'intro'));
+
     const manifest = {
+        ...previous,
         voiceId: config.voiceId,
         model: config.model,
         bitrate: config.bitrate,
@@ -104,13 +122,14 @@ async function main() {
         // excludes it (see scripts/lib/voice-signature.js).
         maxBytes: plan.maxBytes || 500,
         signatureVersion: sign.SIGNATURE_VERSION,
-        // Who is actually reading. The page labels the recorded option with
-        // this, so a synthesised narrator is never presented as a person.
+        // Who is actually reading, recorded as provenance so a synthesised
+        // narrator is never mistaken for a person. (The site's player plays
+        // no section tracks; it reads sections with the browser voice.)
         voiceTitle: plan.voiceTitle || '',
         voiceKind: plan.voiceKind || 'synthetic',
         voiceProvider: plan.voiceProvider || 'Fish Audio',
         renderedOn: plan.renderedOn || '',
-        tracks: {}
+        tracks: { ...kept }
     };
     let failed = 0;
 
@@ -159,8 +178,9 @@ async function main() {
     }
 
     fs.writeFileSync(MANIFEST, JSON.stringify(manifest, null, 2) + '\n');
-    const totalBytes = Object.values(manifest.tracks).reduce((n, t) => n + t.bytes, 0);
-    console.log(`\n  full narration: ${kb(totalBytes)} across ${Object.keys(manifest.tracks).length} tracks (${grams(totalBytes).toFixed(2)} g if someone played all of it)`);
+    const sections = Object.keys(manifest.tracks).filter(id => id !== 'intro');
+    const totalBytes = sections.reduce((n, id) => n + manifest.tracks[id].bytes, 0);
+    console.log(`\n  section narration: ${kb(totalBytes)} across ${sections.length} tracks (${grams(totalBytes).toFixed(2)} g if someone played all of it)`);
     console.log(`  manifest: ${path.relative(ROOT, MANIFEST)}\n`);
 }
 

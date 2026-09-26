@@ -183,11 +183,11 @@ const fieldText = plain(fieldReport);
 }
 
 // --- Narration ----------------------------------------------------------
-// The narration is rendered audio: when it disagrees with the page, fixing it
-// costs an API render, so it is worth knowing early.
+// What the listener hears must say what the page says — and Moses's recorded
+// introduction cannot be fixed with an edit, only with another take.
 {
-    const { SCRIPTS } = require('../voice-scripts.js');
-    const spoken = SCRIPTS.map(s => s.text).join(' ');
+    const { SCRIPTS, INTRO } = require('../voice-scripts.js');
+    const spoken = SCRIPTS.concat(INTRO ? [INTRO] : []).map(s => s.text).join(' ');
 
     assert(
         spoken.includes(profile.currentRole.organization),

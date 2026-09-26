@@ -1,17 +1,115 @@
-# Setting up the narration toolchain
+# Narration: Moses's introduction, and the optional Fish Audio toolchain
+
+The spoken page has two voices, and only one of them is a file:
+
+| | what it is | needs |
+|---|---|---|
+| **the browser voice** | reads any section aloud with the visitor's own speech engine — the default, 0 bytes transferred | nothing |
+| **Moses's introduction** | one 60–90 s recording in his own voice, opening with "Kushe" — the only audio the site plays | a take, and `npm run voice:intro` |
+
+The first half of this page is the second row. Everything after it is the Fish
+Audio toolchain, which is **off by default** and not needed for either.
+
+---
+
+## 0. Recording the introduction
+
+This is the one narration step that matters, and it needs no account, no key
+and no network. **It is Moses's own voice, recorded by him, so no voice model
+is made and no third party's consent is involved.** Nothing is uploaded
+anywhere; the file is committed like any image.
+
+### Step 1 — read the script
+
+The words are the `intro` script in
+[`content/narration.json`](../content/narration.json): about 190 words, first
+person, opening with "Kushe". Every fact in it is already on the site. Reword
+anything that does not sound like you, keep it to 150–220 words (60–90
+seconds at a measured pace), and keep the facts to the ones the site already
+states. `npm run build:content` checks the length and the opening.
+
+### Step 2 — record one clean take
+
+A phone voice-memo app in a quiet, soft-furnished room is enough: no music, no
+background noise, no echo, the phone 20–30 cm away. Aim for 60–90 seconds.
+
+### Step 3 — make it a small MP3
+
+The site plays MP3, the one format every browser decodes. Mono at 64 kbps is
+plenty for a voice, and 90 seconds of it is about 720 KB; the budget in
+`scripts/check-budget.js` is 800 KB. With [ffmpeg](https://ffmpeg.org):
+
+```bash
+ffmpeg -i take.m4a -ac 1 -b:a 64k take.mp3
+```
+
+### Step 4 — install it
+
+```bash
+npm run voice:intro -- path/to/take.mp3
+```
+
+That copies the take to `assets/audio/intro.mp3`, measures its bytes and its
+length (with ffprobe if it is installed, otherwise from the MP3's own frame
+headers), and writes the `intro` entry in `assets/audio/voice-manifest.json`.
+If the length cannot be read, it asks for it: `--seconds 78`.
+
+**If you changed any words while recording**, edit the `intro` script to match
+what you actually said, run `npm run build:content`, then run
+`npm run voice:intro` again. The script is the recording's captions, and
+`npm test` fails if the two drift apart.
+
+### Step 5 — check it, then ship it
+
+```bash
+npm test                            # the manifest, the captions and the 800 KB budget
+python3 -m http.server 8000         # then open http://localhost:8000
+```
+
+Press **Listen** in the nav bar; the player now offers "Hear Moses introduce
+himself · N KB". When it sounds right:
+
+```bash
+git add assets/audio content/narration.json voice-scripts.js
+git commit -m "Add Moses's recorded introduction" && git push
+```
+
+---
+
+## The Fish Audio toolchain (optional, off by default)
+
+Until September 2026 the site shipped ten section tracks rendered by Fish Audio
+in a stock voice. They were retired: they repeated claims the page had since
+dropped, every copy edit made them stale and cost credits to re-render (a full
+render is about 7,700 of a free plan's 8,000), and a stock voice reading
+first-person lines was never Moses — which the section below on picking a voice
+already said. The page now reads sections with the browser voice, and its
+player plays no section tracks.
+
+The toolchain stays for anyone who wants rendered sections anyway. It only
+renders when asked by name:
+
+```bash
+npm run voice                          # explains all this; renders nothing, spends nothing
+npm run voice -- --sections --dry-run  # the plan and the bill
+npm run voice -- --sections            # render section tracks
+```
+
+Committing section tracks would exceed the site's 800 KB audio budget, which is
+sized for the one introduction. That is deliberate: bringing recorded sections
+back is a decision to make on purpose, not a side effect of a copy edit.
 
 Two separate things need credentials, and they are easy to confuse:
 
 | | what it is | needs |
 |---|---|---|
-| **`npm run voice`** | the build step that renders the narration that ships | `FISH_AUDIO_API_KEY` in your shell or `.env` |
+| **`npm run voice -- --sections`** | the build step that renders section tracks | `FISH_AUDIO_API_KEY` in your shell or `.env` |
 | **fish-audio MCP** | a conversational tool for auditioning voices | `FISH_AUDIO_API_KEY` exported in the shell that launches Claude |
 
 Both read the **same** variable, so one export covers both.
 
-**Short version: do this locally.** The build writes files that get committed, and
-cloud environments have no secrets store. The sections below cover all three
-surfaces anyway, including what breaks where.
+**Short version: do this locally.** Cloud environments have no secrets store.
+The sections below cover all three surfaces anyway, including what breaks where.
 
 ---
 
@@ -69,7 +167,9 @@ Ask for a few candidates reading the same line, then listen to
 Two routes. **Cloning your own** (step 4) is the one the scripts were written
 for: they are first person, they open with a Krio greeting, and they say "I grew
 up where water scarcity isn't a statistic." A stock voice delivering those lines
-as you is a different proposition, and some visitors will notice.
+as you is a different proposition, and some visitors will notice. (That is why
+the site's one recording is made the third way, in step 0: recorded, not
+rendered.)
 
 If you want a library voice anyway, audition candidates on your own copy rather
 than on whatever demo line a voice page happens to play:
@@ -81,7 +181,7 @@ npm run voice -- --audition <id1>,<id2>,<id3>
 That renders the opening of the hero script in each voice into
 `.voice-auditions/` — around 150 bytes per voice, so roughly 450 credits to
 compare three. Listen, then put the winner in `.env` as `FISH_AUDIO_VOICE_ID`
-and run `npm run voice`.
+and run `npm run voice -- --sections`.
 
 Use `--audition-text "…"` to try a different line. A good test line is one with
 a proper noun, a number and a technical term, since that is where voices trip:
@@ -114,24 +214,24 @@ cp .env.example .env          # paste the key in as well; .env is gitignored
 npm run voice -- --clone path/to/your-voice.mp3
 ```
 
-That uploads the sample, creates the voice model, writes the returned id back
-into `.env`, and renders all ten sections. Later runs re-render only what changed:
+That uploads the sample, creates the voice model and writes the returned id back
+into `.env`. Add `--sections` to render all ten sections in it. Later runs
+re-render only what changed:
 
 ```bash
-npm run voice
+npm run voice -- --sections
 ```
 
-### Step 5 — check it, then ship it
+A cloned voice is still synthetic speech. It is not a recording, and it is not
+what step 0 asks for.
 
-```bash
-python3 -m http.server 8000      # then open http://localhost:8000
-```
+### Step 5 — listen to what you rendered
 
-Press **listen** on any section. When you are happy:
-
-```bash
-git add assets/audio && git commit -m "Add recorded narration" && git push
-```
+The files land in `assets/audio/` with their entries in `voice-manifest.json`.
+The site's player does not play section tracks, and `npm test` fails the audio
+budget while they are there, so treat them as yours to use elsewhere — or, to
+put recorded sections back on the page, make that change to
+`modules/dispatch.js` and the budget on purpose, in one reviewed commit.
 
 ### What it costs
 
@@ -139,7 +239,7 @@ Fish Audio bills **1 credit per UTF-8 byte of text**, so the price is knowable
 before anything runs:
 
 ```bash
-npm run voice -- --dry-run
+npm run voice -- --sections --dry-run
 ```
 
 The full page is **~7,708 credits**. The free plan grants **8,000 per cycle**, so
@@ -169,7 +269,7 @@ Splitting costs no extra credits, since billing is per byte of text. Fewer, larg
 calls do sound marginally better, because there are no joins at all:
 
 ```bash
-FISH_AUDIO_MAX_BYTES=15000 npm run voice -- --force
+FISH_AUDIO_MAX_BYTES=15000 npm run voice -- --sections --force
 ```
 
 Worth doing if you are on a paid tier or a trial that grants one. Ask the Fish
@@ -182,9 +282,9 @@ A free month is a deadline as much as a budget. Two things are worth doing early
 because they are the parts that can't be rushed later:
 
 1. **Clone your voice.** Cloning is free and the id doesn't expire with the trial.
-2. **Render the narration.** Rendered `.mp3` files are committed to the repo and
-   keep working forever — the site never calls Fish Audio at runtime. Whatever
-   you render while access lasts is yours permanently.
+2. **Render what you need.** Rendered `.mp3` files are ordinary files and keep
+   working forever — nothing calls Fish Audio at runtime. Whatever you render
+   while access lasts is yours permanently.
 
 Editing scripts afterwards costs credits again, so settle the wording with
 `npm run voice:check` first, then render.
@@ -313,7 +413,7 @@ refused.
 Changing allowed hosts rebuilds the environment cache, so the next session takes
 slightly longer to start.
 
-With both in place, `npm run voice` and the MCP server both work in a cloud
+With both in place, `npm run voice -- --sections` and the MCP server both work in a cloud
 session exactly as they do locally.
 
 ### The better cloud option
@@ -350,7 +450,7 @@ cannot save. The build step still needs the API key and both domains reachable.
 
 ## Which surface for which job
 
-| | audition voices | run `npm run voice` | commit the audio |
+| | audition voices | run `npm run voice -- --sections` | commit the audio |
 |---|---|---|---|
 | **Local terminal** | yes | yes | yes |
 | **Desktop — Code tab** | yes | yes | yes |
@@ -372,7 +472,7 @@ root, or declined the trust prompt. `cd` into the repo and restart.
 server. `echo $FISH_AUDIO_API_KEY` in the same shell that launched Claude. If it
 is empty, export it and restart Claude Code; `.mcp.json` expands at launch.
 
-**`npm run voice` says the key is not set** — it reads the shell first, then
+**`npm run voice -- --sections` says the key is not set** — it reads the shell first, then
 `.env`. Check for a typo in `.env` and that the file is at the repo root.
 
 **Something fails with a Fish Audio error you don't recognise** — the generator

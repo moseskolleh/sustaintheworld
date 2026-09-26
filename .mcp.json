@@ -31,8 +31,9 @@
     "an official authenticated connector, prefer it over this.",
     "",
     "Scope. This is for picking a voice, not for building the site. Auditions land",
-    "in .voice-auditions/ (gitignored). The narration that ships is always produced",
-    "by `npm run voice`, which is reproducible, hashed and writes the manifest.",
+    "in .voice-auditions/ (gitignored). Section tracks, if anyone renders them, come",
+    "from `npm run voice -- --sections`, which is reproducible, hashed and writes the",
+    "manifest. The one recording the site plays is Moses's own (npm run voice:intro).",
     "Pass reference_id per call to compare candidate voices."
   ],
   "mcpServers": {
