@@ -384,21 +384,25 @@ async function exerciseAssay(page, r) {
 // ------------------------------------------------------------------
 async function exerciseCarbonTool(page, r) {
     // A closed select cannot wrap, so the widest option has to fit inside
-    // the box, less its padding and the arrow. It clipped at every width
-    // from a 320px phone to a 1440px desktop.
+    // the box. It clipped at every width from a 320px phone to a 1440px
+    // desktop. Each option is measured the way this browser sizes a select
+    // for it: a copy beside it, as wide as that one option needs, padding
+    // and arrow included (Firefox's arrow is not Chromium's 20px).
     for (const width of [320, 390, 1440]) {
         await page.setViewportSize({ width, height: 900 });
         await page.evaluate(() => document.fonts.ready);
         const clipped = await page.evaluate(() => {
-            const ctx = document.createElement('canvas').getContext('2d');
             const out = [];
             document.querySelectorAll('select').forEach((sel) => {
-                const cs = getComputedStyle(sel);
-                ctx.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
-                const room = sel.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - 20;
+                const probe = sel.cloneNode(false);
+                probe.removeAttribute('id');
+                probe.style.cssText = 'position:absolute;visibility:hidden;width:auto;min-width:0;max-width:none';
+                sel.parentNode.appendChild(probe);
                 Array.from(sel.options).forEach((o) => {
-                    if (ctx.measureText(o.textContent).width > room) out.push(`#${sel.id} "${o.textContent}"`);
+                    probe.replaceChildren(new Option(o.textContent));
+                    if (probe.getBoundingClientRect().width > sel.getBoundingClientRect().width + 0.5) out.push(`#${sel.id} "${o.textContent}"`);
                 });
+                probe.remove();
             });
             if (document.documentElement.scrollWidth > innerWidth) out.push(`the page scrolls sideways (${document.documentElement.scrollWidth}px)`);
             return out;
@@ -1005,12 +1009,27 @@ async function exerciseNarration(browser, origin) {
 
         // A nav link followed with the player open lands its heading below
         // the player: style.css pads jumps for the nav bar alone.
+        // Where it settles: the sections it passes swap their estimated
+        // heights for real ones, and script.js re-aims the jump as they do
+        // (Firefox was still moving at 400 ms, with the heading at 21px).
         await page.emulateMedia({ reducedMotion: 'reduce' });
         await page.evaluate(() => document.querySelector('.nav-menu a[href="#experience"]').click());
-        await page.waitForTimeout(400);
-        const landed = await page.evaluate(() => ({
-            heading: Math.round(document.querySelector('#experience .section-title').getBoundingClientRect().top),
-            player: Math.round(document.getElementById('dispatchBar').getBoundingClientRect().bottom)
+        const landed = await page.evaluate(() => new Promise((resolve) => {
+            const at = () => ({
+                heading: Math.round(document.querySelector('#experience .section-title').getBoundingClientRect().top),
+                player: Math.round(document.getElementById('dispatchBar').getBoundingClientRect().bottom)
+            });
+            let last = at();
+            let still = 0;
+            const started = performance.now();
+            const poll = () => {
+                const now = at();
+                still = now.heading === last.heading ? still + 1 : 0;
+                last = now;
+                if (still >= 3 || performance.now() - started > 5000) resolve(now);
+                else setTimeout(poll, 100);
+            };
+            setTimeout(poll, 100);
         }));
         if (landed.heading >= landed.player) ok(`a nav jump with the player open lands its heading below it (${landed.heading}px, player ends at ${landed.player}px)`);
         else bad(`a nav jump with the player open hides its heading under the player (${landed.heading}px, player ends at ${landed.player}px)`);
