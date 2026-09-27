@@ -546,6 +546,12 @@ const scrollProgress = document.getElementById('scrollProgress');
 const scrollTopBtn = document.getElementById('scrollTop');
 const sections = Array.from(document.querySelectorAll('section[id], header[id]'));
 const navLinks = Array.from(document.querySelectorAll('.nav-link'));
+// The section each nav link lights for: the one it jumps to or, for a link
+// to another page, its data-spy (Work: this page's projects).
+const navSpies = navLinks.map((link) => {
+    const href = link.getAttribute('href');
+    return [link, link.dataset.spy || (href[0] === '#' ? href.slice(1) : '')];
+});
 
 (() => {
     let sectionTops = [];
@@ -564,8 +570,8 @@ const navLinks = Array.from(document.querySelectorAll('.nav-link'));
         if (navbar) navbar.classList.toggle('scrolled', y > 100);
         if (scrollTopBtn) scrollTopBtn.classList.toggle('visible', y > window.innerHeight && !underfoot.size);
         if (scrollProgress) scrollProgress.style.width = (docHeight > 0 ? (y / docHeight) * 100 : 0) + '%';
-        navLinks.forEach(link => {
-            link.classList.toggle('active', link.getAttribute('href') === `#${current}`);
+        navSpies.forEach(([link, id]) => {
+            link.classList.toggle('active', !!id && id === current);
         });
     };
     let queued = false;   // a frame is on its way
@@ -660,9 +666,9 @@ const navLinks = Array.from(document.querySelectorAll('.nav-link'));
 const counters = Array.from(document.querySelectorAll('.hero-stat-number'));
 const countersMove = () => !lateStart && scrollMotion() === 'smooth';
 
-// The stats sit below the fold, so until a scroll a zeroed counter was all a
-// screen reader, Find or Reader mode met: "0 Master's degrees". While the
-// digits move they are hidden from those, and a still copy is read instead.
+// A counter mid-count told a screen reader, Find or Reader mode "0 Master's
+// degrees" while the stats sat below the fold. While the digits move they
+// are hidden from those, and a still copy is read instead.
 const still = (counter, on) => {
     if (on) {
         counter.setAttribute('aria-hidden', 'true');

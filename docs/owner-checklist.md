@@ -317,29 +317,51 @@ README under "The visit counter and privacy".
   - *Unlocks:* the Assay stops treating every non-English language as a gap.
     Today every such requirement reads "Not evidenced on this site. Ask
     Moses.", and an English requirement is listed as "Level of English" to
-    confirm with you; with English in the list it is matched instead. Later, the at-a-glance strip (Phase 2.1) and `knowsLanguage` in
-    the structured data (Phase 5.4).
-  - *Check:* `npm run build:content` copies it into `modules/interactives.js`;
-    `npm test` rejects a level that is not A1–C2 or "native". Paste an ad of
-    20 words or more (shorter text is not graded) that asks for "fluent
-    Dutch" into the Assay: the Dutch row shows your level.
+    confirm with you; with English in the list it is matched instead. The
+    same list fills "Languages" in the homepage's at-a-glance strip (Phase
+    2.1), which leaves the line out until then; later, `knowsLanguage` in the
+    structured data (Phase 5.4).
+  - *Check:* `npm run build:content` copies it into `modules/interactives.js`
+    and into the at-a-glance strip in `index.html`; `npm test` rejects a
+    level that is not A1–C2 or "native". Paste an ad of 20 words or more
+    (shorter text is not graded) that asks for "fluent Dutch" into the
+    Assay: the Dutch row shows your level.
 
 - [ ] **F2. Right to work, visa sponsorship, driving licence, security clearance.**
   - *What:* whether you have the right to work in the Netherlands and the EU,
     whether an employer would need to sponsor a visa, whether you hold a
     driving licence (and where it is valid), and any security clearance. No
     document numbers.
-  - *Where:* no field exists yet. Phase 2.1 adds these to `content/profile.json`
-    with the at-a-glance strip; until then, give them to whoever builds it.
-  - *Unlocks:* the at-a-glance strip. Today the Assay only lists these, and
-    relocation, under "Confirm with Moses — not stated on this site".
-  - *Check:* once the strip is built, it shows them, and the Assay answers
-    instead of asking.
+  - *Where:* right to work and sponsorship: `content/profile.json` →
+    `atAGlance.rightToWork`, one short phrase covering both (it is `null`
+    today). Driving licence and security clearance have no field yet: no
+    page shows them, so give them to whoever next works on the Assay.
+  - *Unlocks:* "Right to work" in the homepage's at-a-glance strip, which
+    leaves the line out while the field is `null`. Today the Assay only
+    lists these, and relocation, under "Confirm with Moses — not stated on
+    this site"; it does not read the strip's facts yet.
+  - *Check:* after `npm run build:content`, the strip under the hero shows
+    it. `npm test` refuses a stand-in such as "TBC" or "n/a": leave the
+    field `null` until you can state it.
 
 - [ ] **F3. Target roles, seniority and available-from date** (Phase 2.1).
-  - *Where:* `content/profile.json`, in the fields Phase 2.1 adds.
-  - *Unlocks:* the first view saying which job you want and when you can start.
-  - *Check:* the at-a-glance strip on the homepage shows them.
+  - *Where:* `content/profile.json` → `atAGlance`:
+    - `targetRoles`: filled from the site's own availability line
+      ("sustainability, climate-risk, ESG and sustainable-AI roles and
+      consulting"). Confirm it, or correct it.
+    - `seniority`: `null` today. One short phrase for the level of role
+      you are looking for.
+    - `availableFrom`: `null` today. `"now"`, or a date as `YYYY-MM` or
+      `YYYY-MM-DD`; the strip shows it as "Now", "Jan 2027" or
+      "15 Jan 2027". A past date does not fail the build (`npm test`
+      prints a notice), so update it when you check `meta.verifiedOn`.
+    - The location line comes from `person.locality` and `person.country`,
+      followed by `atAGlance.workArea` (`["EU", "remote-friendly"]`, as the
+      page already said).
+  - *Unlocks:* the first view saying which job you want and when you can
+    start. A `null` field is left out of the strip entirely.
+  - *Check:* after `npm run build:content`, the strip under the hero shows
+    each one, and `npm run build:check` passes.
 
 - [ ] **F4. Which roles count as paid professional experience.**
   - *What:* for each role in `content/profile.json` → `experience`, whether it

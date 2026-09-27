@@ -42,7 +42,9 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 
 ### 🏠 Home (Hero)
 - Name, role and a one-line value proposition over a rotating set of fieldwork photographs (the rotation only runs while the hero is on screen and the tab is visible)
-- Call-to-action buttons and a live index of the five interactive features (the one `Listen` control is in the nav)
+- An at-a-glance strip written from `content/profile.json` by `npm run build:content`: the roles he is open to and where he is today; seniority, start date, languages and right to work appear once Moses states them, and a fact that is `null` is simply not shown
+- One primary action (**See the evidence**, to the case studies), **Get in touch** second, and a quieter CV link; the figures below and the photo's caption sit inside the first screen at 1440×900 and 390×844
+- A six-link nav: Work, About, Experience, Research, CV and Contact, with the one `Listen` control and the theme switch beside them. The index of the five interactive features sits just before Contact
 - Four exact figures (164 water points, 54 hazard systems, 3 continents, 2 master's degrees), written into the HTML so they read correctly without JavaScript; with it they count up to the same values, with nothing appended, and stay still under reduced motion or low-energy mode
 
 ### 🗺️ Journey
@@ -444,6 +446,13 @@ The suites, and the failure each one exists to prevent:
   to it, lands under the nav bar and stays there, and
   at 390x844 back to top never covers a control from the hero to the footer,
   yet shows on the last screen.
+- **`firstview.test.js`** — the hero's at-a-glance strip is exactly what
+  `content/profile.json` says (a `null` fact is not drawn; a stand-in such as
+  "TBC", a misspelt key or an impossible date fails validation), the hero has
+  one primary action, the nav six links with no numbers, the play index sits
+  out of the first view, and the nav lights Work on the homepage's projects.
+  `npm run smoke` checks that the figures, the caption, the strip and the
+  primary action are on the first screen at 1440×900 and 390×844.
 - **`tooling.test.js`** — the machinery under the rest: the runner fails when
   any suite fails and keeps each suite's output in one block, `npm test` runs
   it rather than a hand-kept list of suites, the fake clock fires timers in

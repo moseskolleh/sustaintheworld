@@ -293,8 +293,8 @@ html {
 }
 
 .nav-container {
-    /* The logo, the theme switch, ten links, CV and Contact need about
-       1,270px on one line, padding included (see the 1279px query). */
+    /* The logo, Listen, the theme switch and the six links need about
+       810px on one line, padding included (see the 899px query). */
     max-width: 1520px;
     margin: 0 auto;
     padding: 0 24px;
@@ -381,9 +381,11 @@ html {
     width: 100%;
 }
 
+/* The one filled button in the bar; its text as on .btn-primary. */
 .nav-link.contact-btn {
     border: 1px solid var(--primary-green);
-    color: var(--primary-green);
+    background: var(--primary-green);
+    color: #051000;
     padding: 9px 22px;
     border-radius: 999px;
 }
@@ -391,8 +393,12 @@ html {
 .nav-link.contact-btn::after { display: none; }
 
 .nav-link.contact-btn:hover {
-    background: var(--primary-green);
-    color: var(--darker-bg);
+    background: var(--hover-color);
+    border-color: var(--hover-color);
+}
+
+body.light-mode .nav-link.contact-btn {
+    color: #fff;
 }
 
 .nav-toggle {
@@ -450,6 +456,8 @@ html {
 /* ===================================
    HERO
    =================================== */
+/* Who, what, how to reach him and the figures, all in the first screen
+   (smoke.js checks 1440x900 and 390x844): the stats sat at 883px of 900. */
 .hero {
     min-height: 100vh;
     min-height: 100dvh;
@@ -458,7 +466,7 @@ html {
     justify-content: center;
     position: relative;
     overflow: hidden;
-    padding: 130px 0 90px;
+    padding: 104px 0 40px;
 }
 
 .hero-background {
@@ -499,6 +507,7 @@ html {
 .hero-content {
     position: relative;
     z-index: 2;
+    width: 100%;
 }
 
 .hero-eyebrow {
@@ -507,7 +516,7 @@ html {
     letter-spacing: 0.2em;
     text-transform: uppercase;
     color: var(--primary-green);
-    margin-bottom: 22px;
+    margin-bottom: 14px;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -546,11 +555,12 @@ html {
     50% { transform: scale(1); opacity: 0; }
 }
 
+/* By height too: at 6.2rem the name took a quarter of a 900px screen. */
 .hero-title {
-    font-size: clamp(3rem, 9vw, 6.2rem);
+    font-size: clamp(2.3rem, min(7vw, 9.5vh), 5rem);
     text-transform: uppercase;
     letter-spacing: -0.01em;
-    margin-bottom: 18px;
+    margin-bottom: 12px;
 }
 
 .hero-line {
@@ -560,31 +570,31 @@ html {
 .hero-line-accent {
     color: transparent;
     -webkit-text-stroke: 2px var(--primary-green);
-    text-stroke: 2px var(--primary-green);
 }
 
 .hero-subtitle {
     font-family: var(--font-mono);
     font-size: clamp(1rem, 2.4vw, 1.35rem);
     color: var(--text-primary);
-    margin-bottom: 22px;
+    margin-bottom: 12px;
     min-height: 1.6em;
 }
 
 .hero-valueprop {
-    max-width: 640px;
+    max-width: 680px;
     color: var(--text-primary);
-    font-size: clamp(1.05rem, 1.6vw, 1.25rem);
+    font-size: clamp(1rem, 1.6vw, 1.25rem);
     font-weight: 500;
-    line-height: 1.5;
-    margin-bottom: 20px;
+    line-height: 1.45;
+    margin-bottom: 10px;
 }
 
 .hero-description {
-    max-width: 620px;
+    max-width: 700px;
     color: var(--text-secondary);
     font-size: 1.05rem;
-    margin-bottom: 28px;
+    line-height: 1.6;
+    margin-bottom: 20px;
 }
 
 /* Over the fieldwork photos the light theme's green reads at 3.4-4.1:1
@@ -606,11 +616,38 @@ body.light-mode .hero-availability {
     border: 1px solid var(--line-color);
     border-radius: 999px;
     padding: 8px 16px;
-    margin-bottom: 32px;
 }
 
-/* Week-1 conversion additions: nav CV link, contact availability, form privacy */
+/* At a glance: written by build-content.js from content/profile.json,
+   and a fact that is null there is not in it at all. */
+.at-a-glance {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 20px;
+    margin-bottom: 24px;
+}
 
+.glance-facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 20px;
+    margin: 0;
+}
+
+.glance-fact {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.glance-fact dd {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+}
+
+/* Week-1 conversion additions: contact availability, form privacy */
 .contact-open {
     display: inline-flex;
     align-items: center;
@@ -1018,9 +1055,10 @@ body.light-mode .hero-availability {
 .assay-copy-wrap { margin-top: 14px; }
 .anatomy-copy { margin-top: 12px; }
 
-/* Play index — signposts the interactive features (some hidden in dossiers) */
+/* Play index — signposts the interactive features, between two sections */
 .play-index {
     background: var(--card-bg-alt);
+    border-top: 1px solid var(--line-color);
     border-bottom: 1px solid var(--line-color);
     padding: 15px 24px;
     display: flex;
@@ -1112,9 +1150,38 @@ body.light-mode .hero-availability {
 
 .hero-cta {
     display: flex;
-    gap: 16px;
+    align-items: center;
+    gap: 12px 16px;
     flex-wrap: wrap;
-    margin-bottom: 60px;
+    margin-bottom: 28px;
+}
+
+/* The CV is a third choice, and looks it: a link, not a third button. */
+.hero-cv {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 0 4px;
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 0.85rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    text-decoration: underline;
+    text-decoration-color: var(--line-color);
+    text-underline-offset: 5px;
+    transition: var(--transition);
+}
+
+.hero-cv .icon {
+    color: var(--primary-green);
+}
+
+.hero-cv:hover {
+    color: var(--primary-green);
+    text-decoration-color: currentColor;
 }
 
 .btn {
@@ -1170,10 +1237,10 @@ body.light-mode .btn-primary {
 .hero-stats {
     display: grid;
     grid-template-columns: repeat(4, auto);
-    gap: 48px;
+    gap: 44px;
     justify-content: start;
     border-top: 1px solid var(--line-soft);
-    padding-top: 30px;
+    padding-top: 22px;
     max-width: 760px;
 }
 
@@ -1185,7 +1252,7 @@ body.light-mode .btn-primary {
 
 .hero-stat-number {
     font-family: var(--font-display);
-    font-size: 2.2rem;
+    font-size: 2rem;
     font-weight: 700;
     color: var(--primary-green);
     line-height: 1;
@@ -1199,10 +1266,12 @@ body.light-mode .btn-primary {
     color: var(--text-secondary);
 }
 
+/* Just under the bar, where the first screen shows it (at the hero's
+   foot it sat below the fold), and clear of the scroll drill. */
 .hero-photo-caption {
     position: absolute;
-    bottom: 26px;
-    right: 26px;
+    top: 86px;
+    right: 44px;
     z-index: 2;
     font-family: var(--font-mono);
     font-size: 0.72rem;
@@ -1231,8 +1300,8 @@ body.light-mode .hero-photo-caption {
     overflow: hidden;
 }
 
-/* On narrow screens the centred cue ran through the right-anchored photo
-   caption; the caption is the more useful of the two. */
+/* On narrow screens the centred cue would cross the hero's figures, which
+   on a phone reach the foot of the first screen. */
 @media (max-width: 900px) {
     .scroll-indicator {
         display: none;
@@ -2723,9 +2792,9 @@ html.js .nojs-note { display: none; }
 /* ===================================
    RESPONSIVE
    =================================== */
-/* Below 1280px the bar's ~1,270px do not fit on one line, so the
-   hamburger takes over (the theme switch and Listen stay in the bar). */
-@media (max-width: 1279px) {
+/* Below 900px the bar's ~810px leave too little to spare, so the hamburger
+   takes over (the theme switch and Listen stay in the bar). */
+@media (max-width: 899px) {
     .nav-toggle {
         display: flex;
     }
@@ -2762,7 +2831,7 @@ html.js .nojs-note { display: none; }
     }
 }
 
-@media (max-width: 1279px) and (max-height: 700px) {
+@media (max-width: 899px) and (max-height: 700px) {
     .nav-menu {
         padding: 20px 32px;
         gap: 12px;
@@ -2770,9 +2839,9 @@ html.js .nojs-note { display: none; }
 }
 
 /* Without JavaScript the drawer above can never open, and the menu button
-   is gone (it could not open it). So below 1280px the bar stops floating
+   is gone (it could not open it). So below 900px the bar stops floating
    and the links wrap under the logo, every one of them reachable. */
-@media (max-width: 1279px) {
+@media (max-width: 899px) {
     html:not(.js) {
         scroll-padding-top: 0;
     }
@@ -2806,6 +2875,10 @@ html.js .nojs-note { display: none; }
 
     html:not(.js) .hero {
         padding-top: 56px;
+    }
+
+    html:not(.js) .hero-photo-caption {
+        top: 14px;
     }
 }
 
@@ -2871,8 +2944,9 @@ html.js .nojs-note { display: none; }
     }
 
     .hero-photo-caption {
+        top: 82px;
         right: 16px;
-        bottom: 14px;
+        max-width: calc(100% - 32px);
         font-size: 0.62rem;
     }
 
@@ -2906,18 +2980,80 @@ html.js .nojs-note { display: none; }
     }
 }
 
+/* On a phone the caption needs a line of its own over the eyebrow, so
+   the rest gives a little: two buttons to a line, figures beside labels. */
+@media (max-width: 640px) {
+    .hero {
+        padding-top: 116px;
+    }
+
+    .hero-photo-caption {
+        top: 80px;
+        padding: 5px 12px;
+        letter-spacing: 0.02em;
+    }
+
+    .hero-eyebrow,
+    .hero-subtitle,
+    .hero-valueprop {
+        margin-bottom: 8px;
+    }
+
+    .hero-description {
+        font-size: 0.9rem;
+        line-height: 1.5;
+        margin-bottom: 14px;
+    }
+
+    .at-a-glance {
+        margin-bottom: 14px;
+    }
+
+    .hero-availability {
+        gap: 8px;
+        padding: 6px 12px;
+        font-size: 0.72rem;
+        letter-spacing: 0;
+    }
+
+    .hero-cta {
+        gap: 8px;
+        margin-bottom: 16px;
+    }
+
+    .hero-cv {
+        min-height: 36px;
+    }
+}
+
 @media (max-width: 480px) {
     .hero-cta .btn {
-        width: 100%;
+        flex: 1 1 auto;
         justify-content: center;
+        padding: 14px;
     }
 
     .hero-stats {
-        gap: 18px;
+        gap: 10px 16px;
+        padding-top: 12px;
+    }
+
+    .hero-stat {
+        flex-direction: row;
+        align-items: center;
+        gap: 10px;
     }
 
     .hero-stat-number {
-        font-size: 1.7rem;
+        font-size: 1.6rem;
+    }
+}
+
+/* Below 380px the longer captions can take two lines, and the eyebrow
+   steps down to clear them (smoke.js tries each at 320px). */
+@media (max-width: 380px) {
+    .hero {
+        padding-top: 136px;
     }
 }
 
@@ -4208,11 +4344,10 @@ body.light-mode .journey-you-readout {
     50%      { opacity: 0.35; }
 }
 
-/* Where room is short — a phone's nav bar, and beside the full menu on a
-   desktop — the word steps aside and the waveform carries it. It is
-   clipped, not removed, so a screen reader still hears "Listen to this
-   page", and the tooltip says it for a mouse. */
-@media (max-width: 480px), (min-width: 1280px) {
+/* On a phone's nav bar the word steps aside and the waveform carries it.
+   It is clipped, not removed, so a screen reader still hears "Listen to
+   this page", and the tooltip says it for a mouse. */
+@media (max-width: 480px) {
     .listen-btn {
         padding: 0;
     }
@@ -4224,22 +4359,6 @@ body.light-mode .journey-you-readout {
         overflow: hidden;
         clip: rect(0, 0, 0, 0);
         white-space: nowrap;
-    }
-}
-
-/* Beside the full menu every pixel counts: the rest of the bar leaves
-   ~12px of 1280. This control sits closer to the theme switch, and below
-   1330px the links give up 4px a gap (scripts/smoke.js checks it fits at
-   every width). */
-@media (min-width: 1280px) {
-    .nav-listen {
-        margin-right: -8px;
-    }
-}
-
-@media (min-width: 1280px) and (max-width: 1329px) {
-    .nav-menu {
-        gap: 12px;
     }
 }
 

@@ -46,7 +46,32 @@
     "GIS"
   ],
 
-  "$languages": "Optional and deliberately absent: add \"languages\": [{ \"language\": \"Dutch\", \"level\": \"B1\" }], named in English with a CEFR level (A1-C2) or \"native\", once Moses states them. Until then the Assay on the homepage lists every non-English language a job ad asks for as a gap rather than guessing. npm run build:content copies it into modules/interactives.js.",
+  "$languages": "Optional and deliberately absent: add \"languages\": [{ \"language\": \"Dutch\", \"level\": \"B1\" }], named in English with a CEFR level (A1-C2) or \"native\", once Moses states them. Until then the Assay on the homepage lists every non-English language a job ad asks for as a gap rather than guessing. npm run build:content copies it into modules/interactives.js, and into the at-a-glance strip below.",
+
+  "$atAGlance": [
+    "The strip under the homepage hero's copy: what a recruiter checks first.",
+    "npm run build:content writes it into index.html between the AT-A-GLANCE",
+    "markers. A fact that is null is not shown at all: no 'TBC', no placeholder,",
+    "and the validator refuses one written as a value. Only Moses can state",
+    "seniority, availableFrom and rightToWork (docs/owner-checklist.md, F2 and",
+    "F3). Two facts are read from elsewhere in this file rather than repeated:",
+    "languages (the top-level list above, the one the Assay reads) and the",
+    "location (person.locality and person.country).",
+    "",
+    "targetRoles   required; the hero's availability line, after 'Open to '",
+    "workArea      optional; phrases shown after the location",
+    "seniority     a short phrase: the level of role sought",
+    "availableFrom 'now', or a date as YYYY-MM or YYYY-MM-DD",
+    "rightToWork   a short phrase: where he may work, and whether an employer",
+    "              would need to sponsor a visa"
+  ],
+  "atAGlance": {
+    "targetRoles": "sustainability, climate-risk, ESG and sustainable-AI roles and consulting",
+    "workArea": ["EU", "remote-friendly"],
+    "seniority": null,
+    "availableFrom": null,
+    "rightToWork": null
+  },
 
   "links": {
     "site": "https://moseskolleh.github.io/sustaintheworld/",

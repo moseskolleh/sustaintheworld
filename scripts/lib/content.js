@@ -141,6 +141,56 @@ function checkLanguages(languages) {
 }
 
 // ------------------------------------------------------------------
+// profile.atAGlance — the strip under the homepage hero
+//
+// The first thing a recruiter checks, so the first place a guess would do
+// harm. The shape is closed: a misspelt key ("availablefrom") would
+// otherwise be skipped as unknown and the fact silently never shown. A
+// fact Moses has not stated is null, and the strip leaves it out; a
+// stand-in written as a value ("TBC", "n/a", "?") is refused, because on
+// the page it would read as an answer.
+// ------------------------------------------------------------------
+const GLANCE_KEYS = ['targetRoles', 'workArea', 'seniority', 'availableFrom', 'rightToWork'];
+const PLACEHOLDER = /^\s*(?:tbc|tbd|to be (?:confirmed|decided)|n\/?a|todo|unknown|\?+|-+|…|\.\.\.)\s*$/i;
+const AVAILABLE_FROM = /^(?:now|(\d{4})-(0[1-9]|1[0-2])(?:-(0[1-9]|[12]\d|3[01]))?)$/;
+
+function checkAtAGlance(glance) {
+    const at = 'profile: atAGlance';
+    if (!glance || typeof glance !== 'object' || Array.isArray(glance)) return [`${at} is missing — the hero's availability line is written from it`];
+    const problems = [];
+    Object.keys(glance).filter(k => !k.startsWith('$') && !GLANCE_KEYS.includes(k))
+        .forEach(k => problems.push(`${at}.${k} is not a fact the strip knows (${GLANCE_KEYS.join(', ')}) — misspelt, it would never be shown`));
+
+    const phrase = (key, required) => {
+        const v = glance[key];
+        if (v === null || v === undefined) {
+            if (required) problems.push(`${at}.${key} is required`);
+            return;
+        }
+        if (typeof v !== 'string' || !v.trim()) problems.push(`${at}.${key} must be a phrase, or null until it is known`);
+        else if (PLACEHOLDER.test(v)) problems.push(`${at}.${key} is "${v}" — leave it null until it is known; the strip then leaves it out`);
+    };
+    phrase('targetRoles', true);
+    ['seniority', 'rightToWork'].forEach(k => phrase(k, false));
+    // Where he will work, after where he lives: a list of short phrases.
+    const area = glance.workArea;
+    if (area !== null && area !== undefined) {
+        if (!Array.isArray(area) || !area.length || area.some(a => typeof a !== 'string' || !a.trim() || PLACEHOLDER.test(a))) {
+            problems.push(`${at}.workArea must be a list of short phrases, or null`);
+        }
+    }
+
+    const from = glance.availableFrom;
+    if (from !== null && from !== undefined) {
+        const m = typeof from === 'string' && from.match(AVAILABLE_FROM);
+        // 2026-02-30 matches the pattern; only a real day may pass.
+        const real = m && (!m[3] || new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])).getUTCDate() === +m[3]);
+        if (!real) problems.push(`${at}.availableFrom "${from}" is not "now" or a date as YYYY-MM or YYYY-MM-DD`);
+    }
+    return problems;
+}
+
+// ------------------------------------------------------------------
 // content/stats.json — what the visit counter publishes
 //
 // scripts/fetch-stats.js writes this file from the counter's daily totals,
@@ -585,6 +635,9 @@ function loadAll() {
     // --- languages (optional) ------------------------------------------
     problems.push(...checkLanguages(profile.languages));
 
+    // --- the at-a-glance strip -------------------------------------------
+    problems.push(...checkAtAGlance(profile.atAGlance));
+
     if (problems.length) {
         throw new Error(`content failed validation:\n  - ${problems.join('\n  - ')}`);
     }
@@ -611,6 +664,7 @@ module.exports = {
     urlProblem,
     checkAvailability,
     checkLanguages,
+    checkAtAGlance,
     checkStats,
     peel,
     orderForLens

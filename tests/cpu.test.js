@@ -363,10 +363,10 @@ const key = (window, k, target, init) => {
         const drawn = (grew) => { pageHeight += grew; held().forEach(o => o.cb([])); };
         const scrolled = [];
         window.HTMLElement.prototype.scrollIntoView = function () { scrolled.push(this.id); };
-        doc.querySelector('.nav-menu a[href="#skills"]').dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }));
-        assert(scrolled.join() === 'skills', 'Course: a nav link scrolls to its section');
+        doc.querySelector('.nav-menu a[href="#experience"]').dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }));
+        assert(scrolled.join() === 'experience', 'Course: a nav link scrolls to its section');
         drawn(-713);   // a section passed on the way is drawn, shorter than its estimate
-        assert(scrolled.join() === 'skills,skills', 'Course: a section drawn at its real height mid-jump lands it again, on the same target');
+        assert(scrolled.join() === 'experience,experience', 'Course: a section drawn at its real height mid-jump lands it again, on the same target');
         window.dispatchEvent(new window.Event('wheel'));
         drawn(297);
         assert(scrolled.length === 2 && held().length === 0, 'Course: once the reader scrolls for themselves, the page stops steering');

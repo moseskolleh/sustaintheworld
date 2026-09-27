@@ -19,7 +19,10 @@
 //   - an on-demand module that does not arrive when its feature is used
 //   - an accessibility violation axe-core can find, on any page, at desktop
 //     and phone width, in either theme (see the end of this file)
-//   - a first view heavier than scripts/check-budget.js claims
+//   - a first view heavier than scripts/check-budget.js claims, or one
+//     (1440x900, 390x844) without the hero's figures, its photo caption,
+//     the at-a-glance strip and one primary action, or with the play index;
+//     a photo caption over the eyebrow or the name, down to 320px
 //   - a page that, with JavaScript off (or script.js blocked or late), is
 //     covered, leaves content invisible, shows a [hidden] element or a
 //     control only a script could drive, or hides the contact form
@@ -274,6 +277,7 @@ async function visit(context, page, rel, origin) {
         }
     });
 
+    await exerciseFirstView(browser, origin);
     await exerciseNavigation(browser, origin);
     await exerciseCpu(browser, origin);
     await exerciseStatsPage(browser, origin);
@@ -286,7 +290,7 @@ async function visit(context, page, rel, origin) {
         const page = await context.newPage();
         await page.goto(`${origin}/index.html`, { waitUntil: 'load' });
         const broken = [];
-        for (let w = 1000; w <= 1920; w += 20) {
+        for (let w = 880; w <= 1920; w += 20) {
             await page.setViewportSize({ width: w, height: 800 });
             const r = await page.evaluate(() => {
                 if (getComputedStyle(document.getElementById('navToggle')).display !== 'none') return null;
@@ -305,7 +309,7 @@ async function visit(context, page, rel, origin) {
             if (r && r.length) broken.push(`${w}px: ${r.join(', ')}`);
         }
         if (broken.length) broken.forEach(b => bad(`nav item wraps or is clipped at ${b}`));
-        else ok('nav: every item on one line and on screen, 1000–1920px (or the menu button instead)');
+        else ok('nav: every item on one line and on screen, 880–1920px (or the menu button instead)');
         await page.close();
     }
 
@@ -427,6 +431,86 @@ async function exerciseCarbonTool(page, r) {
 }
 
 // ------------------------------------------------------------------
+// The first view, as a recruiter meets it
+// ------------------------------------------------------------------
+// Who, what and how to reach him in the first screen, with the figures
+// behind it: the hero's stats sat at 883px of a 900px desktop and 1,010px
+// of a phone's 844, its photo caption at 1,019px, and the play index was
+// the next thing down. Measured once the page has settled: fonts in, the
+// loading screen gone, nothing scrolled.
+async function exerciseFirstView(browser, origin) {
+    console.log('  index.html — the first view');
+    for (const [width, height] of [[1440, 900], [390, 844]]) {
+        const context = await browser.newContext({ viewport: { width, height } });
+        const page = await context.newPage();
+        await page.goto(`${origin}/index.html`, { waitUntil: 'load' });
+        await page.evaluate(() => document.fonts.ready);
+        await page.waitForFunction(() => !document.getElementById('preloader'), null, { timeout: 5000 }).catch(() => null);
+        const r = await page.evaluate(() => {
+            const inView = (el) => {
+                const b = el && el.getBoundingClientRect();
+                return !!b && b.width > 0 && b.top >= 0 && b.bottom <= innerHeight && b.left >= 0 && b.right <= innerWidth;
+            };
+            const onTop = (el) => {
+                const b = el.getBoundingClientRect();
+                const hit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+                return !!hit && el.contains(hit);
+            };
+            const at = (sel) => Math.round(document.querySelector(sel).getBoundingClientRect().bottom);
+            const caption = document.getElementById('heroCaption');
+            return {
+                scrolled: scrollY,
+                stats: inView(document.querySelector('.hero-stats')), statsAt: at('.hero-stats'),
+                caption: inView(caption) && onTop(caption), captionAt: at('#heroCaption'),
+                glance: inView(document.querySelector('.at-a-glance')),
+                primary: document.querySelectorAll('#home .btn-primary').length,
+                act: inView(document.querySelector('#home .btn-primary')),
+                play: Math.round(document.querySelector('.play-index').getBoundingClientRect().top),
+                links: document.querySelectorAll('#navMenu a').length
+            };
+        });
+        const at = `at ${width}x${height}`;
+        if (r.scrolled) bad(`first view ${at}: the page opened scrolled to ${r.scrolled}px`);
+        if (r.stats) ok(`first view ${at}: the hero's figures are on the first screen (they end at ${r.statsAt}px)`);
+        else bad(`first view ${at}: the hero's figures end at ${r.statsAt}px, below the first screen`);
+        if (r.caption) ok(`first view ${at}: the photo's caption is on the first screen, uncovered (ends at ${r.captionAt}px)`);
+        else bad(`first view ${at}: the photo's caption is off the first screen or covered (ends at ${r.captionAt}px)`);
+        if (r.glance && r.act) ok(`first view ${at}: the at-a-glance strip and the primary action are on the first screen`);
+        else bad(`first view ${at}: ${r.glance ? '' : 'the at-a-glance strip '}${r.act ? '' : 'the primary action '}not on the first screen`);
+        if (r.primary === 1) ok(`first view ${at}: one primary button in the hero`); else bad(`first view ${at}: ${r.primary} primary buttons in the hero`);
+        if (r.play >= height) ok(`first view ${at}: the play index is below the fold (${r.play}px)`);
+        else bad(`first view ${at}: the play index is in the first screen (${r.play}px)`);
+        if (r.links <= 7) ok(`first view ${at}: ${r.links} links in the nav`); else bad(`first view ${at}: ${r.links} links in the nav — at most 7`);
+        await context.close();
+    }
+
+    // The caption now sits over the eyebrow's corner, and the slideshow
+    // swaps in longer ones: each must stay clear of the eyebrow and the
+    // name, down to a 320px phone, where the longest takes two lines.
+    const captions = (fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8')
+        .match(/heroSlideCaptions = \[([^\]]*)\]/) || ['', ''])[1].match(/'[^']+'/g) || [];
+    if (!captions.length) bad('first view: could not read the slideshow\'s captions from script.js');
+    for (const [width, height] of [[320, 568], [390, 844], [1440, 900]]) {
+        const context = await browser.newContext({ viewport: { width, height } });
+        const page = await context.newPage();
+        await page.goto(`${origin}/index.html`, { waitUntil: 'load' });
+        await page.evaluate(() => document.fonts.ready);
+        const clash = await page.evaluate((list) => list.filter((text) => {
+            document.getElementById('heroCaptionText').textContent = text;
+            const c = document.getElementById('heroCaption').getBoundingClientRect();
+            const range = document.createRange();
+            range.selectNodeContents(document.querySelector('.hero-eyebrow'));
+            const others = Array.from(range.getClientRects()).concat(document.querySelector('.hero-title').getBoundingClientRect());
+            return c.left < 0 || c.right > innerWidth ||
+                others.some(o => c.left < o.right && o.left < c.right && c.top < o.bottom && o.top < c.bottom);
+        }), captions.map(s => s.slice(1, -1)));
+        if (clash.length) bad(`first view at ${width}px: the photo caption covers the eyebrow or the name, or leaves the screen, with ${clash.join(' / ')}`);
+        else ok(`first view at ${width}px: all ${captions.length} photo captions clear of the eyebrow and the name`);
+        await context.close();
+    }
+}
+
+// ------------------------------------------------------------------
 // In-page links, the theme switch and back to top, as a visitor meets them
 // ------------------------------------------------------------------
 // What jsdom cannot show: where the next Tab goes after the skip link, what
@@ -457,7 +541,7 @@ async function exerciseNavigation(browser, origin) {
 
     // Back after following two nav links.
     await page.click('.nav-menu a[href="#about"]');
-    await page.click('.nav-menu a[href="#skills"]');
+    await page.click('.nav-menu a[href="#experience"]');
     await page.goBack();
     await page.waitForTimeout(300);
     const back = await page.evaluate(() => ({ hash: location.hash, focus: document.activeElement.id }));
@@ -509,7 +593,7 @@ async function exerciseNavigation(browser, origin) {
     // widgets it fills grow above the target. The jump used to land once and
     // leave the target 250-320px down the screen. Where it sits 2.5 s later:
     const landings = [
-        [1280, 800, '.nav-menu a[href="#skills"]', 'skills', 'nav link to Skills'],
+        [1280, 800, '.nav-menu a[href="#contact"]', 'contact', 'nav link to Contact'],
         [1280, 800, '.play-index a[href="#anatomy"]', 'anatomy', 'play-index link "weigh one prompt"'],
         [390, 844, '.play-index a[href="#anatomy"]', 'anatomy', 'play-index link "weigh one prompt"']
     ];
@@ -937,10 +1021,10 @@ async function exerciseNarration(browser, origin) {
             await settle();
             return page.evaluate(() => getComputedStyle(document.getElementById('navToggle')).display === 'none');
         };
-        let lo = 1000, hi = 1920;
+        let lo = 600, hi = 1920;
         while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (await fullMenu(mid)) hi = mid; else lo = mid; }
         const off = [];
-        for (const w of new Set([320, 360, 390, 430, 768, lo, hi].concat(Array.from({ length: 47 }, (_, i) => 1000 + i * 20)))) {
+        for (const w of new Set([320, 360, 390, 430, 768, lo, hi].concat(Array.from({ length: 52 }, (_, i) => 900 + i * 20)))) {
             await page.setViewportSize({ width: w, height: 844 });
             // Two frames, so anything the breakpoint change set moving has settled.
             await settle();
@@ -1423,11 +1507,11 @@ async function checkWithoutJs(browser, origin) {
         await context.addInitScript(capture);
         const page = await context.newPage();
         await page.goto(`${origin}/index.html`, { waitUntil: 'load' });
-        // What a screen reader has to read before anyone scrolls: the digits
-        // wait at 0 below the fold, and used to be all it heard.
+        // What a screen reader has to read while the digits count up from 0,
+        // which used to be all it heard.
         const unseen = (await page.locator('.hero-stats').ariaSnapshot()).replace(/\s+/g, ' ');
-        // At 800px tall the figures sit just below the fold; they count when
-        // seen. A count-up takes about 1.8 s, a frame at a time.
+        // The figures are on the first screen, and count from the first
+        // frame. A count-up takes about 1.8 s, a frame at a time.
         await page.evaluate(() => document.querySelector('.hero-stats').scrollIntoView({ block: 'center' }));
         if (label === 'normal') {
             await page.waitForFunction(() => Array.from(document.querySelectorAll('.hero-stat-number'))
@@ -1456,7 +1540,10 @@ async function checkWithoutJs(browser, origin) {
         if (!exact) bad(`${tag}: counters ended at ${r.counters.join(', ')}, not ${r.targets.join(', ')}`);
         if (label === 'normal') {
             const intro = r.atReady && r.atReady.intro;
-            const fromZero = r.atReady && r.atReady.counters.every(c => c === '0');
+            // By DOMContentLoaded (which waits for count.js) the first frame
+            // may have come and the count begun: each is below its target,
+            // zeroed before that frame, never the target shown first.
+            const fromZero = r.atReady && r.atReady.counters.every((c, i) => /^\d+$/.test(c) && +c < +r.targets[i]);
             if (!intro) bad(`${tag}: the intro no longer covers the first paint`);
             if (!fromZero) bad(`${tag}: counters did not start from 0 (${r.atReady && r.atReady.counters.join(', ')})`);
             if (intro && fromZero && exact && !r.preloader) ok(`${tag}: intro shown then lifted, counters count up to ${r.counters.join(', ')} with nothing appended`);
@@ -1720,12 +1807,20 @@ async function exerciseCpu(browser, origin) {
             .filter(s => getComputedStyle(s).contentVisibility === 'auto').length);
         if (cv) ok(`${cv} sections are drawn only as they near the screen (content-visibility: auto)`);
         else bad('no section has content-visibility: auto');
-        for (const id of ['contact', 'about', 'ecoprompt']) {
+        for (const id of ['contact', 'about', 'experience']) {
             await page.click(`.nav-menu a[href="#${id}"]`);
             await lands(page, id, 'a nav link');
         }
-        const spy = await page.evaluate(() => (document.querySelector('.nav-link.active') || {}).hash || 'none');
-        if (spy === '#ecoprompt') ok('the nav highlights the section it landed on'); else bad(`the nav highlights ${spy}, not #ecoprompt`);
+        const lit = () => page.evaluate(() => Array.from(document.querySelectorAll('.nav-link.active')).map(a => a.textContent.trim()).join() || 'none');
+        const spy = await lit();
+        if (spy === 'Experience') ok('the nav highlights the section it landed on'); else bad(`the nav highlights ${spy}, not Experience`);
+        // Work leads to the case studies, and stands for this page's own
+        // projects while the reader is on them. The wheel lets go of the jump.
+        await page.mouse.wheel(0, 10);
+        await page.evaluate(() => document.getElementById('projects').scrollIntoView({ behavior: 'instant' }));
+        await page.waitForTimeout(400);
+        const work = await lit();
+        if (work === 'Work') ok('the nav lights Work on this page\'s projects'); else bad(`on #projects the nav lights ${work}, not Work`);
 
         // Find-in-page, from the top, reaches a section not yet drawn.
         await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
@@ -1774,8 +1869,8 @@ async function exerciseCpu(browser, origin) {
         else bad(`the journey map did not follow the stops (${early}, then ${late})`);
         await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
         await page.click('#navToggle');
-        await page.click('.nav-menu a[href="#projects"]');
-        await lands(page, 'projects', 'on a phone, a menu link');
+        await page.click('.nav-menu a[href="#experience"]');
+        await lands(page, 'experience', 'on a phone, a menu link');
         await context.close();
     }
     // Reading back up after the page skipped ahead: an instant jump (reduced

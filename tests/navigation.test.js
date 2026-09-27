@@ -86,8 +86,8 @@ const countScrolls = (window) => {
 
         // Back and Forward: jsdom fires popstate and hashchange, as browsers
         // do; the landing happens once, a task later.
-        click(window, doc.querySelector('.nav-menu a[href="#skills"]'));
-        assert(doc.activeElement === doc.getElementById('skills'), 'Links: focus is on #skills before going Back');
+        click(window, doc.querySelector('.nav-menu a[href="#experience"]'));
+        assert(doc.activeElement === doc.getElementById('experience'), 'Links: focus is on #experience before going Back');
         const aboutScrolls = scrolled.about;
         window.history.back();
         await clock.tick(40);
@@ -117,7 +117,7 @@ const countScrolls = (window) => {
         window.HTMLElement.prototype.scrollIntoView = function (opts) { seen.push(opts && opts.behavior); };
         click(window, doc.querySelector('.nav-menu a[href="#about"]'));
         doc.body.classList.add('eco-mode');
-        click(window, doc.querySelector('.nav-menu a[href="#skills"]'));
+        click(window, doc.querySelector('.nav-menu a[href="#experience"]'));
         window.history.back();
         await clock.tick(40);
         assert(seen[0] === 'smooth' && seen[1] === 'instant' && seen[2] === 'instant',
@@ -147,16 +147,16 @@ const countScrolls = (window) => {
         const scrolled = countScrolls(window);
         const report = () => observers.filter(o => o.on).forEach(o => o.cb([{ target: doc.body }], o));
 
-        click(window, doc.querySelector('.nav-menu a[href="#skills"]'));
-        assert(scrolled.skills === 1, 'Hold: the jump lands once');
+        click(window, doc.querySelector('.nav-menu a[href="#contact"]'));
+        assert(scrolled.contact === 1, 'Hold: the jump lands once');
         bodyHeight = 20400;   // the module grew the page before the first report
         report();
-        assert(scrolled.skills === 2, `Hold: the first report, already carrying the growth, lands the jump again (${scrolled.skills - 1} landings after it)`);
+        assert(scrolled.contact === 2, `Hold: the first report, already carrying the growth, lands the jump again (${scrolled.contact - 1} landings after it)`);
         report();
-        assert(scrolled.skills === 2, 'Hold: a report of the same height lands nothing');
+        assert(scrolled.contact === 2, 'Hold: a report of the same height lands nothing');
         bodyHeight = 20700;
         report();
-        assert(scrolled.skills === 3, 'Hold: each later growth lands it again');
+        assert(scrolled.contact === 3, 'Hold: each later growth lands it again');
         window.dispatchEvent(new window.Event('wheel'));
         assert(observers.every(o => !o.on), 'Hold: the reader\'s own scroll lets go of it');
     }
@@ -177,7 +177,7 @@ const countScrolls = (window) => {
 
         card.querySelector('.project-toggle').click();   // the reader closes it
         assert(!card.classList.contains('expanded'), 'Dossier setup: closed again');
-        click(window, doc.querySelector('.nav-menu a[href="#skills"]'));
+        click(window, doc.querySelector('.nav-menu a[href="#experience"]'));
         window.history.back();
         await clock.tick(320);
         assert(window.location.hash === '#boreholeGame' && card.classList.contains('expanded'), 'Dossier: Back to #boreholeGame opens the dossier again');
