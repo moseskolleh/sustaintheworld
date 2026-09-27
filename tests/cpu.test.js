@@ -82,6 +82,33 @@ const key = (window, k, target, init) => {
             });
         });
         assert(assigned.length === 0, `Globals: nothing else is assigned to window (${assigned.join(', ') || 'none'})`);
+
+        // The other shipped scripts are not the homepage core. Each still puts
+        // names on its page's window, and these are them, by name, so a new
+        // one cannot slip in unnoticed: the data files export themselves for
+        // both the browser and Node (the tests require them), and carbon-ai.js
+        // is carbon-ai.html's own classic script, never loaded on the homepage.
+        const EXPECTED_ELSEWHERE = {
+            'ai-carbon-data.js': ['AICarbonData'],
+            'voice-scripts.js': ['VoiceScripts'],
+            'carbon-ai.js': ['calculate', 'clampNumber', 'sanitize', 'suggest']
+        };
+        const found = {};
+        Object.keys(EXPECTED_ELSEWHERE).forEach((rel) => {
+            const src = read(rel);
+            const names = new Set();
+            (src.match(/\b(?:root|window|globalThis|self)\.([A-Za-z_$][\w$]*)\s*=(?!=)/g) || [])
+                .forEach(m => names.add(m.match(/\.([\w$]+)\s*=/)[1]));
+            (src.match(/^(?:async\s+)?function\s*\*?\s*([\w$]+)/gm) || [])
+                .forEach(m => names.add(m.replace(/^(?:async\s+)?function\s*\*?\s*/, '')));
+            (src.match(/^var\s+([\w$]+)/gm) || []).forEach(m => names.add(m.replace(/^var\s+/, '')));
+            found[rel] = Array.from(names).sort();
+        });
+        const drift = Object.keys(EXPECTED_ELSEWHERE)
+            .filter(rel => JSON.stringify(found[rel]) !== JSON.stringify(EXPECTED_ELSEWHERE[rel]))
+            .map(rel => `${rel}: ${found[rel].join(', ') || 'none'}`);
+        assert(drift.length === 0,
+            `Globals: the scripts outside the core put exactly their known names on window, and no new ones (${drift.join(' | ') || 'as listed'})`);
     }
 
     // ===============================================================

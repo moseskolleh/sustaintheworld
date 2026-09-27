@@ -289,7 +289,7 @@ function appendSubmission(config, row) {
 //   date (Europe/Amsterdam)  metric  key      count
 //   2026-09-26               visits           41
 //   2026-09-26               page    index    30
-//   2026-09-26               kb               9120    <- summed, not counted
+//   2026-09-26               kb      index    7210    <- KB summed per page, not counted
 //
 // metric is visits, page, lens, deepest, feature, ref, vp or kb, plus
 // contact, which each accepted contact-form submission adds one to. An empty
@@ -319,7 +319,6 @@ var DAILY_TEST_SHEET = 'DailyTest';
 var DAILY_HEADERS = ['date', 'metric', 'key', 'count'];
 var DAILY_METRICS = ['visits', 'page', 'lens', 'deepest', 'feature', 'ref', 'vp', 'kb', 'contact'];
 var COUNT_TIMEZONE = 'Europe/Amsterdam';
-var STATS_DAYS = 400;
 
 // Today's rows are read from the bottom of the tab in slices this long. A
 // day has well under a hundred distinct (metric, key) pairs, so one slice is
@@ -370,7 +369,9 @@ function beaconIncrements(p) {
   if (p.deepest) inc.push(['deepest', p.deepest, 1]);
   if (p.ref) inc.push(['ref', p.ref, 1]);
   p.features.forEach(function (f) { inc.push(['feature', f, 1]); });
-  if (p.kb) inc.push(['kb', '', p.kb]);
+  // Kept per page, so the site's own sustainability statement can report
+  // measured transfer by page; a single daily sum could never be split later.
+  if (p.kb) inc.push(['kb', p.page, p.kb]);
   return inc;
 }
 
@@ -469,7 +470,10 @@ function addToDaily(config, sheetName, increments) {
 }
 
 /**
- * Every row from the last STATS_DAYS days, as [date, metric, key, count].
+ * Every row since counting began, as [date, metric, key, count]. All of
+ * them: stats.html calls its second column "all time" and dates it from the
+ * first row, which a window of recent days would quietly make untrue. The
+ * totals are a few dozen rows a day, read once a week, so this stays small.
  * The tab is only ever appended to in date order, but the rows are checked
  * one by one anyway, so a hand edit cannot put junk into stats.html.
  */
@@ -480,13 +484,12 @@ function readDaily(config, sheetName) {
   var sheet = SpreadsheetApp.openById(config.spreadsheetId).getSheetByName(sheetName);
   if (!sheet || sheet.getLastRow() < 2) return [];
 
-  var cutoff = Utilities.formatDate(new Date(Date.now() - STATS_DAYS * 86400000), COUNT_TIMEZONE, 'yyyy-MM-dd');
   var rows = [];
   sheet.getRange(2, 1, sheet.getLastRow() - 1, 4).getValues().forEach(function (row) {
     var date = cellText(row[0]);
     var metric = cellText(row[1]);
     var count = Number(row[3]);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date < cutoff) return;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
     if (DAILY_METRICS.indexOf(metric) < 0 || !isFinite(count)) return;
     rows.push([date, metric, cellText(row[2]), count]);
   });

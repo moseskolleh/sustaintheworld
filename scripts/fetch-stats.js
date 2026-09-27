@@ -70,7 +70,7 @@ const SMALL = `<${SUPPRESS_BELOW}`;
 const HELD = 'held';
 const TIME_ZONE = 'Europe/Amsterdam';           // the date the Apps Script counts in
 const METRICS = ['visits', 'page', 'lens', 'deepest', 'feature', 'ref', 'vp', 'kb', 'contact'];
-const UNKEYED = ['visits', 'kb', 'contact'];
+const UNKEYED = ['visits', 'contact'];
 const BREAKDOWNS = ['page', 'lens', 'vp', 'ref', 'feature', 'deepest'];
 const VIEWPORTS = ['s', 'm', 'l'];
 const REFERRERS_LISTED = 15;                    // the rest of the hosts fold into "other"
@@ -332,6 +332,12 @@ function normaliseRow(raw, known, today) {
             return VIEWPORTS.includes(key) ? { date, metric, key, count } : { drop: 'unknown viewport class' };
         case 'page':
             return { date, metric, key: known.pages.has(key) ? key : 'other', count };
+        case 'kb':
+            // Summed KB, keyed by the page it was measured on. A row with no
+            // page (the first counter kept one daily sum) still counts in the
+            // totals; it just cannot be split by page.
+            if (key === '') return { date, metric, key, count };
+            return { date, metric, key: known.pages.has(key) ? key : 'other', count };
         case 'lens':
             // No lens is not a lens visit; those are the visits minus these.
             if (key === '') return { skip: true };
@@ -375,6 +381,9 @@ function cleanRows(rawRows, known, today) {
  * one be worked out (protect, below); then it is "held", not "<5".
  */
 const cell = (n) => ({ n, hidden: n < SUPPRESS_BELOW });
+// A part of a sum that stats.html never shows (the weeks before last week).
+// Working it out only matters while it is a count under 5.
+const earlier = (n) => ({ n, hidden: true, earlier: true });
 const shown = (c) => (!c.hidden ? c.n : c.n < SUPPRESS_BELOW ? SMALL : HELD);
 
 /**
@@ -481,7 +490,9 @@ function protect(sums) {
     for (;;) {
         const known = new Map();
         sums.forEach(s => s.cells.forEach((c) => { if (!c.hidden) known.set(c, c.n); }));
-        const leak = peel(sums, known).find(f => f.cell.n !== 0 || f.value !== 0);
+        const leak = peel(sums, known).find(f => (f.cell.earlier
+            ? f.value > 0 && f.value < SUPPRESS_BELOW
+            : f.cell.n !== 0 || f.value !== 0));
         if (!leak) return;
         const partner = leak.sum.cells.filter(c => !c.hidden).sort((a, b) => a.n - b.n)[0];
         // Only totals that do not add up (a hand-edited sheet) leave no cell
@@ -526,7 +537,26 @@ function bytes(rows, from, to) {
     const median = !means.length ? null
         : means.length % 2 ? means[mid] : (means[mid - 1] + means[mid]) / 2;
 
-    return { meanKb: Math.round(kb / visits), medianDayKb: median === null ? null : Math.round(median), days: means.length };
+    // By page: that page's KB over its own page views, for pages with at
+    // least 5 in the period. A mean over fewer would stand for one reader.
+    // Only days whose KB was kept per page count: on a day of the first,
+    // unkeyed counter the page views are there but their KB cannot be split,
+    // and counting those views would pull every page's mean down.
+    const keyedDays = new Set(rows.filter(r => r.metric === 'kb' && r.key !== '').map(r => r.date));
+    const perPage = new Map();
+    rows.forEach((r) => {
+        if (r.date < from || r.date > to || !keyedDays.has(r.date) || r.key === '' ||
+            (r.metric !== 'page' && r.metric !== 'kb')) return;
+        const p = perPage.get(r.key) || { views: 0, kb: 0 };
+        if (r.metric === 'page') p.views += r.count; else p.kb += r.count;
+        perPage.set(r.key, p);
+    });
+    const byPage = Array.from(perPage.entries())
+        .filter(([, p]) => p.views >= SUPPRESS_BELOW && p.kb > 0)
+        .map(([page, p]) => ({ page, meanKb: Math.round(p.kb / p.views) }))
+        .sort((a, b) => (a.page < b.page ? -1 : a.page > b.page ? 1 : 0));
+
+    return { meanKb: Math.round(kb / visits), medianDayKb: median === null ? null : Math.round(median), days: means.length, byPage };
 }
 
 /**
@@ -570,11 +600,19 @@ function transform(rows, { today, known }) {
         sums.push({ cells: [f.visits, ...table.vp.map(r => r[col])] });
         sums.push({ cells: [f.lensVisits, ...table.lens.filter(r => r.key !== 'other').map(r => r[col])] });
     });
-    if (spans[spans.length - 1].start === first) {
-        Object.keys(allFig).forEach((k) => {
-            if (allFig[k]) sums.push({ cells: [allFig[k], ...weekFig.map(w => w[k])] });
-        });
-    }
+    // All time is last week plus everything before it, and what came before
+    // is shown nowhere: 12 all time and 9 last week are 3 before it. Each
+    // such remainder is a part of its sum that is never shown (earlier()).
+    BREAKDOWNS.forEach((metric) => {
+        table[metric].forEach(r => sums.push({ cells: [r.all, r.week, earlier(r.all.n - r.week.n)] }));
+    });
+    const reachBack = spans[spans.length - 1].start === first;
+    Object.keys(allFig).forEach((k) => {
+        if (!allFig[k]) return;
+        const lines = weekFig.map(w => w[k]);
+        sums.push({ cells: reachBack ? [allFig[k], ...lines]
+            : [allFig[k], ...lines, earlier(allFig[k].n - lines.reduce((n, c) => n + c.n, 0))] });
+    });
     protect(sums.filter(s => s.cells.length > 1));
 
     // Homepage views that reached #contact: from the table's own cells for
@@ -647,8 +685,9 @@ function fail(why) {
 async function main() {
     const raw = (process.env.STATS_SOURCE_URL || '').trim();
     if (!raw) {
-        return skip('STATS_SOURCE_URL is not set, so there is nothing to fetch yet. Set it as a repository ' +
-            'variable (Settings → Secrets and variables → Actions) once the counter is live.');
+        return skip('STATS_SOURCE_URL is not set, so there is nothing to fetch yet. Once the counter is live, set it ' +
+            'as a repository SECRET (Settings → Secrets and variables → Actions → Secrets): the Apps Script address ' +
+            'with ?action=stats&token=... carries the token that guards the unsuppressed daily totals.');
     }
 
     let url;

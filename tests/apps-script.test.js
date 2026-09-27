@@ -299,7 +299,7 @@ const snapshot = (w) => JSON.stringify(Array.from(w.sheets.entries()).map(([n, s
     assert(!!tab && JSON.stringify(tab[0]) === '["date","metric","key","count"]', 'Counter: a "Daily" tab is created with the header date,metric,key,count');
     const expected = [
         ['visits', '', 1], ['page', 'index', 1], ['vp', 'm', 1], ['deepest', 'contact', 1],
-        ['ref', 'www.linkedin.com', 1], ['feature', 'cv-download-hero', 1], ['feature', 'module-dossier', 1], ['kb', '', 284]
+        ['ref', 'www.linkedin.com', 1], ['feature', 'cv-download-hero', 1], ['feature', 'module-dossier', 1], ['kb', 'index', 284]
     ];
     const wrong = expected.filter(([m, k, n]) => cell(w, m, k) !== n);
     assert(wrong.length === 0, `Counter: one visit adds one to each of its totals, and its KB to kb (wrong: ${JSON.stringify(wrong)})`);
@@ -319,18 +319,22 @@ const snapshot = (w) => JSON.stringify(Array.from(w.sheets.entries()).map(([n, s
     postCount(w, { ...beacon, page: 'case-studies', lens: 'water', deepest: 'csGrid', features: ['module-dossier', 'lens-water'], ref: '', vp: 's', kb: 100 });
     assert(cell(w, 'visits', '') === 2, 'Counter: a second visit makes visits 2');
     assert(cell(w, 'feature', 'module-dossier') === 2, 'Counter: a feature both visits used is counted twice, on one row');
-    assert(cell(w, 'kb', '') === 384, `Counter: kb is the sum of both visits' KB (${cell(w, 'kb', '')})`);
+    assert(cell(w, 'kb', 'index') === 284 && cell(w, 'kb', 'case-studies') === 100,
+        `Counter: KB is summed per page, so each page keeps its own transfer (${cell(w, 'kb', 'index')}, ${cell(w, 'kb', 'case-studies')})`);
+    assert(cell(w, 'kb', '') === undefined || cell(w, 'kb', '') === 0 || cell(w, 'kb', '') === null,
+        'Counter: no unkeyed kb row is written any more');
     assert(cell(w, 'page', 'index') === 1 && cell(w, 'page', 'case-studies') === 1, 'Counter: each page keeps its own total');
     assert(cell(w, 'lens', 'water') === 1 && cell(w, 'deepest', 'csGrid') === 1, 'Counter: lens and deepest keys are recorded as sent');
     assert(cell(w, 'ref', 'www.linkedin.com') === 1, 'Counter: a visit with no referrer adds nothing to ref');
-    // New keys only: page, lens, deepest, one feature, vp s = 5 rows.
-    assert(daily(w).length === rowsAfterOne + 5, `Counter: the tab grows by new keys only (${rowsAfterOne} → ${daily(w).length} rows)`);
+    // New keys only: page, lens, deepest, one feature, vp s and this page's
+    // kb = 6 rows.
+    assert(daily(w).length === rowsAfterOne + 6, `Counter: the tab grows by new keys only (${rowsAfterOne} → ${daily(w).length} rows)`);
 
     // The next day starts a block of its own below, and leaves this one alone.
     const before = JSON.stringify(daily(w));
     w.setNow(NOW + DAY);
     postCount(w, beacon);
-    assert(JSON.stringify(daily(w).slice(0, rowsAfterOne + 5)) === before, 'Counter: a new day leaves the previous day\'s totals as they were');
+    assert(JSON.stringify(daily(w).slice(0, rowsAfterOne + 6)) === before, 'Counter: a new day leaves the previous day\'s totals as they were');
     assert(cell(w, 'visits', '', 'Daily', '2026-09-27') === 1, 'Counter: a new day starts its own totals at 1');
 }
 
@@ -434,7 +438,7 @@ const snapshot = (w) => JSON.stringify(Array.from(w.sheets.entries()).map(([n, s
 {
     const w = world({ STATS_TOKEN: TOKEN });
     const tab = w.ctx.getDailySheet(w.ctx.getConfig(), 'Daily');
-    tab.appendRow(['2025-08-01', 'visits', '', 9]);     // more than 400 days before 2026-09-26
+    tab.appendRow(['2025-08-01', 'visits', '', 9]);     // more than a year before 2026-09-26
     tab.appendRow(['2025-09-01', 'visits', '', 7]);
     tab.appendRow(['2025-09-01', 'nonsense', '', 3]);   // not a metric
     tab.appendRow(['not a date', 'visits', '', 3]);
@@ -447,8 +451,9 @@ const snapshot = (w) => JSON.stringify(Array.from(w.sheets.entries()).map(([n, s
     assert(body.rows.every(r => r.length === 4 && /^\d{4}-\d{2}-\d{2}$/.test(r[0]) && typeof r[1] === 'string' && typeof r[2] === 'string' && typeof r[3] === 'number'),
         'Stats: every row is [date, metric, key, count] with a YYYY-MM-DD date and a numeric count');
     assert(body.rows.some(r => r[0] === TODAY && r[1] === 'kb' && r[3] === 284), "Stats: today's totals are there");
-    assert(body.rows.some(r => r[0] === '2025-09-01' && r[1] === 'visits' && r[3] === 7), 'Stats: a day inside the last 400 is there');
-    assert(!body.rows.some(r => r[0] === '2025-08-01'), 'Stats: a day more than 400 days ago is left out');
+    assert(body.rows.some(r => r[0] === '2025-09-01' && r[1] === 'visits' && r[3] === 7), 'Stats: an older day is there');
+    assert(body.rows.some(r => r[0] === '2025-08-01' && r[3] === 9),
+        'Stats: every day since counting began is served, so "all time" on stats.html is all time');
     assert(!body.rows.some(r => r[1] === 'nonsense' || r[0] === 'not a date'), 'Stats: rows that are not the aggregate are skipped');
     assert(body.rows.some(r => r[0] === '2025-09-02' && r[2] === '404'), 'Stats: a row Sheets re-read as a date and a number comes back as text');
 

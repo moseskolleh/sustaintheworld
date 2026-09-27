@@ -768,6 +768,22 @@ ${breakdownTable('deepest', 'Page views by furthest section reached', 'Furthest 
         </section>`;
 
         const kb = k => b => (b && b[k] !== null ? `${figure(b[k])}&nbsp;KB` : '&mdash;');
+        // Per page, where the fetcher could split it (KB is kept per page);
+        // a page with fewer than suppressBelow views in a period has no row.
+        const pageKb = (b, page) => {
+            const row = b && Array.isArray(b.byPage) ? b.byPage.find(r => r.page === page) : null;
+            return row ? { meanKb: row.meanKb } : null;
+        };
+        const bytePages = Array.from(new Set([].concat(
+            ...[bytes.week, bytes.all].map(b => (b && Array.isArray(b.byPage) ? b.byPage.map(r => r.page) : []))
+        ))).sort();
+        const bytesByPage = !bytePages.length ? '' : `
+            <h3>By page</h3>
+${table('Mean kilobytes transferred per page view, by page', cols('Page'), bytePages.map(page => `                        <tr>
+                            <th scope="row">${page === 'other' ? 'Any other name' : esc(PAGE_NAMES[page] || page)}</th>
+                            ${cells(pageKb(bytes.week, page), pageKb(bytes.all, page), kb('meanKb'))}
+                        </tr>`))}
+            <p>A page with fewer than ${stats.suppressBelow} page views in a period has no figure for it.</p>`;
         const bytesSection = `
         <section class="st-block" aria-labelledby="st-bytes-h">
             <h2 id="st-bytes-h">Bytes per page view</h2>
@@ -785,7 +801,7 @@ ${table('Kilobytes transferred per page view', cols('Per page view'), [
                 The mean is every kilobyte counted over every page view. The totals are kept by day, so a median of
                 single page views is not something they can give; the median day is the middle of the daily means,
                 over days with ${stats.suppressBelow} or more page views.
-            </p>
+            </p>${bytesByPage}
             <p>
                 This is network transfer only: what the browser reports receiving for the page and everything it
                 loaded, measured with the Resource Timing API. Unlike the carbon receipt in the homepage footer, a
@@ -802,8 +818,10 @@ ${table('Kilobytes transferred per page view', cols('Per page view'), [
         <section class="st-block st-privacy" aria-labelledby="st-privacy-h">
             <h2 id="st-privacy-h">What a page view sends, and what it never does</h2>
             <p>
-                One count per page view, sent as the page is closed or hidden. This example is the whole of one,
-                set out on separate lines here; the real one is a single line of text.
+                One count per page view, sent the first time the page is closed or hidden &mdash; switching to
+                another tab is enough. So every figure here covers a page view up to that moment: what a reader
+                does after coming back to the tab is not in it. This example is the whole of one, set out on
+                separate lines here; the real one is a single line of text.
             </p>
             <pre class="st-payload"><code>${esc(JSON.stringify(EXAMPLE_PAYLOAD, null, 2))}</code></pre>
             <dl class="st-fields">

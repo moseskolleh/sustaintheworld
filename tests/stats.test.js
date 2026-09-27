@@ -261,8 +261,27 @@ function walk(value, visit, where = '') {
     const withBrief = Object.assign({}, known, { features: new Set(Array.from(known.features).concat('brief-run')) });
     const briefRows = fetchStats.cleanRows(fixtureRows().concat([['2026-09-29', 'feature', 'brief-run', 6], ['2026-09-14', 'feature', 'brief-run', 2]]), withBrief, TODAY).rows;
     const live = fetchStats.transform(briefRows, { today: TODAY, known: withBrief });
-    assert(live.briefLive === true && live.headline.week.briefUses === 6 && live.headline.all.briefUses === 8,
-        `Five: Brief uses are counted once the site has a Brief (${live.headline.week.briefUses}, ${live.headline.all.briefUses})`);
+    // 8 all time and 6 last week would give away the 2 before last week, a
+    // count under 5 shown nowhere, so last week's 6 is held.
+    assert(live.briefLive === true && live.headline.week.briefUses === 'held' && live.headline.all.briefUses === 8,
+        `Five: Brief uses are counted once the site has a Brief, and last week is held so the 2 before it cannot be worked out (${live.headline.week.briefUses}, ${live.headline.all.briefUses})`);
+
+    // The same for any breakdown row: all time less last week is a count too.
+    const earlierRows = fetchStats.cleanRows(fixtureRows().concat([
+        ['2026-09-29', 'lens', 'water', 9], ['2026-09-15', 'lens', 'water', 3]
+    ]), known, TODAY).rows;
+    const earlierStats = fetchStats.transform(earlierRows, { today: TODAY, known });
+    const water = earlierStats.breakdown.lens.find(r => r.key === 'water');
+    const workedOut = typeof water.all === 'number' && typeof water.week === 'number' ? water.all - water.week : null;
+    assert(water && !(workedOut >= 1 && workedOut < 5),
+        `Suppression: a lens row does not give away the count before last week by subtraction (${JSON.stringify(water)})`);
+    assert(content.checkStats(earlierStats).length === 0, `Suppression: the protected file passes checkStats (${content.checkStats(earlierStats).join(' | ')})`);
+    // And a hand-edited file that shows both is refused.
+    const leaky = JSON.parse(JSON.stringify(earlierStats));
+    const lw = leaky.breakdown.lens.find(r => r.key === 'water');
+    lw.all = 12; lw.week = 9;
+    assert(content.checkStats(leaky).some(p => /all time less last week leaves 3/.test(p)),
+        'Suppression: checkStats refuses a row whose all time less last week is a count under 5');
 
     // Week by week, newest first; counting began on a Wednesday, and that
     // part week is not a line of its own: it is in no figure at all.
@@ -338,6 +357,17 @@ function walk(value, visit, where = '') {
     ]);
     assert(median.bytes.all.medianDayKb === 200 && median.bytes.all.days === 1 && median.bytes.all.meanKb === 1000,
         `Bytes: a day with one page view counts in the mean but not the median (${JSON.stringify(median.bytes.all)})`);
+
+    // KB kept per page gives a mean per page; a page with fewer than 5 views
+    // in the period has none, and an old unkeyed row still counts in the total.
+    const perPage = one([
+        ['2026-09-28', 'visits', '', 14], ['2026-09-28', 'page', 'index', 10], ['2026-09-28', 'page', 'research', 4],
+        ['2026-09-28', 'kb', 'index', 2800], ['2026-09-28', 'kb', 'research', 400], ['2026-09-28', 'kb', '', 0],
+        ['2026-09-29', 'visits', '', 6], ['2026-09-29', 'page', 'index', 6], ['2026-09-29', 'kb', '', 1200]
+    ]);
+    assert(JSON.stringify(perPage.bytes.all.byPage) === JSON.stringify([{ page: 'index', meanKb: 280 }]),
+        `Bytes: a mean per page from that page's own KB and views, none for a page under 5 views (${JSON.stringify(perPage.bytes.all.byPage)})`);
+    assert(perPage.bytes.all.meanKb === 220, `Bytes: the overall mean still counts every KB row, keyed or not (${perPage.bytes.all.meanKb})`);
 
     // Suppressed rows are listed by name, so their order cannot rank them.
     const order = one([

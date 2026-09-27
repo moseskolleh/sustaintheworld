@@ -118,8 +118,9 @@ deployment: `GOOGLE_APPS_SCRIPT_URL` in `script.js` (the JavaScript path),
 the contact form's `action` attribute in `index.html` (the JavaScript-free
 path), and the address in `count.js`, the visit counter, with
 `?action=count` added (`tests/html.test.js` fails if they disagree). The
-repository variable `STATS_SOURCE_URL`, which the weekly Open counts Action
-reads, holds it too. A new deployment gets a new URL; a new *version* of an
+repository secret `STATS_SOURCE_URL`, which the weekly Open counts Action
+reads, holds it too, with `?action=stats&token=` (a secret, not a variable:
+it carries the token). A new deployment gets a new URL; a new *version* of an
 existing deployment keeps it (see below), which is why updates should be done
 that way.
 
@@ -202,7 +203,7 @@ counter: redeploy as a new version.
   `contact` total, unless the site's script marks it `count: false` (the
   browser sent Do Not Track or Global Privacy Control)
 - **Daily totals, served**: `GET ?action=stats&token=...` returns
-  `{"v":1,"rows":[[date, metric, key, count], ...]}` for the last 400 days,
+  `{"v":1,"rows":[[date, metric, key, count], ...]}` for every day since counting began,
   for the weekly build of `stats.html`, and only with the `STATS_TOKEN`
   token: the rows are not suppressed. On failure the reply has no `rows`,
   so a build stops rather than publish zeros

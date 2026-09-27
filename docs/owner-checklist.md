@@ -288,6 +288,19 @@ README under "The visit counter and privacy".
     privacy settings to leave yourself out of the baseline.
   - *Unlocks:* Phase 1 is done, and Phase 2 can be judged against real
     figures ("How to know it worked" in the plan).
+
+- [ ] **S7. Decide when the Phase 2 homepage redesign goes live.**
+  - *Why:* the baseline in S6 is a baseline of whichever homepage is live
+    while it is counted. To judge the redesign against the page it replaces,
+    the counter has to run on the current homepage for those four weeks
+    first. Nothing in the code holds the redesign back; merging its pull
+    request publishes it.
+  - *Options:* hold the Phase 2 pull request until S6 is recorded (the
+    comparison the plan asks for), or ship it sooner and judge it against
+    its own first four weeks (no before-and-after, but a baseline for every
+    later change).
+  - *Where:* your merge of the Phase 2 (Wave 3) pull request; note the choice
+    under Phase 1, step 5 in `docs/plan.md` → "Progress".
   - *Check:* the figures in `docs/plan.md` match `content/stats.json` →
     `weeks` for the same four weeks.
 

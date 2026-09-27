@@ -93,7 +93,7 @@ suppressed here: the build of `stats.html` hides small counts before
 anything is published.
 
 **Reading it.** `GET ?action=stats&token=<STATS_TOKEN>` returns
-`{"v":1,"rows":[[date, metric, key, count], ...]}` for the last 400 days.
+`{"v":1,"rows":[[date, metric, key, count], ...]}` for every day since counting began.
 These are the raw totals, small counts included, and this address is in
 `count.js` on every page, so without a `token` equal to the `STATS_TOKEN`
 script property, or while that property is unset, the reply is
@@ -193,8 +193,9 @@ counter. The deployment's URL is written in three places, and all three must
 match it: `GOOGLE_APPS_SCRIPT_URL` in `script.js` (the form with JavaScript),
 the form's `action` in `index.html` (without it), and the address in
 `count.js`, with `?action=count` added. `tests/html.test.js` fails if they
-disagree. Outside the code, the repository variable `STATS_SOURCE_URL` holds
-it too, for the weekly Open counts Action.
+disagree. Outside the code, the repository secret `STATS_SOURCE_URL` holds
+it too, with `?action=stats&token=`, for the weekly Open counts Action (a
+secret, not a variable: it carries the token).
 
 `tests/apps-script.test.js` runs this script against stand-ins for Google's
 services; it cannot see the live deployment. To check that, follow items C1

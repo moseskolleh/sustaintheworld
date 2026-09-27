@@ -229,12 +229,23 @@ function publishedSums(stats) {
             if (same) sums.push({ label: `${name} and the "${key}" feature (${when})`, cells: [h[name], fig(same[col])] });
         });
     });
-    const weeks = stats.weeks;
-    if (weeks.length && weeks[weeks.length - 1].start === stats.period.first) {
-        STATS_COUNTS.forEach((k) => {
-            sums.push({ label: `the week-by-week ${k} against all time`, cells: [all[k], week[k], ...weeks.slice(1).map(w => fig(w[k]))] });
+    // All time is last week plus everything before it. What came before is
+    // never shown, but it is a count all the same: 12 page views all time
+    // and 9 last week are 3 before it. `earlier` stands for that count.
+    const earlier = () => ({ v: 'earlier', earlier: true });
+    STATS_BREAKDOWNS.forEach((metric) => {
+        rows(metric).forEach((r) => {
+            sums.push({ label: `the ${metric} row "${r.key}", all time less last week`, cells: [fig(r.all), fig(r.week), earlier()] });
         });
-    }
+    });
+    const weeks = stats.weeks;
+    const reachBack = weeks.length && weeks[weeks.length - 1].start === stats.period.first;
+    STATS_COUNTS.forEach((k) => {
+        const lines = [week[k], ...weeks.slice(1).map(w => fig(w[k]))];
+        sums.push(reachBack
+            ? { label: `the week-by-week ${k} against all time`, cells: [all[k], ...lines] }
+            : { label: `the week-by-week ${k} and the weeks before them`, cells: [all[k], ...lines, earlier()] });
+    });
     // A figure with nothing to give (null) makes a sum no reader can do.
     return sums.filter(s => s.cells.length > 1 && s.cells.every(c => c.v !== null));
 }
@@ -381,12 +392,26 @@ function checkStats(stats) {
             const b = stats.bytes[p];
             if (b === null) return;
             if (!isObj(b)) { problems.push(`${at}: bytes.${p} is not an object`); return; }
-            onlyKeys(b, ['meanKb', 'medianDayKb', 'days'], `bytes.${p}`);
+            onlyKeys(b, ['meanKb', 'medianDayKb', 'days', 'byPage'], `bytes.${p}`);
             if (!Number.isInteger(b.meanKb) || b.meanKb < 0) problems.push(`${at}: bytes.${p}.meanKb is not a whole number of KB`);
             if (b.medianDayKb !== null && (!Number.isInteger(b.medianDayKb) || b.medianDayKb < 0)) {
                 problems.push(`${at}: bytes.${p}.medianDayKb is not null or a whole number of KB`);
             }
             if (!Number.isInteger(b.days) || b.days < 0) problems.push(`${at}: bytes.${p}.days is not a whole number`);
+            // Written by the fetcher since KB is kept per page; absent in files
+            // written before that.
+            if (b.byPage !== undefined) {
+                if (!Array.isArray(b.byPage)) {
+                    problems.push(`${at}: bytes.${p}.byPage is not a list`);
+                } else {
+                    b.byPage.forEach((row, i) => {
+                        if (!isObj(row)) { problems.push(`${at}: bytes.${p}.byPage[${i}] is not an object`); return; }
+                        onlyKeys(row, ['page', 'meanKb'], `bytes.${p}.byPage[${i}]`);
+                        if (typeof row.page !== 'string' || !row.page) problems.push(`${at}: bytes.${p}.byPage[${i}].page is not a page name`);
+                        if (!Number.isInteger(row.meanKb) || row.meanKb < 0) problems.push(`${at}: bytes.${p}.byPage[${i}].meanKb is not a whole number of KB`);
+                    });
+                }
+            }
         });
     }
 
@@ -437,9 +462,11 @@ function checkStats(stats) {
     const sums = publishedSums(stats);
     const known = new Map();
     sums.forEach(sum => sum.cells.forEach((c) => { if (typeof c.v === 'number') known.set(c, c.v); }));
-    peel(sums, known).forEach(({ value, sum }) => {
+    peel(sums, known).forEach(({ cell, value, sum }) => {
         if (value >= 1 && value < floor) {
-            problems.push(`${at}: a figure shown as "${small}" in ${sum.label} can be worked out by subtraction — hide the next smallest figure beside it too`);
+            problems.push(cell.earlier
+                ? `${at}: ${sum.label} leaves ${value}, a count under ${floor} that is shown nowhere but can be worked out — hold the smaller figure too`
+                : `${at}: a figure shown as "${small}" in ${sum.label} can be worked out by subtraction — hide the next smallest figure beside it too`);
         }
     });
 

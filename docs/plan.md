@@ -745,6 +745,11 @@ fixed, and what they changed is folded into the steps below and 6.6-6.7.
    homepage views whose deepest section was Contact; and Brief uses, empty
    until Phase 4.1. ✗ The four-week baseline: it needs S1, S2 and four full
    weeks of counting; Moses records it here (S6). Baseline: not yet recorded.
+   Order matters: a baseline of the *current* homepage exists only if the
+   counter runs for those four weeks before the Phase 2 redesign goes live.
+   Nothing in the code holds Phase 2 back; that is Moses's call (S7).
+   Transfer is kept per page (`kb` rows keyed by page), so the Phase 4.2
+   statement can report measured activity data by page.
 
 **Phase 2.** 2.2 ◐ the nav numbers are gone (Phase 0.5), but it still has 12
 items and the hero still has three buttons. 2.5 ✓ one Listen control in the
@@ -805,8 +810,13 @@ started.
    back. The six top-level function declarations `script.js` still had
    (`revealTarget`, `focusTarget`, `jumpTo`, `handleHashReveal`,
    `setMenuOpen`, `mksLoadFor`), each a property of `window` in a classic
-   script, are `const` now, and a test fails if any shipped script declares
-   a function at the top level again.
+   script, are `const` now, and a test fails if the core (`script.js`,
+   `count.js`, `modules/`) declares a function at the top level again. The
+   scripts outside the core still put names on their own page's `window`:
+   `ai-carbon-data.js` (`AICarbonData`) and `voice-scripts.js`
+   (`VoiceScripts`), which export themselves for the browser and for Node,
+   and carbon-ai.html's `carbon-ai.js` (four top-level functions). A test
+   names each of them, so a new one cannot be added unnoticed.
 7. ◐ **CI.** ✓ `push` runs on `main` only, and a newer commit on a pull
    request cancels the older run. ✓ Node 22 (`engines`:
    `^22.22.0 || >=24.8.0`, which html-validate needs). ✓ Chromium pinned to
@@ -818,8 +828,8 @@ started.
    suite runs the day it exists. ✓ axe-core in smoke on every page at
    1440×900 and 390×844 in both themes, and on the homepage's open states
    (0 violations); html-validate on every page in `npm test`, not in smoke
-   as this step says: on the source files it needs no browser, runs in the
-   first seconds of every CI job, and names the file and line to fix, and
+   as this step says: on the source files it needs no browser, runs early in
+   the test job, and names the file and line to fix, and
    what scripts add after load is covered by axe in smoke. ✓ A budget
    for `carbon-ai.html` (106 KB of 111 KB), and smoke compares every
    budgeted page's measured first view with its estimate. ◐ A Firefox pass
