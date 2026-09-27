@@ -140,6 +140,339 @@ function checkLanguages(languages) {
     return problems;
 }
 
+// ------------------------------------------------------------------
+// content/stats.json — what the visit counter publishes
+//
+// scripts/fetch-stats.js writes this file from the counter's daily totals,
+// and stats.html is built from it. The promise stats.html makes is that no
+// count under 5 is ever published, not even one a reader could work out by
+// subtracting the figures around it from a total, and that no single day's
+// count and no daily row ever reaches the repository. So that promise is
+// checked here, on every build, rather than trusted to the script that
+// wrote the file: a hand-edit, or a bug in the fetcher, fails `npm test`
+// instead of shipping.
+//
+// The shape is closed. Any property the validator does not know is refused,
+// which is what keeps a "rows" array — or any other raw detail — out.
+//
+// Problems name the field and the rule, never the value: the fetcher prints
+// them in a public Action log, and an unsuppressed count is exactly the thing
+// that must not appear there.
+// ------------------------------------------------------------------
+const STATS_STATUSES = ['not-collecting', 'collecting'];
+const STATS_MIN_SUPPRESSION = 5;
+const STATS_HELD = 'held';
+const STATS_COUNTS = ['visits', 'contact', 'cvDownloads', 'lensVisits', 'briefUses'];
+const STATS_BREAKDOWNS = ['page', 'lens', 'vp', 'ref', 'feature', 'deepest'];
+const STATS_KEYS = ['$comment', 'v', 'status', 'asOf', 'suppressBelow', 'period', 'week', 'briefLive',
+    'headline', 'breakdown', 'bytes', 'weeks'];
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const dayOfWeek = (d) => new Date(`${d}T00:00:00Z`).getUTCDay();    // 0 is Sunday
+const addDays = (d, n) => new Date(Date.parse(`${d}T00:00:00Z`) + n * 86400000).toISOString().slice(0, 10);
+const daysBetween = (a, b) => Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86400000) + 1;
+
+/**
+ * Which hidden figures can be worked out from the shown ones. Each sum is
+ * { cells: [total, ...parts] }: the total is the parts added up, as page
+ * views are the pages' views added up. `known` maps each shown cell to its
+ * number. A sum with exactly one cell not yet known gives that one away,
+ * and what it gives away can give away another in the next sum, so this
+ * repeats until nothing more comes out. Returns what came out, in order:
+ * { cell, value, sum }.
+ *
+ * scripts/fetch-stats.js runs it on the true counts to decide what else to
+ * hide; checkStats() below runs it on the published file to prove that the
+ * result holds.
+ */
+function peel(sums, known) {
+    const found = [];
+    for (let more = true; more;) {
+        more = false;
+        sums.forEach((sum) => {
+            const unknown = sum.cells.filter(c => !known.has(c));
+            if (unknown.length !== 1) return;
+            const [cell] = unknown;
+            const [total, ...parts] = sum.cells;
+            const rest = parts.reduce((n, c) => n + (c === cell ? 0 : known.get(c)), 0);
+            const value = cell === total ? rest : known.get(total) - rest;
+            known.set(cell, value);
+            found.push({ cell, value, sum });
+            more = true;
+        });
+    }
+    return found;
+}
+
+/**
+ * The sums a reader of stats.html can do, as figures of the published file.
+ * Every page view has exactly one page and one window class, so each of
+ * those tables adds up to the page views; the known lenses add up to the
+ * lens-link visits; and while the week-by-week table reaches back to the
+ * start, its lines add up to all time. Last week's headline and the newest
+ * week-by-week line are the same figures, as are CV downloads and the
+ * feature row "cv-download", and Brief uses and "brief-run".
+ */
+function publishedSums(stats) {
+    const fig = (v) => ({ v: v === undefined ? null : v });
+    const counts = (h) => Object.fromEntries(STATS_COUNTS.map(k => [k, fig(h[k])]));
+    const all = counts(stats.headline.all);
+    const week = counts(stats.headline.week);
+    const rows = (metric, keep = () => true) => (stats.breakdown[metric] || []).filter(r => keep(r.key));
+    const sums = [];
+    [['all time', 'all', all], ['last week', 'week', week]].forEach(([when, col, h]) => {
+        const cells = (metric, keep) => rows(metric, keep).map(r => fig(r[col]));
+        sums.push({ label: `page views by page (${when})`, cells: [h.visits, ...cells('page')] });
+        sums.push({ label: `page views by window width (${when})`, cells: [h.visits, ...cells('vp')] });
+        sums.push({ label: `page views by role lens (${when})`, cells: [h.lensVisits, ...cells('lens', k => k !== 'other')] });
+        [['cv-download', 'cvDownloads'], ['brief-run', 'briefUses']].forEach(([key, name]) => {
+            const same = rows('feature', k => k === key)[0];
+            if (same) sums.push({ label: `${name} and the "${key}" feature (${when})`, cells: [h[name], fig(same[col])] });
+        });
+    });
+    // All time is last week plus everything before it. What came before is
+    // never shown, but it is a count all the same: 12 page views all time
+    // and 9 last week are 3 before it. `earlier` stands for that count.
+    const earlier = () => ({ v: 'earlier', earlier: true });
+    STATS_BREAKDOWNS.forEach((metric) => {
+        rows(metric).forEach((r) => {
+            sums.push({ label: `the ${metric} row "${r.key}", all time less last week`, cells: [fig(r.all), fig(r.week), earlier()] });
+        });
+    });
+    const weeks = stats.weeks;
+    const reachBack = weeks.length && weeks[weeks.length - 1].start === stats.period.first;
+    STATS_COUNTS.forEach((k) => {
+        const lines = [week[k], ...weeks.slice(1).map(w => fig(w[k]))];
+        sums.push(reachBack
+            ? { label: `the week-by-week ${k} against all time`, cells: [all[k], ...lines] }
+            : { label: `the week-by-week ${k} and the weeks before them`, cells: [all[k], ...lines, earlier()] });
+    });
+    // A figure with nothing to give (null) makes a sum no reader can do.
+    return sums.filter(s => s.cells.length > 1 && s.cells.every(c => c.v !== null));
+}
+
+const REF_HOST = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/;
+
+function checkStats(stats) {
+    const at = 'content/stats.json';
+    if (!stats || typeof stats !== 'object' || Array.isArray(stats)) return [`${at}: is not an object`];
+
+    const problems = [];
+    const isObj = (o) => !!o && typeof o === 'object' && !Array.isArray(o);
+    const onlyKeys = (o, allowed, where) => {
+        Object.keys(o).filter(k => !allowed.includes(k))
+            .forEach(k => problems.push(`${at}: ${where} has a field "${k}" the page does not publish — only suppressed totals belong here`));
+    };
+    const date = (v, where) => {
+        if (typeof v !== 'string' || !ISO_DATE.test(v)) problems.push(`${at}: ${where} is not a YYYY-MM-DD date`);
+    };
+
+    onlyKeys(stats, STATS_KEYS, 'the file');
+    if (stats.v !== 1) problems.push(`${at}: v must be 1`);
+    if (!STATS_STATUSES.includes(stats.status)) problems.push(`${at}: status must be one of ${STATS_STATUSES.join(', ')}`);
+
+    const floor = stats.suppressBelow;
+    if (!Number.isInteger(floor) || floor < STATS_MIN_SUPPRESSION) {
+        problems.push(`${at}: suppressBelow must be a whole number of at least ${STATS_MIN_SUPPRESSION}`);
+        return problems;            // every count check below depends on it
+    }
+    const small = `<${floor}`;
+    // "held" is a count of 5 or more hidden so that one under 5 beside it
+    // cannot be worked out by subtraction (scripts/fetch-stats.js, protect).
+    const count = (v, where) => {
+        if (v === null || v === small || v === STATS_HELD || (Number.isInteger(v) && v >= floor)) return;
+        problems.push(`${at}: ${where} is neither "${small}", "${STATS_HELD}" nor a whole number of at least ${floor} — a count under ${floor} must never be published`);
+    };
+    const share = (v, where) => {
+        if (v === null || (typeof v === 'number' && v >= 0 && v <= 1)) return;
+        problems.push(`${at}: ${where} must be null or a fraction between 0 and 1`);
+    };
+    const headline = (h, where, extra = []) => {
+        if (h === null) return;
+        if (!isObj(h)) { problems.push(`${at}: ${where} is not an object`); return; }
+        onlyKeys(h, STATS_COUNTS.concat('contactShare', extra), where);
+        STATS_COUNTS.forEach(k => count(h[k] === undefined ? null : h[k], `${where}.${k}`));
+        share(h.contactShare === undefined ? null : h.contactShare, `${where}.contactShare`);
+    };
+
+    // The empty state is honest only if it carries no numbers at all.
+    if (stats.status === 'not-collecting') {
+        ['asOf', 'period', 'week', 'headline', 'breakdown', 'bytes'].forEach((k) => {
+            if (stats[k] !== null) problems.push(`${at}: status is "not-collecting" but ${k} is not null`);
+        });
+        if (!Array.isArray(stats.weeks) || stats.weeks.length) problems.push(`${at}: status is "not-collecting" but weeks is not empty`);
+        return problems;
+    }
+
+    date(stats.asOf, 'asOf');
+    if (!isObj(stats.period)) {
+        problems.push(`${at}: period is missing`);
+    } else {
+        onlyKeys(stats.period, ['first', 'last', 'days'], 'period');
+        date(stats.period.first, 'period.first');
+        date(stats.period.last, 'period.last');
+        if (stats.period.first > stats.period.last) problems.push(`${at}: period.first is after period.last`);
+        if (!Number.isInteger(stats.period.days) || stats.period.days < 1) problems.push(`${at}: period.days is not a positive whole number`);
+    }
+    // Whole weeks, Monday to Sunday, and none of them still running: a
+    // part week, or all time running on into today, would let a reader take
+    // the weeks from all time and be left with a single day's count.
+    if (!isObj(stats.week)) {
+        problems.push(`${at}: week is missing — nothing is published until the first full week, Monday to Sunday, has ended`);
+    } else {
+        onlyKeys(stats.week, ['start', 'end'], 'week');
+        date(stats.week.start, 'week.start');
+        date(stats.week.end, 'week.end');
+        if (ISO_DATE.test(stats.week.start) && (dayOfWeek(stats.week.start) !== 1 || stats.week.end !== addDays(stats.week.start, 6))) {
+            problems.push(`${at}: week is not a Monday-to-Sunday week`);
+        }
+        if (isObj(stats.period) && stats.period.last !== stats.week.end) problems.push(`${at}: period.last is not the end of the last complete week`);
+    }
+    if (isObj(stats.period) && ISO_DATE.test(stats.period.first) && ISO_DATE.test(stats.period.last)) {
+        if (dayOfWeek(stats.period.first) !== 1 || dayOfWeek(stats.period.last) !== 0) problems.push(`${at}: period does not run from a Monday to a Sunday`);
+        if (stats.period.days !== daysBetween(stats.period.first, stats.period.last)) problems.push(`${at}: period.days does not match period.first and period.last`);
+        if (!(stats.period.last < stats.asOf)) problems.push(`${at}: period.last is not before asOf — the day the file was made is still being counted`);
+    }
+    if (typeof stats.briefLive !== 'boolean') problems.push(`${at}: briefLive must be true or false`);
+
+    // A weekly figure needs a week, and a week needs its figures: the page
+    // reads one to label the other.
+    const noWeek = !isObj(stats.week);
+    if (isObj(stats.headline) && (stats.headline.week === null) !== noWeek) {
+        problems.push(`${at}: headline.week must be present exactly when week is`);
+    }
+    if (isObj(stats.bytes) && noWeek && stats.bytes.week !== null) {
+        problems.push(`${at}: bytes.week is given, but there is no week`);
+    }
+    if (isObj(stats.breakdown) && noWeek && STATS_BREAKDOWNS.some(m => (stats.breakdown[m] || []).some(r => r.week !== null))) {
+        problems.push(`${at}: a breakdown has weekly figures, but there is no week`);
+    }
+
+    if (!isObj(stats.headline)) {
+        problems.push(`${at}: headline is missing`);
+    } else {
+        onlyKeys(stats.headline, ['week', 'all'], 'headline');
+        headline(stats.headline.week, 'headline.week');
+        headline(stats.headline.all, 'headline.all');
+        if (stats.headline.all === null) problems.push(`${at}: headline.all is missing`);
+    }
+
+    if (!isObj(stats.breakdown)) {
+        problems.push(`${at}: breakdown is missing`);
+    } else {
+        onlyKeys(stats.breakdown, STATS_BREAKDOWNS, 'breakdown');
+        STATS_BREAKDOWNS.forEach((metric) => {
+            const rows = stats.breakdown[metric];
+            if (!Array.isArray(rows)) { problems.push(`${at}: breakdown.${metric} is not a list`); return; }
+            rows.forEach((r, i) => {
+                const where = `breakdown.${metric}[${i}]`;
+                if (!isObj(r)) { problems.push(`${at}: ${where} is not an object`); return; }
+                onlyKeys(r, ['key', 'week', 'all'], where);
+                if (typeof r.key !== 'string') problems.push(`${at}: ${where}.key is not a string`);
+                // A referrer is published as a bare host, or not at all.
+                if (metric === 'ref' && !(r.key === 'other' || REF_HOST.test(r.key))) {
+                    problems.push(`${at}: ${where}.key is not a host name`);
+                }
+                count(r.week, `${where}.week`);
+                count(r.all, `${where}.all`);
+            });
+        });
+        // Grouping is the point: only hosts with 5 or more may be named.
+        (stats.breakdown.ref || []).forEach((r, i) => {
+            if (r.key !== 'other' && (r.all === small || r.all === STATS_HELD)) {
+                problems.push(`${at}: breakdown.ref[${i}] names a host with fewer than ${floor} page views — it belongs in "other"`);
+            }
+        });
+    }
+
+    if (!isObj(stats.bytes)) {
+        problems.push(`${at}: bytes is missing`);
+    } else {
+        onlyKeys(stats.bytes, ['week', 'all'], 'bytes');
+        ['week', 'all'].forEach((p) => {
+            const b = stats.bytes[p];
+            if (b === null) return;
+            if (!isObj(b)) { problems.push(`${at}: bytes.${p} is not an object`); return; }
+            onlyKeys(b, ['meanKb', 'medianDayKb', 'days', 'byPage'], `bytes.${p}`);
+            if (!Number.isInteger(b.meanKb) || b.meanKb < 0) problems.push(`${at}: bytes.${p}.meanKb is not a whole number of KB`);
+            if (b.medianDayKb !== null && (!Number.isInteger(b.medianDayKb) || b.medianDayKb < 0)) {
+                problems.push(`${at}: bytes.${p}.medianDayKb is not null or a whole number of KB`);
+            }
+            if (!Number.isInteger(b.days) || b.days < 0) problems.push(`${at}: bytes.${p}.days is not a whole number`);
+            // Written by the fetcher since KB is kept per page; absent in files
+            // written before that.
+            if (b.byPage !== undefined) {
+                if (!Array.isArray(b.byPage)) {
+                    problems.push(`${at}: bytes.${p}.byPage is not a list`);
+                } else {
+                    b.byPage.forEach((row, i) => {
+                        if (!isObj(row)) { problems.push(`${at}: bytes.${p}.byPage[${i}] is not an object`); return; }
+                        onlyKeys(row, ['page', 'meanKb'], `bytes.${p}.byPage[${i}]`);
+                        if (typeof row.page !== 'string' || !row.page) problems.push(`${at}: bytes.${p}.byPage[${i}].page is not a page name`);
+                        if (!Number.isInteger(row.meanKb) || row.meanKb < 0) problems.push(`${at}: bytes.${p}.byPage[${i}].meanKb is not a whole number of KB`);
+                    });
+                }
+            }
+        });
+    }
+
+    if (!Array.isArray(stats.weeks)) {
+        problems.push(`${at}: weeks is not a list`);
+    } else {
+        stats.weeks.forEach((w, i) => {
+            headline(w, `weeks[${i}]`, ['start', 'end']);
+            if (isObj(w)) {
+                date(w.start, `weeks[${i}].start`);
+                date(w.end, `weeks[${i}].end`);
+                if (ISO_DATE.test(w.start) && (dayOfWeek(w.start) !== 1 || w.end !== addDays(w.start, 6))) {
+                    problems.push(`${at}: weeks[${i}] is not a Monday-to-Sunday week`);
+                }
+                if (isObj(stats.period) && (w.start < stats.period.first || w.end > stats.period.last)) {
+                    problems.push(`${at}: weeks[${i}] runs outside the period`);
+                }
+                if (i && isObj(stats.weeks[i - 1]) && w.start !== addDays(stats.weeks[i - 1].start, -7)) {
+                    problems.push(`${at}: weeks[${i}] is not the week before weeks[${i - 1}]`);
+                }
+            }
+        });
+    }
+    if (problems.length) return problems;       // the checks below read the shape as valid
+
+    // Last week is shown twice, as the headline and as the newest line of
+    // the week-by-week table: two different figures for it would be one
+    // hidden figure given away by the other.
+    const newest = stats.weeks[0];
+    if (!newest || newest.start !== stats.week.start ||
+        STATS_COUNTS.concat('contactShare').some(k => newest[k] !== stats.headline.week[k])) {
+        problems.push(`${at}: weeks[0] is not last week, figure for figure, as headline.week gives it`);
+    }
+
+    // A share gives its part away when its whole is shown, and its whole
+    // when its part is: both have to be shown numbers.
+    [['all', 'all'], ['week', 'week']].forEach(([h, col]) => {
+        if (stats.headline[h].contactShare === null) return;
+        const index = (stats.breakdown.page.find(r => r.key === 'index') || {})[col];
+        const contact = (stats.breakdown.deepest.find(r => r.key === 'contact') || {})[col];
+        if (typeof index !== 'number' || typeof contact !== 'number') {
+            problems.push(`${at}: headline.${h}.contactShare is given, but homepage views or views that reached #contact are not shown — the share would give the hidden one away`);
+        }
+    });
+
+    // And the point of all of it: no figure shown as "<5" can be worked out
+    // by subtracting the shown figures around it from a total.
+    const sums = publishedSums(stats);
+    const known = new Map();
+    sums.forEach(sum => sum.cells.forEach((c) => { if (typeof c.v === 'number') known.set(c, c.v); }));
+    peel(sums, known).forEach(({ cell, value, sum }) => {
+        if (value >= 1 && value < floor) {
+            problems.push(cell.earlier
+                ? `${at}: ${sum.label} leaves ${value}, a count under ${floor} that is shown nowhere but can be worked out — hold the smaller figure too`
+                : `${at}: a figure shown as "${small}" in ${sum.label} can be worked out by subtraction — hide the next smallest figure beside it too`);
+        }
+    });
+
+    return problems;
+}
+
 /**
  * Reads everything and returns it validated, or throws with every problem
  * listed at once — one run of the build should tell you all of them.
@@ -150,8 +483,9 @@ function loadAll() {
     const research = load('research');
     const lenses = load('lenses');
     const narration = load('narration');
+    const stats = load('stats');
 
-    const problems = [];
+    const problems = checkStats(stats);
     const lensIds = lenses.lenses.map(l => l.id);
 
     // --- case studies ---------------------------------------------------
@@ -255,7 +589,7 @@ function loadAll() {
         throw new Error(`content failed validation:\n  - ${problems.join('\n  - ')}`);
     }
 
-    return { profile, projects, research, lenses, narration, lensIds };
+    return { profile, projects, research, lenses, narration, stats, lensIds };
 }
 
 /** Case studies for a lens: matching ones first, the rest after. Never filtered. */
@@ -277,5 +611,7 @@ module.exports = {
     urlProblem,
     checkAvailability,
     checkLanguages,
+    checkStats,
+    peel,
     orderForLens
 };

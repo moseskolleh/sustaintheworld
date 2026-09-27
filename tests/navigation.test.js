@@ -23,7 +23,9 @@ function assert(cond, msg) {
         failures++;
     }
 }
-const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+// Each page below runs on the harness's fake clock (jsdom's Back and Forward
+// are queued on the window's timers too), so `await clock.tick(ms)` stands
+// for ms of waiting without spending it.
 const click = (window, el, init) => {
     const ev = new window.MouseEvent('click', Object.assign({ bubbles: true, cancelable: true }, init || {}));
     el.dispatchEvent(ev);
@@ -42,7 +44,8 @@ const countScrolls = (window) => {
 (async () => {
     // --- A link is a navigation: one history entry, focus on the target ---
     {
-        const { window } = run('dark', {
+        const { window, clock } = run('dark', {
+            clock: true,
             // A link whose target is focusable already, put in before the
             // script binds its links.
             before: (w) => {
@@ -87,15 +90,15 @@ const countScrolls = (window) => {
         assert(doc.activeElement === doc.getElementById('skills'), 'Links: focus is on #skills before going Back');
         const aboutScrolls = scrolled.about;
         window.history.back();
-        await wait(40);
+        await clock.tick(40);
         assert(window.location.hash === '#main', `History: Back returns to the previous address (${window.location.hash})`);
         assert(doc.activeElement === main, 'History: Back moves focus to where that entry pointed');
         window.history.back();
-        await wait(40);
+        await clock.tick(40);
         assert(window.location.hash === '#about' && doc.activeElement === section, 'History: Back again lands on #about');
         assert(scrolled.about === aboutScrolls + 1, `History: popstate and hashchange for one Back land once, not twice (${scrolled.about - aboutScrolls})`);
         window.history.forward();
-        await wait(40);
+        await clock.tick(40);
         assert(window.location.hash === '#main' && doc.activeElement === main, 'History: Forward lands on #main again');
 
         // Last, because jsdom then follows the link itself (a browser would
@@ -108,7 +111,7 @@ const countScrolls = (window) => {
     // 'auto' would defer to the stylesheet, whose html scroll-behavior is
     // smooth, so low-energy mode used to glide the whole page anyway.
     {
-        const { window } = run('dark');
+        const { window, clock } = run('dark', { clock: true });
         const doc = window.document;
         const seen = [];
         window.HTMLElement.prototype.scrollIntoView = function (opts) { seen.push(opts && opts.behavior); };
@@ -116,7 +119,7 @@ const countScrolls = (window) => {
         doc.body.classList.add('eco-mode');
         click(window, doc.querySelector('.nav-menu a[href="#skills"]'));
         window.history.back();
-        await wait(40);
+        await clock.tick(40);
         assert(seen[0] === 'smooth' && seen[1] === 'instant' && seen[2] === 'instant',
             `Motion: a jump glides, but not in low-energy mode, Back included (${seen.join(', ')})`);
     }
@@ -160,7 +163,7 @@ const countScrolls = (window) => {
 
     // --- Back into a collapsed dossier opens it again ---
     {
-        const { window } = run('dark');
+        const { window, clock } = run('dark', { clock: true });
         const doc = window.document;
         countScrolls(window);
         const card = doc.querySelector('.project-card[data-project="groundwater"]');
@@ -169,14 +172,14 @@ const countScrolls = (window) => {
 
         click(window, doc.querySelector('.play-index a[href="#boreholeGame"]'));
         assert(card.classList.contains('expanded'), 'Dossier: a link into a closed dossier opens it');
-        await wait(300);
+        await clock.tick(300);
         assert(doc.activeElement === game, 'Dossier: focus lands on the game once the dossier is open');
 
         card.querySelector('.project-toggle').click();   // the reader closes it
         assert(!card.classList.contains('expanded'), 'Dossier setup: closed again');
         click(window, doc.querySelector('.nav-menu a[href="#skills"]'));
         window.history.back();
-        await wait(320);
+        await clock.tick(320);
         assert(window.location.hash === '#boreholeGame' && card.classList.contains('expanded'), 'Dossier: Back to #boreholeGame opens the dossier again');
         assert(doc.activeElement === game, 'Dossier: and focus follows it in');
     }
@@ -191,7 +194,7 @@ const countScrolls = (window) => {
             /<button[^>]*id="themeToggle"[^>]*>[\s\S]*?<\/button>\s*<button[^>]*id="navToggle"/.test(raw),
             'Theme: it sits in the nav bar, immediately before the menu button');
 
-        const { window } = run('dark');
+        const { window, clock } = run('dark', { clock: true });
         const doc = window.document;
         const toggle = doc.getElementById('themeToggle');
         const meta = doc.querySelector('meta[name="theme-color"]');
@@ -217,7 +220,8 @@ const countScrolls = (window) => {
     // --- Back to top: after one full screen, and never over a control ---
     {
         const observers = [];
-        const { window } = run('dark', {
+        const { window, clock } = run('dark', {
+            clock: true,
             before: (w) => {
                 w.IntersectionObserver = class {
                     constructor(cb, opts) { this.cb = cb; this.opts = opts || {}; this.els = []; observers.push(this); }
@@ -232,7 +236,7 @@ const countScrolls = (window) => {
         const scrollTo = async (y) => {
             window.pageYOffset = y;
             window.dispatchEvent(new window.Event('scroll'));
-            await wait(20);
+            await clock.tick(20);
         };
         window.innerHeight = 800;
 
@@ -256,10 +260,10 @@ const countScrolls = (window) => {
             `Back to top: its band is cut to the button's corner, not the whole width of the screen (${band && band.opts.rootMargin})`);
         const toggle = doc.querySelector('.project-toggle');
         band.cb([{ target: toggle, isIntersecting: true }]);
-        await wait(20);
+        await clock.tick(20);
         assert(!btn.classList.contains('visible'), 'Back to top: it steps aside while a dossier title passes beneath it');
         band.cb([{ target: toggle, isIntersecting: false }]);
-        await wait(20);
+        await clock.tick(20);
         assert(btn.classList.contains('visible'), 'Back to top: and comes back once it has passed');
 
         btn.click();

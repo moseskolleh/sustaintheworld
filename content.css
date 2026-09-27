@@ -39,7 +39,7 @@
    CONTENT PAGES — case studies and research outputs
    Layered on carbon-ai.css, which already carries the shell: the nav, the
    hero, the colour variables and the type scale. Only what those two pages
-   add lives here.
+   add lives here. The open counts page adds its own in stats.css.
    =================================================================== */
 
 .icon-flip { transform: scaleX(-1); }

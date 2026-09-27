@@ -5,10 +5,10 @@
 // its first press loads voice-scripts.js and this file, which opens a
 // compact player just under the nav and reads the section in view.
 //
-// Loaded on demand by script.js (window.mksLoad('dispatch')) — see the
+// Loaded on demand by script.js (mks.load('dispatch')) — see the
 // ON-DEMAND MODULES section there for when. This file is a classic script:
 // it shares the page's global scope, so it declares nothing at the top
-// level and talks to the core only through the window.mks* helpers.
+// level and talks to the core only through window.mks.
 //
 // tests/harness.js evaluates it after script.js so the jsdom suites see the
 // page fully initialised, the way a visitor who used every feature would.
@@ -31,8 +31,9 @@
 // first-person lines was never Moses. They are gone, and nothing here plays a
 // recording that is not a recording of him. Nothing ever autoplays.
 (() => {
-    // The storage adapter is script.js's; a module reaches it through window.
-    const safeStorage = window.mksStorage;
+    // The storage adapter is script.js's; a module reaches it through mks.
+    const mks = window.mks;
+    const safeStorage = mks.storage;
     const VS = window.VoiceScripts;
     const SCRIPTS = (VS && VS.SCRIPTS) || [];
     if (!SCRIPTS.length || !safeStorage) return;
@@ -505,8 +506,7 @@
         const head = (script.id !== 'hero' && node.querySelector('.section-header')) || node;
         const clear = bar.hidden ? 80 : bar.getBoundingClientRect().bottom + 16;
         const y = script.id === 'hero' ? 0 : head.getBoundingClientRect().top + (window.pageYOffset || 0) - clear;
-        const motion = typeof window.mksScrollMotion === 'function' ? window.mksScrollMotion() : 'auto';
-        window.scrollTo({ top: Math.max(0, y), behavior: motion });
+        window.scrollTo({ top: Math.max(0, y), behavior: mks.scrollMotion() });
     };
 
     const step = (dir) => {
@@ -550,10 +550,12 @@
     });
 
     // Escape inside the player closes it, and the keyboard lands back on
-    // the Listen button it came from.
-    bar.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') { e.stopPropagation(); stop(); }
-    });
+    // the Listen button it came from; an open menu waits for the next press.
+    mks.onKey('Escape', (e) => {
+        if (bar.hidden || !bar.contains(e.target)) return false;
+        stop();
+        return true;
+    }, mks.keyRank.player);
 
     // Talking after someone has left the page is a bug, not a feature.
     window.addEventListener('pagehide', stop);
@@ -590,7 +592,7 @@
     });
 
     // Used by the nav button (script.js) and the field terminal (`voice`, `help`, `co2`).
-    window.FieldDispatch = {
+    mks.narration = {
         toggle,
         play: (id) => {
             const script = VS.byId[id];
@@ -614,4 +616,4 @@
     };
 })();
 // Tells the loader in script.js that this module is in place.
-(window.mksLoaded = window.mksLoaded || {}).dispatch = true;
+window.mks.loaded.dispatch = true;

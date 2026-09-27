@@ -1,0 +1,60 @@
+name: Open counts
+
+# Reads the visit counter's daily totals once a week, suppresses them into
+# content/stats.json, rebuilds stats.html, and commits the two files if they
+# changed. Only suppressed aggregates are ever committed; the raw daily
+# totals stay in the owner's Google Sheet.
+#
+# STATS_SOURCE_URL is a repository secret (Settings → Secrets and variables
+# → Actions → Secrets): the Apps Script web app the contact form uses, with
+# ?action=stats&token= and the script's STATS_TOKEN, which it needs because
+# those daily totals are not suppressed. A repository variable of the same
+# name is read if there is no secret, for a source with no token in it (the
+# "Daily" sheet published as CSV). Until one is set, scripts/fetch-stats.js
+# says so and changes nothing, the tests pass on the unchanged files, and
+# there is nothing to commit — this job stays green before the counter is
+# switched on, and before its first full week has ended.
+
+on:
+  schedule:
+    # Mondays, 04:17 UTC: early morning in Amsterdam, after Sunday's totals
+    # are complete. Off the hour, when scheduled runs queue the longest.
+    - cron: '17 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: open-counts
+  cancel-in-progress: false
+
+jobs:
+  counts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Fetch the week's totals
+        run: node scripts/fetch-stats.js
+        env:
+          STATS_SOURCE_URL: ${{ secrets.STATS_SOURCE_URL || vars.STATS_SOURCE_URL }}
+      - run: npm run build:content
+      # The same checks CI runs: content/stats.json is refused if any count
+      # under 5 or any daily row got into it, and the page must stay in budget.
+      - run: npm test
+      - name: Commit the counts
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add content/stats.json stats.html
+          if git diff --cached --quiet; then
+            echo "nothing to commit"
+          else
+            git commit -m "Update the open counts (weekly totals, suppressed below 5)"
+            git push
+          fi

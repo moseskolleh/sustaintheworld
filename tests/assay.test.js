@@ -44,8 +44,8 @@ const { window, errors } = run('dark', {
     }
 });
 const doc = window.document;
-const A = window.mksAssay;
-assert(!!A && typeof A.analyse === 'function', 'Setup: the Assay exposes its analysis as window.mksAssay.analyse');
+const A = window.mks.assay;
+assert(!!A && typeof A.analyse === 'function', 'Setup: the Assay exposes its analysis as window.mks.assay.analyse');
 assert(errors.length === 0, `Setup: the page boots without errors (${errors.map(String).join('; ') || 'none'})`);
 const analyse = (text, opts) => A.analyse(text, Object.assign({ now: NOW }, opts));
 

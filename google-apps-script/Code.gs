@@ -1,8 +1,12 @@
 /**
- * Google Apps Script — Contact Form Response Collector
+ * Google Apps Script — Contact Form Response Collector and Visit Counter
  *
  * Receives contact-form submissions from the portfolio, appends them to a
- * Google Sheet, and emails the owner.
+ * Google Sheet, and emails the owner. It also keeps the site's own visit
+ * counts: POST ?action=count takes the one small payload count.js sends per
+ * page view and adds it to daily totals, and GET ?action=stats&token=...
+ * serves those totals as JSON for the weekly build of stats.html, to that
+ * build alone. See "The visit counter" below and README.md for the payload.
  *
  * This endpoint is PUBLIC (anyone can POST to it), so everything below is
  * written on the assumption that the payload is hostile. Four things this
@@ -34,10 +38,17 @@
  *
  *     SPREADSHEET_ID    required. The id in the sheet's URL:
  *                       docs.google.com/spreadsheets/d/<THIS PART>/edit
+ *                       The visit counts go in the same spreadsheet, on a
+ *                       "Daily" tab the script creates.
  *     SHEET_NAME        optional, default "Responses". Created if missing.
  *     OWNER_EMAIL       required. Where notifications are sent.
  *     TURNSTILE_SECRET  optional. When set, every submission must carry a
  *                       valid Cloudflare Turnstile token. See README.
+ *     STATS_TOKEN       needed to read the visit counts. GET ?action=stats
+ *                       answers only a request whose &token= matches it, and
+ *                       nobody at all while it is unset. Any long random
+ *                       string; the weekly build keeps the same one in the
+ *                       repository secret STATS_SOURCE_URL.
  */
 
 // ---------------------------------------------------------------------------
@@ -59,6 +70,15 @@ var GLOBAL_MAX_SUBMISSIONS_PER_HOUR = 200;
 // to retry. Apps Script's own execution ceiling is well above this.
 var LOCK_TIMEOUT_MS = 15000;
 
+// A count waits far less, and a count past the ceiling below does not wait
+// at all. Both share the one lock with the contact form, and a count is the
+// one that can be dropped: a queue of them in front of a message would make
+// the message time out, and the counter exists to measure the form, not to
+// compete with it. At a second or so of lock time per count, 30 a minute
+// leaves the lock free most of the time; this site sees far fewer.
+var COUNT_LOCK_TIMEOUT_MS = 1500;
+var COUNT_MAX_PER_MINUTE = 30;
+
 var FIELD_LIMITS = { name: 200, email: 200, subject: 300, message: 5000 };
 
 function getConfig() {
@@ -67,7 +87,8 @@ function getConfig() {
     spreadsheetId: props.getProperty('SPREADSHEET_ID'),
     sheetName: props.getProperty('SHEET_NAME') || DEFAULT_SHEET_NAME,
     ownerEmail: props.getProperty('OWNER_EMAIL'),
-    turnstileSecret: props.getProperty('TURNSTILE_SECRET')
+    turnstileSecret: props.getProperty('TURNSTILE_SECRET'),
+    statsToken: props.getProperty('STATS_TOKEN')
   };
 }
 
@@ -248,6 +269,317 @@ function appendSubmission(config, row) {
 }
 
 // ---------------------------------------------------------------------------
+// The visit counter
+// ---------------------------------------------------------------------------
+//
+// count.js, on every page of the site, sends one payload per page view to
+// POST ?action=count. Schema v1 is exactly these eight keys (README.md has
+// what each one means):
+//
+//   {"v":1,"page":"index","lens":"","deepest":"contact",
+//    "features":["cv-download-hero","cv-download","module-dossier"],
+//    "ref":"www.linkedin.com","vp":"m","kb":284}
+//
+// Nothing in it identifies anyone: there is no id, and Apps Script does not
+// give this script the visitor's IP address or user agent, so there is none
+// to store.
+// Each accepted payload adds one to a handful of daily totals in a "Daily"
+// tab, in long format:
+//
+//   date (Europe/Amsterdam)  metric  key      count
+//   2026-09-26               visits           41
+//   2026-09-26               page    index    30
+//   2026-09-26               kb      index    7210    <- KB summed per page, not counted
+//
+// metric is visits, page, lens, deepest, feature, ref, vp or kb, plus
+// contact, which each accepted contact-form submission adds one to. An empty
+// lens, deepest or ref adds nothing: "no lens" is visits minus the lens rows.
+//
+// Small counts are NOT suppressed here. The build of stats.html does that
+// before anything is published. So GET ?action=stats, which serves these
+// rows as they are, answers only a request carrying the STATS_TOKEN script
+// property as &token=, and nobody while it is unset: this deployment's
+// address is in count.js on every page, and stats.html promises that no
+// count under 5 and no single day's count is ever published.
+//
+// Counts are best effort. One that finds the lock busy for more than
+// COUNT_LOCK_TIMEOUT_MS, or arrives past COUNT_MAX_PER_MINUTE, is dropped,
+// so the contact form never waits behind the counter.
+//
+// A payload that is not exactly schema v1 is dropped without a word. The
+// endpoint is public, and a reply that explained the rejection would only
+// help someone shape a better fake.
+//
+// ?test=1 on either action uses a "DailyTest" tab instead, so a health check
+// can send a real payload and read it back (with the token) without moving
+// the public numbers. testCounter() below does exactly that from the editor.
+
+var DAILY_SHEET = 'Daily';
+var DAILY_TEST_SHEET = 'DailyTest';
+var DAILY_HEADERS = ['date', 'metric', 'key', 'count'];
+var DAILY_METRICS = ['visits', 'page', 'lens', 'deepest', 'feature', 'ref', 'vp', 'kb', 'contact'];
+var COUNT_TIMEZONE = 'Europe/Amsterdam';
+
+// Today's rows are read from the bottom of the tab in slices this long. A
+// day has well under a hundred distinct (metric, key) pairs, so one slice is
+// almost always the whole of it.
+var DAILY_READ_CHUNK = 200;
+
+var BEACON_KEYS = ['v', 'page', 'lens', 'deepest', 'features', 'ref', 'vp', 'kb'];
+var BEACON_NAME = /^[a-z0-9-]{1,40}$/;              // page, lens, each feature
+var BEACON_ID = /^[\w-]{1,40}$/;                    // deepest: an element id
+var BEACON_HOST = /^[a-z0-9.-]{1,253}(:\d{1,5})?$/; // ref: a host, nothing more
+var BEACON_MAX_FEATURES = 20;
+var BEACON_MAX_KB = 100000;
+var BEACON_MAX_CHARS = 4096;                        // a real one is under 1,500
+
+/**
+ * True only for a payload that is exactly schema v1: the eight keys and no
+ * others, each of the right type and shape. Every string that passes is
+ * letters, digits, dots, hyphens, underscores and at most a port's colon,
+ * and lands in a plain-text cell, so none of them can become a formula.
+ */
+function isBeaconV1(p) {
+  if (!p || typeof p !== 'object' || Array.isArray(p)) return false;
+  var keys = Object.keys(p);
+  if (keys.length !== BEACON_KEYS.length) return false;
+  for (var i = 0; i < keys.length; i++) {
+    if (BEACON_KEYS.indexOf(keys[i]) < 0) return false;
+  }
+  var blankOr = function (value, pattern) {
+    return typeof value === 'string' && (value === '' || pattern.test(value));
+  };
+  if (p.v !== 1) return false;
+  if (typeof p.page !== 'string' || !BEACON_NAME.test(p.page)) return false;
+  if (!blankOr(p.lens, BEACON_NAME) || !blankOr(p.deepest, BEACON_ID) || !blankOr(p.ref, BEACON_HOST)) return false;
+  if (['s', 'm', 'l'].indexOf(p.vp) < 0) return false;
+  if (typeof p.kb !== 'number' || Math.floor(p.kb) !== p.kb || p.kb < 0 || p.kb > BEACON_MAX_KB) return false;
+  if (!Array.isArray(p.features) || p.features.length > BEACON_MAX_FEATURES) return false;
+  for (var j = 0; j < p.features.length; j++) {
+    var f = p.features[j];
+    if (typeof f !== 'string' || !BEACON_NAME.test(f) || p.features.indexOf(f) !== j) return false;
+  }
+  return true;
+}
+
+/** The daily totals one accepted payload moves, as [metric, key, amount]. */
+function beaconIncrements(p) {
+  var inc = [['visits', '', 1], ['page', p.page, 1], ['vp', p.vp, 1]];
+  if (p.lens) inc.push(['lens', p.lens, 1]);
+  if (p.deepest) inc.push(['deepest', p.deepest, 1]);
+  if (p.ref) inc.push(['ref', p.ref, 1]);
+  p.features.forEach(function (f) { inc.push(['feature', f, 1]); });
+  // Kept per page, so the site's own sustainability statement can report
+  // measured transfer by page; a single daily sum could never be split later.
+  if (p.kb) inc.push(['kb', p.page, p.kb]);
+  return inc;
+}
+
+function todayString() {
+  return Utilities.formatDate(new Date(), COUNT_TIMEZONE, 'yyyy-MM-dd');
+}
+
+/**
+ * A cell as the text it was written as. The first three columns are written
+ * as plain text; if someone has reformatted the tab, Sheets hands a date
+ * back as a Date and a key such as "404" as a number, so both are turned
+ * back into the strings they started as.
+ */
+function cellText(value) {
+  if (value instanceof Date) return Utilities.formatDate(value, COUNT_TIMEZONE, 'yyyy-MM-dd');
+  return String(value == null ? '' : value);
+}
+
+function getDailySheet(config, name) {
+  if (!config.spreadsheetId) {
+    throw new Error('SPREADSHEET_ID script property is not set');
+  }
+  var spreadsheet = SpreadsheetApp.openById(config.spreadsheetId);
+  var sheet = spreadsheet.getSheetByName(name);
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet(name);
+  }
+  if (sheet.getLastRow() === 0) {
+    sheet.getRange(1, 1, 1, DAILY_HEADERS.length).setValues([DAILY_HEADERS]);
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+/**
+ * Adds [metric, key, amount] increments to today's totals, inside the same
+ * lock the contact form uses, waiting for it no longer than a count may
+ * (COUNT_LOCK_TIMEOUT_MS).
+ *
+ * Today's rows are always the block at the bottom of the tab: every write is
+ * for today, and a new day starts below the last one. So this reads upwards
+ * from the end until the date changes, updates the counts in memory, writes
+ * the count column of that block back in one call, and appends a row only
+ * for a (metric, key) not yet seen today. A visit costs one short read and
+ * one or two writes however long the history above it grows, and the tab
+ * grows by distinct keys per day, not by visits.
+ */
+function addToDaily(config, sheetName, increments) {
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(COUNT_LOCK_TIMEOUT_MS)) {
+    throw new Error('Could not acquire the sheet lock');
+  }
+
+  try {
+    var sheet = getDailySheet(config, sheetName);
+    var today = todayString();
+    var last = sheet.getLastRow();
+
+    var start = last + 1;                  // first row of today's block
+    var block = [];
+    while (start > 2) {                    // row 1 is the header
+      var n = Math.min(DAILY_READ_CHUNK, start - 2);
+      var values = sheet.getRange(start - n, 1, n, 4).getValues();
+      var k = n;
+      while (k > 0 && cellText(values[k - 1][0]) === today) k--;
+      block = values.slice(k).concat(block);
+      start -= n - k;
+      if (k > 0) break;                    // reached an earlier day
+    }
+
+    var at = Object.create(null);
+    block.forEach(function (row, i) { at[cellText(row[1]) + '\n' + cellText(row[2])] = i; });
+    var added = [];
+    increments.forEach(function (inc) {
+      var id = inc[0] + '\n' + inc[1];
+      if (id in at) {
+        var row = at[id] < block.length ? block[at[id]] : added[at[id] - block.length];
+        row[3] = (Number(row[3]) || 0) + inc[2];
+      } else {
+        at[id] = block.length + added.length;
+        added.push([today, inc[0], inc[1], inc[2]]);
+      }
+    });
+
+    if (block.length) {
+      sheet.getRange(start, 4, block.length, 1).setValues(block.map(function (row) { return [row[3]]; }));
+    }
+    if (added.length) {
+      sheet.getRange(last + 1, 1, added.length, 3).setNumberFormat('@');   // date, metric, key as text
+      sheet.getRange(last + 1, 1, added.length, 4).setValues(added);
+    }
+    SpreadsheetApp.flush();                // commit before the lock is released
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/**
+ * Every row since counting began, as [date, metric, key, count]. All of
+ * them: stats.html calls its second column "all time" and dates it from the
+ * first row, which a window of recent days would quietly make untrue. The
+ * totals are a few dozen rows a day, read once a week, so this stays small.
+ * The tab is only ever appended to in date order, but the rows are checked
+ * one by one anyway, so a hand edit cannot put junk into stats.html.
+ */
+function readDaily(config, sheetName) {
+  if (!config.spreadsheetId) {
+    throw new Error('SPREADSHEET_ID script property is not set');
+  }
+  var sheet = SpreadsheetApp.openById(config.spreadsheetId).getSheetByName(sheetName);
+  if (!sheet || sheet.getLastRow() < 2) return [];
+
+  var rows = [];
+  sheet.getRange(2, 1, sheet.getLastRow() - 1, 4).getValues().forEach(function (row) {
+    var date = cellText(row[0]);
+    var metric = cellText(row[1]);
+    var count = Number(row[3]);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+    if (DAILY_METRICS.indexOf(metric) < 0 || !isFinite(count)) return;
+    rows.push([date, metric, cellText(row[2]), count]);
+  });
+  return rows;
+}
+
+/**
+ * True while this minute has had fewer than COUNT_MAX_PER_MINUTE counts, and
+ * counts this one. Checked before the lock is asked for, so a burst past the
+ * ceiling costs a cache read each and never touches the sheet. The cache is
+ * not atomic, so two counts at once can both slip under the ceiling; it is a
+ * brake, not an exact limit.
+ */
+function countThisMinute() {
+  var cache = CacheService.getScriptCache();
+  var key = 'count-minute-' + Math.floor(Date.now() / 60000);
+  var n = parseInt(cache.get(key), 10) || 0;
+  if (n >= COUNT_MAX_PER_MINUTE) return false;
+  cache.put(key, String(n + 1), 120);
+  return true;
+}
+
+/**
+ * POST ?action=count. Always answers with an empty body, accepted or not:
+ * nothing reads the reply, and nothing about a rejection is worth saying.
+ */
+function handleCount(e, config) {
+  try {
+    var body = e && e.postData ? String(e.postData.contents || '') : '';
+    if (!body || body.length > BEACON_MAX_CHARS) return emptyResponse();
+
+    var payload;
+    try {
+      payload = JSON.parse(body);
+    } catch (parseError) {
+      return emptyResponse();
+    }
+    if (!isBeaconV1(payload)) return emptyResponse();
+    if (!countThisMinute()) return emptyResponse();
+
+    var test = e.parameter && e.parameter.test === '1';
+    addToDaily(config, test ? DAILY_TEST_SHEET : DAILY_SHEET, beaconIncrements(payload));
+  } catch (error) {
+    console.error('handleCount failed: ' + (error && error.stack ? error.stack : error));
+  }
+  return emptyResponse();
+}
+
+/**
+ * Whether two strings are the same, taking as long to say no to a near miss
+ * as to a wild guess, so the time a refusal takes cannot spell out the
+ * token a character at a time.
+ */
+function sameSecret(given, secret) {
+  var a = String(given == null ? '' : given);
+  var b = String(secret == null ? '' : secret);
+  var diff = a.length ^ b.length;
+  for (var i = 0; i < b.length; i++) {
+    diff |= (i < a.length ? a.charCodeAt(i) : 0) ^ b.charCodeAt(i);
+  }
+  return diff === 0;
+}
+
+/**
+ * GET ?action=stats&token=...: {"v":1,"rows":[[date, metric, key, count], ...]}.
+ *
+ * Without the right token, or with no STATS_TOKEN set at all, the reply is
+ * status "refused" and no rows: the rows are unsuppressed, and the address
+ * is public. On a failure to read them it is status "error" and no rows,
+ * rather than an empty list, so a build that reads it stops instead of
+ * publishing a week of zeros; the build treats that one as passing, and
+ * tries again the next week.
+ */
+function statsResponse(e, config) {
+  var params = (e && e.parameter) || {};
+  if (!config.statsToken || !sameSecret(params.token, config.statsToken)) {
+    return jsonResponse('refused', 'The counts are read by the site\'s weekly build, with a token.');
+  }
+  var test = params.test === '1';
+  try {
+    var rows = readDaily(config, test ? DAILY_TEST_SHEET : DAILY_SHEET);
+    return ContentService.createTextOutput(JSON.stringify({ v: 1, rows: rows }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (error) {
+    console.error('statsResponse failed: ' + error);
+    return jsonResponse('error', 'The counts are unavailable right now.');
+  }
+}
+
+// ---------------------------------------------------------------------------
 // HTTP
 // ---------------------------------------------------------------------------
 
@@ -258,12 +590,21 @@ function jsonResponse(status, message) {
   })).setMimeType(ContentService.MimeType.JSON);
 }
 
+/** The closest Apps Script comes to a 204: no body at all. */
+function emptyResponse() {
+  return ContentService.createTextOutput('');
+}
+
 /**
  * Handles GET requests — a health check that reveals nothing about the
  * spreadsheet behind it. The previous version printed the spreadsheet's name
- * to anyone who loaded the URL.
+ * to anyone who loaded the URL. ?action=stats serves the daily visit totals,
+ * and only with the right &token= (see statsResponse).
  */
 function doGet(e) {
+  if (e && e.parameter && e.parameter.action === 'stats') {
+    return statsResponse(e, getConfig());
+  }
   return ContentService.createTextOutput(JSON.stringify({
     status: 'ok',
     message: 'Contact form endpoint is active. Send submissions as POST.'
@@ -275,6 +616,12 @@ function doGet(e) {
  */
 function doPost(e) {
   var config = getConfig();
+
+  // The visit counter shares this deployment, not this path: it is routed
+  // away before anything below reads the body as a contact message.
+  if (e && e.parameter && e.parameter.action === 'count') {
+    return handleCount(e, config);
+  }
 
   try {
     // Two ways in. With JavaScript, the site posts a JSON string. Without it,
@@ -387,6 +734,20 @@ function handleSubmission(data, config) {
       sanitizeForSheet(source)
     ]);
 
+    // One more on today's contact total. The message is already safe in the
+    // sheet, so a count that fails must not fail the submission. The site's
+    // script sends count: false when the browser asks not to be tracked (Do
+    // Not Track or Global Privacy Control), as stats.html promises; a form
+    // posted without JavaScript cannot say, and Apps Script does not show
+    // this script the request's headers, so that one is counted.
+    if (data.count !== false) {
+      try {
+        addToDaily(config, DAILY_SHEET, [['contact', '', 1]]);
+      } catch (countError) {
+        console.error('Contact count failed: ' + countError);
+      }
+    }
+
     // Notify the owner only. The submitter's address goes in replyTo so a
     // plain "Reply" reaches them — never CC it, or the public endpoint
     // becomes a way to send mail to arbitrary addresses from this account.
@@ -485,8 +846,9 @@ function testFormulaEscaping() {
 }
 
 /**
- * Simulates a form submission end to end. Writes a real row — run it on a
- * test sheet, or delete the row afterwards.
+ * Simulates a form submission end to end. Writes a real row, and adds one to
+ * today's contact count on the Daily tab — run it on a test sheet, or undo
+ * both afterwards.
  */
 function testCapture() {
   var result = doPost({
@@ -502,6 +864,31 @@ function testCapture() {
     }
   });
   Logger.log(result.getContent());
+}
+
+/**
+ * Sends one sample visit through the real counter path into the DailyTest
+ * tab, and reads it back, without moving the public numbers. A health check
+ * can do the same over HTTP: POST the payload to ?action=count&test=1, then
+ * GET ?action=stats&test=1&token=<STATS_TOKEN>.
+ */
+function testCounter() {
+  doPost({
+    parameter: { action: 'count', test: '1' },
+    postData: {
+      type: 'text/plain',
+      contents: JSON.stringify({
+        v: 1, page: 'index', lens: '', deepest: 'contact',
+        features: ['cv-download-hero', 'cv-download', 'module-dossier'],
+        ref: 'www.linkedin.com', vp: 'm', kb: 284
+      })
+    }
+  });
+  var rows = readDaily(getConfig(), DAILY_TEST_SHEET).filter(function (r) { return r[0] === todayString(); });
+  Logger.log(rows.length
+    ? 'Counter OK: ' + rows.length + ' DailyTest rows for today, e.g. ' + JSON.stringify(rows[0])
+    : 'Nothing was recorded. Check the execution log.');
+  return rows;
 }
 
 /**

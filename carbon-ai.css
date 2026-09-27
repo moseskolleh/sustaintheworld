@@ -141,6 +141,19 @@ a { color: var(--primary-green); }
     padding: 40px 24px 80px;
 }
 
+/* The quiet footer every page on this stylesheet carries, this one and the
+   generated ones: where a reader finds what the visit counter sends. */
+.ca-foot {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px 40px;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+.ca-foot a { color: var(--text-secondary); }
+.ca-foot a:hover,
+.ca-foot a:focus-visible { color: var(--primary-green); }
+
 .ca-back {
     display: inline-flex;
     align-items: center;
@@ -217,10 +230,12 @@ a { color: var(--primary-green); }
     border-radius: 12px;
     padding: 24px;
 }
-/* Leaves a select 254px on a 320px phone, not 222px: enough for every option. */
+/* Leaves a select 254px on a 320px phone, not 222px: enough for every
+   option, with 12px to spare at this size. */
 @media (max-width: 420px) {
     .ca-shell { padding-left: 16px; padding-right: 16px; }
     .ca-card { padding: 16px; }
+    .ca-field select { font-size: 0.85rem; }
 }
 .ca-card h2 {
     margin: 0 0 16px;
@@ -248,6 +263,9 @@ a { color: var(--primary-green); }
     border: 1px solid var(--border);
     border-radius: 6px;
     padding: 8px 10px;
+    /* The page's face, not each browser's own: Firefox's default was wide
+       enough to cut options off that fit in Chromium's. */
+    font-family: inherit;
     font-size: 0.9rem;
     width: 100%;
 }
@@ -410,6 +428,7 @@ a { color: var(--primary-green); }
 .ca-chart-controls select {
     max-width: 100%;
     min-width: 0;
+    font-family: inherit;
     background: var(--darker-bg);
     color: var(--text-primary);
     border: 1px solid var(--border);

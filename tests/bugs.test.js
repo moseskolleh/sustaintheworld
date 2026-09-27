@@ -221,7 +221,7 @@ function assert(cond, msg) {
 
     const playing = doc.querySelectorAll('.listen-btn.is-playing');
     assert(playing.length === 0, 'Bug6: no section is narrating on load');
-    assert(window.FieldDispatch.state().playing === null, 'Bug6: the player has nothing playing on load');
+    assert(window.mks.narration.state().playing === null, 'Bug6: the player has nothing playing on load');
 
     const open = Array.from(doc.querySelectorAll('.listen-btn'))
         .filter((b) => b.getAttribute('aria-expanded') !== 'false');
@@ -274,10 +274,10 @@ function assert(cond, msg) {
     const doc = window.document;
     const toggle = doc.getElementById('terminalToggle');
     toggle.focus();
-    window.FieldTerminal.open();
-    window.FieldTerminal.open();
-    assert(window.FieldTerminal.isOpen(), 'Bug10 setup: the terminal is open');
-    window.FieldTerminal.close();
+    window.mks.terminal.open();
+    window.mks.terminal.open();
+    assert(window.mks.terminal.isOpen(), 'Bug10 setup: the terminal is open');
+    window.mks.terminal.close();
     assert(doc.activeElement === toggle, `Bug10: closing returns focus to what had it before (${doc.activeElement && (doc.activeElement.id || doc.activeElement.tagName)})`);
 }
 
@@ -346,14 +346,14 @@ function assert(cond, msg) {
 // away and show the same generic error it shows when the network is down.
 const formChecks = (async () => {
     const submit = async (respond) => {
-        const { window } = run('dark');
+        const { window, clock } = run('dark', { clock: true });
         const doc = window.document;
         window.fetch = respond;
         doc.getElementById('name').value = 'Ada';
         doc.getElementById('email').value = 'ada@example.com';
         doc.getElementById('message').value = 'A question about groundwater.';
         doc.getElementById('contactForm').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
-        await new Promise((resolve) => setTimeout(resolve, 20));
+        await clock.tick(20);
         return doc.getElementById('formStatus');
     };
     const answer = (body) => async () => ({ ok: true, json: async () => body });
@@ -375,14 +375,14 @@ const formChecks = (async () => {
 
     // --- Bug 9: a copy button gets its icon back after "Copied ✓" ---
     {
-        const { window } = run('dark');
+        const { window, clock } = run('dark', { clock: true });
         const btn = window.document.getElementById('anatomyCopy');
         const before = btn.innerHTML;
         window.navigator.clipboard = { writeText: async () => {} };
-        await window.mksShare.copy('x', btn);
-        await window.mksShare.copy('x', btn);   // pressed again while it still says Copied
+        await window.mks.share.copy('x', btn);
+        await window.mks.share.copy('x', btn);   // pressed again while it still says Copied
         assert(/Copied/.test(btn.textContent), 'Bug9: the button confirms the copy');
-        await new Promise((resolve) => setTimeout(resolve, 1800));
+        await clock.tick(1800);
         assert(btn.innerHTML === before && !!btn.querySelector('svg'), 'Bug9: the button is restored with its icon');
     }
 })();

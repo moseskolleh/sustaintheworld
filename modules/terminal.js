@@ -4,10 +4,10 @@
 // A hidden feature costs nothing until it is found: the core listens for
 // the backtick and the footer button, and fetches this on the first press.
 //
-// Loaded on demand by script.js (window.mksLoad('terminal')) — see the
+// Loaded on demand by script.js (mks.load('terminal')) — see the
 // ON-DEMAND MODULES section there for when. This file is a classic script:
 // it shares the page's global scope, so it declares nothing at the top
-// level and talks to the core only through the window.mks* helpers.
+// level and talks to the core only through window.mks.
 //
 // tests/harness.js evaluates it after script.js so the jsdom suites see the
 // page fully initialised, the way a visitor who used every feature would.
@@ -17,6 +17,7 @@
 // FIELD TERMINAL — press ` or the footer button
 // ===================================
 (() => {
+    const mks = window.mks;
     const toggleBtn = document.getElementById('terminalToggle');
     let overlay = null, screen = null, input = null, lastFocus = null;
     const history = [];
@@ -30,12 +31,10 @@
         screen.scrollTop = screen.scrollHeight;
     };
 
-    const calm = () => document.body.classList.contains('eco-mode');
-
     const COMMANDS = {
         help: () => {
             // 'voice about' is suggested only where there is a voice to read it.
-            const fd = window.FieldDispatch, synth = window.speechSynthesis;
+            const fd = mks.narration, synth = window.speechSynthesis;
             const voiced = fd ? fd.state().voiced : !!(synth && (synth.getVoices() || []).length);
             print('available commands:');
             [['journey', 'the route, Freetown to Amsterdam'],
@@ -83,7 +82,7 @@
             print('this counts network transfer only — not the energy your device spends rendering it.');
             // As the player's label: an offline voice adds nothing, a
             // streamed one an amount no page can see.
-            const fd = window.FieldDispatch;
+            const fd = mks.narration;
             if (fd) {
                 const st = fd.state();
                 print(st.playing === 'intro'
@@ -102,7 +101,7 @@
                 'STRIKE 💧 water at 38 m. static level −6 m, yield looks good.',
                 '(odds are 7/10 when you read the resistivity curve first — see the Groundwater dossier.)'
             ];
-            if (calm()) { steps.forEach(s => print(s)); return; }
+            if (!mks.motionOK()) { steps.forEach(s => print(s)); return; }
             let i = 0;
             const tick = () => {
                 print(steps[i]);
@@ -115,6 +114,8 @@
         },
         cv: () => {
             print('fetching Moses_Kolleh_Sesay_CV.pdf …');
+            // A CV download like any CV link's (count.js adds cv-download for those).
+            if (typeof mks.track === 'function') { mks.track('cv-download-terminal'); mks.track('cv-download'); }
             const a = document.createElement('a');
             a.href = 'assets/Moses_Kolleh_Sesay_CV.pdf';
             a.download = '';
@@ -125,7 +126,7 @@
         map: () => {
             close();
             const j = document.getElementById('journey');
-            if (j) j.scrollIntoView({ behavior: calm() ? 'auto' : 'smooth' });
+            if (j) j.scrollIntoView({ behavior: mks.scrollMotion() });
         },
         eco: () => {
             const b = document.getElementById('ecoModeToggle');
@@ -134,15 +135,15 @@
         },
         voice: (args, done) => {
             // The player is its own module; fetch it on the first `voice`.
-            if (!window.FieldDispatch && window.mksLoad && !window.mksLoaded.dispatch) {
+            if (!mks.narration && !mks.loaded.dispatch) {
                 print('loading the narration player…');
-                window.mksLoad('dispatch').then(
+                mks.load('dispatch').then(
                     () => { COMMANDS.voice(args, () => {}); done(); },
                     () => { print('the narration player could not be loaded.', 'ft-err'); done(); }
                 );
                 return true; // async
             }
-            const fd = window.FieldDispatch;
+            const fd = mks.narration;
             if (!fd) { print('no speech engine in this browser — the page stays quiet.', 'ft-err'); return; }
             const state = fd.state();
             const arg = (args && args[0]) || '';
@@ -280,22 +281,21 @@
     const isOpen = () => overlay && overlay.classList.contains('open');
 
     if (toggleBtn) toggleBtn.addEventListener('click', () => (isOpen() ? close() : open()));
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && isOpen()) { close(); return; }
-        if (e.key !== '`' || e.ctrlKey || e.metaKey || e.altKey) return;
-        const t = e.target;
-        const typing = t && t !== input && (
-            t.tagName === 'TEXTAREA' || t.isContentEditable ||
-            (t.tagName === 'INPUT' && !/^(range|checkbox|radio|button|submit)$/.test(t.type))
-        );
-        if (typing) return;
-        e.preventDefault();
-        isOpen() ? close() : open();
-    });
+    // Through the core's one key listener: Escape closes this before what
+    // lies beneath, as does a backtick at its prompt (no command uses one).
+    mks.onKey(['Escape', '`'], (e) => {
+        if (!isOpen()) return false;
+        if (e.key === '`') {
+            if (e.target !== input || e.ctrlKey || e.metaKey || e.altKey) return false;
+            e.preventDefault();
+        }
+        close();
+        return true;
+    }, mks.keyRank.terminal);
 
     // The core's trigger hands over to this the moment it exists.
-    window.FieldTerminal = { open, close, isOpen };
+    mks.terminal = { open, close, isOpen };
 })();
 
 // Tells the loader in script.js that this module is in place.
-(window.mksLoaded = window.mksLoaded || {}).terminal = true;
+window.mks.loaded.terminal = true;

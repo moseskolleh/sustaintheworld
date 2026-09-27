@@ -2,8 +2,9 @@
 // ===================================================================
 // SMOKE — the site in a real browser
 //
-//     npm run smoke                 every page, headless Chromium
-//     npm run smoke -- --screens    also save a screenshot per page to .smoke/
+//     npm run smoke                      every page, headless Chromium
+//     npm run smoke -- --browser firefox the same pass in Firefox
+//     npm run smoke -- --screens         also save a screenshot per page to .smoke/
 //
 // The jsdom suites in tests/ exercise the logic; this exercises the page.
 // It serves the repository the way GitHub Pages does (text gzipped, images
@@ -11,19 +12,31 @@
 // a visitor would hit that jsdom cannot see:
 //
 //   - an uncaught exception or a console error on load
-//   - a request that fails, or that leaves this origin at all
+//   - a request that fails, or that leaves this origin at all, bar the one
+//     the visit counter is allowed, and that one carrying anything but
+//     the documented fields, going out twice for one page view, or going
+//     out at all under Do Not Track or GPC or with JavaScript off
 //   - an on-demand module that does not arrive when its feature is used
+//   - an accessibility violation axe-core can find, on any page, at desktop
+//     and phone width, in either theme (see the end of this file)
 //   - a first view heavier than scripts/check-budget.js claims
 //   - a page that, with JavaScript off (or script.js blocked or late), is
 //     covered, leaves content invisible, shows a [hidden] element or a
 //     control only a script could drive, or hides the contact form
 //   - a skip link, nav link or Back that does not land where it says; a
-//     theme switch or nav item off the bar; back to top over a control
+//     theme switch or nav item off the bar; back to top over a control; a
+//     lightbox that opens without taking focus, reduced motion included
 //   - more than one listen control, a nav bar that moves when it appears,
 //     a player that covers more than 20% of a phone screen or the send
 //     button, or a recording fetched unasked
 //   - an Assay that grades a mismatched ad well, or sends anything
 //   - a clipped dropdown or an unreadable number on carbon-ai.html
+//   - stats.html, drawn full from fixture totals, splitting a word in a
+//     table to make room for the figures, or scrolling sideways, on a phone
+//   - a jump that misses once sections are drawn at their real height, a
+//     page that moves under a reader going back up, a section find-in-page
+//     or print cannot reach, a loop running off screen, or a page busy on
+//     the main thread while nobody touches it
 //
 // The first-view weight matters most. check-budget.js estimates it from
 // the HTML; this measures it. Before the two were compared, the estimate was
@@ -33,9 +46,17 @@
 // figure comes in above it, this fails.
 //
 // Which browser: $SMOKE_CHROME if set, else Playwright's own Chromium if it
-// is installed, else the system Chrome (GitHub's ubuntu runners ship one).
-// With none of those, the run is skipped with a message — unless
-// --require is passed, in which case it fails, which is what CI wants.
+// is installed, else the system Chrome. CI installs the Chromium build that
+// matches the pinned playwright-core, so a run there is repeatable rather
+// than whatever Chrome the runner image shipped that week. With none of
+// those, the run is skipped with a message — unless --require is passed, in
+// which case it fails, which is what CI wants.
+//
+// With --browser firefox it uses Playwright's Firefox ($SMOKE_FIREFOX, or
+// the build `npx playwright-core install firefox` puts in place; a stock
+// Firefox cannot be driven). Everything runs the same except the byte
+// counts, which come from the Chrome DevTools Protocol: Firefox has no
+// equivalent, so the weights are checked in the Chromium run only.
 // ===================================================================
 
 const fs = require('fs');
@@ -48,9 +69,30 @@ const ROOT = path.join(__dirname, '..');
 const args = process.argv.slice(2);
 const SCREENS = args.includes('--screens');
 const REQUIRE = args.includes('--require');
+const BROWSER = (() => {
+    const i = args.findIndex(a => a === '--browser' || a.startsWith('--browser='));
+    if (i === -1) return 'chromium';
+    return (args[i].includes('=') ? args[i].split('=')[1] : args[i + 1] || '').toLowerCase();
+})();
+const CHROMIUM = BROWSER === 'chromium';
 const PORT = 8123 + Math.floor(Math.random() * 1000);
 
-const PAGES = ['index.html', 'case-studies.html', 'research.html', 'carbon-ai.html', 'field-report.html', '404.html'];
+// Every page at the root, the homepage first. Read from the directory so a
+// new page is covered the day it exists, not the day someone lists it.
+const PAGES = fs.readdirSync(ROOT).filter(f => f.endsWith('.html'))
+    .sort((a, b) => (b === 'index.html') - (a === 'index.html') || a.localeCompare(b));
+
+// The one request allowed to leave this origin: the visit counter's POST to
+// the contact form's Apps Script deployment, with ?action=count, and only
+// that exact address. It is read from count.js so there is one copy, and
+// checked for shape so this cannot quietly allow anything broader. No run of
+// this script ever lets it reach the real endpoint: see quietCounter().
+const COUNT_URL = (() => {
+    const m = fs.readFileSync(path.join(ROOT, 'count.js'), 'utf8').match(/'(https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec\?action=count)'/);
+    if (!m) throw new Error('count.js does not name its endpoint in the expected form');
+    return m[1];
+})();
+const BEACON_KEYS = ['v', 'page', 'lens', 'deepest', 'features', 'ref', 'vp', 'kb'];
 
 // ------------------------------------------------------------------
 // A static server that behaves like the host: gzip for text, nothing else.
@@ -85,10 +127,18 @@ const server = http.createServer((req, res) => {
 // ------------------------------------------------------------------
 // Find a browser
 // ------------------------------------------------------------------
-function findBrowser(chromium) {
+function findBrowser(engine) {
+    if (!CHROMIUM) {
+        if (process.env.SMOKE_FIREFOX) return { executablePath: process.env.SMOKE_FIREFOX, label: process.env.SMOKE_FIREFOX };
+        try {
+            const p = engine.executablePath();
+            if (p && fs.existsSync(p)) return { executablePath: p, label: 'Playwright Firefox' };
+        } catch (e) { /* not installed */ }
+        return null;
+    }
     if (process.env.SMOKE_CHROME) return { executablePath: process.env.SMOKE_CHROME, label: process.env.SMOKE_CHROME };
     try {
-        const p = chromium.executablePath();
+        const p = engine.executablePath();
         if (p && fs.existsSync(p)) return { executablePath: p, label: 'Playwright Chromium' };
     } catch (e) { /* not installed */ }
     for (const candidate of ['google-chrome', 'google-chrome-stable', 'chromium', 'chromium-browser']) {
@@ -119,13 +169,17 @@ async function visit(context, page, rel, origin) {
     page.on('console', (m) => { if (m.type() === 'error') errors.push(`console.error: ${m.text()}`); });
     page.on('pageerror', (e) => errors.push(`uncaught: ${e.message}`));
     page.on('requestfailed', (r) => failed.push(`${r.url()} — ${(r.failure() || {}).errorText}`));
-    page.on('request', (r) => { if (!r.url().startsWith(origin)) foreign.push(r.url()); });
+    page.on('request', (r) => { if (!r.url().startsWith(origin) && r.url() !== COUNT_URL) foreign.push(r.url()); });
 
-    const cdp = await context.newCDPSession(page);
-    await cdp.send('Network.enable');
+    // Bytes over the wire come from the DevTools protocol, which only
+    // Chromium speaks; in Firefox the weights go unmeasured (see the top).
+    const cdp = CHROMIUM ? await context.newCDPSession(page) : null;
     const sizes = new Map();
-    cdp.on('Network.responseReceived', (e) => sizes.set(e.requestId, { url: e.response.url, bytes: 0 }));
-    cdp.on('Network.loadingFinished', (e) => { const s = sizes.get(e.requestId); if (s) s.bytes = e.encodedDataLength; });
+    if (cdp) {
+        await cdp.send('Network.enable');
+        cdp.on('Network.responseReceived', (e) => sizes.set(e.requestId, { url: e.response.url, bytes: 0 }));
+        cdp.on('Network.loadingFinished', (e) => { const s = sizes.get(e.requestId); if (s) s.bytes = e.encodedDataLength; });
+    }
 
     await page.goto(`${origin}/${rel}`, { waitUntil: 'networkidle' });
     await page.waitForTimeout(600);
@@ -134,17 +188,23 @@ async function visit(context, page, rel, origin) {
     const arrivalBytes = arrival.reduce((n, s) => n + s.bytes, 0);
     const bytesSince = () => Array.from(sizes.values()).reduce((n, s) => n + s.bytes, 0) - arrivalBytes;
 
-    return { errors, foreign, failed, arrival, arrivalBytes, bytesSince, cdp };
+    return { errors, foreign, failed, arrival, arrivalBytes, bytesSince, cdp, measured: !!cdp };
 }
 
 (async () => {
-    let chromium;
-    try { chromium = require('playwright-core').chromium; }
+    if (!['chromium', 'firefox'].includes(BROWSER)) {
+        console.error(`  ✗ --browser ${BROWSER}: this smoke test runs in chromium or firefox`);
+        process.exit(1);
+    }
+    let engine;
+    try { engine = require('playwright-core')[BROWSER]; }
     catch (e) { console.error('  playwright-core is not installed — run `npm install`'); process.exit(1); }
 
-    const browserSpec = findBrowser(chromium);
+    const browserSpec = findBrowser(engine);
     if (!browserSpec) {
-        const msg = 'no Chromium found (set SMOKE_CHROME=/path/to/chrome)';
+        const msg = CHROMIUM
+            ? 'no Chromium found (set SMOKE_CHROME=/path/to/chrome)'
+            : 'no Playwright Firefox found (run `npx playwright-core install firefox`, or set SMOKE_FIREFOX)';
         if (REQUIRE) { console.error(`  ✗ ${msg}`); process.exit(1); }
         console.log(`  smoke: skipped — ${msg}`);
         process.exit(0);
@@ -152,14 +212,27 @@ async function visit(context, page, rel, origin) {
 
     await new Promise((r) => server.listen(PORT, '127.0.0.1', r));
     const origin = `http://127.0.0.1:${PORT}`;
-    const browser = await chromium.launch({ executablePath: browserSpec.executablePath, args: ['--no-sandbox', '--disable-dev-shm-usage'] });
+    const browser = await engine.launch({
+        executablePath: browserSpec.executablePath,
+        args: CHROMIUM ? ['--no-sandbox', '--disable-dev-shm-usage'] : []
+    });
+    // Every context opened from here on has the visit counter quietened (see
+    // quietCounter()), so a check added later cannot forget to. The one
+    // exception is exerciseCounter(), which is handed the unquietened opener.
+    const openContext = browser.newContext.bind(browser);
+    browser.newContext = async (options) => {
+        const c = await openContext(options);
+        await quietCounter(c);
+        return c;
+    };
     const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
     if (SCREENS) fs.mkdirSync(path.join(ROOT, '.smoke'), { recursive: true });
 
-    console.log(`\n  Smoke test in ${browserSpec.label}\n`);
+    console.log(`\n  Smoke test in ${browserSpec.label} ${browser.version()}\n`);
 
-    // The budget script's first-view estimate, to hold the measurement against.
-    const estimate = require('./check-budget.js').measure().measured.criticalWire;
+    // The budget script's first-view estimates, to hold the measurements against.
+    const budget = require('./check-budget.js');
+    const estimates = budget.measure().measured;
 
     const results = {};
     for (const rel of PAGES) {
@@ -170,28 +243,40 @@ async function visit(context, page, rel, origin) {
         if (r.errors.length) r.errors.forEach(e => bad(e)); else ok('no console errors, no uncaught exceptions');
         if (r.failed.length) r.failed.forEach(f => bad(`request failed: ${f}`)); else ok('every request succeeded');
         if (r.foreign.length) r.foreign.forEach(f => bad(`left the origin: ${f}`)); else ok('no request left this origin');
-        ok(`arrival: ${fmt(r.arrivalBytes)} over the wire in ${r.arrival.length} requests`);
+        if (r.measured) ok(`arrival: ${fmt(r.arrivalBytes)} over the wire in ${r.arrival.length} requests`);
 
         if (rel === 'index.html') await exerciseHomepage(page, r, origin);
         if (rel === 'index.html') await exerciseAssay(page, r);
         if (rel === 'carbon-ai.html') await exerciseCarbonTool(page, r);
 
-        if (SCREENS) await page.screenshot({ path: path.join(ROOT, '.smoke', rel.replace('.html', '.png')) });
+        if (SCREENS) await page.screenshot({ path: path.join(ROOT, '.smoke', (CHROMIUM ? '' : `${BROWSER}-`) + rel.replace('.html', '.png')) });
         await page.close();
     }
 
     await checkWithoutJs(browser, origin);
 
-    // The homepage's measured first view against the budget's estimate. A
-    // little slack for HTTP overhead, which the estimate does not model.
-    const home = results['index.html'];
-    if (home.arrivalBytes <= estimate * 1.02) {
-        ok(`index.html: measured first view ${fmt(home.arrivalBytes)} is within the budget's estimate of ${fmt(estimate)}`);
-    } else {
-        bad(`index.html: measured first view ${fmt(home.arrivalBytes)} exceeds the budget's estimate of ${fmt(estimate)} — check-budget.js is missing something the page fetches on load`);
-    }
+    // Each budgeted page's measured first view against the budget's
+    // estimate. The estimate counts bodies; every response also carries a
+    // status line and headers, which it does not model — about 210 bytes a
+    // response from this server — so each request is allowed 300 bytes on
+    // top. (A flat 2% did that job for the homepage, but on a 90 KB page it
+    // left room for barely one more request.) The pages come from
+    // check-budget.js, so a page that gains a budget there is measured here.
+    if (!CHROMIUM) ok(`first-view weights: not measured in ${BROWSER} (no DevTools protocol) — the Chromium run checks them`);
+    else Object.entries(budget.PAGE_BUDGETS).forEach(([rel, key]) => {
+        const r = results[rel];
+        const estimate = estimates[key];
+        if (!r) return bad(`${rel}: has a budget in check-budget.js but is not a page here`);
+        if (r.arrivalBytes <= estimate + 300 * r.arrival.length) {
+            ok(`${rel}: measured first view ${fmt(r.arrivalBytes)} is within the budget's estimate of ${fmt(estimate)}`);
+        } else {
+            bad(`${rel}: measured first view ${fmt(r.arrivalBytes)} exceeds the budget's estimate of ${fmt(estimate)} — check-budget.js is missing something the page fetches on load`);
+        }
+    });
 
     await exerciseNavigation(browser, origin);
+    await exerciseCpu(browser, origin);
+    await exerciseStatsPage(browser, origin);
 
     // The top nav at every desktop width: one line per item, nothing past the
     // right edge. It used to wrap "Case studies" and "AI, Weighed" at every
@@ -225,6 +310,9 @@ async function visit(context, page, rel, origin) {
     }
 
     await exerciseNarration(browser, origin);
+    await exerciseCounter(openContext, origin, results['index.html'].arrivalBytes);
+
+    await accessibilityPass(browser, origin);
 
     await browser.close();
     server.close();
@@ -259,7 +347,7 @@ async function exerciseAssay(page, r) {
     const sent = [];
     const onRequest = (q) => sent.push(q.url());
     await page.evaluate(() => document.getElementById('assay').scrollIntoView());
-    await page.waitForFunction(() => window.mksAssay, null, { timeout: 5000 }).catch(() => null);
+    await page.waitForFunction(() => (window.mks || {}).assay, null, { timeout: 5000 }).catch(() => null);
     // Only the grading is watched. Scrolling here pulls in lazy images, and
     // a browser with no speech voice asks the voice manifest once, 1.5 s
     // after load — CI's headless Chrome has none, and scrolling through the
@@ -296,21 +384,25 @@ async function exerciseAssay(page, r) {
 // ------------------------------------------------------------------
 async function exerciseCarbonTool(page, r) {
     // A closed select cannot wrap, so the widest option has to fit inside
-    // the box, less its padding and the arrow. It clipped at every width
-    // from a 320px phone to a 1440px desktop.
+    // the box. It clipped at every width from a 320px phone to a 1440px
+    // desktop. Each option is measured the way this browser sizes a select
+    // for it: a copy beside it, as wide as that one option needs, padding
+    // and arrow included (Firefox's arrow is not Chromium's 20px).
     for (const width of [320, 390, 1440]) {
         await page.setViewportSize({ width, height: 900 });
         await page.evaluate(() => document.fonts.ready);
         const clipped = await page.evaluate(() => {
-            const ctx = document.createElement('canvas').getContext('2d');
             const out = [];
             document.querySelectorAll('select').forEach((sel) => {
-                const cs = getComputedStyle(sel);
-                ctx.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
-                const room = sel.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - 20;
+                const probe = sel.cloneNode(false);
+                probe.removeAttribute('id');
+                probe.style.cssText = 'position:absolute;visibility:hidden;width:auto;min-width:0;max-width:none';
+                sel.parentNode.appendChild(probe);
                 Array.from(sel.options).forEach((o) => {
-                    if (ctx.measureText(o.textContent).width > room) out.push(`#${sel.id} "${o.textContent}"`);
+                    probe.replaceChildren(new Option(o.textContent));
+                    if (probe.getBoundingClientRect().width > sel.getBoundingClientRect().width + 0.5) out.push(`#${sel.id} "${o.textContent}"`);
                 });
+                probe.remove();
             });
             if (document.documentElement.scrollWidth > innerWidth) out.push(`the page scrolls sideways (${document.documentElement.scrollWidth}px)`);
             return out;
@@ -432,7 +524,7 @@ async function exerciseNavigation(browser, origin) {
             const r = await pg.evaluate((i) => ({
                 top: Math.round(document.getElementById(i).getBoundingClientRect().top),
                 bar: Math.round(document.getElementById('navbar').getBoundingClientRect().bottom),
-                loaded: !!(window.mksLoaded && window.mksLoaded.interactives)
+                loaded: !!(window.mks && window.mks.loaded.interactives)
             }), id);
             const tag = `first jump by the ${what} at ${width}px${reducedMotion === 'reduce' ? ', reduced motion' : ''}`;
             if (Math.abs(r.top - r.bar) <= 4) ok(`${tag}: #${id} lands under the nav bar and stays (${r.top}px, bar ends at ${r.bar}px)`);
@@ -552,14 +644,130 @@ async function exerciseNavigation(browser, origin) {
         if (await shown()) ok(`back to top: shown at the very bottom of the page at ${size.width}x${size.height}`);
         else bad(`back to top: hidden at the very bottom of the page at ${size.width}x${size.height}`);
     }
+
+    // The photo lightbox takes focus as it opens, keeps Tab on its one
+    // control, and hands focus back on Escape, with reduced motion as well.
+    // The global reduced-motion rule once stretched its instant visibility
+    // flip to 0.01ms, so Close was still hidden when focus was sent to it,
+    // and focus stayed on the photo behind the modal.
+    await p.setViewportSize({ width: 390, height: 844 });
+    for (const reducedMotion of ['reduce', 'no-preference']) {
+        await p.emulateMedia({ reducedMotion });
+        await p.evaluate(async () => {
+            const card = document.querySelector('.gallery-open').closest('.project-card');
+            if (card && !card.classList.contains('expanded')) card.querySelector('.project-toggle').click();
+            await new Promise(r => setTimeout(r, 800));
+            document.querySelector('.gallery-open').focus();
+        });
+        const focused = () => p.evaluate(() => {
+            const el = document.activeElement;
+            return el.id ? `#${el.id}` : `${el.tagName.toLowerCase()}.${el.className}`;
+        });
+        await p.keyboard.press('Enter');
+        const opened = await focused();
+        await p.keyboard.press('Tab');
+        const kept = await focused();
+        await p.keyboard.press('Escape');
+        await p.waitForTimeout(400);
+        const back = await p.evaluate(() => ({
+            open: document.getElementById('lightbox').classList.contains('active'),
+            on: document.activeElement.className
+        }));
+        const tag = `lightbox, ${reducedMotion === 'reduce' ? 'reduced motion' : 'with motion'}`;
+        if (opened === '#lightboxClose' && kept === '#lightboxClose' && !back.open && back.on === 'gallery-open') {
+            ok(`${tag}: focus goes to Close as it opens, stays there on Tab, and returns to the photo on Escape`);
+        } else {
+            bad(`${tag}: focus on opening was on ${opened}, after Tab on ${kept}, after Escape ${back.open ? 'the dialog was still open' : `on .${back.on}`}`);
+        }
+    }
     await phone.close();
+}
+
+// ------------------------------------------------------------------
+// stats.html with figures in it
+// ------------------------------------------------------------------
+// The page is committed empty until counting starts, so it is drawn here as
+// it will look, from fixture totals put through the real fetch-stats.js and
+// renderer, and served in place of the committed file. A table's label must
+// never split a word to make room for the figures (at 320-390px the tables
+// once broke "Sustainable AI" after "Sustainabl" and "Homepage" after
+// "Homepag"), and the page must not scroll sideways. Host names may break
+// anywhere: they have no spaces to break at.
+async function exerciseStatsPage(browser, origin) {
+    const fetchStats = require('./fetch-stats.js');
+    const { renderStats } = require('./build-content.js');
+    const { lenses, projects } = require('./lib/content.js').loadAll();
+    const known = fetchStats.knownNames();
+    const today = '2026-10-05';                        // a Monday
+    const sections = ['journey', 'about', 'experience', 'projects', 'skills', 'contact'].concat(projects.caseStudies.map(c => c.id));
+    const draw = (perDay, weeks) => {
+        const rows = [];
+        const n = f => Math.max(1, Math.round(perDay * f));
+        const others = ['case-studies', 'research', 'carbon-ai', 'field-report', 'stats', '404'];
+        for (let d = fetchStats.addDays(today, -7 * weeks); d < today; d = fetchStats.addDays(d, 1)) {
+            rows.push([d, 'visits', '', perDay], [d, 'kb', '', perDay * 260]);
+            others.forEach(p => rows.push([d, 'page', p, n(0.06)]));
+            rows.push([d, 'page', 'index', perDay - others.length * n(0.06)]);
+            rows.push([d, 'vp', 's', n(0.4)], [d, 'vp', 'm', n(0.1)], [d, 'vp', 'l', perDay - n(0.4) - n(0.1)]);
+            known.lenses.forEach(l => rows.push([d, 'lens', l, n(0.1)]));
+            known.features.forEach(f => rows.push([d, 'feature', f, n(0.05)]));
+            sections.forEach(id => rows.push([d, 'deepest', id, n(0.05)]));
+            rows.push([d, 'ref', 'www.linkedin.com', n(0.1)]);
+            for (let h = 0; h < 16; h++) rows.push([d, 'ref', `referring-site-${h}.example-company.com`, n(0.02)]);
+        }
+        const stats = fetchStats.transform(fetchStats.cleanRows(rows, known, today).rows, { today, known });
+        return renderStats({ stats, lenses });
+    };
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const page = await context.newPage();
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    for (const [label, html] of [['a modest five weeks', draw(20, 5)], ['a busy quarter, five-figure totals', draw(500, 12)]]) {
+        await context.unroute('**/stats.html');
+        await context.route('**/stats.html', route => route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: html }));
+        const trouble = [];
+        for (const width of [320, 360, 375, 390, 414, 430, 1440]) {
+            await page.setViewportSize({ width, height: 844 });
+            await page.goto(`${origin}/stats.html`, { waitUntil: 'load' });
+            await page.evaluate(() => document.fonts.ready);
+            const found = await page.evaluate(() => {
+                const split = [];
+                const range = document.createRange();
+                document.querySelectorAll('.st-table th, .st-table td').forEach((cell) => {
+                    const walk = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT);
+                    for (let node = walk.nextNode(); node; node = walk.nextNode()) {
+                        if (node.parentElement.closest('.st-host')) continue;
+                        const text = node.textContent;
+                        let top = null;
+                        for (let i = 0; i < text.length; i++) {
+                            range.setStart(node, i);
+                            range.setEnd(node, i + 1);
+                            const r = range.getClientRects()[0];
+                            if (!r) continue;
+                            if (top !== null && r.top > top + 2 && /[\p{L}\p{N}]/u.test(text[i]) && /[\p{L}\p{N}]/u.test(text[i - 1])) {
+                                split.push(`"${text.trim()}" after "${text.slice(0, i).trim()}"`);
+                            }
+                            top = r.top;
+                        }
+                    }
+                });
+                return { split, wide: document.documentElement.scrollWidth > innerWidth };
+            });
+            if (found.split.length) trouble.push(`${width}px: ${found.split.slice(0, 4).join('; ')}`);
+            if (found.wide) trouble.push(`${width}px: the page scrolls sideways`);
+        }
+        if (trouble.length) trouble.forEach(t => bad(`stats.html full (${label}) — ${t}`));
+        else ok(`stats.html full (${label}): no table splits a word, and nothing scrolls sideways, 320-430px and 1440px`);
+    }
+    if (errors.length) errors.forEach(e => bad(`stats.html full: uncaught ${e}`));
+    await context.close();
 }
 
 // ------------------------------------------------------------------
 // The homepage's on-demand features, each used once
 // ------------------------------------------------------------------
 async function exerciseHomepage(page, r, origin) {
-    const loadedNow = () => page.evaluate(() => Object.assign({}, window.mksLoaded || {}));
+    const loadedNow = () => page.evaluate(() => Object.assign({}, window.mks.loaded));
 
     const before = await loadedNow();
     ['interactives', 'dossier', 'terminal', 'dispatch'].forEach((m) => {
@@ -571,7 +779,7 @@ async function exerciseHomepage(page, r, origin) {
     await page.mouse.wheel(0, 300);
     await page.waitForTimeout(800);
     const mapSvg = await page.$('#journeyMapFrame svg');
-    if (mapSvg) ok(`journey map arrived on first scroll (+${fmt(r.bytesSince())})`); else bad('journey map did not load after scrolling');
+    if (mapSvg) ok(`journey map arrived on first scroll${r.measured ? ` (+${fmt(r.bytesSince())})` : ''}`); else bad('journey map did not load after scrolling');
 
     // The manifest lists no recording, so the listen control is there only
     // if this browser has a speech voice. Headless Chromium has none; a
@@ -593,7 +801,7 @@ async function exerciseHomepage(page, r, origin) {
     if (summary) {
         await summary.scrollIntoViewIfNeeded();
         await summary.click();
-        await page.waitForFunction(() => window.mksLoaded && window.mksLoaded.dossier, null, { timeout: 5000 }).catch(() => null);
+        await page.waitForFunction(() => window.mks.loaded.dossier, null, { timeout: 5000 }).catch(() => null);
         const l = await loadedNow();
         if (l.dossier) ok('dossier games loaded when the dossier opened'); else bad('dossier games did not load on open');
         const scene = await page.$('#boreholeGame svg');
@@ -602,7 +810,7 @@ async function exerciseHomepage(page, r, origin) {
 
     // Section 05 coming into range fetches the interactives.
     await page.evaluate(() => document.getElementById('ecoprompt').scrollIntoView());
-    await page.waitForFunction(() => window.mksLoaded && window.mksLoaded.interactives, null, { timeout: 5000 }).catch(() => null);
+    await page.waitForFunction(() => window.mks.loaded.interactives, null, { timeout: 5000 }).catch(() => null);
     const li = await loadedNow();
     if (li.interactives) ok('interactives loaded as section 05 came into range'); else bad('interactives did not load near section 05');
     const options = await page.$$eval('#ecoModel option', (o) => o.length);
@@ -610,7 +818,7 @@ async function exerciseHomepage(page, r, origin) {
 
     // The backtick opens the terminal.
     await page.keyboard.press('`');
-    await page.waitForFunction(() => window.mksLoaded && window.mksLoaded.terminal, null, { timeout: 5000 }).catch(() => null);
+    await page.waitForFunction(() => window.mks.loaded.terminal, null, { timeout: 5000 }).catch(() => null);
     const lt = await loadedNow();
     if (lt.terminal) ok('terminal loaded on the backtick'); else bad('terminal did not load on the backtick');
     const open = await page.$('.field-terminal.open');
@@ -618,7 +826,7 @@ async function exerciseHomepage(page, r, origin) {
     await page.keyboard.press('Escape');
 
     if (r.errors.length) r.errors.forEach(e => bad(e)); else ok('still no errors after using every feature');
-    ok(`using every feature above fetched ${fmt(r.bytesSince())} more — modules, the map, and every image scrolled past`);
+    if (r.measured) ok(`using every feature above fetched ${fmt(r.bytesSince())} more — modules, the map, and every image scrolled past`);
 }
 
 // ------------------------------------------------------------------
@@ -762,12 +970,12 @@ async function exerciseNarration(browser, origin) {
         await page.setViewportSize({ width: 390, height: 844 });
         await page.evaluate(() => document.getElementById('about').scrollIntoView({ behavior: 'instant' }));
         await page.click('#listenBtn');
-        const opened = await page.waitForFunction(() => window.mksLoaded && window.mksLoaded.dispatch &&
+        const opened = await page.waitForFunction(() => window.mks.loaded.dispatch &&
             !document.getElementById('dispatchBar').hidden, null, { timeout: 5000 }).then(() => true, () => false);
         if (!opened) { bad('pressing Listen did not open the player'); await context.close(); return; }
 
         const st = await page.evaluate(() => ({
-            playing: window.FieldDispatch.state().playing,
+            playing: window.mks.narration.state().playing,
             spoke: window.__spoken.length,
             weight: document.querySelector('.dispatch-weight').textContent,
             styled: getComputedStyle(document.getElementById('dispatchBar')).position,
@@ -801,12 +1009,27 @@ async function exerciseNarration(browser, origin) {
 
         // A nav link followed with the player open lands its heading below
         // the player: style.css pads jumps for the nav bar alone.
+        // Where it settles: the sections it passes swap their estimated
+        // heights for real ones, and script.js re-aims the jump as they do
+        // (Firefox was still moving at 400 ms, with the heading at 21px).
         await page.emulateMedia({ reducedMotion: 'reduce' });
         await page.evaluate(() => document.querySelector('.nav-menu a[href="#experience"]').click());
-        await page.waitForTimeout(400);
-        const landed = await page.evaluate(() => ({
-            heading: Math.round(document.querySelector('#experience .section-title').getBoundingClientRect().top),
-            player: Math.round(document.getElementById('dispatchBar').getBoundingClientRect().bottom)
+        const landed = await page.evaluate(() => new Promise((resolve) => {
+            const at = () => ({
+                heading: Math.round(document.querySelector('#experience .section-title').getBoundingClientRect().top),
+                player: Math.round(document.getElementById('dispatchBar').getBoundingClientRect().bottom)
+            });
+            let last = at();
+            let still = 0;
+            const started = performance.now();
+            const poll = () => {
+                const now = at();
+                still = now.heading === last.heading ? still + 1 : 0;
+                last = now;
+                if (still >= 3 || performance.now() - started > 5000) resolve(now);
+                else setTimeout(poll, 100);
+            };
+            setTimeout(poll, 100);
         }));
         if (landed.heading >= landed.player) ok(`a nav jump with the player open lands its heading below it (${landed.heading}px, player ends at ${landed.player}px)`);
         else bad(`a nav jump with the player open hides its heading under the player (${landed.heading}px, player ends at ${landed.player}px)`);
@@ -864,7 +1087,7 @@ async function exerciseNarration(browser, origin) {
         if (hits.length === 0) ok('the recording is not fetched before it is asked for');
         else bad(`the recording was fetched before anyone asked (${hits.length} requests)`);
         await page.click('.dispatch-intro');
-        const fetched = await page.waitForFunction(() => window.FieldDispatch.state().playing === 'intro', null, { timeout: 5000 })
+        const fetched = await page.waitForFunction(() => window.mks.narration.state().playing === 'intro', null, { timeout: 5000 })
             .then(() => page.waitForTimeout(500)).then(() => hits.length > 0, () => false);
         if (fetched) ok('pressing it fetches assets/audio/intro.mp3 and plays Moses');
         else bad('pressing the offer did not fetch the recording');
@@ -892,7 +1115,7 @@ async function exerciseNarration(browser, origin) {
             });
             await page.focus('#listenBtn');
             await page.keyboard.press('Enter');
-            const played = await page.waitForFunction(() => window.FieldDispatch && window.FieldDispatch.state().playing === 'intro', null, { timeout: 5000 })
+            const played = await page.waitForFunction(() => window.mks.narration && window.mks.narration.state().playing === 'intro', null, { timeout: 5000 })
                 .then(() => page.waitForTimeout(500)).then(() => true, () => false);
             const after = await page.evaluate(() => ({
                 focus: document.activeElement === document.getElementById('listenBtn') || document.getElementById('dispatchBar').contains(document.activeElement),
@@ -1106,7 +1329,7 @@ async function checkWithoutJs(browser, origin) {
         await page.waitForTimeout(200);
         const seen = await reading();
 
-        const tookOver = await page.waitForFunction(() => window.mksReady === true, null, { timeout: 10000 }).then(() => true, () => false);
+        const tookOver = await page.waitForFunction(() => (window.mks || {}).ready === true, null, { timeout: 10000 }).then(() => true, () => false);
         await page.waitForTimeout(1200);   // the dossiers' games arrive and fill in
         const after = await page.evaluate(() => ({
             marked: document.documentElement.classList.contains('js'),
@@ -1163,7 +1386,7 @@ async function checkWithoutJs(browser, origin) {
             return { top: Math.round(l.getBoundingClientRect().top), what: l.textContent.replace(/\s+/g, ' ').trim().slice(0, 40) };
         });
         const seen = await line();
-        const tookOver = await page.waitForFunction(() => window.mksReady === true, null, { timeout: 10000 }).then(() => true, () => false);
+        const tookOver = await page.waitForFunction(() => (window.mks || {}).ready === true, null, { timeout: 10000 }).then(() => true, () => false);
         await page.waitForTimeout(2500);
         const now = await line();
         const tag = `index.html, script.js late, no scroll anchoring, reading ${where}`;
@@ -1216,7 +1439,7 @@ async function checkWithoutJs(browser, origin) {
             atReady: window.__atReady,
             preloader: !!document.getElementById('preloader'),
             marked: document.documentElement.classList.contains('js'),
-            ready: window.mksReady === true,
+            ready: (window.mks || {}).ready === true,
             counters: Array.from(document.querySelectorAll('.hero-stat-number')).map(c => c.textContent),
             targets: Array.from(document.querySelectorAll('.hero-stat-number')).map(c => c.getAttribute('data-target')),
             said: Array.from(document.querySelectorAll('.hero-stat')).map(s => `${s.querySelector('.hero-stat-number').getAttribute('data-target')} ${s.querySelector('.hero-stat-label').textContent}`),
@@ -1248,7 +1471,7 @@ async function checkWithoutJs(browser, origin) {
         // class-level display beat the browser's own [hidden].
         if (label === 'normal') {
             await page.evaluate(() => document.getElementById('ecoprompt').scrollIntoView());
-            await page.waitForFunction(() => window.mksLoaded && window.mksLoaded.interactives, null, { timeout: 5000 }).catch(() => null);
+            await page.waitForFunction(() => window.mks.loaded.interactives, null, { timeout: 5000 }).catch(() => null);
             const h = await page.evaluate(() => ({
                 leaks: Array.from(document.querySelectorAll('[hidden]')).filter(el => getComputedStyle(el).display !== 'none').map(el => '#' + (el.id || el.className)),
                 count: document.querySelectorAll('[hidden]').length,
@@ -1263,4 +1486,645 @@ async function checkWithoutJs(browser, origin) {
         }
         await context.close();
     }));
+}
+
+// ------------------------------------------------------------------
+// Accessibility: axe-core on every page, at two sizes, in both themes
+//
+// An audit once took the site from 241 axe violations to none, and nothing
+// held it there. This does. Every page is loaded at 1440×900 and 390×844, in
+// the dark theme and the light one, axe-core is injected from node_modules
+// (so nothing leaves this origin), and any violation fails the run. The
+// homepage is also checked scrolled through — the only time section 05's
+// interactives, the journey map and every reveal are in the page — and in
+// the states a visitor opens: a dossier, the Assay's verdict on an ad it
+// finds gaps in, the carbon receipt, the docked narration player, the menu
+// on a phone and the terminal, each checked on its own. The homepage and
+// carbon-ai.html are checked once more with their scripts blocked, which is
+// the layout a reader without JavaScript gets (every nav link on show,
+// every dossier open, the calculator's note in place of the calculator).
+//
+// Each size and theme gets its own browser context with reduced motion, so
+// axe judges what a reader settles on rather than an element halfway
+// through a transition. The four run side by side.
+// ------------------------------------------------------------------
+const AXE_PATH = require.resolve('axe-core/axe.min.js');
+const AXE_VIEWS = [];
+[{ width: 1440, height: 900 }, { width: 390, height: 844 }].forEach((viewport) => {
+    ['dark', 'light'].forEach((theme) => AXE_VIEWS.push({ viewport, theme, name: `${viewport.width}×${viewport.height} ${theme}` }));
+});
+
+// The pages whose script swaps in a different layout, so the one a reader
+// without JavaScript gets is checked as well. (With the scripts blocked the
+// theme cannot be applied either: those two are checked in dark only.)
+const AXE_NO_SCRIPT = ['index.html', 'carbon-ai.html'];
+
+// What the player offers once Moses has recorded his introduction (see
+// exerciseNarration): served in place of today's empty manifest, so the
+// player is checked with the offer it will carry. Nothing is played.
+const AXE_MANIFEST = { tracks: { intro: {
+    file: 'assets/audio/intro.mp3', bytes: silentMp3().length, grams: 0.013, seconds: 5, voiceKind: 'recorded', voiceTitle: 'Moses Kolleh Sesay'
+} } };
+
+async function axeRun(page, scope) {
+    if (!(await page.evaluate(() => !!window.axe))) await page.addScriptTag({ path: AXE_PATH });
+    return page.evaluate(async (sel) => {
+        const result = await window.axe.run(sel || document, { resultTypes: ['violations'] });
+        return result.violations.map(v => ({ id: v.id, help: v.help, targets: v.nodes.map(n => n.target.join(' ')) }));
+    }, scope || null);
+}
+
+async function accessibilityPass(browser, origin) {
+    const t0 = Date.now();
+    const found = new Map();     // page · state · rule · element → the views it failed in
+    const states = new Map();    // page → the states checked
+    const trouble = [];          // a state that could not be opened, or an axe run that threw
+    const note = (rel, state, view, violations) => {
+        if (!states.has(rel)) states.set(rel, new Set());
+        states.get(rel).add(state);
+        violations.forEach(v => v.targets.forEach((target) => {
+            const key = [rel, state, v.id, target].join('\t');
+            if (!found.has(key)) found.set(key, { rel, state, id: v.id, help: v.help, target, views: [] });
+            found.get(key).views.push(view.name);
+        }));
+    };
+
+    await Promise.all(AXE_VIEWS.map(view => axeView(browser, origin, view, note, trouble)));
+
+    const version = require('axe-core/package.json').version;
+    console.log(`\n  Accessibility — axe-core ${version}, ${AXE_VIEWS.map(v => v.name).join(', ')} (${((Date.now() - t0) / 1000).toFixed(0)} s)\n`);
+    trouble.forEach(t => bad(t));
+    PAGES.forEach((rel) => {
+        const mine = Array.from(found.values()).filter(f => f.rel === rel);
+        const checked = Array.from(states.get(rel) || []);
+        if (!mine.length) return ok(`${rel}: no violations (${checked.join(', ')})`);
+        mine.forEach(f => bad(`${rel}, ${f.state}: [${f.id}] ${f.target} — ${f.help} (${f.views.join('; ')})`));
+    });
+}
+
+async function axeView(browser, origin, view, note, trouble) {
+    // axe goes in as an inline script, which a Content-Security-Policy would
+    // otherwise be entitled to refuse.
+    const context = await browser.newContext({ viewport: view.viewport, colorScheme: view.theme, reducedMotion: 'reduce', bypassCSP: true });
+    // The homepage keeps its theme in localStorage; field-report.html follows
+    // the system setting, which colorScheme sets. Pages with one theme simply
+    // get checked in it twice.
+    await context.addInitScript((theme) => {
+        try { localStorage.setItem('theme', theme); } catch (e) { /* storage blocked */ }
+    }, view.theme);
+    // A speech voice, as nearly every real browser has and headless ones do
+    // not, so the nav shows its listen control and the player can open.
+    await context.addInitScript(STAND_IN_VOICE);
+    await context.route('**/assets/audio/voice-manifest.json', (route) => route.fulfill({ json: AXE_MANIFEST }));
+    // Four more visits to every page: none of them may reach a real endpoint
+    // (the contact form's, or anything added later), whatever the page does.
+    await context.route((url) => !url.href.startsWith(origin), (route) => route.abort());
+    const attempt = async (what, fn) => {
+        try { await fn(); } catch (e) { trouble.push(`${what} (${view.name}): ${String(e.message || e).split('\n')[0]}`); }
+    };
+    try {
+        for (const rel of PAGES) {
+            const page = await context.newPage();
+            await attempt(`${rel}: axe on arrival`, async () => {
+                await page.goto(`${origin}/${rel}`, { waitUntil: 'load' });
+                await page.evaluate(async () => { if (document.fonts) await document.fonts.ready; });
+                await page.waitForTimeout(250);
+                note(rel, 'on arrival', view, await axeRun(page));
+            });
+            if (rel === 'index.html') await axeHomepageStates(page, view, note, attempt);
+            await page.close();
+            if (!AXE_NO_SCRIPT.includes(rel)) continue;
+            const bare = await context.newPage();
+            await bare.route('**/*.js', (route) => route.abort());
+            await attempt(`${rel}: axe with its scripts blocked`, async () => {
+                await bare.goto(`${origin}/${rel}`, { waitUntil: 'load' });
+                await bare.waitForFunction(() => !document.documentElement.classList.contains('js'), null, { timeout: 5000 });
+                note(rel, 'scripts blocked', view, await axeRun(bare));
+            });
+            await bare.close();
+        }
+    } finally {
+        await context.close();
+    }
+}
+
+async function axeHomepageStates(page, view, note, attempt) {
+    const rel = 'index.html';
+    const within = { timeout: 5000 };
+
+    await attempt(`${rel}: axe scrolled through`, async () => {
+        await page.evaluate(async () => {
+            for (let y = 0; y < document.documentElement.scrollHeight; y += innerHeight * 0.8) {
+                scrollTo(0, y);
+                await new Promise(r => setTimeout(r, 50));
+            }
+        });
+        await page.waitForFunction(() => window.mks && window.mks.loaded && window.mks.loaded.interactives, null, within);
+        await page.evaluate(() => scrollTo(0, 0));
+        await page.waitForTimeout(250);
+        note(rel, 'scrolled through', view, await axeRun(page));
+    });
+
+    const dossier = '.project-card[data-project="groundwater"]';
+    await attempt(`${rel}: axe with a dossier open`, async () => {
+        await page.click(`${dossier} .project-toggle`, within);
+        await page.waitForSelector('#boreholeGame svg', within);
+        note(rel, 'a dossier open', view, await axeRun(page, dossier));
+    });
+
+    // The Assay's verdict, with rows for what matched and for the gaps.
+    await attempt(`${rel}: axe on the Assay's verdict`, async () => {
+        await page.fill('#assayInput', 'ESG Reporting Consultant for CSRD and ESRS. Fluent Dutch. ' +
+            '5+ years at a Big Four firm. Hands-on SAP. GHG accounting and stakeholder engagement.');
+        await page.click('#assayRun', within);
+        await page.waitForSelector('#assayResult .assay-row-gap', within);
+        note(rel, 'the Assay\'s verdict', view, await axeRun(page, '#assay'));
+    });
+
+    // The page's own carbon receipt, printed from the footer.
+    await attempt(`${rel}: axe on the carbon receipt`, async () => {
+        await page.click('#receiptBtn', within);
+        await page.waitForSelector('#receiptBody :first-child', within);
+        note(rel, 'the carbon receipt', view, await axeRun(page, '#receiptPanel'));
+        await page.click('#receiptBtn', within);
+    });
+
+    // The docked player, opened from the nav, offering the introduction.
+    await attempt(`${rel}: axe on the narration player`, async () => {
+        await page.click('#listenBtn', within);
+        await page.waitForSelector('#dispatchBar .dispatch-offer', { state: 'visible', ...within });
+        note(rel, 'the narration player', view, await axeRun(page, '#dispatchBar'));
+        await page.click('#listenBtn', within);   // a second press stops and closes
+        await page.waitForSelector('#dispatchBar', { state: 'hidden', ...within });
+    });
+
+    // On a phone the nav's links sit behind the menu button.
+    if (await page.isVisible('#navToggle')) {
+        await attempt(`${rel}: axe with the menu open`, async () => {
+            await page.click('#navToggle', within);
+            await page.waitForSelector('#navMenu.active', within);
+            note(rel, 'the menu open', view, await axeRun(page, '.navbar'));
+            await page.keyboard.press('Escape');
+        });
+    }
+
+    await attempt(`${rel}: axe on the terminal`, async () => {
+        await page.click('#terminalToggle', within);
+        await page.waitForSelector('.field-terminal.open', within);
+        note(rel, 'the terminal', view, await axeRun(page, '.field-terminal'));
+        await page.keyboard.press('Escape');
+    });
+}
+
+// ------------------------------------------------------------------
+// CPU: sections drawn near the screen, loops only where they are seen
+// ------------------------------------------------------------------
+// content-visibility lets the browser skip a section's layout and paint
+// until it nears the screen, sizing it by an estimate until then, and that
+// estimate moves whatever a jump aims at; script.js re-aims a jump as the
+// real heights arrive. What jsdom cannot show: where jumps actually land,
+// whether find-in-page and printing still reach every section, which loops
+// are really paused, and how busy the main thread is while nobody touches
+// the page (at 4x CPU slowdown it was about 0.7 s in every 2 s before).
+const IDLE_CEILING_MS = 100;   // main-thread work per 2 s idle, at 4x slowdown
+
+async function exerciseCpu(browser, origin) {
+    console.log('  index.html — sections drawn near the screen, loops paused out of sight');
+    const landed = (page, id) => page.evaluate((id) => new Promise((resolve) => {
+        // Where the section's top should sit: under the fixed nav bar.
+        const want = parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0;
+        const el = document.getElementById(id);
+        let still = 0;
+        const started = performance.now();
+        const poll = () => {
+            const top = Math.round(el.getBoundingClientRect().top);
+            still = Math.abs(top - want) <= 2 ? still + 1 : 0;
+            if (still >= 3 || performance.now() - started > 5000) resolve({ top, want });
+            else setTimeout(poll, 100);
+        };
+        poll();
+    }), id);
+    const lands = async (page, id, how) => {
+        const r = await landed(page, id);
+        if (Math.abs(r.top - r.want) <= 2) ok(`${how} to #${id} lands its top under the nav bar (${r.top}px)`);
+        else bad(`${how} to #${id} lands ${r.top}px from the top of the screen, not ${r.want}px`);
+    };
+
+    // Desktop, motion allowed: the jump glides past sections still sized by
+    // their estimates, which is the hard case.
+    {
+        const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+        const page = await context.newPage();
+        await page.goto(`${origin}/index.html`, { waitUntil: 'load' });
+        const cv = await page.evaluate(() => Array.from(document.querySelectorAll('main > section'))
+            .filter(s => getComputedStyle(s).contentVisibility === 'auto').length);
+        if (cv) ok(`${cv} sections are drawn only as they near the screen (content-visibility: auto)`);
+        else bad('no section has content-visibility: auto');
+        for (const id of ['contact', 'about', 'ecoprompt']) {
+            await page.click(`.nav-menu a[href="#${id}"]`);
+            await lands(page, id, 'a nav link');
+        }
+        const spy = await page.evaluate(() => (document.querySelector('.nav-link.active') || {}).hash || 'none');
+        if (spy === '#ecoprompt') ok('the nav highlights the section it landed on'); else bad(`the nav highlights ${spy}, not #ecoprompt`);
+
+        // Find-in-page, from the top, reaches a section not yet drawn.
+        await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
+        const found = await page.evaluate(() => {
+            const heading = document.querySelector('#notes h3');
+            const text = heading ? heading.textContent.trim() : '';
+            const hit = !!text && window.find(text);
+            const sel = getSelection();
+            return { text, hit, inside: !!(sel.anchorNode && document.getElementById('notes').contains(sel.anchorNode)) };
+        });
+        if (found.hit && found.inside) ok(`find-in-page reaches a section not yet drawn ("${found.text}")`);
+        else bad(`find-in-page could not find "${found.text}" in #notes from the top of the page`);
+
+        await page.emulateMedia({ media: 'print' });
+        const printed = await page.evaluate(() => Array.from(document.querySelectorAll('main > section'))
+            .filter(s => getComputedStyle(s).contentVisibility !== 'visible').map(s => '#' + s.id));
+        if (printed.length) bad(`printing would skip ${printed.join(', ')}`); else ok('printing draws every section');
+        await page.emulateMedia({ media: null });
+        await context.close();
+    }
+
+    // A deep link, and a phone.
+    {
+        const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+        const page = await context.newPage();
+        await page.goto(`${origin}/index.html#skills`, { waitUntil: 'load' });
+        await lands(page, 'skills', 'a shared link');
+        await context.close();
+    }
+    {
+        const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+        const page = await context.newPage();
+        await page.goto(`${origin}/index.html`, { waitUntil: 'load' });
+        // The journey map still flies with its stops (one column on a phone)
+        // as the section around them is drawn.
+        await page.mouse.wheel(0, 300);
+        await page.waitForFunction(() => document.querySelector('#journeyMapFrame svg'), null, { timeout: 5000 }).catch(() => null);
+        const readAt = async (i) => {
+            await page.evaluate((i) => document.querySelector(`.journey-stop[data-stop="${i}"]`).scrollIntoView({ block: 'center', behavior: 'instant' }), i);
+            await page.waitForTimeout(600);
+            return page.evaluate(() => document.getElementById('journeyMapReadout').textContent.split('—').pop().trim());
+        };
+        const early = await readAt(1);
+        const late = await readAt(4);
+        if (late === 'Amsterdam' && early !== late) ok(`the journey map flies with the stops (${early}, then ${late})`);
+        else bad(`the journey map did not follow the stops (${early}, then ${late})`);
+        await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
+        await page.click('#navToggle');
+        await page.click('.nav-menu a[href="#projects"]');
+        await lands(page, 'projects', 'on a phone, a menu link');
+        await context.close();
+    }
+    // Reading back up after the page skipped ahead: an instant jump (reduced
+    // motion) or a scroll bar dragged to the end. The sections passed were
+    // never drawn, so each took its real height as the reader got back to it,
+    // just above what they were reading, and Chrome's scroll anchoring missed
+    // it: at 390px the page moved up to 2,376px at a time. script.js draws
+    // them once the page rests. (A few pixels is a hover lift, not this.)
+    for (const [how, arrive] of [
+        ['after a shared link to #contact with reduced motion', async (page) => {
+            await page.goto(`${origin}/index.html#contact`, { waitUntil: 'load' });
+            await lands(page, 'contact', 'with reduced motion, a shared link');
+            // The reader takes over with the wheel, which lets go of the jump.
+            await page.mouse.move(195, 422);
+            await page.mouse.wheel(0, -150);
+            await page.mouse.move(2, 2);
+        }],
+        ['after dragging the scroll bar to the end', async (page) => {
+            await page.goto(`${origin}/index.html`, { waitUntil: 'load' });
+            await page.evaluate(() => scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' }));
+        }]
+    ]) {
+        const context = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: /reduced/.test(how) ? 'reduce' : 'no-preference' });
+        const page = await context.newPage();
+        await arrive(page);
+        await page.waitForTimeout(1200);
+        const moved = await page.evaluate(async () => {
+            const frames = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+            const out = [];
+            while (scrollY > 0) {
+                const el = document.elementFromPoint(innerWidth / 2, innerHeight / 2);
+                const was = el.getBoundingClientRect().top, y = scrollY;
+                scrollBy({ top: -150, behavior: 'instant' });
+                const step = y - scrollY;
+                await frames();
+                const off = Math.round(el.getBoundingClientRect().top - was - step);
+                if (Math.abs(off) > 24) out.push(`${off}px at ${Math.round(scrollY)}`);
+            }
+            return out;
+        });
+        if (!moved.length) ok(`reading back up ${how}, nothing on screen moves as the sections passed are drawn`);
+        else bad(`reading back up ${how}, what was on screen moved ${moved.join(', ')}`);
+        await context.close();
+    }
+
+    // Loops: running where they can be seen, paused elsewhere and in a
+    // hidden tab. Then the main thread, left alone, at 4x slowdown.
+    {
+        const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+        const page = await context.newPage();
+        await page.goto(`${origin}/index.html`, { waitUntil: 'load' });
+        await page.waitForTimeout(1200);
+        const loops = () => page.evaluate(() => document.getAnimations()
+            .filter(a => a.effect && a.effect.getTiming().iterations === Infinity)
+            .map((a) => {
+                const el = a.effect.target;
+                return { name: a.animationName, state: a.playState, away: !(el && el.closest('.onscreen')) };
+            }));
+        const atTop = await loops();
+        const wrong = atTop.filter(l => (l.away ? l.state !== 'paused' : l.state !== 'running'));
+        const shown = atTop.filter(l => !l.away).length;
+        if (atTop.length && shown && !wrong.length) ok(`${atTop.length} loops: the ${shown} in view run, the ${atTop.length - shown} out of view are paused`);
+        else bad(`loops at the top of the page: ${wrong.map(l => `${l.name} ${l.state}${l.away ? ' off screen' : ' in view'}`).join(', ') || 'none found'}`);
+
+        const setHidden = (hidden) => page.evaluate((hidden) => {
+            Object.defineProperty(document, 'hidden', { configurable: true, get: () => hidden });
+            document.dispatchEvent(new Event('visibilitychange'));
+        }, hidden);
+        await setHidden(true);
+        const running = (await loops()).filter(l => l.state !== 'paused');
+        if (!running.length) ok('in a hidden tab every loop is paused'); else bad(`in a hidden tab ${running.map(l => l.name).join(', ')} still run`);
+        await setHidden(false);
+
+        // The main thread's own clock is a Chromium DevTools figure.
+        if (browser.browserType().name() !== 'chromium') {
+            ok('idle main-thread work: not measured in this browser (a Chromium DevTools figure)');
+            await context.close();
+            return;
+        }
+        const cdp = await context.newCDPSession(page);
+        await cdp.send('Performance.enable');
+        await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+        await page.waitForTimeout(1000);   // let the checks above settle first
+        const busy = async () => {
+            const at = async () => (await cdp.send('Performance.getMetrics')).metrics.find(m => m.name === 'TaskDuration').value;
+            const t0 = await at();
+            await page.waitForTimeout(2000);
+            return Math.round((await at() - t0) * 1000);
+        };
+        const top = await busy();
+        await page.evaluate(() => document.getElementById('projects').scrollIntoView({ behavior: 'instant' }));
+        await page.waitForTimeout(2000);
+        const mid = await busy();
+        await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+        if (top <= IDLE_CEILING_MS && mid <= IDLE_CEILING_MS) ok(`left alone, the main thread works ${top} ms at the top and ${mid} ms mid-page per 2 s at 4x slowdown (ceiling ${IDLE_CEILING_MS} ms)`);
+        else bad(`left alone, the main thread works ${top} ms at the top and ${mid} ms mid-page per 2 s at 4x slowdown — ceiling ${IDLE_CEILING_MS} ms`);
+        await context.close();
+    }
+}
+
+// ------------------------------------------------------------------
+// The visit counter, kept off the real endpoint
+// ------------------------------------------------------------------
+// Closing a page fires pagehide, and count.js sends its count then. A
+// request made while a page is closing cannot be intercepted (Chromium
+// sends it after the page's routes are gone), so it would reach the real
+// Apps Script and count a smoke run as a visit. So every page opened in a
+// context passed through here browses with Global Privacy Control on, which
+// is the counter's own opt-out, and anything sent while a page is still
+// open is answered locally. Every context this script opens is passed
+// through here as it is opened (see the wrapper around browser.newContext),
+// bar exerciseCounter()'s, which never closes a page the counter is armed on.
+async function quietCounter(context) {
+    await context.addInitScript(() => {
+        Object.defineProperty(Navigator.prototype, 'globalPrivacyControl', { configurable: true, get: () => true });
+    });
+    await context.route((url) => url.href === COUNT_URL, (route) => route.fulfill({ status: 204, body: '' }));
+}
+
+// ------------------------------------------------------------------
+// The visit counter: what one visit sends, and when it sends nothing
+// ------------------------------------------------------------------
+// The privacy promise is that the count holds only the documented fields,
+// and this is the test that enforces it: a real visit, three features used,
+// the page left, and the request that leaves the browser taken apart.
+// openContext is the browser's own newContext, without the quietening.
+async function exerciseCounter(openContext, origin, arrivalBytes) {
+    console.log('  the visit counter');
+    const sent = [];
+    const record = (context) => context.route((url) => url.href === COUNT_URL, async (route) => {
+        const req = route.request();
+        sent.push({ method: req.method(), headers: await req.allHeaders(), body: req.postData() || '' });
+        await route.fulfill({ status: 204, body: '' });
+    });
+    const context = await openContext({ viewport: { width: 1280, height: 800 } });
+    // A voice, so the Listen control shows, as it does for most visitors.
+    await context.addInitScript(STAND_IN_VOICE);
+    await record(context);
+    const counts = (page) => sent.filter((s) => { try { return JSON.parse(s.body).page === page; } catch (e) { return false; } });
+    const settle = async (page, n) => {
+        for (let i = 0; i < 30 && sent.length < n; i++) await page.waitForTimeout(100);
+        await page.waitForTimeout(300);   // and a moment more, for anything that should not arrive
+    };
+
+    // Leaving a page, without letting go of it. A real navigation fires
+    // pagehide too, but the request count.js makes then is not reliably
+    // caught by a route: measured here, about one navigation in three let
+    // it straight past, to the real endpoint. So the events are dispatched
+    // while the page is still open (the same listeners, the same fetch, and
+    // every request caught), and a page is only navigated away or closed
+    // once its counter has already sent, when it cannot send again.
+    const leave = (p) => p.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: false })));
+    const visibility = (p, state) => p.evaluate((s) => {
+        Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => s });
+        document.dispatchEvent(new Event('visibilitychange'));
+    }, state);
+
+    const page = await context.newPage();
+    const foreign = [];
+    const errors = [];
+    page.on('request', (r) => { if (!r.url().startsWith(origin) && r.url() !== COUNT_URL && !r.url().startsWith('about:')) foreign.push(r.url()); });
+    page.on('pageerror', (e) => errors.push(e.message));
+
+    // Arrive from LinkedIn on a lens link, use three features, read to the end.
+    await page.goto(`${origin}/index.html?lens=water`, { waitUntil: 'load', referer: 'https://www.linkedin.com/feed/' });
+    await page.click('#receiptBtn');                          // data-analytics="receipt-open"; fetches the interactives
+    await page.waitForFunction(() => window.mks && window.mks.loaded && window.mks.loaded.interactives, null, { timeout: 5000 }).catch(() => null);
+    await page.keyboard.press('`');                           // fetches the terminal
+    await page.waitForFunction(() => window.mks && window.mks.loaded && window.mks.loaded.terminal, null, { timeout: 5000 }).catch(() => null);
+    await page.keyboard.press('Escape');
+    await page.click('#listenBtn');                           // data-analytics="listen"; fetches the player
+    await page.waitForFunction(() => window.mks && window.mks.loaded && window.mks.loaded.dispatch, null, { timeout: 5000 }).catch(() => null);
+    await page.keyboard.press('Escape');
+    await page.evaluate(() => document.getElementById('contact').scrollIntoView({ behavior: 'instant' }));
+    await page.waitForTimeout(400);
+    if (sent.length) bad(`the counter sent ${sent.length} request(s) while the page was still open and visible`);
+
+    await leave(page);
+    await settle(page, 1);
+
+    const home = counts('index');
+    if (home.length !== 1) {
+        bad(`leaving the homepage sent ${home.length} counts, not 1`);
+    } else {
+        const s = home[0];
+        let body = null;
+        try { body = JSON.parse(s.body); } catch (e) { /* reported below */ }
+        const keys = body ? Object.keys(body) : [];
+        if (JSON.stringify(keys) === JSON.stringify(BEACON_KEYS)) ok(`one count on leaving, with exactly the documented keys: ${keys.join(', ')}`);
+        else bad(`the count's keys are not the documented set: ${keys.join(', ') || s.body}`);
+
+        const shaped = !!body && body.v === 1 &&
+            ['page', 'lens', 'deepest', 'ref', 'vp'].every(k => typeof body[k] === 'string') &&
+            ['s', 'm', 'l'].includes(body.vp) &&
+            Array.isArray(body.features) && body.features.length <= 20 &&
+            body.features.every(f => typeof f === 'string' && /^[a-z0-9-]{1,40}$/.test(f)) &&
+            new Set(body.features).size === body.features.length &&
+            Number.isInteger(body.kb) && body.kb >= 0 && body.kb <= 100000;
+        if (shaped) ok('every value has its documented type and shape'); else bad(`a value has the wrong type or shape: ${s.body}`);
+
+        if (body) {
+            const want = { page: 'index', lens: 'water', deepest: 'contact', ref: 'www.linkedin.com', vp: 'l' };
+            const wrong = Object.keys(want).filter(k => body[k] !== want[k]);
+            if (wrong.length) bad(`the count got the visit wrong: ${wrong.map(k => `${k}=${JSON.stringify(body[k])}`).join(', ')}`);
+            else ok(`it says what the visit did: ${Object.keys(want).map(k => `${k} ${want[k]}`).join(', ')}`);
+
+            const used = ['receipt-open', 'module-interactives', 'module-terminal', 'listen', 'module-dispatch'];
+            const missing = used.filter(f => !(body.features || []).includes(f));
+            if (missing.length) bad(`features used but not counted: ${missing.join(', ')} (got ${(body.features || []).join(', ')})`);
+            else ok(`features: ${body.features.join(', ')}`);
+
+            const floor = Math.floor((arrivalBytes / 1024) * 0.8);
+            if (body.kb >= floor) ok(`kb: ${body.kb}, no less than the ${fmt(arrivalBytes)} the homepage took to arrive`);
+            else bad(`kb is ${body.kb}, below the ${fmt(arrivalBytes)} measured for the homepage's arrival`);
+        }
+
+        const h = s.headers;
+        if (s.method === 'POST' && !h.cookie && !h.referer && /^text\/plain/.test(h['content-type'] || '')) ok('a plain-text POST, with no cookie and no Referer header');
+        else bad(`the request carried more than its body: ${s.method} cookie=${!!h.cookie} referer=${h.referer || ''} type=${h['content-type']}`);
+    }
+
+    // A reader who comes back after the count has gone finds it on the
+    // page's own bill: a request to another site whose bytes the browser
+    // will not report, so the badge says "+" and the Receipt names it as
+    // what it is, not as a third-party file.
+    await visibility(page, 'visible');
+    await page.click('#receiptBtn');
+    await page.click('#receiptBtn');
+    await page.waitForTimeout(300);
+    const bill = await page.evaluate(() => ({
+        badge: document.getElementById('carbonBadgeText').textContent,
+        receipt: document.getElementById('receiptBody').textContent
+    }));
+    if (/^This page weighs \+ /.test(bill.badge) && /\* 1 off-site request not counted/.test(bill.receipt)) ok(`after the count: the badge reads "${bill.badge.slice(0, 32)}…" and the Receipt "* 1 off-site request not counted"`);
+    else bad(`after the count, the badge reads "${bill.badge}" and the Receipt ${/off-site request/.test(bill.receipt) ? 'names' : 'does not name'} the request`);
+
+    // Once per page view: after the count has gone, hidden, shown, hidden
+    // again and left again, then really navigated away, and nothing more.
+    await visibility(page, 'hidden');
+    await leave(page);
+    await page.goto(`${origin}/field-report.html`, { waitUntil: 'load' });
+    await settle(page, 2);
+    if (counts('index').length === 1) ok('once per page view: hiding and leaving again, then navigating away, sent nothing more');
+    else bad(`the homepage sent ${counts('index').length} counts for one view`);
+
+    // The first time the page is hidden is enough (a phone switching apps
+    // may never fire pagehide at all).
+    await visibility(page, 'hidden');
+    await settle(page, 2);
+    if (counts('field-report').length === 1) ok('hiding a page sends its count, as leaving does');
+    else bad(`hiding the field report sent ${counts('field-report').length} counts, not 1`);
+    await page.goto('about:blank');
+
+    // Every page counts itself, under its own name and with the same eight
+    // keys, and each count is one the server's own schema check (Code.gs,
+    // run here as it is in the unit tests) accepts. The 404 page is served
+    // at an address that does not exist, as GitHub Pages serves it.
+    {
+        const vm = require('vm');
+        const gas = vm.createContext({});
+        vm.runInContext(fs.readFileSync(path.join(ROOT, 'google-apps-script', 'Code.gs'), 'utf8'), gas);
+        await context.route('**/sustaintheworld/no/such/page', (route) => route.fulfill({ status: 404, contentType: 'text/html; charset=utf-8', path: path.join(ROOT, '404.html') }));
+        const everyPage = PAGES.filter(rel => rel !== '404.html').map(rel => [rel, rel.replace(/\.html$/, '')])
+            .concat([['sustaintheworld/no/such/page', '404']]);
+        const wrong = [];
+        for (const [rel, name] of everyPage) {
+            const p = await context.newPage();
+            p.on('pageerror', (e) => errors.push(e.message));
+            const before = sent.length;
+            await p.goto(`${origin}/${rel}`, { waitUntil: 'load' });
+            await leave(p);
+            await settle(p, before + 1);
+            const got = sent.slice(before).map((s) => { try { return JSON.parse(s.body); } catch (e) { return s.body; } });
+            const b = got[0];
+            if (got.length !== 1 || !b || JSON.stringify(Object.keys(b)) !== JSON.stringify(BEACON_KEYS) || b.page !== name || !gas.isBeaconV1(b)) {
+                wrong.push(`${rel}: ${got.length} count(s) ${JSON.stringify(got)}`);
+            }
+            await p.close();   // its count has gone, so closing cannot send another
+        }
+        if (wrong.length) wrong.forEach(w => bad(`the count from ${w}`));
+        else ok(`every page counts itself once, by name, with the documented keys, and the server accepts each: ${everyPage.map(([, n]) => n).join(', ')}`);
+    }
+
+    for (const [label, prop, value] of [['Do Not Track', 'doNotTrack', '1'], ['Global Privacy Control', 'globalPrivacyControl', true]]) {
+        const p = await context.newPage();
+        p.on('pageerror', (e) => errors.push(e.message));
+        await p.addInitScript(([k, v]) => Object.defineProperty(Navigator.prototype, k, { configurable: true, get: () => v }), [prop, value]);
+        const before = sent.length;
+        await p.goto(`${origin}/index.html`, { waitUntil: 'load' });
+        await p.click('#receiptBtn');
+        await visibility(p, 'hidden');
+        await leave(p);
+        await p.waitForTimeout(800);
+        if (sent.length === before) ok(`nothing at all is sent under ${label}`);
+        else bad(`the counter sent ${sent.length - before} request(s) under ${label}`);
+        await p.goto('about:blank');
+        await p.close();
+    }
+
+    // With JavaScript off there is no counter, so a visit sends nothing:
+    // a hook followed and the page really left, and not one request made.
+    {
+        const bare = await openContext({ viewport: { width: 1280, height: 800 }, javaScriptEnabled: false });
+        await record(bare);
+        const p = await bare.newPage();
+        p.on('request', (r) => { if (!r.url().startsWith(origin)) foreign.push(r.url()); });
+        const before = sent.length;
+        await p.goto(`${origin}/index.html`, { waitUntil: 'load' });
+        await p.click('[data-analytics="contact-hero"]');
+        const ran = await p.evaluate(() => typeof window.mks !== 'undefined');
+        await p.goto(`${origin}/field-report.html`, { waitUntil: 'load' });
+        await p.waitForTimeout(500);
+        if (sent.length === before && !ran) ok('nothing is sent with JavaScript off: the counter never runs');
+        else bad(`with JavaScript off, the counter ${ran ? 'ran' : 'did not run'} and ${sent.length - before} count(s) went out`);
+        await bare.close();
+    }
+
+    // script.js blocked: the page falls back to its no-JavaScript layout, but
+    // the counter does not depend on script.js, and still counts the visit.
+    {
+        const blocked = await openContext({ viewport: { width: 1280, height: 800 } });
+        await blocked.route('**/script.js', (route) => route.abort());
+        await record(blocked);
+        const p = await blocked.newPage();
+        p.on('request', (r) => { if (!r.url().startsWith(origin) && r.url() !== COUNT_URL && !r.url().startsWith('about:')) foreign.push(r.url()); });
+        p.on('pageerror', (e) => errors.push(e.message));
+        const before = sent.length;
+        await p.goto(`${origin}/index.html`, { waitUntil: 'load' });
+        await p.click('[data-analytics="contact-hero"]');
+        await leave(p);
+        await settle(p, before + 1);
+        const got = sent.slice(before);
+        let body = null;
+        try { body = JSON.parse(got[0].body); } catch (e) { /* reported below */ }
+        if (got.length === 1 && body && JSON.stringify(Object.keys(body)) === JSON.stringify(BEACON_KEYS) &&
+            body.page === 'index' && body.features.includes('contact-hero')) {
+            ok(`script.js blocked: still one count, with the documented keys and the hook followed (${body.features.join(', ')})`);
+        } else {
+            bad(`script.js blocked: ${got.length} count(s) — ${got.map(s => s.body).join(' | ') || 'none'}`);
+        }
+        // Had the count not gone, leaving now would send it past the route:
+        // take its fetch away first.
+        await p.evaluate(() => { window.fetch = () => Promise.resolve(); });
+        await p.goto('about:blank');
+        await blocked.close();
+    }
+
+    if (foreign.length) foreign.forEach(f => bad(`left the origin: ${f}`)); else ok('nothing but the count left the origin');
+    if (errors.length) errors.forEach(e => bad(`uncaught: ${e}`)); else ok('no errors on the way');
+    await page.close();
+    await context.close();
 }

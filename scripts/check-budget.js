@@ -45,14 +45,15 @@ const MB = 1024 * 1024;
 
 // ------------------------------------------------------------------
 // Budgets. The headroom is not uniform: the report prints each figure as a
-// share of its ceiling, and in September 2026 that ran from 76% (the field
-// report) to 99% (the on-demand total: the wave-1 review's fixes filled it
-// to within 100 bytes, until the journey map shed 1.6 KB of path points
-// that drew nothing), with the audio budget at 0% until Moses records his
-// introduction. To make room, remove something of
-// equal weight rather than raise a ceiling (docs/plan.md, "Stop doing").
-// When a ceiling does change, the README quotes these, so update it in the
-// same commit.
+// share of its ceiling, and in September 2026 that ran from 74% (the field
+// report over the wire) to 96% (the on-demand total: the wave-1 review's
+// fixes filled it to within 100 bytes, until the journey map shed 1.6 KB of
+// path points that drew nothing, then 3.6 KB more written as steps, which
+// paid for the time-zone table moving here out of script.js), with the
+// audio budget at 0% until Moses records his introduction. To make room,
+// remove something of equal weight rather than raise a ceiling
+// (docs/plan.md, "Stop doing"). When a ceiling does change, the README
+// quotes these, so update it in the same commit.
 // ------------------------------------------------------------------
 const BUDGETS = {
     criticalWire: {
@@ -90,9 +91,17 @@ const BUDGETS = {
         readme: 'fetched only when a visitor asks to hear him'
     },
     fieldReport: {
-        label: 'Text-only field report, whole page',
+        label: 'Text-only field report, the HTML file as saved (uncompressed)',
         max: 12 * KB,
         readme: 'the footer calls it "the whole portfolio in 9 KB" — this is what keeps that true'
+    },
+    // The same page as a visit costs it: its HTML gzipped, the visit counter
+    // (the one script it loads) and its icon. The footer's figure above is
+    // the file a reader can save; this is what reaching it transfers.
+    fieldReportWire: {
+        label: 'Text-only field report, over the wire (with its visit counter)',
+        max: 8 * KB,
+        readme: 'a first view like the other pages, counter included'
     },
     // The generated pages carry no images and no framework, so they should
     // stay small. A budget here is what stops "just one more section" turning
@@ -102,11 +111,42 @@ const BUDGETS = {
         max: 120 * KB,
         readme: 'generated from content/projects.json — text only, no images'
     },
+    // Sized for the page once it is full, not for today's empty state (about
+    // 88 KB), so the weekly Action cannot turn red just because counting
+    // started: twelve weeks of lines, fifteen referrers and every feature the
+    // site names came to about 90 KB from a fixture.
+    statsWire: {
+        label: 'Open counts page, over the wire (with fonts)',
+        max: 105 * KB,
+        readme: 'generated from content/stats.json — text only, no images'
+    },
     researchWire: {
         label: 'Research outputs page, over the wire (with fonts)',
         max: 110 * KB,
         readme: 'generated from content/research.json — text only, no images'
+    },
+    // "AI, Weighed" carries its calculator and the emission-factor data on
+    // arrival, so it is the heaviest page after the homepage and it went
+    // unbudgeted until a real browser measured it at 106 KB. The ceiling is
+    // that measurement plus 5%, not the usual headroom: budgets only ratchet
+    // down, and this one starts where the page already is.
+    carbonAiWire: {
+        label: 'AI, Weighed (carbon-ai.html), over the wire (with fonts)',
+        max: 111 * KB,
+        readme: 'the calculator and its emission-factor data arrive with the page'
     }
+};
+
+// The pages whose whole first view is budgeted, and the measurement that
+// holds each. `npm run smoke` loads every one of them in a browser and fails
+// if what it transfers comes in above the estimate here.
+const PAGE_BUDGETS = {
+    'index.html': 'criticalWire',
+    'case-studies.html': 'caseStudiesWire',
+    'research.html': 'researchWire',
+    'carbon-ai.html': 'carbonAiWire',
+    'stats.html': 'statsWire',
+    'field-report.html': 'fieldReportWire'
 };
 
 const fmt = (bytes) => (bytes >= MB ? `${(bytes / MB).toFixed(2)} MB` : `${(bytes / KB).toFixed(0)} KB`);
@@ -152,6 +192,14 @@ function criticalAssets(page = 'index.html') {
         if (m) add(m[1]);
     });
 
+    // The icon: a browser asks for it on arrival, on every page. It is about
+    // 200 bytes, but on the 6 KB field report that was most of the room
+    // between this estimate and what a browser measured.
+    (html.match(/<link[^>]+rel=["']icon["'][^>]*>/gi) || []).forEach((tag) => {
+        const m = tag.match(/href=["']([^"']+)["']/i);
+        if (m) add(m[1]);
+    });
+
     // Every face a stylesheet declares. Not every page uses every weight
     // above the fold, but the four here are all used somewhere on a first
     // screen, and counting them all is the conservative side to err on.
@@ -165,8 +213,8 @@ function criticalAssets(page = 'index.html') {
     });
 
     // An <img> without loading="lazy" is fetched during the first view.
-    // The lightbox's empty <img src=""> is not a request, so it is skipped
-    // by the sizeOf() check above.
+    // The lightbox's <img> has no src until an image is opened, so it adds
+    // nothing.
     (html.match(/<img[^>]*>/gi) || []).forEach((tag) => {
         if (/loading=["']lazy["']/i.test(tag)) return;
         const m = tag.match(/src=["']([^"']+)["']/i);
@@ -186,7 +234,7 @@ function onDemandAssets() {
         fs.readdirSync(modulesDir).filter(f => /\.(js|css)$/.test(f)).sort()
             .forEach(f => files.push(`modules/${f}`));
     }
-    ['voice-scripts.js', 'ai-carbon-data.js', 'assets/journey-map.svg', 'assets/audio/voice-manifest.json']
+    ['voice-scripts.js', 'ai-carbon-data.js', 'assets/journey-map.svg', 'assets/timezones.json', 'assets/audio/voice-manifest.json']
         .forEach((rel) => { if (sizeOf(rel) !== null) files.push(rel); });
     return files;
 }
@@ -218,13 +266,16 @@ function measure() {
         criticalWire: critical.reduce((n, a) => n + a.wire, 0),
         onDemand: onDemand.reduce((n, a) => n + a.wire, 0),
         caseStudiesWire: pageWire('case-studies.html'),
+        statsWire: pageWire('stats.html'),
         researchWire: pageWire('research.html'),
+        carbonAiWire: pageWire('carbon-ai.html'),
         largestImage: images.reduce((n, f) => Math.max(n, sizeOf(f) || 0), 0),
         allImages: images.reduce((n, f) => n + (sizeOf(f) || 0), 0),
         introAudio: audio.reduce((n, f) => n + (sizeOf(f) || 0), 0),
         // Uncompressed, because that is the number the footer quotes and the one a
         // reader can verify by saving the page.
-        fieldReport: sizeOf('field-report.html') || 0
+        fieldReport: sizeOf('field-report.html') || 0,
+        fieldReportWire: pageWire('field-report.html')
     };
     const largest = images.map(f => ({ f, size: sizeOf(f) || 0 })).sort((a, b) => b.size - a.size)[0] || null;
     return { measured, critical, onDemand, largest };
@@ -278,4 +329,4 @@ function report() {
 
 if (require.main === module) report();
 
-module.exports = { BUDGETS, measure, criticalAssets, onDemandAssets };
+module.exports = { BUDGETS, PAGE_BUDGETS, measure, criticalAssets, onDemandAssets };

@@ -16,14 +16,15 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 - **"Don't let it become a boat" flood scene**: an interactive Wupper cross-section in the Wuppertal dossier — slide the river from a calm day to July 2021 and watch the margin under the Schwebebahn's hanging cars shrink
 - **Field terminal**: press <code>`</code> anywhere (or the footer button) for a hidden green-on-black terminal — try `journey`, `drill`, `co2`, `voice`, `kushe`, `help`
 - **The spoken page**: one `Listen` control in the nav reads the section in view with the browser's own speech engine, which transfers **zero bytes**. The one recording on the site is Moses introducing himself in his own voice, offered once he has recorded it, fetched only on click and labelled with exactly what it transfers (see [Narration](#narration-the-spoken-page)). Nothing ever autoplays
-- **Carbon-aware by construction**: images ship as optimized WebP, the three typefaces are self-hosted subsets, and a first view costs about **280 KB over the wire, fonts included**, against a 300 KB ceiling `npm test` enforces — a budget, not a number in a README, and one that `npm run smoke` checks against a real browser (see [Performance](#performance)). Everything a visit does not reach — the narration player, the field terminal, the dossier games, the section-05 interactives — is fetched only when it is used. No request leaves the site's own origin. A live footer badge weighs each visit in the browser (Resource Timing API × Sustainable Web Design model), counting network transfer only. A low-energy mode pauses all animation and honours `prefers-reduced-motion`
+- **Carbon-aware by construction**: images ship as optimized WebP, the three typefaces are self-hosted subsets, and a first view costs about **282 KB over the wire, fonts included**, against a 300 KB ceiling `npm test` enforces — a budget, not a number in a README, and one that `npm run smoke` checks against a real browser (see [Performance](#performance)). Everything a visit does not reach — the narration player, the field terminal, the dossier games, the section-05 interactives — is fetched only when it is used. Nothing is loaded from any other origin, and only two things are ever sent to one, both to the site's own Apps Script endpoint: a contact message, and one cookieless visit count per page view (never under Do Not Track or Global Privacy Control; see [The visit counter and privacy](#the-visit-counter-and-privacy)). A live footer badge weighs each visit in the browser (Resource Timing API × Sustainable Web Design model), counting network transfer only. A low-energy mode pauses all animation and honours `prefers-reduced-motion`
 - **[Case studies](case-studies.html), evidence-first**: the same six projects as **problem → method → artifact → result**. Every result carries the basis it rests on and says plainly whether you can check it from outside; every artifact says whether it is public, available on request, or held by the client. See [Content pipeline](#content-pipeline)
 - **Role-specific lenses**: `case-studies.html?lens=water`, `?lens=climate-risk`, `?lens=sustainable-ai` — shareable views that reframe the portfolio for one kind of role. They **reorder and frame, they never filter**: every case study stays on the page in every view, because a view that hides inconvenient work is a CV that lies by omission. Without JavaScript the switcher steps aside and every case study shows in the default view
 - **[Research outputs](research.html)**: theses, reports, datasets, code and tools, each labelled public / on request / held by the client. No DOI, journal or conference is named anywhere, because none of this work has one — and a test fails the build if one ever appears without proof
+- **[Open counts](stats.html)**: what the site's own cookieless counter has counted, rebuilt weekly — the five numbers that say whether the site works, page views by page, lens and window width, referrers, features used and bytes per page view, in whole weeks. Every count under 5 reads `<5`, a figure that would let one be worked out by subtraction reads `held`, and the page prints the exact payload a page view sends. See [Open counts](#open-counts)
 - **Borehole core-log experience timeline**: career history logged the way a geologist logs a core — depth is time, every layer is a chapter
 - **"AI, Weighed" live widget**: a homepage slice of the EcoPrompt Coach research — model × workload × grid → energy, carbon, water, in units people can feel
 - **Evidence-first skills**: no invented percentages — every tool links to the project where it earned its place, plus real field numbers (164 water points itemized, 70% strike rate)
-- **The Assay**: paste a job ad beside the contact form and get an honest fit, graded in the browser with nothing sent. It lists matched evidence with links, and gaps (languages, years of experience, named tools, consulting-firm or director-level experience, financial modelling, a PhD or a law degree), first when they cap the grade; right to work, visa, clearance, driving licence, relocation and the level of English are named as things to confirm with Moses, never guessed. General skills (stakeholders, data, delivery, international work, research) count towards a grade but never make one: an ad with nothing from his own field is "Different field" Its facts about him come from `content/profile.json`
+- **The Assay**: paste a job ad beside the contact form and get an honest fit, graded in the browser; the ad itself is never sent (the page view's count carries the grade, see [The visit counter and privacy](#the-visit-counter-and-privacy)). It lists matched evidence with links, and gaps (languages, years of experience, named tools, consulting-firm or director-level experience, financial modelling, a PhD or a law degree), first when they cap the grade; right to work, visa, clearance, driving licence, relocation and the level of English are named as things to confirm with Moses, never guessed. General skills (stakeholders, data, delivery, international work, research) count towards a grade but never make one: an ad with nothing from his own field is "Different field" Its facts about him come from `content/profile.json`
 - **Field Notes**: short essays connecting boreholes, scenario storytelling and sustainable AI
 - **Modern design**: dark theme with vibrant green accents, light mode, responsive layout, full SEO/social metadata (Open Graph, JSON-LD, sitemap)
 - **Comprehensive sections**: journey, about (with CV download), experience, projects with photo dossiers, AI cost widget, skills, education, field notes, contact form
@@ -32,7 +33,7 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 
 - **HTML5**: Semantic markup for better SEO and accessibility
 - **CSS3**: Modern styling with CSS Grid, Flexbox, animations, and transitions
-- **JavaScript (Vanilla)**: no framework, no bundler. A 72 KB core (`script.js`, 23 KB gzipped) and four on-demand modules in `modules/` (plus the player's stylesheet, `modules/dispatch.css`) that the core fetches the first time a feature is used
+- **JavaScript (Vanilla)**: no framework, no bundler. A 73 KB core (`script.js`, 23 KB gzipped) and four on-demand modules in `modules/` (plus the player's stylesheet, `modules/dispatch.css`) that the core fetches the first time a feature is used
 - **Icons**: an inline SVG symbol sprite, no icon font
 - **Fonts**: Inter, Space Grotesk and IBM Plex Mono, self-hosted as Latin subsets under the SIL Open Font License (see [Fonts](#fonts))
 - **GitHub Pages**: Free hosting for static websites
@@ -305,14 +306,19 @@ npm install
 npm test          # everything below
 ```
 
+Node 22.22 or later in the 22 line, or 24.8 or newer (`engines` in
+`package.json`): html-validate, which `npm test` runs, needs one of those, and
+CI uses Node 22.
+
 | Command | What it holds in place |
 |---|---|
 | `npm run build:check` | every generated page still matches `content/` |
 | `npm run fonts:check` | the committed fonts still hash to their manifest and every stylesheet's `@font-face` block is current |
-| `npm run test:unit` | the twelve suites in `tests/`, listed below (892 passing assertions on 2026-09-26) |
+| `npm run lint:html` | every page is valid HTML ([html-validate](https://html-validate.org/)'s recommended rules; the two relaxations are explained in `.htmlvalidate.cjs`) |
+| `npm run test:unit` | every `tests/*.test.js`, side by side, one process per suite, so a new suite runs the day it exists: the sixteen listed below (1307 passing assertions on 2026-09-27) |
 | `npm run map:check` | the committed `journey-map.svg` still matches its generator |
 | `npm run budget` | the weights this README quotes (see [Performance](#performance)) |
-| `npm run smoke` | every page in a real browser: no errors, no failed or off-origin requests, every on-demand module arrives when used, and the measured first view is no heavier than the budget claims; every page again with JavaScript off, and the homepage with `script.js` blocked and late; the skip link, Back, the theme switch, back to top and the nav bar at every width; the listen control and its player; the Assay; and the carbon-ai page's dropdowns and numbers (its own CI job; needs Chromium) |
+| `npm run smoke` | every page in a real browser: no errors, no failed or off-origin requests, every on-demand module arrives when used, no axe-core violation at 1440×900 or 390×844 in either theme, and each budgeted page's measured first view no heavier than the budget claims; every page again with JavaScript off, and the homepage with `script.js` blocked and late; the skip link, Back, the theme switch, back to top and the nav bar at every width; the listen control and its player; the Assay; where jumps land while sections are drawn on demand, that reading back up after skipping ahead moves nothing, find-in-page and printing, which loops run, and how busy the idle page keeps the main thread at 4× CPU slowdown; the carbon-ai page's dropdowns and numbers; and the visit counter's one request, taken apart: exactly the documented fields, no cookie, no Referer, once per page view, and nothing under Do Not Track or Global Privacy Control or with JavaScript off (its own CI job; needs Chromium — `-- --browser firefox` runs it in Firefox, which CI also does) |
 | `npm run mcp:verify` | the pinned MCP package still hashes to the reviewed tarball (needs network) |
 
 The suites, and the failure each one exists to prevent:
@@ -384,15 +390,48 @@ The suites, and the failure each one exists to prevent:
   result a basis; no artifact claims to be public without a working link; the
   lenses reorder without ever dropping a case study; and the validator is fed
   deliberately fabricated links to prove it still rejects them.
+- **`stats.test.js`** — the open counts: every published count is 5 or more
+  or reads `<5`, and no `<5` can be worked out by subtraction, from one table
+  or a chain of them (the rows the review that found it used are the test);
+  figures are whole weeks, with nothing published before the first one ends;
+  no share is made from a hidden count, small referrers are grouped, names
+  the site does not use are published only as "other", no daily row reaches
+  `content/stats.json`, and the payload `stats.html` shows has exactly the
+  counter's fields. The fetcher runs end to end against a local server, and
+  stays green with no source configured, no whole week yet, or a sheet the
+  endpoint could not read this time.
 - **`html.test.js`** — button types, named landmarks, dialog semantics, image
   dimensions, labelled controls, resolvable links, valid JSON-LD, and no
-  stylesheet, script, preload or preconnect pointing off this origin.
+  stylesheet, script, preload or preconnect pointing off this origin. The one
+  off-site address any shipped script may name is the Apps Script deployment
+  the contact form posts to (the visit counter adds `?action=count`); nothing
+  may use `navigator.sendBeacon`, which cannot leave cookies out; and every
+  page loads `count.js` once, deferred.
 - **`apps-script.test.js`** — the contact form's backend
   (`google-apps-script/Code.gs`), run in a VM with stand-ins for Google's
   services: both ways in (the JSON post and the JavaScript-free form post,
   which gets a page back that never says "undefined"), formulas stored as
-  text, the honeypot, and the per-submitter rate limit. It cannot tell you the
-  live deployment is configured; `docs/owner-checklist.md` says how to check.
+  text, the honeypot, and the per-submitter rate limit. And the visit
+  counter's end of it: a visit adds to the right daily totals and a second
+  one increments them in place, anything that is not exactly schema v1
+  (an extra key, a wrong type, 21 features, a huge `kb`) changes nothing,
+  the lock is taken (a count waits for it at most 1.5 s, and past 30 a
+  minute not at all, so counts never keep a message waiting), `?test=1`
+  stays off the public tab, `?action=stats` serves the rows to the right
+  token and to nobody else, and each contact message is counted unless the
+  site says the browser asked not to be tracked. It cannot tell you
+  the live deployment is configured; `docs/owner-checklist.md` says how to
+  check.
+- **`count.test.js`** — the visit counter's payload, field by field: the page
+  (404 names itself), the lens the visit arrived with, the deepest part of
+  `<main>` reached (one IntersectionObserver, no scroll handler), features
+  clicked or fetched, deduplicated and capped at 20 (two CV links in one view
+  add `cv-download` once), the referrer's host and nothing more of it, the
+  viewport class and the KB transferred; one count per page view, none under
+  Do Not Track or GPC, never an error; and a contact message sent under
+  either says `count: false`. Every payload is run through the server's own
+  schema check, every `data-analytics` name on the site must be one the
+  counter keeps, and every CV and email link on a counted page must have one.
 - **`navigation.test.js`** — an in-page link updates the address (so Back
   works) and moves focus to its target, Back and Forward land there again and
   reopen a closed dossier, the theme switch sits in the nav bar and names what
@@ -405,11 +444,28 @@ The suites, and the failure each one exists to prevent:
   to it, lands under the nav bar and stays there, and
   at 390x844 back to top never covers a control from the hero to the footer,
   yet shows on the last screen.
+- **`tooling.test.js`** — the machinery under the rest: the runner fails when
+  any suite fails and keeps each suite's output in one block, `npm test` runs
+  it rather than a hand-kept list of suites, the fake clock fires timers in
+  order and only when told, and every page with a first-view budget exists
+  and is measured.
+- **`cpu.test.js`** — the page's keys go through one listener, so one Escape
+  closes one layer (terminal, then lightbox, then player, then menu) and the
+  backtick follows one rule for "typing"; one `mks.motionOK()` answers for
+  reduced motion and low-energy mode, live; the time-zone table is fetched
+  only when the journey map needs it; everything the core shares hangs off
+  `window.mks`; section offsets are measured once a frame and a jump
+  lands again as sections take their real height; sections skipped past are
+  drawn once the page rests, and every image states its real shape; and every
+  looping animation runs on transform and opacity and pauses out of view and
+  in a hidden tab.
 
 The jsdom harness (`tests/harness.js`) evaluates `script.js` and then every
 file in `modules/`, so the suites see the page the way a visitor who used
 every feature would — and a module that declared anything at the top level,
-or reached for storage directly, fails `resilience.test.js`.
+or reached for storage directly, fails `resilience.test.js`. A suite that
+tests timing passes `clock: true` and moves time with `await clock.tick(ms)`
+instead of sleeping, so a 1.7-second timeout costs nothing to test.
 
 ## Content pipeline
 
@@ -426,6 +482,7 @@ Everything derived now comes from `content/`:
 | `content/lenses.json` | the role-specific views |
 | `content/research.json` | `research.html` |
 | `content/narration.json` | `voice-scripts.js` |
+| `content/stats.json` | `stats.html`, the open counts (written weekly by `scripts/fetch-stats.js`) |
 
 ```bash
 npm run build:content     # regenerate everything derived from content/
@@ -468,6 +525,53 @@ confirmed the open-ended facts (the "Present" role in particular) were still
 true. When that goes stale the test prints a notice rather than failing — a
 suite that goes red on a calendar date is one people learn to ignore.
 
+### Open counts
+
+`stats.html` is built from `content/stats.json`, which only
+`scripts/fetch-stats.js` writes. A weekly Action (`.github/workflows/stats.yml`,
+Mondays early UTC, or by hand) fetches the counter's daily totals, suppresses
+them, rebuilds the page, runs `npm test` and commits the two files if they
+changed. The raw daily rows never enter the repository.
+
+What is published is whole weeks only, Monday to Sunday: last week, all time
+from the first full week to last Sunday, and one line per week. The days
+before the first Monday and the week still running are in no figure, so no
+sum of the figures leaves a single day's count behind, and nothing is
+published at all until a full week has ended. Every count under 5 is `"<5"`.
+Where a table adds up to a total shown beside it (pages and window classes
+to page views, the known lenses to lens-link visits, the weeks to all time),
+a lone `"<5"` would be the total less the rest, so the smallest figure
+beside it is held back too, as `"held"`, until nothing hidden can be worked
+out, through any chain of such sums. `scripts/lib/content.js` fails the build
+if a count under 5, one that subtraction would give away, a part week, today,
+a named referrer under 5 or any field it does not know gets into
+`content/stats.json`.
+
+To switch it on, first give the Apps Script a `STATS_TOKEN` script property
+(any long random string) and publish the current
+`google-apps-script/Code.gs` as a new version of the existing deployment, so
+that `?action=count` and `?action=stats` exist. `?action=stats` answers only
+a request with `&token=` set to that string: its rows are not suppressed, and
+the deployment's address is in `count.js` on every page. Then make the web
+app URL with `?action=stats&token=<the string>` a repository **secret**
+`STATS_SOURCE_URL` (Settings → Secrets and variables → Actions). Do it in
+that order: an older deployment answers `?action=stats` with its health
+check, and the Action fails on that rather than mistake it for an empty
+week. The `Daily` sheet published as CSV also works as the source, but a
+published tab is readable by anyone who has its link, which `stats.html`
+says is not the case. Until the secret is set, the Action says so and
+commits nothing, and the page says counting has not started. The steps, and
+how to check each, are items S1 and S2 in
+[docs/owner-checklist.md](docs/owner-checklist.md). To run it locally:
+
+```bash
+STATS_SOURCE_URL='<url>' node scripts/fetch-stats.js && npm run build:content
+```
+
+The sheet's date column should be formatted as plain text; dates Apps Script
+serialises as instants are read back to the Amsterdam date, anything else is
+dropped and counted in the log. Nothing read from the source is ever printed.
+
 ### Editing the narration
 
 `content/narration.json` is the only copy of the spoken text; `voice-scripts.js`
@@ -476,6 +580,114 @@ the current text, and nothing is rendered unless someone opts in with
 `npm run voice -- --sections`. The `intro` script is the exception — it is the
 words of Moses's recording and its captions, so once he has recorded it, change
 it only to match what he said, then run `npm run voice:intro` again.
+
+## The visit counter and privacy
+
+The site counts its own page views, so that each later change to it can be
+judged against what readers actually do ([docs/plan.md](docs/plan.md),
+Phase 1). It uses no analytics service, and the count sets no cookie and
+reads or writes no browser storage. (The site itself remembers the theme,
+low-energy mode, the reading speed and whether the intro has played, in the
+visitor's own browser, and sends none of it.) All of it is `count.js`: 3 KB
+(2 KB gzipped), loaded deferred on every page and counted in each page's
+budget.
+
+**Status.** Built and tested, but not yet counting: the live Apps Script has
+to be published again with the counter's code first (item S1 in
+[docs/owner-checklist.md](docs/owner-checklist.md)). Until then the counts
+reach the old script. Every version of `Code.gs` committed here from
+2026-07-17 on reads a count as a contact message with no name and refuses it,
+so nothing is recorded and nobody is emailed; the 2025 versions would have
+recorded and emailed every one, which is why the checklist publishes the new
+script before this reaches the live site.
+
+**What one page view sends.** One POST, the first time the page is hidden or
+left (`visibilitychange` to hidden, or `pagehide`), and never a second for the
+same page view. This is the whole of one, exactly as `count.js` sends it:
+
+```json
+{"v":1,"page":"index","lens":"","deepest":"contact","features":["cv-download-hero","cv-download","module-dossier"],"ref":"www.linkedin.com","vp":"m","kb":284}
+```
+
+| Key | What it holds |
+|---|---|
+| `v` | `1`, the version of this format |
+| `page` | the page's file name without `.html` (`index`, `case-studies`, `research`, `carbon-ai`, `field-report`, `stats`), or `404` |
+| `lens` | the `?lens=` the page view arrived with, or `""` |
+| `deepest` | the id of the furthest top-level part of `<main>` that came on screen: on the homepage one of the nine sections the nav links to, from `journey` to `contact`; `csGrid` on the case studies; `""` on the pages that have no such part |
+| `features` | up to 20 distinct names of things used: the site's `data-analytics` hooks (27 today, such as `cv-download-hero` and `receipt-open`), `cv-download` once for a view that used any CV link (the CV-downloads figure counts page views), `cv-download-terminal` when the field terminal's `cv` command fetches the CV, `module-<name>` for each on-demand module fetched, `contact-form-submit`, and the Assay's grade (`assay-high`, `assay-workable`, `assay-marginal`) |
+| `ref` | the referring site's host only (`www.linkedin.com`); `""` if there was none, or it was this site |
+| `vp` | the browser window's width as a class: `s` under 600 px, `m` under 1024 px, `l` wider |
+| `kb` | whole KB this page view transferred, from the browser's Resource Timing API, so a cached revisit counts as the near-zero it is |
+
+**What is never sent or stored.**
+
+- No cookie, no browser storage and no id of any kind, so two page views
+  cannot be tied to each other, or to a person. Every published figure is a
+  count of page views, not of people.
+- No `Referer` header and no full referring address, only its host.
+- Nothing typed into the page. The Assay's grade is counted; the job ad
+  pasted into it never leaves the page.
+- No IP address, browser, device or operating system, and no screen or
+  window size beyond the three classes. Apps Script does not give the script the
+  sender's address or headers, so there is nothing to store even by mistake.
+  Google, which runs the endpoint, receives the request as it receives any
+  other.
+- No time finer than the day the count arrives.
+
+**Do Not Track and Global Privacy Control.** If the browser sends either
+(`navigator.doNotTrack` is `"1"` or `navigator.globalPrivacyControl` is
+`true`), `count.js` stops before it adds a single listener, and nothing is
+sent. With JavaScript off, nothing is sent either. If `script.js` fails to
+load, the counter still counts, since it does not depend on it. A contact
+message from such a browser carries `count: false`, and `Code.gs` leaves it
+out of the daily contact total; a message sent with JavaScript off cannot
+say so (Apps Script does not show the script the request's headers), and is
+counted.
+
+**Why a keepalive `fetch`, not `sendBeacon`.** The plan named
+`navigator.sendBeacon`, the usual way to send something as a page closes. It
+always sends the browser's cookies for the address it posts to — here
+`script.google.com`, where a visitor signed in to Google has session cookies —
+and a `Referer` unless the whole page changes its referrer policy, and it
+cannot be told otherwise for one request. `fetch` with `keepalive: true`
+outlives the page the same way, and it takes `credentials: 'omit'` and
+`referrerPolicy: 'no-referrer'`. It is sent `mode: 'no-cors'` with a plain
+string body, so there is no preflight, which Apps Script cannot answer, and
+the page never reads the reply. `tests/html.test.js` fails if any script the
+site ships calls `sendBeacon`.
+
+**Where it goes.** To the same Google Apps Script deployment the contact form
+posts to, at `?action=count`; the address is in `count.js`, and
+`tests/html.test.js` fails if it differs from the form's. `Code.gs` accepts
+only a payload that is exactly the one above in shape — those eight keys and
+no others, each of the right type, at most 20 features, `kb` from 0 to
+100,000 — and silently drops anything else. It then adds one to a handful of
+daily totals in a `Daily` tab of Moses's Google Sheet, under the same lock the
+contact form uses, waiting for it at most 1.5 s, and not at all past 30
+counts a minute, so a burst of page views never keeps a contact message
+waiting (a dropped count makes the figures a floor, as `stats.html` says):
+`date` (Amsterdam), `metric`, `key`, `count`. No single page view is kept.
+`GET ?action=stats&token=...` serves those daily totals to the weekly Action,
+which holds the token as a secret, and to nobody else; once a week the Action
+suppresses them and rebuilds [stats.html](stats.html) (see
+[Open counts](#open-counts)).
+
+**Seen from the page.** The count is a request like any other, so once it has
+gone (after the tab has been hidden once), the footer's carbon badge shows a
+leading "+" and the Receipt lists "1 off-site request not counted": a request
+to another site that the browser will not let the page weigh, as after a
+contact message.
+
+**How the promise is held.** `tests/count.test.js` checks the payload field
+by field and runs every one it builds through `Code.gs`'s own schema check;
+`tests/apps-script.test.js` holds the server to the same schema;
+`tests/html.test.js` allows the one off-site address and no `sendBeacon`; and
+`npm run smoke` takes a real browser's count apart: exactly the eight keys, no
+cookie, no `Referer`, once per page view, and nothing under Do Not Track,
+Global Privacy Control or with JavaScript off. Every other browser context in
+the smoke test opens with Global Privacy Control on, so a test run never sends
+a count to the real endpoint.
 
 ## Customization Guide
 
@@ -508,11 +720,18 @@ To change the color scheme, edit the CSS variables in `style.css`:
 
 ## Browser Support
 
-- ✅ Chrome (latest)
-- ✅ Firefox (latest)
-- ✅ Safari (latest)
-- ✅ Edge (latest)
-- ✅ Mobile browsers (iOS Safari, Chrome Mobile)
+What CI runs every page in, on every pull request:
+
+- ✅ Chromium, the build pinned by `playwright-core` — so Chrome and Edge,
+  which share its engine
+- ◐ Firefox, the build pinned by `playwright-core` (142 at the moment): the
+  job is in CI, and its first run is on the pull request that adds it; this
+  becomes ✅ once that run has passed
+- ✅ Phone width (390×844) and desktop (1440×900), in both themes, for the
+  accessibility checks — a browser window at that size, not a real phone
+
+Safari (WebKit) is not tested, on a Mac or an iPhone. Nothing on the site is
+knowingly specific to one engine, but this list claims only what CI runs.
 
 ## Performance
 
@@ -524,14 +743,17 @@ every run of `npm test`, and the build fails when they are exceeded.
 
 | Budget | Measured | Ceiling |
 |---|---|---|
-| First view of the homepage, over the wire (fonts included) | ~280 KB | 300 KB |
-| Everything a full visit adds on demand (modules, scripts, map) | ~71 KB | 72 KB |
-| Case studies page, over the wire (fonts included) | ~93 KB | 120 KB |
-| Research outputs page, over the wire (fonts included) | ~88 KB | 110 KB |
-| Text-only field report, whole page | ~9 KB | 12 KB |
+| First view of the homepage, over the wire (fonts included) | ~282 KB | 300 KB |
+| Everything a full visit adds on demand (modules, scripts, map) | ~69 KB | 72 KB |
+| Case studies page, over the wire (fonts included) | ~94 KB | 120 KB |
+| Research outputs page, over the wire (fonts included) | ~90 KB | 110 KB |
+| AI, Weighed (`carbon-ai.html`), over the wire (fonts included) | ~106 KB | 111 KB |
+| Text-only field report, the HTML file (the size the footer quotes) | ~9 KB | 12 KB |
+| Text-only field report, over the wire (with its visit counter) | ~6 KB | 8 KB |
 | Largest single image | ~200 KB | 220 KB |
-| Every image in the repository | ~3.24 MB | 3.5 MB |
+| Every image in the repository | ~3.23 MB | 3.5 MB |
 | Recorded narration: Moses's introduction (0 KB until he records it) | 0 KB | 800 KB |
+| Open counts page, over the wire (fonts included; empty today) | ~90 KB | 105 KB |
 
 **What the estimate used to miss.** An earlier version of this table said
 234 KB. Opening the page in a real browser measured over 500 KB. Two things
@@ -547,12 +769,12 @@ than the old one and smaller than the old truth.
 **What "over the wire" means.** GitHub Pages compresses text, so HTML, CSS and
 JS are counted gzipped — what a visitor actually downloads — while images and
 fonts are counted as-is. The first view is `index.html`, its stylesheet, the
-core script, the four font files and the one preloaded hero image. Everything
-else is fetched only when it is reached: the journey map on the first scroll,
-the other 32 images as you get to them, the remaining hero backgrounds when the
-rotation needs them, and no narration until someone presses play. So "every
-image in the repository" is the cost of opening every gallery, not the cost of
-arriving.
+core script, the visit counter, the four font files, the icon and the one
+preloaded hero image. Everything else is fetched only when it is reached: the
+journey map on the first scroll, the other 32 images as you get to them, the
+remaining hero backgrounds when the rotation needs them, and no narration until
+someone presses play. So "every image in the repository" is the cost of opening
+every gallery, not the cost of arriving.
 
 **On-demand modules.** About two thirds of the site's JavaScript serves
 features most visits never reach. It used to ship in one 155 KB file, parsed
@@ -565,9 +787,10 @@ each file the moment it is first needed:
 | `modules/dispatch.js` (+ `dispatch.css`, `voice-scripts.js`) | the first press of Listen, or `voice` in the terminal | ~16 KB |
 | `modules/dossier.js` | a project dossier with a mini-game is opened | ~6 KB |
 | `modules/terminal.js` | the backtick key or the footer button | ~5 KB |
+| `assets/timezones.json` | the journey map arrives, for its "you?" mark (the zone is looked up in the page, never sent) | ~2 KB |
 
 Modules are classic scripts sharing the page's global scope: they declare
-nothing at the top level and reach the core only through `window.mks*`. The
+nothing at the top level and reach the core only through `window.mks`. The
 Listen button is in the page's own HTML, shown by the core once something can
 speak; the first press fetches the player, its stylesheet and its scripts.
 
@@ -591,6 +814,7 @@ npx lighthouse https://moseskolleh.github.io/sustaintheworld/ --view
   - Lazy loading for images and hero backgrounds; on-demand modules for the features
   - One passive, frame-coalesced scroll listener for the navbar, progress bar, active link and scroll-to-top button; section offsets measured once, not per event
   - The hero rotation stops in hidden tabs and once the hero has scrolled away
+  - Sections are laid out and painted only as they near the screen (`content-visibility: auto`, where the browser anchors scrolling; a section the reader has passed stays drawn); every looping animation runs on transform and opacity, which the compositor handles alone, and pauses out of view and in hidden tabs. Measured at 4× CPU slowdown in Chromium (medians of 15 loads before, 10 after): layout on load 238 → 125 ms, the longest task 238 → 110 ms, and main-thread work while nobody touches the page 1,023 → 16 ms per 3 s at the top and 1,250 → 7 ms mid-page; `npm run smoke` holds the idle figure under a ceiling
   - Intrinsic `width`/`height` on every image, so nothing shifts as they arrive
 
 ### Fonts
@@ -629,11 +853,19 @@ aspirational:
   there, so the next Tab lands inside `<main>`; every in-page link moves focus
   and updates the address (`tests/navigation.test.js`, `npm run smoke`)
 - Single-letter shortcuts stand down while a form control has focus
+- Escape closes one layer at a time: the field terminal, then the lightbox, then the narration player, then the menu
 - No duplicate `id`s, no focusable element inside an `aria-hidden` container
 
-Not machine-checked, and worth a manual pass when the design changes: contrast
-ratios, focus-visible styling, and screen-reader flow through the interactive
-widgets.
+`npm run smoke` adds axe-core in a real browser: every page at 1440×900 and
+390×844 in both themes, and the homepage again with a dossier, the Assay's
+verdict, the carbon receipt, the player, the terminal and the phone menu
+open, and with its script blocked. Any violation fails, contrast included —
+but axe fails only what it can decide, and text over an image or a gradient
+it leaves for a person to review.
+
+Not machine-checked, and worth a manual pass when the design changes:
+contrast over images and gradients, focus-visible styling, and screen-reader
+flow through the interactive widgets.
 
 ## Contact
 

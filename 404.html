@@ -7,9 +7,13 @@
     <meta name="robots" content="noindex">
     <link rel="icon" type="image/svg+xml" href="/sustaintheworld/assets/favicon.svg">
     <meta name="theme-color" content="#0a0a0a">
-    <!-- Self-contained on purpose: a 404 should cost almost nothing to serve.
-         Links use the GitHub Pages project base path; update them if the site
-         moves to a custom domain. -->
+    <!-- The visit counter, the one script this page loads. data-page names the
+         page, because the address it is served at is whatever address was
+         not found. -->
+    <script defer src="/sustaintheworld/count.js" data-page="404"></script>
+    <!-- Otherwise self-contained on purpose: a 404 should cost almost nothing
+         to serve. Links use the GitHub Pages project base path; update them
+         if the site moves to a custom domain. -->
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -96,7 +100,8 @@
             <nav class="links" aria-label="Places to drill instead">
                 <a href="/sustaintheworld/">&larr; back to the surface</a>
                 <a href="/sustaintheworld/#projects">the project dossiers</a>
-                <a href="/sustaintheworld/field-report.html">8&nbsp;KB field report</a>
+                <a href="/sustaintheworld/field-report.html">9&nbsp;KB field report</a>
+                <a href="/sustaintheworld/stats.html">open counts</a>
             </nav>
         </div>
     </main>
