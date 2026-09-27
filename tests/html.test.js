@@ -222,6 +222,64 @@ PAGES.forEach((page) => {
     });
 });
 
+// --- The one request allowed to leave the site: the visit counter's --------
+// Pages link to other sites, but at runtime nothing may be fetched from or
+// sent to anywhere else, with exactly one exception: the Apps Script
+// deployment the contact form posts to, which the visit counter (count.js)
+// also posts to with ?action=count. This holds every script the site ships
+// to that: the only absolute addresses any of them may contain are that
+// deployment, that deployment with ?action=count, and the SVG namespace
+// (a name, never fetched). `npm run smoke` checks the same at runtime and
+// fails on any request to anywhere else.
+{
+    const SVG_NS = 'http://www.w3.org/2000/svg';
+    const js = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
+    const GAS = (js('script.js').match(/const GOOGLE_APPS_SCRIPT_URL = '([^']+)'/) || [])[1] || '';
+    const COUNT_URL = `${GAS}?action=count`;
+    assert(/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(GAS), `Endpoint: script.js names one Apps Script deployment (${GAS || 'none'})`);
+
+    const form = (read('index.html').match(/<form[^>]+id=["']contactForm["'][^>]*>/i) || [''])[0];
+    assert(attr(form, 'action') === GAS, 'Endpoint: the contact form without JavaScript posts to the same deployment');
+
+    const shipped = [
+        'script.js', 'count.js', 'carbon-ai.js', 'ai-carbon-data.js', 'voice-scripts.js',
+        ...fs.readdirSync(path.join(ROOT, 'modules')).filter(f => f.endsWith('.js')).map(f => `modules/${f}`)
+    ].map(rel => [rel, js(rel)]);
+    PAGES.forEach((page) => {
+        const inline = (read(page).match(/<script(?![^>]*\bsrc=)(?![^>]*ld\+json)[^>]*>[\s\S]*?<\/script>/gi) || []).join('\n');
+        if (inline) shipped.push([`${page} (inline)`, inline]);
+    });
+
+    const allowed = new Set([GAS, COUNT_URL, SVG_NS]);
+    const offenders = [];
+    shipped.forEach(([rel, text]) => {
+        (text.match(/['"`](?:https?:)?\/\/[^'"`\s$]*/g) || []).map(m => m.slice(1))
+            .filter(url => !allowed.has(url))
+            .forEach(url => offenders.push(`${rel}: ${url}`));
+    });
+    assert(offenders.length === 0, `Endpoint: no shipped script names any other off-site address (${offenders.join(', ') || 'none'})`);
+
+    const count = js('count.js');
+    const urls = count.match(/['"`](?:https?:)?\/\/[^'"`\s$]*/g) || [];
+    assert(urls.length === 1 && urls[0].slice(1) === COUNT_URL, `Endpoint: count.js sends to that deployment with ?action=count and nowhere else (${urls.map(u => u.slice(1)).join(', ')})`);
+
+    // sendBeacon always carries the browser's cookies for the address it
+    // posts to, and cannot be told not to; count.js uses a keepalive fetch
+    // with credentials: 'omit' instead. This keeps it that way.
+    const beacons = shipped.filter(([, text]) => /\bsendBeacon\s*\(/.test(text)).map(([rel]) => rel);
+    assert(beacons.length === 0, `Endpoint: nothing uses navigator.sendBeacon, which cannot leave cookies out (${beacons.join(', ') || 'none'})`);
+}
+
+// --- Every page is counted, by the one counter ------------------------------
+PAGES.forEach((page) => {
+    const scripts = tags(read(page), 'script').filter(t => /(^|\/)count\.js$/.test(attr(t, 'src') || ''));
+    assert(scripts.length === 1, `${page}: loads count.js once (${scripts.length})`);
+    if (scripts[0]) assert(/\bdefer\b/.test(scripts[0]), `${page}: count.js is deferred, so it never holds up the page`);
+    if (page === '404.html' && scripts[0]) {
+        assert(attr(scripts[0], 'data-page') === '404', '404.html: names itself to the counter, since its address is whatever was missing');
+    }
+});
+
 // --- The lightbox is a modal and has to say so ----------------------------
 {
     const html = read('index.html');

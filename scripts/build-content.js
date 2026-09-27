@@ -139,6 +139,7 @@ function pageShell({ title, description, canonical, heroTag, heroTitle, heroLead
     <link rel="preload" as="font" type="font/woff2" href="assets/fonts/ibm-plex-mono-latin-400.woff2" crossorigin>
     <link rel="stylesheet" href="carbon-ai.css">
     <link rel="stylesheet" href="content.css">
+    <script defer src="count.js"></script>
 </head>
 <body>
     <a class="skip-link" href="#main">Skip to content</a>

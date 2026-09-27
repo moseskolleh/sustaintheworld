@@ -158,8 +158,10 @@ function rules(css) {
     const src = read('carbon-ai.html');
     assert(/class="nojs-note"/.test(src), 'carbon-ai.html: a note stands in for the calculator without JavaScript');
     // A calculator whose scripts never arrived showed blank selects and
-    // dashes, with the note hidden because JavaScript was on.
-    const tags = src.match(/<script\b[^>]*\bsrc=[^>]*>/g) || [];
+    // dashes, with the note hidden because JavaScript was on. The visit
+    // counter is not one of the calculator's scripts: a blocker that stops it
+    // must not take the calculator down with it.
+    const tags = (src.match(/<script\b[^>]*\bsrc=[^>]*>/g) || []).filter(t => !/\bsrc=["']count\.js["']/.test(t));
     assert(tags.length === 2 && tags.every(t => /onerror=["'][^"']*classList\.remove\('js'\)/.test(t)),
         `carbon-ai.html: each script that fails to load brings the note back (onerror on ${tags.filter(t => /onerror/.test(t)).length} of ${tags.length})`);
     assert(/class="nojs-note"/.test(html), 'index.html: a note stands in for the section-05 calculators without JavaScript');

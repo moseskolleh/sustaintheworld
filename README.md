@@ -16,7 +16,7 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 - **"Don't let it become a boat" flood scene**: an interactive Wupper cross-section in the Wuppertal dossier — slide the river from a calm day to July 2021 and watch the margin under the Schwebebahn's hanging cars shrink
 - **Field terminal**: press <code>`</code> anywhere (or the footer button) for a hidden green-on-black terminal — try `journey`, `drill`, `co2`, `voice`, `kushe`, `help`
 - **The spoken page**: one `Listen` control in the nav reads the section in view with the browser's own speech engine, which transfers **zero bytes**. The one recording on the site is Moses introducing himself in his own voice, offered once he has recorded it, fetched only on click and labelled with exactly what it transfers (see [Narration](#narration-the-spoken-page)). Nothing ever autoplays
-- **Carbon-aware by construction**: images ship as optimized WebP, the three typefaces are self-hosted subsets, and a first view costs about **280 KB over the wire, fonts included**, against a 300 KB ceiling `npm test` enforces — a budget, not a number in a README, and one that `npm run smoke` checks against a real browser (see [Performance](#performance)). Everything a visit does not reach — the narration player, the field terminal, the dossier games, the section-05 interactives — is fetched only when it is used. No request leaves the site's own origin. A live footer badge weighs each visit in the browser (Resource Timing API × Sustainable Web Design model), counting network transfer only. A low-energy mode pauses all animation and honours `prefers-reduced-motion`
+- **Carbon-aware by construction**: images ship as optimized WebP, the three typefaces are self-hosted subsets, and a first view costs about **280 KB over the wire, fonts included**, against a 300 KB ceiling `npm test` enforces — a budget, not a number in a README, and one that `npm run smoke` checks against a real browser (see [Performance](#performance)). Everything a visit does not reach — the narration player, the field terminal, the dossier games, the section-05 interactives — is fetched only when it is used. Nothing is loaded from any other origin, and only two things are ever sent to one, both to the site's own Apps Script endpoint: a contact message, and one cookieless visit count per page view (never under Do Not Track or Global Privacy Control; see `count.js`). A live footer badge weighs each visit in the browser (Resource Timing API × Sustainable Web Design model), counting network transfer only. A low-energy mode pauses all animation and honours `prefers-reduced-motion`
 - **[Case studies](case-studies.html), evidence-first**: the same six projects as **problem → method → artifact → result**. Every result carries the basis it rests on and says plainly whether you can check it from outside; every artifact says whether it is public, available on request, or held by the client. See [Content pipeline](#content-pipeline)
 - **Role-specific lenses**: `case-studies.html?lens=water`, `?lens=climate-risk`, `?lens=sustainable-ai` — shareable views that reframe the portfolio for one kind of role. They **reorder and frame, they never filter**: every case study stays on the page in every view, because a view that hides inconvenient work is a CV that lies by omission. Without JavaScript the switcher steps aside and every case study shows in the default view
 - **[Research outputs](research.html)**: theses, reports, datasets, code and tools, each labelled public / on request / held by the client. No DOI, journal or conference is named anywhere, because none of this work has one — and a test fails the build if one ever appears without proof
@@ -310,10 +310,10 @@ npm test          # everything below
 | `npm run build:check` | every generated page still matches `content/` |
 | `npm run fonts:check` | the committed fonts still hash to their manifest and every stylesheet's `@font-face` block is current |
 | `npm run lint:html` | every page is valid HTML ([html-validate](https://html-validate.org/)'s recommended rules; the two relaxations are explained in `.htmlvalidate.cjs`) |
-| `npm run test:unit` | every `tests/*.test.js`, side by side, one process per suite, so a new suite runs the day it exists: the fourteen listed below (985 passing assertions on 2026-09-27) |
+| `npm run test:unit` | every `tests/*.test.js`, side by side, one process per suite, so a new suite runs the day it exists: the fifteen listed below (1052 passing assertions on 2026-09-27) |
 | `npm run map:check` | the committed `journey-map.svg` still matches its generator |
 | `npm run budget` | the weights this README quotes (see [Performance](#performance)) |
-| `npm run smoke` | every page in a real browser: no errors, no failed or off-origin requests, every on-demand module arrives when used, no axe-core violation at 1440×900 or 390×844 in either theme, and each budgeted page's measured first view no heavier than the budget claims; every page again with JavaScript off, and the homepage with `script.js` blocked and late; the skip link, Back, the theme switch, back to top and the nav bar at every width; the listen control and its player; the Assay; where jumps land while sections are drawn on demand, that reading back up after skipping ahead moves nothing, find-in-page and printing, which loops run, and how busy the idle page keeps the main thread at 4× CPU slowdown; and the carbon-ai page's dropdowns and numbers (its own CI job; needs Chromium — `-- --browser firefox` runs it in Firefox, which CI also does) |
+| `npm run smoke` | every page in a real browser: no errors, no failed or off-origin requests, every on-demand module arrives when used, no axe-core violation at 1440×900 or 390×844 in either theme, and each budgeted page's measured first view no heavier than the budget claims; every page again with JavaScript off, and the homepage with `script.js` blocked and late; the skip link, Back, the theme switch, back to top and the nav bar at every width; the listen control and its player; the Assay; where jumps land while sections are drawn on demand, that reading back up after skipping ahead moves nothing, find-in-page and printing, which loops run, and how busy the idle page keeps the main thread at 4× CPU slowdown; the carbon-ai page's dropdowns and numbers; and the visit counter's one request, taken apart: exactly the documented fields, no cookie, no Referer, once per page view, and nothing under Do Not Track or Global Privacy Control or with JavaScript off (its own CI job; needs Chromium — `-- --browser firefox` runs it in Firefox, which CI also does) |
 | `npm run mcp:verify` | the pinned MCP package still hashes to the reviewed tarball (needs network) |
 
 The suites, and the failure each one exists to prevent:
@@ -387,13 +387,31 @@ The suites, and the failure each one exists to prevent:
   deliberately fabricated links to prove it still rejects them.
 - **`html.test.js`** — button types, named landmarks, dialog semantics, image
   dimensions, labelled controls, resolvable links, valid JSON-LD, and no
-  stylesheet, script, preload or preconnect pointing off this origin.
+  stylesheet, script, preload or preconnect pointing off this origin. The one
+  off-site address any shipped script may name is the Apps Script deployment
+  the contact form posts to (the visit counter adds `?action=count`); nothing
+  may use `navigator.sendBeacon`, which cannot leave cookies out; and every
+  page loads `count.js` once, deferred.
 - **`apps-script.test.js`** — the contact form's backend
   (`google-apps-script/Code.gs`), run in a VM with stand-ins for Google's
   services: both ways in (the JSON post and the JavaScript-free form post,
   which gets a page back that never says "undefined"), formulas stored as
-  text, the honeypot, and the per-submitter rate limit. It cannot tell you the
-  live deployment is configured; `docs/owner-checklist.md` says how to check.
+  text, the honeypot, and the per-submitter rate limit. And the visit
+  counter's end of it: a visit adds to the right daily totals and a second
+  one increments them in place, anything that is not exactly schema v1
+  (an extra key, a wrong type, 21 features, a huge `kb`) changes nothing,
+  the lock is taken, `?test=1` stays off the public tab, `?action=stats`
+  serves the rows, and each contact message is counted. It cannot tell you
+  the live deployment is configured; `docs/owner-checklist.md` says how to
+  check.
+- **`count.test.js`** — the visit counter's payload, field by field: the page
+  (404 names itself), the lens the visit arrived with, the deepest part of
+  `<main>` reached (one IntersectionObserver, no scroll handler), features
+  clicked or fetched, deduplicated and capped at 20, the referrer's host and
+  nothing more of it, the viewport class and the KB transferred; one count
+  per page view, none under Do Not Track or GPC, never an error. Every
+  payload is run through the server's own schema check, and every
+  `data-analytics` name on the site must be one the counter keeps.
 - **`navigation.test.js`** — an in-page link updates the address (so Back
   works) and moves focus to its target, Back and Forward land there again and
   reopen a closed dossier, the theme switch sits in the nav bar and names what
@@ -549,10 +567,11 @@ every run of `npm test`, and the build fails when they are exceeded.
 |---|---|---|
 | First view of the homepage, over the wire (fonts included) | ~280 KB | 300 KB |
 | Everything a full visit adds on demand (modules, scripts, map) | ~69 KB | 72 KB |
-| Case studies page, over the wire (fonts included) | ~93 KB | 120 KB |
-| Research outputs page, over the wire (fonts included) | ~88 KB | 110 KB |
-| AI, Weighed (`carbon-ai.html`), over the wire (fonts included) | ~104 KB | 111 KB |
-| Text-only field report, whole page | ~9 KB | 12 KB |
+| Case studies page, over the wire (fonts included) | ~94 KB | 120 KB |
+| Research outputs page, over the wire (fonts included) | ~89 KB | 110 KB |
+| AI, Weighed (`carbon-ai.html`), over the wire (fonts included) | ~106 KB | 111 KB |
+| Text-only field report, the HTML file (the size the footer quotes) | ~9 KB | 12 KB |
+| Text-only field report, over the wire (with its visit counter) | ~6 KB | 8 KB |
 | Largest single image | ~200 KB | 220 KB |
 | Every image in the repository | ~3.23 MB | 3.5 MB |
 | Recorded narration: Moses's introduction (0 KB until he records it) | 0 KB | 800 KB |
@@ -571,12 +590,12 @@ than the old one and smaller than the old truth.
 **What "over the wire" means.** GitHub Pages compresses text, so HTML, CSS and
 JS are counted gzipped — what a visitor actually downloads — while images and
 fonts are counted as-is. The first view is `index.html`, its stylesheet, the
-core script, the four font files and the one preloaded hero image. Everything
-else is fetched only when it is reached: the journey map on the first scroll,
-the other 32 images as you get to them, the remaining hero backgrounds when the
-rotation needs them, and no narration until someone presses play. So "every
-image in the repository" is the cost of opening every gallery, not the cost of
-arriving.
+core script, the visit counter, the four font files and the one preloaded hero
+image. Everything else is fetched only when it is reached: the journey map on
+the first scroll, the other 32 images as you get to them, the remaining hero
+backgrounds when the rotation needs them, and no narration until someone
+presses play. So "every image in the repository" is the cost of opening every
+gallery, not the cost of arriving.
 
 **On-demand modules.** About two thirds of the site's JavaScript serves
 features most visits never reach. It used to ship in one 155 KB file, parsed

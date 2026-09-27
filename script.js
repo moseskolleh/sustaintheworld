@@ -198,6 +198,8 @@ const mksLoad = (() => {
             .then(() => {
                 loaded[name] = true;
                 document.dispatchEvent(new CustomEvent('mks:layout'));
+                // A fetched module is a feature someone reached; count.js counts it.
+                if (window.mks && window.mks.track) window.mks.track('module-' + name);
             }, (err) => { delete inflight[name]; throw err; });
         return inflight[name];
     };
@@ -1588,36 +1590,24 @@ if (lateStart) {
 mks.ready = true;
 
 // ===================================
-// CONVERSION ANALYTICS (privacy-first, provider-agnostic)
+// CONVERSION ANALYTICS
 // ===================================
-// A tiny dispatcher that fires named events on the key conversion actions
-// (contact, email, CV download) into whichever cookieless analytics provider
-// is enabled in index.html's <head>. It is a no-op until you turn one on, so it
-// never transmits anything on its own and needs no cookie-consent banner.
+// The counting itself is count.js, on every page: it keeps this visit's list
+// of features used, counts every [data-analytics] click into it, and sends
+// the list once as the page is left (never under Do Not Track or GPC). It
+// used to be a dispatcher into Plausible or gtag, neither of which was ever
+// switched on, so nothing had been counted at all.
+//
+// This adds the one conversion that is not a click on a hook: the contact
+// form being sent, by its button or by Enter. count.js is deferred and runs
+// after this file, so it is looked up when needed rather than captured now.
 (() => {
-    const track = (name) => {
-        if (!name) return;
-        try {
-            if (typeof window.plausible === 'function') {
-                window.plausible(name);
-            } else if (typeof window.gtag === 'function') {
-                window.gtag('event', name);
-            } else if (Array.isArray(window.dataLayer)) {
-                window.dataLayer.push({ event: name });
-            }
-        } catch (e) { /* analytics must never break the page */ }
-    };
-    window.trackEvent = track;
-
-    // Delegated: anything carrying data-analytics reports itself on click.
-    document.addEventListener('click', (e) => {
-        const el = e.target.closest('[data-analytics]');
-        if (el) track(el.getAttribute('data-analytics'));
-    });
-
-    // A contact-form submission is the primary conversion goal.
     const form = document.getElementById('contactForm');
-    if (form) form.addEventListener('submit', () => track('contact-form-submit'));
+    if (!form) return;
+    form.addEventListener('submit', () => {
+        const mks = window.mks;
+        if (mks && typeof mks.track === 'function') mks.track('contact-form-submit');
+    });
 })();
 
 // ===================================

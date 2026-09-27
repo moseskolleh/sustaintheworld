@@ -25,6 +25,7 @@ Automatically capture form responses and store them in Google Sheets using Googl
 - ✅ Escapes spreadsheet formulas so submissions can never execute
 - ✅ Serialises writes with `LockService`, so concurrent submissions cannot collide
 - ✅ Per-submitter rate limiting, plus an optional Cloudflare Turnstile check
+- ✅ Keeps the site's own cookieless visit counts as daily totals, and serves them for `stats.html` (see [The visit counter](#-the-visit-counter))
 - ✅ No external dependencies required
 
 ## ⚙️ Configuration
@@ -41,6 +42,64 @@ Properties** before the first submission (see `DEPLOYMENT_GUIDE.md` step 2b):
 
 Run `testConfiguration()` from the editor to check them, and
 `testFormulaEscaping()` to confirm the injection defences are intact.
+
+## 📈 The visit counter
+
+The same deployment keeps the site's own visit counts. `count.js`, loaded on
+every page, sends one payload per page view to `POST ?action=count` as the page
+is hidden or left. It sends nothing at all when the browser has Do Not Track or
+Global Privacy Control on. The request carries no cookies and no referrer
+(`fetch` with `keepalive`, `credentials: 'omit'`; `sendBeacon` would have sent
+the visitor's Google cookies along to `script.google.com`), and Apps Script
+never sees the visitor's IP address or user agent.
+
+**The payload, schema v1.** Exactly these eight keys, and nothing else:
+
+```
+{"v":1,"page":"index","lens":"","deepest":"contact","features":["cv-download-hero","module-dossier"],"ref":"www.linkedin.com","vp":"m","kb":284}
+```
+
+| Key | What it holds |
+| --- | --- |
+| `v` | `1`, the schema version |
+| `page` | the page's file name without `.html` (`index`, `case-studies`, `research`, `carbon-ai`, `field-report`, `stats`), or `404` |
+| `lens` | the `?lens=` the visit arrived with, or `""` |
+| `deepest` | the id of the furthest top-level part of `<main>` that came on screen, or `""` |
+| `features` | up to 20 distinct names: `data-analytics` hooks clicked, modules fetched on demand (`module-terminal`), `contact-form-submit` |
+| `ref` | the referring site's host only (`www.linkedin.com`), `""` if none or this site |
+| `vp` | viewport class: `s` under 600 px, `m` under 1024 px, `l` wider |
+| `kb` | whole KB this visit transferred (Resource Timing `transferSize`), so a cached revisit counts as the near-zero it is |
+
+The server rejects, silently, anything that is not exactly that: an unknown or
+missing key, a wrong type, a name that is not `[a-z0-9-]{1,40}`, more than 20
+features, a `kb` outside 0 to 100000. `tests/apps-script.test.js` and
+`tests/count.test.js` hold the two ends to the same schema, and
+`npm run smoke` checks the request a real browser sends.
+
+**The aggregate.** Each accepted payload adds one to a handful of daily totals
+on a `Daily` tab, created on first use, in long format: `date` (Europe/Amsterdam),
+`metric`, `key`, `count`. `metric` is `visits`, `page`, `lens`, `deepest`,
+`feature`, `ref`, `vp`, `kb` (the day's summed KB) or `contact` (one per
+accepted contact-form submission). An empty lens, deepest or ref adds no row.
+A visit updates the day's rows in place, under the same lock as the contact
+form, so the tab grows by distinct keys per day, not by visits. Nothing is
+suppressed here: the build of `stats.html` hides small counts before
+anything is published.
+
+**Reading it.** `GET ?action=stats` returns `{"v":1,"rows":[[date, metric, key, count], ...]}`
+for the last 400 days. On failure the reply has no `rows` at all, so a build
+stops rather than publishing zeros. Alternatively, publish the `Daily` tab as
+CSV (File → Share → Publish to web); its header row is `date,metric,key,count`.
+Note that both are the raw totals, small counts included, and both are public.
+
+**Testing it without moving the numbers.** Add `&test=1` to either action and
+it uses a `DailyTest` tab instead: `POST ?action=count&test=1` with a payload,
+then `GET ?action=stats&test=1` to read it back. `testCounter()` in the editor
+does exactly that.
+
+**After changing `Code.gs`,** publish it as a new version of the *existing*
+deployment (Deploy → Manage deployments → Edit → Version: New version), so the
+web app URL the site already uses stays the same.
 
 ## 📊 Example Usage
 

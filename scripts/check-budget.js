@@ -45,15 +45,15 @@ const MB = 1024 * 1024;
 
 // ------------------------------------------------------------------
 // Budgets. The headroom is not uniform: the report prints each figure as a
-// share of its ceiling, and in September 2026 that ran from 76% (the field
-// report) to 96% (the on-demand total: the wave-1 review's fixes filled it
-// to within 100 bytes, until the journey map shed 1.6 KB of path points
-// that drew nothing, then 3.6 KB more written as steps, which paid for the
-// time-zone table moving here out of script.js), with the audio budget at
-// 0% until Moses records his introduction. To make room, remove something of
-// equal weight rather than raise a ceiling (docs/plan.md, "Stop doing").
-// When a ceiling does change, the README quotes these, so update it in the
-// same commit.
+// share of its ceiling, and in September 2026 that ran from 72% (the field
+// report over the wire) to 96% (the on-demand total: the wave-1 review's
+// fixes filled it to within 100 bytes, until the journey map shed 1.6 KB of
+// path points that drew nothing, then 3.6 KB more written as steps, which
+// paid for the time-zone table moving here out of script.js), with the
+// audio budget at 0% until Moses records his introduction. To make room,
+// remove something of equal weight rather than raise a ceiling
+// (docs/plan.md, "Stop doing"). When a ceiling does change, the README
+// quotes these, so update it in the same commit.
 // ------------------------------------------------------------------
 const BUDGETS = {
     criticalWire: {
@@ -91,9 +91,17 @@ const BUDGETS = {
         readme: 'fetched only when a visitor asks to hear him'
     },
     fieldReport: {
-        label: 'Text-only field report, whole page',
+        label: 'Text-only field report, the HTML file as saved (uncompressed)',
         max: 12 * KB,
         readme: 'the footer calls it "the whole portfolio in 9 KB" — this is what keeps that true'
+    },
+    // The same page as a visit costs it: its HTML gzipped, and the visit
+    // counter, the one script it loads. The footer's figure above is the file
+    // a reader can save; this is what reaching it transfers.
+    fieldReportWire: {
+        label: 'Text-only field report, over the wire (with its visit counter)',
+        max: 8 * KB,
+        readme: 'a first view like the other pages, counter included'
     },
     // The generated pages carry no images and no framework, so they should
     // stay small. A budget here is what stops "just one more section" turning
@@ -246,7 +254,8 @@ function measure() {
         introAudio: audio.reduce((n, f) => n + (sizeOf(f) || 0), 0),
         // Uncompressed, because that is the number the footer quotes and the one a
         // reader can verify by saving the page.
-        fieldReport: sizeOf('field-report.html') || 0
+        fieldReport: sizeOf('field-report.html') || 0,
+        fieldReportWire: pageWire('field-report.html')
     };
     const largest = images.map(f => ({ f, size: sizeOf(f) || 0 })).sort((a, b) => b.size - a.size)[0] || null;
     return { measured, critical, onDemand, largest };

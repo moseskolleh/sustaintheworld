@@ -271,7 +271,8 @@ const fieldText = plain(fieldReport);
 
 // --- Figures: the page's own weight --------------------------------------
 // The footer and the Receipt quote sizes that scripts/check-budget.js
-// measures. The field report had grown to 9 KB while all three still said 8.
+// measures. The field report had grown to 9 KB while all three still said 8,
+// and the 404 page's link to it, which nothing checked, said 8 for longer.
 {
     const { measure } = require('../scripts/check-budget.js');
     const { measured } = measure();
@@ -280,10 +281,11 @@ const fieldText = plain(fieldReport);
     const reportKB = Math.round(measured.fieldReport / KB);
     const quoted = [...index.matchAll(/(\d+)(?:&nbsp;| )KB field report|whole portfolio in (\d+)(?:&nbsp;| )KB/g)]
         .concat([...read('modules/interactives.js').matchAll(/'Text-only report', r: '(\d+) KB'/g)])
+        .concat([...read('404.html').matchAll(/(\d+)(?:&nbsp;| )KB field report/g)])
         .map(m => +(m[1] || m[2]));
     assert(
-        quoted.length === 3 && quoted.every(n => n === reportKB),
-        `Figures: the footer and the Receipt quote the field report's real size (${quoted.join(', ')} KB quoted, ${reportKB} KB measured)`
+        quoted.length === 4 && quoted.every(n => n === reportKB),
+        `Figures: the footer, the Receipt and the 404 page quote the field report's real size (${quoted.join(', ')} KB quoted, ${reportKB} KB measured)`
     );
 
     // Every place that quotes the first view quotes the budget's own figure,

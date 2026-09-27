@@ -12,7 +12,10 @@
 // a visitor would hit that jsdom cannot see:
 //
 //   - an uncaught exception or a console error on load
-//   - a request that fails, or that leaves this origin at all
+//   - a request that fails, or that leaves this origin at all, bar the one
+//     the visit counter is allowed, and that one carrying anything but
+//     the documented fields, going out twice for one page view, or going
+//     out at all under Do Not Track or GPC or with JavaScript off
 //   - an on-demand module that does not arrive when its feature is used
 //   - an accessibility violation axe-core can find, on any page, at desktop
 //     and phone width, in either theme (see the end of this file)
@@ -75,6 +78,18 @@ const PORT = 8123 + Math.floor(Math.random() * 1000);
 // new page is covered the day it exists, not the day someone lists it.
 const PAGES = fs.readdirSync(ROOT).filter(f => f.endsWith('.html'))
     .sort((a, b) => (b === 'index.html') - (a === 'index.html') || a.localeCompare(b));
+
+// The one request allowed to leave this origin: the visit counter's POST to
+// the contact form's Apps Script deployment, with ?action=count, and only
+// that exact address. It is read from count.js so there is one copy, and
+// checked for shape so this cannot quietly allow anything broader. No run of
+// this script ever lets it reach the real endpoint: see quietCounter().
+const COUNT_URL = (() => {
+    const m = fs.readFileSync(path.join(ROOT, 'count.js'), 'utf8').match(/'(https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec\?action=count)'/);
+    if (!m) throw new Error('count.js does not name its endpoint in the expected form');
+    return m[1];
+})();
+const BEACON_KEYS = ['v', 'page', 'lens', 'deepest', 'features', 'ref', 'vp', 'kb'];
 
 // ------------------------------------------------------------------
 // A static server that behaves like the host: gzip for text, nothing else.
@@ -151,7 +166,7 @@ async function visit(context, page, rel, origin) {
     page.on('console', (m) => { if (m.type() === 'error') errors.push(`console.error: ${m.text()}`); });
     page.on('pageerror', (e) => errors.push(`uncaught: ${e.message}`));
     page.on('requestfailed', (r) => failed.push(`${r.url()} — ${(r.failure() || {}).errorText}`));
-    page.on('request', (r) => { if (!r.url().startsWith(origin)) foreign.push(r.url()); });
+    page.on('request', (r) => { if (!r.url().startsWith(origin) && r.url() !== COUNT_URL) foreign.push(r.url()); });
 
     // Bytes over the wire come from the DevTools protocol, which only
     // Chromium speaks; in Firefox the weights go unmeasured (see the top).
@@ -198,6 +213,15 @@ async function visit(context, page, rel, origin) {
         executablePath: browserSpec.executablePath,
         args: CHROMIUM ? ['--no-sandbox', '--disable-dev-shm-usage'] : []
     });
+    // Every context opened from here on has the visit counter quietened (see
+    // quietCounter()), so a check added later cannot forget to. The one
+    // exception is exerciseCounter(), which is handed the unquietened opener.
+    const openContext = browser.newContext.bind(browser);
+    browser.newContext = async (options) => {
+        const c = await openContext(options);
+        await quietCounter(c);
+        return c;
+    };
     const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
     if (SCREENS) fs.mkdirSync(path.join(ROOT, '.smoke'), { recursive: true });
 
@@ -282,6 +306,7 @@ async function visit(context, page, rel, origin) {
     }
 
     await exerciseNarration(browser, origin);
+    await exerciseCounter(openContext, origin, results['index.html'].arrivalBytes);
 
     await accessibilityPass(browser, origin);
 
@@ -1710,4 +1735,257 @@ async function exerciseCpu(browser, origin) {
         else bad(`left alone, the main thread works ${top} ms at the top and ${mid} ms mid-page per 2 s at 4x slowdown — ceiling ${IDLE_CEILING_MS} ms`);
         await context.close();
     }
+}
+
+// ------------------------------------------------------------------
+// The visit counter, kept off the real endpoint
+// ------------------------------------------------------------------
+// Closing a page fires pagehide, and count.js sends its count then. A
+// request made while a page is closing cannot be intercepted (Chromium
+// sends it after the page's routes are gone), so it would reach the real
+// Apps Script and count a smoke run as a visit. So every page opened in a
+// context passed through here browses with Global Privacy Control on, which
+// is the counter's own opt-out, and anything sent while a page is still
+// open is answered locally. Every context this script opens is passed
+// through here as it is opened (see the wrapper around browser.newContext),
+// bar exerciseCounter()'s, which never closes a page the counter is armed on.
+async function quietCounter(context) {
+    await context.addInitScript(() => {
+        Object.defineProperty(Navigator.prototype, 'globalPrivacyControl', { configurable: true, get: () => true });
+    });
+    await context.route((url) => url.href === COUNT_URL, (route) => route.fulfill({ status: 204, body: '' }));
+}
+
+// ------------------------------------------------------------------
+// The visit counter: what one visit sends, and when it sends nothing
+// ------------------------------------------------------------------
+// The privacy promise is that the count holds only the documented fields,
+// and this is the test that enforces it: a real visit, three features used,
+// the page left, and the request that leaves the browser taken apart.
+// openContext is the browser's own newContext, without the quietening.
+async function exerciseCounter(openContext, origin, arrivalBytes) {
+    console.log('  the visit counter');
+    const sent = [];
+    const record = (context) => context.route((url) => url.href === COUNT_URL, async (route) => {
+        const req = route.request();
+        sent.push({ method: req.method(), headers: await req.allHeaders(), body: req.postData() || '' });
+        await route.fulfill({ status: 204, body: '' });
+    });
+    const context = await openContext({ viewport: { width: 1280, height: 800 } });
+    // A voice, so the Listen control shows, as it does for most visitors.
+    await context.addInitScript(STAND_IN_VOICE);
+    await record(context);
+    const counts = (page) => sent.filter((s) => { try { return JSON.parse(s.body).page === page; } catch (e) { return false; } });
+    const settle = async (page, n) => {
+        for (let i = 0; i < 30 && sent.length < n; i++) await page.waitForTimeout(100);
+        await page.waitForTimeout(300);   // and a moment more, for anything that should not arrive
+    };
+
+    // Leaving a page, without letting go of it. A real navigation fires
+    // pagehide too, but the request count.js makes then is not reliably
+    // caught by a route: measured here, about one navigation in three let
+    // it straight past, to the real endpoint. So the events are dispatched
+    // while the page is still open (the same listeners, the same fetch, and
+    // every request caught), and a page is only navigated away or closed
+    // once its counter has already sent, when it cannot send again.
+    const leave = (p) => p.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: false })));
+    const visibility = (p, state) => p.evaluate((s) => {
+        Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => s });
+        document.dispatchEvent(new Event('visibilitychange'));
+    }, state);
+
+    const page = await context.newPage();
+    const foreign = [];
+    const errors = [];
+    page.on('request', (r) => { if (!r.url().startsWith(origin) && r.url() !== COUNT_URL && !r.url().startsWith('about:')) foreign.push(r.url()); });
+    page.on('pageerror', (e) => errors.push(e.message));
+
+    // Arrive from LinkedIn on a lens link, use three features, read to the end.
+    await page.goto(`${origin}/index.html?lens=water`, { waitUntil: 'load', referer: 'https://www.linkedin.com/feed/' });
+    await page.click('#receiptBtn');                          // data-analytics="receipt-open"; fetches the interactives
+    await page.waitForFunction(() => window.mks && window.mks.loaded && window.mks.loaded.interactives, null, { timeout: 5000 }).catch(() => null);
+    await page.keyboard.press('`');                           // fetches the terminal
+    await page.waitForFunction(() => window.mks && window.mks.loaded && window.mks.loaded.terminal, null, { timeout: 5000 }).catch(() => null);
+    await page.keyboard.press('Escape');
+    await page.click('#listenBtn');                           // data-analytics="listen"; fetches the player
+    await page.waitForFunction(() => window.mks && window.mks.loaded && window.mks.loaded.dispatch, null, { timeout: 5000 }).catch(() => null);
+    await page.keyboard.press('Escape');
+    await page.evaluate(() => document.getElementById('contact').scrollIntoView({ behavior: 'instant' }));
+    await page.waitForTimeout(400);
+    if (sent.length) bad(`the counter sent ${sent.length} request(s) while the page was still open and visible`);
+
+    await leave(page);
+    await settle(page, 1);
+
+    const home = counts('index');
+    if (home.length !== 1) {
+        bad(`leaving the homepage sent ${home.length} counts, not 1`);
+    } else {
+        const s = home[0];
+        let body = null;
+        try { body = JSON.parse(s.body); } catch (e) { /* reported below */ }
+        const keys = body ? Object.keys(body) : [];
+        if (JSON.stringify(keys) === JSON.stringify(BEACON_KEYS)) ok(`one count on leaving, with exactly the documented keys: ${keys.join(', ')}`);
+        else bad(`the count's keys are not the documented set: ${keys.join(', ') || s.body}`);
+
+        const shaped = !!body && body.v === 1 &&
+            ['page', 'lens', 'deepest', 'ref', 'vp'].every(k => typeof body[k] === 'string') &&
+            ['s', 'm', 'l'].includes(body.vp) &&
+            Array.isArray(body.features) && body.features.length <= 20 &&
+            body.features.every(f => typeof f === 'string' && /^[a-z0-9-]{1,40}$/.test(f)) &&
+            new Set(body.features).size === body.features.length &&
+            Number.isInteger(body.kb) && body.kb >= 0 && body.kb <= 100000;
+        if (shaped) ok('every value has its documented type and shape'); else bad(`a value has the wrong type or shape: ${s.body}`);
+
+        if (body) {
+            const want = { page: 'index', lens: 'water', deepest: 'contact', ref: 'www.linkedin.com', vp: 'l' };
+            const wrong = Object.keys(want).filter(k => body[k] !== want[k]);
+            if (wrong.length) bad(`the count got the visit wrong: ${wrong.map(k => `${k}=${JSON.stringify(body[k])}`).join(', ')}`);
+            else ok(`it says what the visit did: ${Object.keys(want).map(k => `${k} ${want[k]}`).join(', ')}`);
+
+            const used = ['receipt-open', 'module-interactives', 'module-terminal', 'listen', 'module-dispatch'];
+            const missing = used.filter(f => !(body.features || []).includes(f));
+            if (missing.length) bad(`features used but not counted: ${missing.join(', ')} (got ${(body.features || []).join(', ')})`);
+            else ok(`features: ${body.features.join(', ')}`);
+
+            const floor = Math.floor((arrivalBytes / 1024) * 0.8);
+            if (body.kb >= floor) ok(`kb: ${body.kb}, no less than the ${fmt(arrivalBytes)} the homepage took to arrive`);
+            else bad(`kb is ${body.kb}, below the ${fmt(arrivalBytes)} measured for the homepage's arrival`);
+        }
+
+        const h = s.headers;
+        if (s.method === 'POST' && !h.cookie && !h.referer && /^text\/plain/.test(h['content-type'] || '')) ok('a plain-text POST, with no cookie and no Referer header');
+        else bad(`the request carried more than its body: ${s.method} cookie=${!!h.cookie} referer=${h.referer || ''} type=${h['content-type']}`);
+    }
+
+    // A reader who comes back after the count has gone finds it on the
+    // page's own bill: a request to another site whose bytes the browser
+    // will not report, so the badge says "+" and the Receipt names it as
+    // what it is, not as a third-party file.
+    await visibility(page, 'visible');
+    await page.click('#receiptBtn');
+    await page.click('#receiptBtn');
+    await page.waitForTimeout(300);
+    const bill = await page.evaluate(() => ({
+        badge: document.getElementById('carbonBadgeText').textContent,
+        receipt: document.getElementById('receiptBody').textContent
+    }));
+    if (/^This page weighs \+ /.test(bill.badge) && /\* 1 off-site request not counted/.test(bill.receipt)) ok(`after the count: the badge reads "${bill.badge.slice(0, 32)}…" and the Receipt "* 1 off-site request not counted"`);
+    else bad(`after the count, the badge reads "${bill.badge}" and the Receipt ${/off-site request/.test(bill.receipt) ? 'names' : 'does not name'} the request`);
+
+    // Once per page view: after the count has gone, hidden, shown, hidden
+    // again and left again, then really navigated away, and nothing more.
+    await visibility(page, 'hidden');
+    await leave(page);
+    await page.goto(`${origin}/field-report.html`, { waitUntil: 'load' });
+    await settle(page, 2);
+    if (counts('index').length === 1) ok('once per page view: hiding and leaving again, then navigating away, sent nothing more');
+    else bad(`the homepage sent ${counts('index').length} counts for one view`);
+
+    // The first time the page is hidden is enough (a phone switching apps
+    // may never fire pagehide at all).
+    await visibility(page, 'hidden');
+    await settle(page, 2);
+    if (counts('field-report').length === 1) ok('hiding a page sends its count, as leaving does');
+    else bad(`hiding the field report sent ${counts('field-report').length} counts, not 1`);
+    await page.goto('about:blank');
+
+    // Every page counts itself, under its own name and with the same eight
+    // keys, and each count is one the server's own schema check (Code.gs,
+    // run here as it is in the unit tests) accepts. The 404 page is served
+    // at an address that does not exist, as GitHub Pages serves it.
+    {
+        const vm = require('vm');
+        const gas = vm.createContext({});
+        vm.runInContext(fs.readFileSync(path.join(ROOT, 'google-apps-script', 'Code.gs'), 'utf8'), gas);
+        await context.route('**/sustaintheworld/no/such/page', (route) => route.fulfill({ status: 404, contentType: 'text/html; charset=utf-8', path: path.join(ROOT, '404.html') }));
+        const everyPage = PAGES.filter(rel => rel !== '404.html').map(rel => [rel, rel.replace(/\.html$/, '')])
+            .concat([['sustaintheworld/no/such/page', '404']]);
+        const wrong = [];
+        for (const [rel, name] of everyPage) {
+            const p = await context.newPage();
+            p.on('pageerror', (e) => errors.push(e.message));
+            const before = sent.length;
+            await p.goto(`${origin}/${rel}`, { waitUntil: 'load' });
+            await leave(p);
+            await settle(p, before + 1);
+            const got = sent.slice(before).map((s) => { try { return JSON.parse(s.body); } catch (e) { return s.body; } });
+            const b = got[0];
+            if (got.length !== 1 || !b || JSON.stringify(Object.keys(b)) !== JSON.stringify(BEACON_KEYS) || b.page !== name || !gas.isBeaconV1(b)) {
+                wrong.push(`${rel}: ${got.length} count(s) ${JSON.stringify(got)}`);
+            }
+            await p.close();   // its count has gone, so closing cannot send another
+        }
+        if (wrong.length) wrong.forEach(w => bad(`the count from ${w}`));
+        else ok(`every page counts itself once, by name, with the documented keys, and the server accepts each: ${everyPage.map(([, n]) => n).join(', ')}`);
+    }
+
+    for (const [label, prop, value] of [['Do Not Track', 'doNotTrack', '1'], ['Global Privacy Control', 'globalPrivacyControl', true]]) {
+        const p = await context.newPage();
+        p.on('pageerror', (e) => errors.push(e.message));
+        await p.addInitScript(([k, v]) => Object.defineProperty(Navigator.prototype, k, { configurable: true, get: () => v }), [prop, value]);
+        const before = sent.length;
+        await p.goto(`${origin}/index.html`, { waitUntil: 'load' });
+        await p.click('#receiptBtn');
+        await visibility(p, 'hidden');
+        await leave(p);
+        await p.waitForTimeout(800);
+        if (sent.length === before) ok(`nothing at all is sent under ${label}`);
+        else bad(`the counter sent ${sent.length - before} request(s) under ${label}`);
+        await p.goto('about:blank');
+        await p.close();
+    }
+
+    // With JavaScript off there is no counter, so a visit sends nothing:
+    // a hook followed and the page really left, and not one request made.
+    {
+        const bare = await openContext({ viewport: { width: 1280, height: 800 }, javaScriptEnabled: false });
+        await record(bare);
+        const p = await bare.newPage();
+        p.on('request', (r) => { if (!r.url().startsWith(origin)) foreign.push(r.url()); });
+        const before = sent.length;
+        await p.goto(`${origin}/index.html`, { waitUntil: 'load' });
+        await p.click('[data-analytics="contact-hero"]');
+        const ran = await p.evaluate(() => typeof window.mks !== 'undefined');
+        await p.goto(`${origin}/field-report.html`, { waitUntil: 'load' });
+        await p.waitForTimeout(500);
+        if (sent.length === before && !ran) ok('nothing is sent with JavaScript off: the counter never runs');
+        else bad(`with JavaScript off, the counter ${ran ? 'ran' : 'did not run'} and ${sent.length - before} count(s) went out`);
+        await bare.close();
+    }
+
+    // script.js blocked: the page falls back to its no-JavaScript layout, but
+    // the counter does not depend on script.js, and still counts the visit.
+    {
+        const blocked = await openContext({ viewport: { width: 1280, height: 800 } });
+        await blocked.route('**/script.js', (route) => route.abort());
+        await record(blocked);
+        const p = await blocked.newPage();
+        p.on('request', (r) => { if (!r.url().startsWith(origin) && r.url() !== COUNT_URL && !r.url().startsWith('about:')) foreign.push(r.url()); });
+        p.on('pageerror', (e) => errors.push(e.message));
+        const before = sent.length;
+        await p.goto(`${origin}/index.html`, { waitUntil: 'load' });
+        await p.click('[data-analytics="contact-hero"]');
+        await leave(p);
+        await settle(p, before + 1);
+        const got = sent.slice(before);
+        let body = null;
+        try { body = JSON.parse(got[0].body); } catch (e) { /* reported below */ }
+        if (got.length === 1 && body && JSON.stringify(Object.keys(body)) === JSON.stringify(BEACON_KEYS) &&
+            body.page === 'index' && body.features.includes('contact-hero')) {
+            ok(`script.js blocked: still one count, with the documented keys and the hook followed (${body.features.join(', ')})`);
+        } else {
+            bad(`script.js blocked: ${got.length} count(s) — ${got.map(s => s.body).join(' | ') || 'none'}`);
+        }
+        // Had the count not gone, leaving now would send it past the route:
+        // take its fetch away first.
+        await p.evaluate(() => { window.fetch = () => Promise.resolve(); });
+        await p.goto('about:blank');
+        await blocked.close();
+    }
+
+    if (foreign.length) foreign.forEach(f => bad(`left the origin: ${f}`)); else ok('nothing but the count left the origin');
+    if (errors.length) errors.forEach(e => bad(`uncaught: ${e}`)); else ok('no errors on the way');
+    await page.close();
+    await context.close();
 }

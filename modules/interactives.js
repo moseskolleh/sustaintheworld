@@ -724,7 +724,7 @@ window.mks.share = (() => {
         if (a.confirm.length) plain += '\nConfirm with Moses (not stated on the site):\n' + a.confirm.map(c => `• ${c}\n`).join('');
         lastAssayText = plain + `\n— ${window.mks.share ? window.mks.share.site : 'moseskolleh.github.io/sustaintheworld'}`;
         html += `<div class="assay-copy-wrap"><button type="button" class="btn btn-secondary btn-small assay-copy" data-analytics="assay-copy"><svg class="icon" aria-hidden="true"><use href="#i-copy"></use></svg> Copy this result</button></div>`;
-        html += '<p class="assay-note">Deterministic matching against a hand-written evidence set and the facts on this site: no AI, no data sent anywhere. Anything the site does not show is a gap, not a guess. A starting point for a conversation, not a verdict.</p>';
+        html += '<p class="assay-note">Deterministic matching against a hand-written evidence set and the facts on this site: no AI; the ad is never sent. Anything the site does not show is a gap, not a guess. A starting point for a conversation, not a verdict.</p>';
         result.innerHTML = html;
         document.dispatchEvent(new CustomEvent('mks:layout'));   // new links, for back to top to keep clear of
         if (clearBtn) clearBtn.hidden = false;
@@ -1317,7 +1317,7 @@ window.mks.share = (() => {
         }
         lines.push({ t: 'r', l: 'Text-only report', r: '9 KB' });
         if (unmeasured) {
-            lines.push({ t: 'c', s: `* ${unmeasured} third-party file${unmeasured > 1 ? 's' : ''} not counted`, dim: true });
+            lines.push({ t: 'c', s: `* ${unmeasured} off-site request${unmeasured > 1 ? 's' : ''} not counted`, dim: true });
         }
         lines.push({ t: 'd' });
         lines.push({ t: 'c', s: 'browsed lightly — say hello' });
