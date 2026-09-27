@@ -315,6 +315,31 @@ function assert(cond, msg) {
     assert(/Already struck/.test(result.textContent), 'Bug11: and says why it did not count');
 }
 
+// --- Bug 12: You Draw It hands focus on when the pressed button goes ---
+// Reveal hid itself while focused, and so did "Draw again": focus dropped to
+// the page, and a screen reader said nothing of where it had gone.
+{
+    const { window } = run('dark');
+    const doc = window.document;
+    const hit = doc.querySelector('#ydiSvg .ydi-hit');
+    const reveal = doc.getElementById('ydiReveal');
+    const share = doc.getElementById('ydiShare');
+    const reset = doc.getElementById('ydiReset');
+    hit.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true }));
+    reveal.focus();
+    reveal.click();
+    assert(reveal.hidden && !share.hidden && doc.activeElement === share,
+        `Bug12: after Reveal, focus is on "Share result", which takes its place (on ${doc.activeElement && (doc.activeElement.id || doc.activeElement.tagName)})`);
+    reset.focus();
+    reset.click();
+    assert(reset.hidden && !reveal.hidden && doc.activeElement === reveal,
+        `Bug12: after "Draw again", focus is back on Reveal (on ${doc.activeElement && (doc.activeElement.id || doc.activeElement.tagName)})`);
+    hit.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true }));
+    hit.focus();
+    hit.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    assert(reveal.hidden && doc.activeElement === hit, 'Bug12: revealing from the chart with Enter leaves focus on the chart');
+}
+
 // --- Bug 7: a message the endpoint turns down says why ---
 // The Apps Script answers a rejection with a reason written for the visitor
 // ("a valid email address", "wait a moment"). The form used to throw that

@@ -95,6 +95,22 @@ function rules(css) {
 }
 
 // ===================================================================
+// Copy that promises what only JavaScript does hides with it
+// ===================================================================
+{
+    // Without JavaScript every dossier is open already and the section-05
+    // widgets are a note, so "click any one to open" and "the live widget"
+    // described nothing a reader could do.
+    const { JSDOM } = require('jsdom');
+    const doc = new JSDOM(html).window.document;
+    ['click any one to open', 'the live widget on this page', 'Watch the route unfold'].forEach((phrase) => {
+        const holders = Array.from(doc.querySelectorAll('body *'))
+            .filter(el => Array.from(el.childNodes).some(n => n.nodeType === 3 && n.textContent.includes(phrase)));
+        assert(holders.length > 0 && holders.every(el => el.closest('.needs-js')), `Copy: "${phrase}" is inside .needs-js, so it goes when JavaScript cannot run`);
+    });
+}
+
+// ===================================================================
 // One [hidden] rule, and nothing hidden only because JavaScript is expected
 // ===================================================================
 ['style.css', 'carbon-ai.css', 'content.css'].forEach((sheet) => {
@@ -201,6 +217,15 @@ async function waitFor(fn, ms = 4000) {
     return fn();
 }
 
+// What a screen reader, Find or Reader mode meets in the stats: the text,
+// minus anything aria-hidden.
+function spoken(el) {
+    return Array.from(el.childNodes).map((n) => (n.nodeType === 3 ? n.textContent
+        : n.getAttribute('aria-hidden') === 'true' ? '' : spoken(n))).join(' ').replace(/\s+/g, ' ').trim();
+}
+const statsSaid = (doc) => Array.from(doc.querySelectorAll('.hero-stat'))
+    .map(s => `${s.querySelector('.hero-stat-number').getAttribute('data-target')} ${s.querySelector('.hero-stat-label').textContent}`).join(' ');
+
 async function counterCase(label, options, expectMotion) {
     let observers = [];
     let seen = [];
@@ -215,13 +240,22 @@ async function counterCase(label, options, expectMotion) {
 
     await tick(0);   // the microtask that zeroes the counters, if they will move
     const beforeView = doc.querySelectorAll('.hero-stat-number')[0].textContent;
+    const saidBefore = spoken(doc.querySelector('.hero-stats'));
     fireStats(window, observers);
-    const done = await waitFor(() => Array.from(doc.querySelectorAll('.hero-stat-number')).every(c => c.textContent === c.getAttribute('data-target')));
+    // Done when every count has ended (the digits can show the figure a
+    // frame before the count ends, since they round up).
+    const done = await waitFor(() => Array.from(doc.querySelectorAll('.hero-stat-number')).every(c => c.textContent === c.getAttribute('data-target'))
+        && !doc.querySelector('.hero-stats .sr-only'));
     const final = Array.from(doc.querySelectorAll('.hero-stat-number')).map(c => c.textContent).join('|');
 
     assert(errors.length === 0, `${label}: no errors (${errors.map(String).join('; ').slice(0, 120) || 'none'})`);
     assert(done && final === written, `${label}: each counter ends on its exact value, nothing appended (${final})`);
     assert(!/\+/.test(seen.join('|')), `${label}: no "+" is ever shown`);
+    // The stats sit below the fold, so until a scroll a zeroed counter used
+    // to be all a screen reader heard: "0 Water points delivered".
+    assert(saidBefore === statsSaid(doc), `${label}: before they are seen, the stats read as their real figures (${saidBefore})`);
+    assert(spoken(doc.querySelector('.hero-stats')) === statsSaid(doc) && !doc.querySelector('.hero-stats .sr-only, .hero-stat-number[aria-hidden]'),
+        `${label}: once counted, the figures are read from the digits again, with no copy left behind`);
     if (expectMotion) {
         assert(beforeView === '0', `${label}: set to 0 before it comes into view, to count up from (${beforeView})`);
         assert(seen.length > 3, `${label}: it counts up (${seen.length} states seen)`);
@@ -269,9 +303,51 @@ async function takeoverCase(label, markJs) {
     window.close();
 }
 
+// A late start puts the line being read back where it was, and holds it
+// there while the widgets html.js brings back fill in. The one correction
+// at takeover left the rest to scroll anchoring, which Safari does not do:
+// with it off, the line slid hundreds to thousands of pixels away.
+async function lateLineCase() {
+    const observers = [];
+    let lineTop = 240;
+    let bodyHeight = 30000;
+    const scrolls = [];
+    const { window, errors } = run('dark', {
+        before(w) {
+            fakes(w, { markJs: false });
+            w.ResizeObserver = class {
+                constructor(cb) { this.cb = cb; this.on = false; observers.push(this); }
+                observe(el) { this.on = el === w.document.body; }
+                unobserve() {}
+                disconnect() { this.on = false; }
+            };
+            const line = w.document.querySelector('#skills .section-description') || w.document.getElementById('skills');
+            w.document.elementFromPoint = () => line;
+            line.getBoundingClientRect = () => ({ top: lineTop, bottom: lineTop + 40, left: 0, right: 800, width: 800, height: 40 });
+            line.getClientRects = () => [line.getBoundingClientRect()];   // on show, which jsdom cannot tell
+            w.document.body.getBoundingClientRect = () => ({ top: 0, left: 0, right: 1280, bottom: bodyHeight, width: 1280, height: bodyHeight });
+            w.scrollTo = (o) => { scrolls.push(o.top); lineTop -= o.top - w.pageYOffset; w.pageYOffset = o.top; };
+        }
+    });
+    const report = () => observers.filter(o => o.on).forEach(o => o.cb([{ target: window.document.body }], o));
+
+    assert(errors.length === 0, 'Late start, held line: no errors');
+    lineTop = 1000;   // a dossier above grows to fit its widget, pushing the line down
+    bodyHeight = 30760;
+    report();
+    assert(lineTop === 240 && scrolls.length === 1, `Late start, held line: when the page grows above it, the line is put back (at ${lineTop}px after ${scrolls.length} scroll(s))`);
+    report();
+    assert(scrolls.length === 1, 'Late start, held line: a report of the same height moves nothing');
+    window.dispatchEvent(new window.Event('touchstart'));
+    assert(observers.every(o => !o.on), 'Late start, held line: the reader\'s own touch lets go of it');
+    await tick(20);   // let the modules' own start-up settle before the window goes
+    window.close();
+}
+
 (async () => {
     await takeoverCase('Takeover (on time)', true);
     await takeoverCase('Takeover (late)', false);
+    await lateLineCase();
 
     await counterCase('Counters (motion allowed)', {}, true);
     await counterCase('Counters (reduced motion)', { reduce: true }, false);
@@ -290,6 +366,8 @@ async function takeoverCase(label, markJs) {
         fireStats(window, observers);
         const shown = Array.from(doc.querySelectorAll('.hero-stat-number')).map(c => c.textContent).join('|');
         assert(zeroed === '0' && shown === targets(doc), `Counters (low-energy mode switched on late): straight back to ${shown}, no count-up`);
+        assert(spoken(doc.querySelector('.hero-stats')) === statsSaid(doc) && !doc.querySelector('.hero-stats .sr-only, .hero-stat-number[aria-hidden]'),
+            'Counters (low-energy mode switched on late): read from the digits again, with no copy left behind');
         window.close();
     }
 

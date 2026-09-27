@@ -34,6 +34,9 @@
 
     const COMMANDS = {
         help: () => {
+            // 'voice about' is suggested only where there is a voice to read it.
+            const fd = window.FieldDispatch, synth = window.speechSynthesis;
+            const voiced = fd ? fd.state().voiced : !!(synth && (synth.getVoices() || []).length);
             print('available commands:');
             [['journey', 'the route, Freetown to Amsterdam'],
              ['projects', 'list the six project dossiers'],
@@ -43,7 +46,7 @@
              ['cv', 'download the CV (PDF)'],
              ['map', 'fly to the journey map'],
              ['eco', 'toggle low-energy mode'],
-             ['voice', 'read a section aloud — try \'voice about\''],
+             ['voice', 'read a section aloud' + (voiced ? ' — try \'voice about\'' : ', where the browser has a voice')],
              ['theme', 'toggle light/dark'],
              ['kushe', 'a greeting from Freetown'],
              ['clear', 'wipe the screen'],

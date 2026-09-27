@@ -137,6 +137,16 @@
                 </svg>
                 <span class="logo-text">MK<span class="logo-accent">S</span></span>
             </a>
+            <!-- Shown by script.js once something can speak, which can be well
+                 after the first paint: first in the right-hand group, where it
+                 takes only free space and moves nothing already on show. The
+                 player goes right after it, next in Tab order. -->
+            <div class="nav-listen" id="navListen" hidden>
+                <button type="button" class="listen-btn" id="listenBtn" aria-expanded="false" title="Listen to this page" data-analytics="listen">
+                    <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-waveform"></use></svg>
+                    <span class="listen-word">Listen<span class="sr-only"> to this page</span></span>
+                </button>
+            </div>
             <!-- Hidden until script.js wires it up: without the script it
                  could not switch anything, so it does not show. -->
             <button type="button" class="theme-toggle" id="themeToggle" aria-label="Switch to light theme" hidden>
@@ -161,14 +171,6 @@
                 <li><a href="assets/Moses_Kolleh_Sesay_CV.pdf" class="nav-link nav-cv" download data-analytics="cv-download-nav"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-file-arrow-down"></use></svg> CV</a></li>
                 <li><a href="#contact" class="nav-link contact-btn" data-analytics="contact-nav">Contact</a></li>
             </ul>
-            <!-- Shown by script.js once something can speak; the player goes
-                 right after it, next in Tab order. -->
-            <div class="nav-listen" id="navListen" hidden>
-                <button type="button" class="listen-btn" id="listenBtn" aria-expanded="false" title="Listen to this page" data-analytics="listen">
-                    <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-waveform"></use></svg>
-                    <span class="listen-word">Listen<span class="sr-only"> to this page</span></span>
-                </button>
-            </div>
         </div>
     </nav>
 
@@ -518,7 +520,7 @@
             <div class="section-header">
                 <span class="section-index">04</span>
                 <h2 class="section-title">Research &amp; <span class="highlight">Projects</span></h2>
-                <p class="section-description">Six field dossiers — click any one to open the full story, photos included.</p>
+                <p class="section-description">Six field dossiers<span class="needs-js"> — click any one to open the full story</span>, photos included.</p>
                 <p class="section-cta">
                     Want the evidence rather than the story?
                     <a href="case-studies.html" data-analytics="projects-to-case-studies">Read the case studies</a> —
@@ -920,8 +922,7 @@
                                     <h4><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-trophy"></use></svg> Results &amp; impact</h4>
                                     <ul>
                                         <li>70% aquifer strike rate in subsequent drilling, from field records rather than a controlled trial</li>
-                                        <li>Groundwater-potential maps used in the siting work that followed</li>
-                                        <li>The method informed borehole siting in the drilling that followed, part of the 164 water points I helped deliver</li>
+                                        <li>The maps and method informed borehole siting in the drilling that followed, part of the 164 water points I helped deliver</li>
                                     </ul>
                                 </div>
                             </div>
@@ -1059,7 +1060,7 @@
                 <div class="anatomy-head">
                     <span class="mono-label">The accounting view</span><span class="try-tag">try it</span>
                     <h3 class="anatomy-title">Anatomy of a prompt — where one answer lands on a CSRD report</h3>
-                    <p class="anatomy-lede">The totals above are only half the story. A sustainability report doesn't want one number — it wants the right number on the right disclosure line. Here's how a single answer splits across the ESRS.</p>
+                    <p class="anatomy-lede">The totals above are only half the story. A sustainability report doesn't want one number — it wants the right number on the right disclosure line. Here's how a single answer splits across the ESRS for whoever runs the model.</p>
                 </div>
                 <div class="anatomy-control">
                     <label class="mono-label" for="anatomyModel">Model</label>
@@ -1075,7 +1076,7 @@
                 <div class="anatomy-svg-wrap" tabindex="0" role="region" aria-label="Anatomy of an AI answer, flow diagram (scrolls sideways on small screens)"><svg class="anatomy-svg" id="anatomySvg" viewBox="0 0 720 320" role="img" aria-label="Flow diagram splitting one AI answer into Scope 2 grid electricity, Scope 3 embodied hardware (not quantified), and data-centre cooling water, each mapped to its ESRS disclosure line. A text summary follows."></svg></div>
                 <p class="anatomy-summary" id="anatomySummary"></p>
                 <button type="button" class="anatomy-copy btn btn-secondary btn-small" id="anatomyCopy" data-analytics="anatomy-copy"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-copy"></use></svg> Copy figure</button>
-                <p class="anatomy-foot">Boundary: inference only, as in the full coach. Scope 2 is grid electricity, data-centre overhead included; cooling water maps to ESRS E3. Embodied hardware carbon belongs on Scope 3 (capital goods), but no per-query factor for it is sourced well enough for the evidence ledger, so neither page quantifies it. Energy, grid and water come from the same shared model behind &ldquo;AI, Weighed&rdquo;.</p>
+                <p class="anatomy-foot">Boundary: inference only, as in the full coach, on the report of whoever runs the model (its provider, or you if you host it). There, grid electricity (data-centre overhead included) is Scope 2, cooling water is ESRS E3, and embodied hardware is Scope 3 (capital goods), which neither page quantifies: no per-query factor for it is sourced well enough for the evidence ledger. Buying answers from a hosted model, as most teams do, the carbon is your Scope 3, category 1 (purchased services), and the water is in your value chain, not your own E3-4 consumption. Energy, grid and water come from the same shared model behind &ldquo;AI, Weighed&rdquo;.</p>
                 <a class="feature-next" href="#assay">Next &rarr; does my record fit your role?</a>
             </div>
         </div>
@@ -1115,7 +1116,7 @@
                         </li>
                         <li class="toolkit-item">
                             <span class="toolkit-name">JavaScript <span class="toolkit-sub">interactive tools</span></span>
-                            <a class="toolkit-proof" href="#ecoprompt">EcoPrompt Coach — the live widget on this page <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-arrow-right"></use></svg></a>
+                            <a class="toolkit-proof" href="#ecoprompt">EcoPrompt Coach<span class="needs-js"> — the live widget on this page</span> <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-arrow-right"></use></svg></a>
                         </li>
                     </ul>
                 </div>
@@ -1468,7 +1469,7 @@
                     (&asymp;0.36&nbsp;g CO&#8322;e per MB, global average grid). Comparison point: the median web page ships &asymp;2.5&nbsp;MB
                     (<a href="https://httparchive.org/reports/page-weight" target="_blank" rel="noopener">HTTP Archive</a>).
                     A leading &ldquo;+&rdquo; means a third-party file served without timing headers couldn&rsquo;t be measured, so the true figure is a touch higher &mdash; never lower.
-                    Before this redesign, this page shipped ~25&nbsp;MB of images. A first view now costs about 279&nbsp;KB over the wire, fonts included &mdash; text compressed, one hero image, everything else loaded only if you go looking for it. That figure is a budget the test suite enforces, not a claim in a README.
+                    Before this redesign, this page shipped ~25&nbsp;MB of images. A first view now costs about 280&nbsp;KB over the wire, fonts included &mdash; text compressed, one hero image, everything else loaded only if you go looking for it. That figure is a budget the test suite enforces, not a claim in a README.
                     Want the logical extreme? The <a href="field-report.html">text-only field report</a> is the whole portfolio in 9&nbsp;KB.</p>
                 </div>
 

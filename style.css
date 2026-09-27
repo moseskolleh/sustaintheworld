@@ -1077,7 +1077,7 @@ body.light-mode .hero-availability {
 .assay-grade-marginal { border-left-color: var(--accent-salmon); }
 .assay-grade-marginal .assay-grade-tag { color: var(--accent-salmon); }
 
-.assay-map-h, .assay-gaps-h { margin-bottom: 10px; color: var(--text-secondary); }
+.assay-map-h { margin-bottom: 10px; color: var(--text-secondary); }
 .assay-row {
     display: grid;
     grid-template-columns: 1fr 1.4fr;
@@ -2959,12 +2959,6 @@ html.js .nojs-note { display: none; }
     will-change: transform;
 }
 
-.map-sphere {
-    fill: none;
-    stroke: var(--line-soft);
-    stroke-width: 1;
-}
-
 .map-graticule {
     fill: none;
     stroke: var(--line-soft);
@@ -4149,8 +4143,9 @@ body.light-mode .journey-you-readout {
    by modules/dispatch.css, which arrives with the player on first press.
    =================================================================== */
 
-/* Gives screen readers the full name of a control whose visible label is
-   shorter ("Listen" is announced as "Listen to this page"). */
+/* Text for screen readers only: the full name of a control whose visible
+   label is shorter ("Listen" is announced as "Listen to this page"), and a
+   hero figure while its digits count up (script.js). */
 .sr-only {
     position: absolute;
     width: 1px;
@@ -4241,11 +4236,12 @@ body.light-mode .journey-you-readout {
 }
 
 /* Beside the full menu every pixel counts: the rest of the bar leaves
-   ~12px of 1280. This control sits closer to Contact, and below 1330px the
-   links give up 4px a gap (scripts/smoke.js checks it fits at every width). */
+   ~12px of 1280. This control sits closer to the theme switch, and below
+   1330px the links give up 4px a gap (scripts/smoke.js checks it fits at
+   every width). */
 @media (min-width: 1280px) {
     .nav-listen {
-        margin-left: -8px;
+        margin-right: -8px;
     }
 }
 

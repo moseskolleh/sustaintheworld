@@ -589,7 +589,7 @@
         updateAvailability();
     });
 
-    // Used by the nav button (script.js) and the field terminal's `voice`.
+    // Used by the nav button (script.js) and the field terminal (`voice`, `help`, `co2`).
     window.FieldDispatch = {
         toggle,
         play: (id) => {
@@ -600,8 +600,6 @@
         },
         playIntro: () => loadManifest().then(playIntro),
         stop,
-        loadManifest,
-        hasIntro: () => !!introTrack(),
         state: () => {
             const t = introTrack();
             return {

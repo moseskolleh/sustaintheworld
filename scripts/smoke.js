@@ -19,8 +19,9 @@
 //     control only a script could drive, or hides the contact form
 //   - a skip link, nav link or Back that does not land where it says; a
 //     theme switch or nav item off the bar; back to top over a control
-//   - more than one listen control, a player that covers more than 20% of
-//     a phone screen or the send button, or a recording fetched unasked
+//   - more than one listen control, a nav bar that moves when it appears,
+//     a player that covers more than 20% of a phone screen or the send
+//     button, or a recording fetched unasked
 //   - an Assay that grades a mismatched ad well, or sends anything
 //   - a clipped dropdown or an unreadable number on carbon-ai.html
 //
@@ -440,6 +441,34 @@ async function exerciseNavigation(browser, origin) {
         }
     }
 
+    // A shared link straight into section 05 lands a task after load, and
+    // the module it fetches often arrives within the next frame. The hold
+    // skipped the observer's first report as "only the current size", so
+    // growth inside that frame was never landed for: /#assay and /#anatomy
+    // stopped 250-440px short on about one visit in three, the cache warm
+    // from an earlier page. Each is opened a few times.
+    for (const id of ['anatomy', 'assay']) {
+        const misses = [];
+        for (let run = 0; run < 3; run++) {
+            const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+            const warm = await ctx.newPage();
+            await warm.goto(`${origin}/index.html#ydi`, { waitUntil: 'load' });
+            await warm.waitForTimeout(1500);
+            await warm.close();
+            const pg = await ctx.newPage();
+            await pg.goto(`${origin}/index.html#${id}`, { waitUntil: 'load' });
+            await pg.waitForTimeout(3000);
+            const r = await pg.evaluate((i) => ({
+                top: Math.round(document.getElementById(i).getBoundingClientRect().top),
+                bar: Math.round(document.getElementById('navbar').getBoundingClientRect().bottom)
+            }), id);
+            if (Math.abs(r.top - r.bar) > 4) misses.push(`${r.top}px against ${r.bar}px`);
+            await ctx.close();
+        }
+        if (misses.length) bad(`shared link /#${id} at 390px: stopped short of the nav bar (${misses.join(', ')})`);
+        else ok(`shared link /#${id} at 390px: lands under the nav bar, 3 of 3 times with the cache warm`);
+    }
+
     // Without script the switch could not switch anything, so it must not show.
     const noScript = await browser.newContext({ viewport: { width: 390, height: 800 }, javaScriptEnabled: false });
     const bare = await noScript.newPage();
@@ -638,6 +667,31 @@ const NO_VOICE = () => {
     Object.defineProperty(window, 'speechSynthesis', { value: synth, configurable: true });
 };
 
+// Voices that turn up after the first paint, as Chrome's routinely do: none
+// until voiceschanged, 1.2 s after load.
+const LATE_VOICE = () => {
+    const heard = [];
+    let voices = [];
+    const synth = {
+        getVoices: () => voices, speak() {}, cancel() {}, pause() {}, resume() {},
+        speaking: false, paused: false, pending: false,
+        addEventListener(type, fn) { if (type === 'voiceschanged') heard.push(fn); }, removeEventListener() {}
+    };
+    Object.defineProperty(window, 'speechSynthesis', { value: synth, configurable: true });
+    window.SpeechSynthesisUtterance = function (text) { this.text = text; };
+    window.addEventListener('load', () => setTimeout(() => {
+        voices = [{ name: 'Late', lang: 'en-GB', localService: true, default: true, voiceURI: 'late' }];
+        heard.forEach((fn) => fn(new Event('voiceschanged')));
+    }, 1200));
+};
+
+// Where each thing in the nav bar sits: what must not move when Listen shows.
+const barPlaces = (page) => page.evaluate(() => ['.nav-logo', '#themeToggle', '#navToggle', '.nav-menu .nav-link', '.nav-menu .contact-btn'].map((sel) => {
+    const el = document.querySelector(sel);
+    const r = el && getComputedStyle(el).display !== 'none' ? el.getBoundingClientRect() : null;
+    return `${sel} ${r && r.width ? Math.round(r.left) : '-'}`;
+}).join(', '));
+
 const PLAYER_CEILING = 0.20;   // share of a 390×844 viewport the open player may cover
 
 async function exerciseNarration(browser, origin) {
@@ -695,6 +749,9 @@ async function exerciseNarration(browser, origin) {
                 if (hit(box(document.getElementById('themeToggle')))) return 'overlapping the theme switch';
                 const last = box(document.querySelector('.nav-menu .contact-btn'));
                 if (getComputedStyle(document.getElementById('navToggle')).display === 'none' && hit(last)) return 'overlapping Contact';
+                // It sits first in the right-hand group, so what it costs shows at the far end.
+                const end = getComputedStyle(document.getElementById('navToggle')).display === 'none' ? last : box(document.getElementById('navToggle'));
+                if (end && end.right > edge + 0.5) return `pushing ${end === last ? 'Contact' : 'the menu button'} ${Math.round(end.right - edge)}px past the bar's edge`;
                 return null;
             });
             if (r) off.push(`${w}px: ${r}`);
@@ -819,10 +876,14 @@ async function exerciseNarration(browser, origin) {
     // the player used to hide the control while it waited, focus and all.
     {
         const { context, page, hits } = await withIntro(false, 300);
+        const before = await barPlaces(page);
         const shown = await page.waitForFunction(() => !document.getElementById('navListen').hidden, null, { timeout: 6000 })
             .then(() => true, () => false);
         if (shown && hits.length === 0) ok('no voice but a recording: the control appears (and still fetches nothing)');
         else bad(`no voice but a recording: the control ${shown ? 'appeared but fetched audio early' : 'never appeared'}`);
+        const after = await barPlaces(page);
+        if (before === after) ok('no voice but a recording: the control appears 1.5 s after load, and nothing else in the bar moves');
+        else bad(`no voice but a recording: the bar moved when the control appeared (${before} → ${after})`);
         if (shown) {
             await page.evaluate(() => {
                 window.__listenHidden = 0;
@@ -841,6 +902,27 @@ async function exerciseNarration(browser, origin) {
             if (played && after.focus && !after.blinked) ok('no voice but a recording: Enter on Listen plays him, and the control and focus stay put');
             else bad(`no voice but a recording, Enter on Listen: playing ${played}, focus on ${after.on}, the control hid ${after.blinked} time(s)`);
         }
+        await context.close();
+    }
+
+    // --- Listen shows late, and nothing else in the bar moves -----------------
+    // It used to be the last thing in the bar: shown when the voices came,
+    // it pushed the theme switch and the menu button 56px left and took the
+    // menu button's spot, so a tap meant for the menu opened the player.
+    for (const width of [390, 1440]) {
+        const context = await browser.newContext({ viewport: { width, height: 844 } });
+        await context.addInitScript(LATE_VOICE);
+        const page = await context.newPage();
+        watch(page);
+        await page.goto(`${origin}/index.html`, { waitUntil: 'load' });
+        const before = await barPlaces(page);
+        const hidden = await page.evaluate(() => document.getElementById('navListen').hidden);
+        const shown = await page.waitForFunction(() => !document.getElementById('navListen').hidden, null, { timeout: 5000 }).then(() => true, () => false);
+        await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+        const after = await barPlaces(page);
+        if (!hidden || !shown) bad(`late voices at ${width}px: the control was ${hidden ? 'never shown' : 'shown before any voice'}`);
+        else if (before === after) ok(`late voices at ${width}px: Listen appears and nothing else in the bar moves`);
+        else bad(`late voices at ${width}px: the bar moved when Listen appeared (${before} → ${after})`);
         await context.close();
     }
 
@@ -908,9 +990,10 @@ async function checkWithoutJs(browser, origin) {
         else ok(`${label}: no control on show that needs JavaScript`);
         if (r.deadLinks.length) bad(`${label}: in-page links to nothing on show: ${r.deadLinks.join(', ')}`);
         // Nor copy on show that points at what JavaScript would have drawn:
-        // the journey map, carbon-ai's ledger, the homepage's Anatomy.
+        // the journey map, carbon-ai's ledger, the homepage's Anatomy, a
+        // click to open dossiers that are open already, a live widget.
         const pointing = await page.evaluate(() => {
-            const out = (document.body.innerText.match(/Watch the route unfold|the ledger below/gi) || []);
+            const out = (document.body.innerText.match(/Watch the route unfold|the ledger below|click any one to open|the live widget on this page/gi) || []);
             document.querySelectorAll('a[href$="index.html#anatomy"]').forEach((a) => { if (a.getClientRects().length) out.push('a link to index.html#anatomy'); });
             return out;
         });
@@ -1049,6 +1132,46 @@ async function checkWithoutJs(browser, origin) {
         await context.close();
     }
 
+    // (c2) The same, with no scroll anchoring, as in Safari, and the reader
+    // further down: below a dossier whose widget comes back with the mark
+    // and grows it, and in Skills, below all of section 05. Chromium's
+    // anchoring had been doing the holding; without it the line slid
+    // 760-2,800px in the 2.5 s after the takeover.
+    await Promise.all([
+        ['the UN dossier', '[data-project="un-disaster"] .project-details'],
+        ['the water-management dossier', '[data-project="water-management"] .project-details'],
+        ['Skills', '#skills']
+    ].map(async ([where, sel]) => {
+        const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+        await context.addInitScript(() => document.addEventListener('DOMContentLoaded', () => {
+            const s = document.createElement('style');
+            s.textContent = '* { overflow-anchor: none !important; }';
+            document.head.appendChild(s);
+        }));
+        await context.route('**/script.js', async (route) => {
+            await new Promise(res => setTimeout(res, 6000));
+            await route.continue();
+        });
+        const page = await context.newPage();
+        await page.goto(`${origin}/index.html`, { waitUntil: 'commit' });
+        await page.waitForFunction(() => document.querySelector('footer') && !document.documentElement.classList.contains('js'), null, { timeout: 5500 }).catch(() => null);
+        await page.waitForTimeout(900);
+        await page.evaluate((q) => scrollTo({ top: document.querySelector(q).getBoundingClientRect().top + scrollY + 150, behavior: 'instant' }), sel);
+        await page.waitForTimeout(200);
+        const line = () => page.evaluate(() => {
+            const l = window.__line || (window.__line = document.elementFromPoint(innerWidth / 2, innerHeight / 3));
+            return { top: Math.round(l.getBoundingClientRect().top), what: l.textContent.replace(/\s+/g, ' ').trim().slice(0, 40) };
+        });
+        const seen = await line();
+        const tookOver = await page.waitForFunction(() => window.mksReady === true, null, { timeout: 10000 }).then(() => true, () => false);
+        await page.waitForTimeout(2500);
+        const now = await line();
+        const tag = `index.html, script.js late, no scroll anchoring, reading ${where}`;
+        if (tookOver && Math.abs(now.top - seen.top) <= 4) ok(`${tag}: the line stays put while the page fills in ("${seen.what}" at ${seen.top}px, then ${now.top}px)`);
+        else bad(`${tag}: the line ("${seen.what}") moved from ${seen.top}px to ${now.top}px (took over: ${tookOver})`);
+        await context.close();
+    }));
+
     // (d) A normal visit keeps its intro, and the counters count up to exact
     // values. Under reduced motion or low-energy mode they never move. What
     // the page looked like at DOMContentLoaded is captured by a listener
@@ -1077,12 +1200,15 @@ async function checkWithoutJs(browser, origin) {
         await context.addInitScript(capture);
         const page = await context.newPage();
         await page.goto(`${origin}/index.html`, { waitUntil: 'load' });
+        // What a screen reader has to read before anyone scrolls: the digits
+        // wait at 0 below the fold, and used to be all it heard.
+        const unseen = (await page.locator('.hero-stats').ariaSnapshot()).replace(/\s+/g, ' ');
         // At 800px tall the figures sit just below the fold; they count when
         // seen. A count-up takes about 1.8 s, a frame at a time.
         await page.evaluate(() => document.querySelector('.hero-stats').scrollIntoView({ block: 'center' }));
         if (label === 'normal') {
             await page.waitForFunction(() => Array.from(document.querySelectorAll('.hero-stat-number'))
-                .every(c => c.textContent === c.getAttribute('data-target')), null, { timeout: 8000 }).catch(() => null);
+                .every(c => c.textContent === c.getAttribute('data-target')) && !document.querySelector('.hero-stats .sr-only'), null, { timeout: 8000 }).catch(() => null);
         } else {
             await page.waitForTimeout(2600);
         }
@@ -1092,9 +1218,15 @@ async function checkWithoutJs(browser, origin) {
             marked: document.documentElement.classList.contains('js'),
             ready: window.mksReady === true,
             counters: Array.from(document.querySelectorAll('.hero-stat-number')).map(c => c.textContent),
-            targets: Array.from(document.querySelectorAll('.hero-stat-number')).map(c => c.getAttribute('data-target'))
+            targets: Array.from(document.querySelectorAll('.hero-stat-number')).map(c => c.getAttribute('data-target')),
+            said: Array.from(document.querySelectorAll('.hero-stat')).map(s => `${s.querySelector('.hero-stat-number').getAttribute('data-target')} ${s.querySelector('.hero-stat-label').textContent}`),
+            copies: document.querySelectorAll('.hero-stats .sr-only, .hero-stat-number[aria-hidden]').length
         }));
         const tag = `index.html, ${label}`;
+        const missed = r.said.filter(t => !unseen.includes(t));
+        if (missed.length) bad(`${tag}: before the stats are scrolled to, the accessibility tree lacks ${missed.join('; ')} (${unseen})`);
+        else ok(`${tag}: before the stats are scrolled to, a screen reader reads ${r.said.join(', ')}`);
+        if (r.copies) bad(`${tag}: ${r.copies} screen-reader copies or hidden digits left once the count ended`);
         const exact = r.counters.join('|') === r.targets.join('|');
         if (!r.ready || !r.marked) bad(`${tag}: script.js did not take over (ready ${r.ready}, marked ${r.marked})`);
         if (r.preloader) bad(`${tag}: the preloader is still in the page after load`);

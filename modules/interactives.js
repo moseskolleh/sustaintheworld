@@ -327,6 +327,9 @@ window.mksShare = (() => {
         languageCues: ['fluent', 'fluency', 'native', 'mother tongue', 'proficient', 'proficiency', 'speak',
             'speaking', 'speaker', 'spoken', 'written', 'verbal', 'language', 'bilingual', 'command of',
             'working knowledge', 'english', 'vloeiend'],
+        // The language to write an application in is not one the job needs:
+        // "Applications in English or Dutch are welcome".
+        applyIn: ['apply in', 'application in', 'applications in', 'cv in', 'letter in'],
         // Never when the next word starts with one of these, or is a name
         // ("Dutch Tax Authority"): that is the employer, not the job.
         nationalStems: ['minist', 'govern', 'federal', 'national', 'tax', 'authorit', 'agenc', 'municipal', 'compan',
@@ -562,9 +565,17 @@ window.mksShare = (() => {
                 need('tool:' + tool.name, tool.name, toolEv[tool.name], 'Not evidenced on this site. Ask Moses.');
             });
 
-            if (n <= 4 || langCue(line)) {
+            // The employer describing itself ("Our team works in English,
+            // Dutch and French") asks nothing of the applicant, and nor does
+            // the language to apply in. In the employer's voice a language is
+            // asked for only where the line says so: a level, "a plus", or
+            // "language" in its clause ("Our working language is Dutch").
+            const Y = RULES.years;
+            const ours = hit(line, Y.we) && !stemHit(line, Y.you);
+            const asks = (clause) => !ours || levelOf(line) || hit(line, RULES.softCues) || hit(clause, ['language']);
+            if ((n <= 4 || langCue(line)) && !hit(line, RULES.applyIn)) {
                 clauses(line).forEach((clause) => {
-                    if (wordCount(clause) > 4 && !langCue(clause)) return;
+                    if ((wordCount(clause) > 4 && !langCue(clause)) || !asks(clause)) return;
                     LANGUAGES.forEach((lang) => {
                         if (!spoken(clause, lang)) return;
                         // The level beside this language, else its clause's:
@@ -585,8 +596,7 @@ window.mksShare = (() => {
                 });
             }
 
-            const Y = RULES.years;
-            if (!hit(line, Y.not) && !(hit(line, Y.we) && !stemHit(line, Y.you))) {
+            if (!hit(line, Y.not) && !ours) {
                 let years = 0;
                 for (const m of line.matchAll(rx(Y.re, 'gi'))) {
                     const count = Number(m[2]) || Y.words[m[2].toLowerCase()] || 0;
@@ -774,10 +784,13 @@ window.mksShare = (() => {
     const TOKENS = 1000;                              // everyday-chat workload
     const PUE = DATA.PUE;
     const WUE = DATA.WUE_PROFILES.avg.wue_L_per_kWh;
-    // Embodied hardware carbon belongs on Scope 3 (capital goods), so the line
-    // stays on the diagram, but without a number: the 0.05 gCO2e/Wh once typed
-    // here had no source, and the full coach excludes embodied carbon. A sourced
-    // factor in ai-carbon-data.js would bring it back on both pages at once.
+    // The lines are those of whoever runs the model; a buyer of a hosted one
+    // reports the carbon as its Scope 3, category 1, as the foot and summary
+    // say. For the operator, embodied hardware is Scope 3 (capital goods), so
+    // the line stays on the diagram, but without a number: the 0.05 gCO2e/Wh
+    // once typed here had no source, and the full coach excludes embodied
+    // carbon. A sourced factor in ai-carbon-data.js would bring it back on
+    // both pages at once.
     const EMBODIED_NOTE = 'not quantified';
     const ANSWERS_PER_YEAR = 20 * 220;               // 20 prompts/day × 220 working days
     let scale = 'answer';
@@ -844,7 +857,7 @@ window.mksShare = (() => {
         vals[2].textContent = `${fmt(d.water * m / cDiv)} ${wu} water`;
         if (summary) {
             const basis = yr ? `at ~${ANSWERS_PER_YEAR.toLocaleString()} answers/analyst-year (20/day × 220 days)` : 'one everyday answer';
-            summary.innerHTML = `<strong>${DATA.MODELS[sel.value].label}</strong>, ${basis} on the <strong>${grid.label}</strong> grid: <strong>${fmt(d.scope2 * m / cDiv)} ${cu}</strong> Scope 2 and <strong>${fmt(d.water * m / cDiv)} ${wu}</strong> cooling water — two ESRS lines quantified. Scope 3 embodied hardware is a third line, named but ${EMBODIED_NOTE}.`;
+            summary.innerHTML = `<strong>${DATA.MODELS[sel.value].label}</strong>, ${basis} on the <strong>${grid.label}</strong> grid, for whoever runs the model: <strong>${fmt(d.scope2 * m / cDiv)} ${cu}</strong> Scope 2 and <strong>${fmt(d.water * m / cDiv)} ${wu}</strong> cooling water — two ESRS lines quantified. Scope 3 embodied hardware is a third line, named but ${EMBODIED_NOTE}. A buyer of the hosted model reports the carbon as Scope 3, category 1.`;
         }
     };
 
@@ -873,7 +886,7 @@ window.mksShare = (() => {
 
 
 // ===================================
-// YOU DRAW IT — predict AI's hidden energy curve, then reveal the truth
+// YOU DRAW IT — predict AI's hidden energy curve, then reveal the estimates
 // The NYT "you draw it" mechanic, powered by the shared AI carbon data.
 // ===================================
 (() => {
@@ -899,7 +912,10 @@ window.mksShare = (() => {
 
     const KEYS = ['llama-32-1b', 'gpt-4-1-nano', 'gpt-4o-mini', 'gemini-15-flash', 'gemini-20-flash', 'llama-33-70b', 'claude-37-sonnet', 'gpt-4o', 'gemini-15-pro', 'deepseek-r1'];
     const SHORT = { 'llama-32-1b': '1B', 'gpt-4-1-nano': 'nano', 'gpt-4o-mini': '4o-mini', 'gemini-15-flash': '1.5 Flash', 'gemini-20-flash': '2.0 Flash', 'llama-33-70b': '70B', 'claude-37-sonnet': 'Sonnet', 'gpt-4o': 'GPT-4o', 'gemini-15-pro': '1.5 Pro', 'deepseek-r1': 'R1' };
-    const models = KEYS.filter(k => DATA.MODELS[k]).map(k => ({ key: k, label: DATA.MODELS[k].label, short: SHORT[k] || DATA.MODELS[k].label, wh: DATA.MODELS[k].energyPer1kTokens_Wh }));
+    const models = KEYS.filter(k => DATA.MODELS[k]).map(k => {
+        const m = DATA.MODELS[k], wh = m.energyPer1kTokens_Wh;
+        return { key: k, label: m.label, short: SHORT[k] || m.label, wh, range: m.range || [wh, wh] };
+    });
     const n = models.length;
     if (n < 5) return;
     const KNOWN = 3;
@@ -1074,34 +1090,40 @@ window.mksShare = (() => {
         });
         if (hintEl) hintEl.style.opacity = '0';
         if (resetBtn) resetBtn.hidden = false;
+        if (shareBtn) shareBtn.hidden = false;
+        // Reveal goes, and focus with it to the page, where a screen reader
+        // says nothing of where it went: hand it to what takes its place.
+        const next = shareBtn || resetBtn;
+        if (next && document.activeElement === revealBtn) next.focus();
         revealBtn.hidden = true;
 
+        // Each figure is a published estimate with a range, good to an order
+        // of magnitude. A guess inside the range is not wrong, and a gap
+        // quoted to a decimal against the central value was false precision.
         const gWh = Math.max(guess[n - 1], 0);
         const rWh = models[n - 1].wh;
         const tiny = models[0].wh;
+        const [lo, hi] = models[n - 1].range, [tLo, tHi] = models[0].range;
         const factorFrontier = Math.round(rWh / tiny);
+        const factors = `${Math.round(lo / tHi)}–${Math.round(hi / tLo).toLocaleString('en')}×`;
+        const est = `The published estimate is about ${rWh} Wh (${lo}–${hi} Wh)`;
         let msg;
-        if (gWh < 0.02) {
-            msg = `You put the biggest model near zero — it's actually ${rWh.toFixed(2)} Wh, a dramatic underestimate of the frontier.`;
-        } else if (rWh / gWh >= 1.3) {
-            msg = `You put the biggest model at ~${gWh.toFixed(2)} Wh. It's actually ${rWh.toFixed(2)} Wh — you underestimated the frontier by ${(rWh / gWh).toFixed(1)}×.`;
-        } else if (gWh / rWh >= 1.3) {
-            msg = `You had the frontier at ~${gWh.toFixed(2)} Wh; it's actually ${rWh.toFixed(2)} Wh — an overestimate of ${(gWh / rWh).toFixed(1)}×.`;
-        } else {
-            msg = `Close — you had the frontier near ${gWh.toFixed(2)} Wh; it's ${rWh.toFixed(2)} Wh.`;
-        }
-        msg += ` A 1B model answers for ${tiny.toFixed(3)} Wh — the frontier reasoning model burns roughly ${factorFrontier}× more for the same 1,000-token answer. That gap is exactly what the tools people prompt with never show them.`;
+        if (gWh < 0.02) msg = `You put the biggest model near zero. ${est}: a dramatic underestimate of the frontier.`;
+        else if (gWh < lo) msg = `You put the biggest model at ~${gWh.toFixed(2)} Wh. ${est}, so you underestimated the frontier, about ${Math.round(rWh / gWh)}× below its central figure.`;
+        else if (gWh > hi) msg = `You had the frontier at ~${gWh.toFixed(2)} Wh. ${est}, so that is an overestimate.`;
+        else msg = `You had the frontier at ~${gWh.toFixed(2)} Wh. ${est}: your guess is within that range.`;
+        msg += ` A 1B model answers for about ${tiny} Wh, so the frontier reasoning model uses roughly ${factorFrontier}× more for the same 1,000-token answer (${factors} across the ranges). That gap is exactly what the tools people prompt with never show them.`;
         // Shape grade: did they capture the frontier spike, not just a magnitude?
         let guessPeak = KNOWN;
         for (let i = KNOWN + 1; i < n; i++) if (guess[i] > guess[guessPeak]) guessPeak = i;
         const spread = guess[n - 1] - guess[KNOWN];
         let shape;
-        if (guessPeak === n - 1 && rWh / Math.max(gWh, 0.001) < 1.6) shape = 'You nailed the shape — you saw the frontier spike.';
+        if (guessPeak === n - 1 && gWh >= lo) shape = 'You nailed the shape — you saw the frontier spike.';
         else if (guessPeak === n - 1) shape = 'You saw the spike, but under-scaled how steep it gets.';
         else if (spread < 0.1) shape = 'You drew it nearly flat — the research estimates hide a cliff at the frontier.';
-        else shape = 'You underestimated the frontier — the reasoning model is the outlier.';
+        else shape = 'You put the peak before the frontier — the reasoning model is the outlier.';
         if (verdictEl) { verdictEl.innerHTML = `<span class="ydi-shape">${shape}</span> ${msg}`; verdictEl.hidden = false; }
-        cardData = { shape: shape, factor: factorFrontier };
+        cardData = { shape, factor: factorFrontier, factors };
         // Third line: a straight-line guess that misses the reasoning spike —
         // drawn, not sourced, so the legend and the data table say illustrative.
         const intuitEnd = 0.55;
@@ -1112,7 +1134,6 @@ window.mksShare = (() => {
         svg.appendChild(callout);
         realDots.push(callout);
         if (legendEl) legendEl.hidden = false;
-        if (shareBtn) shareBtn.hidden = false;
     };
     revealBtn.addEventListener('click', doReveal);
 
@@ -1137,7 +1158,7 @@ window.mksShare = (() => {
         ctx.font = "600 19px 'Space Grotesk', system-ui, sans-serif";
         const shapeLines = wrapText(ctx, cardData.shape, cw);
         ctx.font = "400 16px 'Inter', system-ui, sans-serif";
-        const factorText = `The frontier reasoning model burns about ${cardData.factor}× more energy per answer than a 1-billion-parameter model.`;
+        const factorText = `By the published estimates, the frontier reasoning model uses about ${cardData.factor}× the energy per answer of a 1-billion-parameter model (${cardData.factors} across their ranges).`;
         const factorLines = wrapText(ctx, factorText, cw);
         const headerH = 78;
         const H = headerH + 26 + shapeLines.length * 26 + 14 + factorLines.length * 23 + 66;
@@ -1149,7 +1170,7 @@ window.mksShare = (() => {
         ctx.fillStyle = '#7CFC00'; ctx.font = "700 24px 'Space Grotesk', system-ui, sans-serif";
         ctx.fillText("AI's Hidden Curve", padX, 40);
         ctx.fillStyle = '#9fdf7a'; ctx.font = "400 13px 'IBM Plex Mono', monospace";
-        ctx.fillText('I guessed what one AI answer really costs', padX, 62);
+        ctx.fillText('I guessed what one AI answer costs', padX, 62);
         let y = headerH + 22;
         ctx.fillStyle = '#eaffe0'; ctx.font = "600 19px 'Space Grotesk', system-ui, sans-serif";
         shapeLines.forEach(l => { ctx.fillText(l, padX, y); y += 26; });
@@ -1185,8 +1206,9 @@ window.mksShare = (() => {
             for (let i = KNOWN; i < n; i++) guess[i] = models[KNOWN - 1].wh;
             drawGuess();
             if (verdictEl) { verdictEl.hidden = true; verdictEl.textContent = ''; }
-            resetBtn.hidden = true;
             revealBtn.hidden = false;
+            if (document.activeElement === resetBtn) revealBtn.focus();
+            resetBtn.hidden = true;
             if (shareBtn) shareBtn.hidden = true;
             interacted = false;
             if (hintEl) hintEl.style.opacity = '';

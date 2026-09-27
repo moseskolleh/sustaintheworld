@@ -232,11 +232,36 @@ function resolves(href) {
         ['Employer: Dutch Tax Authority', language, 'a Dutch authority is not a language requirement'],
         ['Client: German Federal Ministry', language, 'a German ministry is not a language requirement'],
         ['Location: Amsterdam, Dutch office', language, 'a Dutch office is not a language requirement'],
-        ['You will work with German and French partners, in fluent English.', language, '"fluent" belongs to English, not to the partners\' nationalities']
+        ['You will work with German and French partners, in fluent English.', language, '"fluent" belongs to English, not to the partners\' nationalities'],
+        // The team's languages, and the one to apply in, are not the
+        // applicant's: each of these cut a High-grade fit to Workable or
+        // Marginal with one or two false hard gaps.
+        ['Our team works in English, Dutch and French.', language, 'the languages the team works in are not a requirement'],
+        ['Our team speaks English, Dutch and German.', language, 'the languages the team speaks are not a requirement'],
+        ['We are an international team working in English and Dutch.', language, 'an international team describing itself asks for no language'],
+        ['Our working language is English, and many colleagues also speak Dutch.', language, 'what colleagues also speak is not asked of the applicant'],
+        ['Applications in English or Dutch are welcome.', language, 'the language to apply in is not one the job needs'],
+        ['Please apply in English or French.', language, '"apply in French" is not a French requirement']
     ].forEach(([line, isWrong, why]) => {
         const a = analyse(line + '\n' + ADS.ai);
         const wrong = a.gaps.filter(isWrong).map(g => g.label);
         assert(wrong.length === 0 && a.cls === 'high', `No false gap: ${why} (${wrong.join(', ') || 'none'}; "${a.grade}")`);
+    });
+    // Nor does the team's language put English on the list to confirm, or
+    // count as a requirement line the site does not answer.
+    const plain = analyse(ADS.ai);
+    const team = analyse('Our team works in English, Dutch and French.\n' + ADS.ai);
+    assert(!team.confirm.length && team.coverage.asked === plain.coverage.asked && team.coverage.answered === plain.coverage.answered,
+        `Languages: the team's languages change neither coverage nor what to confirm (${team.coverage.answered}/${team.coverage.asked}, confirm: ${team.confirm.join(', ') || 'none'})`);
+    // …while the employer's voice still asks where it says so.
+    [
+        ['Our ideal candidate speaks fluent Dutch.', 'Dutch (C1 / fluent)', true],
+        ['We require fluent Dutch.', 'Dutch (C1 / fluent)', true],
+        ['Our working language is Dutch.', 'Dutch', true],
+        ['Our office language is Dutch, so fluency is essential.', 'Dutch', true]
+    ].forEach(([line, label, hard]) => {
+        const a = analyse(ADS.ai + '\n' + line);
+        assert(a.gaps.some(g => g.label === label && g.hard === hard), `Languages: "${line}" still asks for ${label} (${a.gaps.map(g => g.label).join(', ') || 'no gaps'})`);
     });
     // …while the same words addressed to the applicant still ask.
     const asked = analyse('We are looking for someone with 5+ years of experience.\n' + ADS.ai);

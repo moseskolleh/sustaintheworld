@@ -556,7 +556,7 @@ rule makes that cheap.
 ## Progress
 
 What branch `claude/plan-implementation-soh954` implements so far, step by step,
-checked against the code and the test runs on 2026-09-26 (`npm test`: 844
+checked against the code and the test runs on 2026-09-26 (`npm test`: 892
 passing in twelve suites; `npm run smoke`: passes). ✓ done · ◐ partial, with
 the reason · ✗ waiting on Moses. Everything Moses has to supply is listed, with
 where it goes, in [owner-checklist.md](owner-checklist.md).
@@ -564,18 +564,23 @@ where it goes, in [owner-checklist.md](owner-checklist.md).
 **Phase 0 — wave 1.** Not done as a phase yet: step 9 waits on Moses, and
 step 4 has the leftover named below, which is his too. Its "done when" tests
 are green: `npm test`, and smoke with the new no-JavaScript and skip-link
-checks. The wave's review listed 30 findings, some of them twice; all are
-fixed, and what they changed is folded into the steps below.
+checks. The wave's review listed 30 findings, some of them twice, and a
+second round 16 more; all are fixed, and what they changed is folded into
+the steps below.
 
 1. ✓ **Works without JavaScript.** The `html.js` line is in `<head>`; the
    preloader, `.reveal`, collapsed dossiers and empty bars are hidden only
-   under it; the hero stats are written as 164, 54, 3 and 2; a 4 s failsafe
+   under it; the hero stats are written as 164, 54, 3 and 2, and read as
+   those while the digits count up (a screen reader heard "0 Master's
+   degrees" until a scroll); a 4 s failsafe
    (and an `onerror` on `script.js`, and on carbon-ai.html's two scripts)
    drops the class if the script never takes over. Below 1280px the nav
    links wrap under the logo without JavaScript, all twelve on show; the
    dossier titles ship `aria-expanded="true"`, as they are shown, and
    script.js closes them. A late `script.js` keeps the six dossiers open and
-   puts back the line being read (they used to fold shut under the reader).
+   puts back the line being read (they used to fold shut under the reader),
+   then holds it there while the widgets fill in: without scroll anchoring,
+   as in Safari, it slid up to 2,800px (smoke checks it with anchoring off).
    Copy that points at what only JavaScript draws hides with it. Smoke loads
    every page with JavaScript off (the homepage at 390, 1024 and 1280px),
    and the homepage with `script.js` blocked and late.
@@ -587,7 +592,10 @@ fixed, and what they changed is folded into the steps below.
    left it. A first jump into or past section 05 used to stop 250–320px short
    (318px for Skills at 1280×800) as the widgets it fetched grew above the
    target; the jump now lands again while the page settles, until the reader
-   scrolls or types, and smoke holds the landing to the nav bar.
+   scrolls or types, and smoke holds the landing to the nav bar. A shared
+   link into section 05 does too: the height was taken from the observer's
+   first report, a frame late, so growth in that frame was missed and
+   /#assay stopped short on about one visit in three.
 4. ◐ **Claims without a basis.** Off the pages: "10,000+ people", 95%, 15%,
    "certified across", Power BI in the toolkit's proof list, "advised", the
    `+` on exact counts, and lines that went beyond the case studies. The 30%
@@ -596,14 +604,23 @@ fixed, and what they changed is folded into the steps below.
    and the test fails if it names a tool the homepage does not show. The
    hero says "continents studied and worked on", the groundwater method
    informed the siting that followed rather than all 164 water points, and
-   You Draw It calls its figures published estimates, not measurements.
+   You Draw It calls its figures published estimates, not measurements: its
+   verdict gives each with its range and judges a guess against the range,
+   not the central figure to a decimal. The skills narration no longer says
+   every listed skill has a project behind it (Life Cycle Assessment, Carbon
+   Markets and Circular Economy have none), and the contact narration says
+   "Amsterdam and the E.U.", as the page does.
    Left: the CV PDF still carries four of the removed claims (✗ Moses, or
    Phase 3.7). ✗ Sources for the 30%, a people-reached count and a method for
    95% and 15%, if they exist.
 5. ✓ **Contradictions resolved**: embodied carbon excluded on both pages,
+   and Anatomy names whose report its Scope 2 and capital-goods lines are
+   on (whoever runs the model; a buyer of a hosted one reports the carbon as
+   Scope 3, category 1),
    thesis periods agree everywhere, Wuppertal says "Team of six" and "worked
    in", not "led", on every page, © 2026, nav numbers dropped. ✗ Moses to
-   confirm the periods and whether he led the Wuppertal team.
+   confirm the periods, whether he led the Wuppertal team, and the ministry
+   project's boundary (K5).
 6. ✓ **Nothing floats over content**: the theme switch is in the nav bar;
    back to top waits one screen and steps aside for every control in its
    corner (it used to watch four whole regions, so it covered the dossier
@@ -615,9 +632,11 @@ fixed, and what they changed is folded into the steps below.
    is not graded. General areas (stakeholders, data, delivery, international,
    research) never make a grade alone: Workable needs one area of his field,
    High two, and HR, ERP, marketing and IT ads grade "Different field". An
-   employer's history ("For over 20 years, we…") or a "Dutch Ministry" is not
-   a requirement. The Dutch / Big Four / SAP ad grades "Marginal match" with
-   4 gaps. ✗ Languages and levels, which roles were paid, and right to work.
+   employer's history ("For over 20 years, we…"), its team's languages
+   ("Our team works in English, Dutch and French"), the language to apply in,
+   or a "Dutch Ministry" is not a requirement. The Dutch / Big Four / SAP ad
+   grades "Marginal match" with 4 gaps. ✗ Languages and levels, which roles
+   were paid, and right to work.
 8. ✓ **carbon-ai display bugs**: one formatter, no exponents, no rounded-away
    zeros, unit switching on the value as shown (0.9999 km is "1.0 km", not
    "1,000 m"); no clipped dropdowns at 320, 390 or 1440px.
@@ -625,19 +644,25 @@ fixed, and what they changed is folded into the steps below.
 10. ✓ **Stale docs**: suite count and budget figures from real runs,
     `check-budget.js` headroom comment, `DEPLOYMENT_GUIDE.md` against
     `Code.gs`, the `profile.json` comment. The footer, the lens and the README
-    now have to quote the budget's first-view figure exactly (279 KB), not
-    within 5 KB of it. The review's fixes cost 1.7 KB of first view, all in
-    the core (the jump that lands again, back to top watching each control,
-    the late start, Back's focus, the no-JavaScript nav), and left the
-    on-demand total about 100 bytes under its 72 KB ceiling: the next thing
-    added there has to take something of equal weight out.
+    now have to quote the budget's first-view figure exactly (280 KB), not
+    within 5 KB of it. The review's first round cost 1.7 KB of first view,
+    all in the core (the jump that lands again, back to top watching each
+    control, the late start, Back's focus, the no-JavaScript nav), and left
+    the on-demand total about 100 bytes under its 72 KB ceiling. The second
+    round cost 0.8 KB more of first view (the counters' readable figures,
+    the held line on a late start, Anatomy's boundary), less two dead rules
+    in style.css; on demand it cost 0.8 KB and the journey map paid 1.6 KB
+    for it, losslessly, by dropping path points that sit on a straight line
+    between their neighbours (the parallels were 60 points each).
 
 **Phase 1** — not started.
 
 **Phase 2.** 2.2 ◐ the nav numbers are gone (Phase 0.5), but it still has 12
 items and the hero still has three buttons. 2.5 ✓ one Listen control in the
-nav, the browser voice by default at 0 bytes; the open player covers 13.3% of
-a 390×844 screen (15.5% with the introduction offered), smoke fails it above
+nav, first after the logo, where showing it late (voices often arrive after
+the first paint) moves nothing else in the bar; the browser voice by default
+at 0 bytes; the open player covers 13.3% of a 390×844 screen (15.5% with
+the introduction offered), smoke fails it above
 20%, and it never covers the send button. With no voice, the control and
 its focus stay put while the player's manifest answers, and the manifest is
 revalidated rather than read blind from the cache, so the day Moses records,
