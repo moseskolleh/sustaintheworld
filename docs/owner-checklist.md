@@ -58,7 +58,8 @@ https://script.google.com/macros/s/AKfycbzgyqRUmu0d2UFjb0WxbYyoDbO8F9jVnlvIQnNAf
     names what is missing.
   - *Unlocks:* submissions land in the right sheet and reach you by email.
     The visit counts (S1) go in the same spreadsheet, on a `Daily` tab the
-    script creates, so the same `SPREADSHEET_ID` serves both.
+    script creates, so the same `SPREADSHEET_ID` serves both. The counter
+    needs one more property, `STATS_TOKEN`; S1 says how to make it.
 
 - [ ] **C2. Redeploy the Apps Script as a new version, after #41 and #42,
   and now the visit counter.**
@@ -137,12 +138,13 @@ https://script.google.com/macros/s/AKfycbzgyqRUmu0d2UFjb0WxbYyoDbO8F9jVnlvIQnNAf
 
 Wave 2 built a cookieless visit counter (`count.js`, on every page), its end
 in `Code.gs` (`POST ?action=count` adds a page view to daily totals, and
-`GET ?action=stats` serves them), and `stats.html` with a weekly Action that
-fills it. None of it counts anything until S1 and S2 are done. What is sent,
-what never is, and why, is in the README under "The visit counter and
-privacy".
+`GET ?action=stats&token=...` serves them to the weekly Action alone), and
+`stats.html` with a weekly Action that fills it. None of it counts anything
+until S1 and S2 are done. What is sent, what never is, and why, is in the
+README under "The visit counter and privacy".
 
-- [ ] **S1. Publish the counter, then run `testCounter()` once.**
+- [ ] **S1. Give the script a `STATS_TOKEN`, publish the counter, then run
+  `testCounter()` once.**
   - *First, before this branch is merged to `main`:* find out how old the
     live script is. Run `curl -L "<the URL above>"` (or open that address in
     a browser). If the reply is an HTML page rather than one line of JSON
@@ -154,6 +156,17 @@ privacy".
     from 2026-08-05 or later: it reads a count as a message with no name and
     refuses it, recording nothing, so merging first is harmless, and nothing
     is counted until you publish.
+  - *The token:* the daily totals `?action=stats` serves are not suppressed,
+    and the web app's address is in `count.js` on every page, so the script
+    serves them only to a request carrying `&token=` set to the
+    `STATS_TOKEN` script property, and to nobody at all while it is unset.
+    `stats.html` promises that no count under 5 and no single day's count is
+    ever published, and this is what keeps that true. Make one with
+    `node -e "console.log(require('crypto').randomBytes(24).toString('base64url'))"`
+    (or any long random string of letters, digits, `-` and `_`), and add it
+    in **Project Settings → Script Properties** as `STATS_TOKEN`, beside
+    `SPREADSHEET_ID` and `OWNER_EMAIL`. Keep it: S2 needs it, and it goes
+    nowhere else.
   - *Where:* this is the same publish as C2: paste the current
     `google-apps-script/Code.gs`, then **Deploy → Manage deployments** →
     the active Web app deployment → **Edit** → **Version: New version** →
@@ -162,35 +175,36 @@ privacy".
     `index.html`, `count.js` and `STATS_SOURCE_URL` would all have to change.
   - *Then:* in the editor, pick `testCounter` in the function menu and press
     **Run**. The execution log should say
-    `Counter OK: 8 DailyTest rows for today, e.g. [...]`. It writes only to a
+    `Counter OK: 9 DailyTest rows for today, e.g. [...]`. It writes only to a
     `DailyTest` tab, created on the first run; `Daily`, where the real counts
     go, is untouched. (Do not test with `testCapture`: it writes a real
     contact row and adds one to the public contact count.)
-  - *Check:* `curl -L "<the URL above>?action=stats"` prints
-    `{"v":1,"rows":[...]}`; before the publish it printed the health check.
-    Once the branch is live, open a page of the site in a browser with
-    neither Do Not Track nor Global Privacy Control on, switch to another
-    tab, and run the same `curl` again: today's `visits` row has gone up by
-    one.
+  - *Check:* `curl -L "<the URL above>?action=stats&token=<STATS_TOKEN>"`
+    prints `{"v":1,"rows":[...]}`, and the same without `&token=...` prints
+    `{"status":"refused",...}` and no rows; before the publish both printed
+    the health check. Once the branch is live, open a page of the site in a
+    browser with neither Do Not Track nor Global Privacy Control on, switch
+    to another tab, and run the first `curl` again: today's `visits` row has
+    gone up by one.
   - *Unlocks:* counts arriving daily, the first half of Phase 1's "done
     when"; and S2.
 
-- [ ] **S2. Set the repository variable `STATS_SOURCE_URL`** (after S1).
-  - *What:* the web app URL with `?action=stats`, that is
-    `https://script.google.com/macros/s/AKfycbzgyqRUmu0d2UFjb0WxbYyoDbO8F9jVnlvIQnNAfMU0v8JFpH5KAefy4z9BNoQqd68/exec?action=stats`
-    (the script adds `?action=stats` if you leave it off). Or, instead, the
-    `Daily` tab published as CSV: in the sheet, **File → Share → Publish to
-    web** → the `Daily` tab and **Comma-separated values (.csv)** →
-    **Publish**, and copy that link. `Code.gs` writes the date column as
-    plain text; if it has been reformatted, set it back (**Format → Number →
-    Plain text**), or those rows are dropped.
+- [ ] **S2. Set the repository secret `STATS_SOURCE_URL`** (after S1).
+  - *What:* the web app URL with `?action=stats` and the token from S1, that
+    is
+    `https://script.google.com/macros/s/AKfycbzgyqRUmu0d2UFjb0WxbYyoDbO8F9jVnlvIQnNAfMU0v8JFpH5KAefy4z9BNoQqd68/exec?action=stats&token=<STATS_TOKEN>`.
+    (The `Daily` tab published as CSV also works as the source, but a
+    published tab can be read by anyone who has its link, unsuppressed, and
+    `stats.html` says the raw totals are not public; if you use it, that
+    paragraph of `stats.html`, in `scripts/build-content.js`, has to change
+    with it.)
   - *Where:* GitHub → the repository → **Settings → Secrets and variables →
-    Actions → Variables** → **New repository variable**, name
-    `STATS_SOURCE_URL`. If the URL carries a token (S3), make it a
-    **secret** of the same name instead: the Action prefers the secret, and
-    never prints the URL.
+    Actions → Secrets** → **New repository secret**, name
+    `STATS_SOURCE_URL`. A secret, not a variable: it carries the token. The
+    Action never prints the URL, only its host.
   - *Order:* after S1. Before it, `?action=stats` answers with the health
-    check, and the Action fails rather than publish that.
+    check, and the Action fails rather than publish that. Without the right
+    token it answers `refused`, and the Action fails and says so.
   - *If `main` is protected:* the Action commits `content/stats.json` and
     `stats.html` straight to `main` as `github-actions[bot]`. If a branch
     rule blocks direct pushes, let GitHub Actions bypass it, or the weekly
@@ -199,41 +213,43 @@ privacy".
     **Actions → Open counts → Run workflow**. Its "Fetch the week's totals"
     step prints `fetch-stats: N row(s) from script.google.com (json), <first
     day> to <last day> → content/stats.json`, or
-    `script.google.com has no daily totals yet` if nothing has been counted;
-    when the figures changed, a commit "Update the open counts (weekly
-    totals, suppressed below 5)" appears on `main`. After that it runs by
-    itself every Monday at 04:17 UTC.
-  - *Unlocks:* `stats.html` shows real figures, every one under 5 held back,
-    instead of "Counting has not started yet": the second half of Phase 1's
-    "done when".
+    `script.google.com has no daily totals yet` if nothing has been counted,
+    or `... no full week of them, Monday to Sunday, has ended yet` before the
+    first whole week is over (nothing is published until it is); when the
+    figures changed, a commit "Update the open counts (weekly totals,
+    suppressed below 5)" appears on `main`. After that it runs by itself
+    every Monday at 04:17 UTC.
+  - *Unlocks:* `stats.html` shows real figures, in whole weeks, every one
+    under 5 held back, instead of "Counting has not started yet": the second
+    half of Phase 1's "done when". The first figures appear on the Monday
+    after the first full Monday-to-Sunday week of counting.
 
-- [ ] **S3. Decide whether the raw daily totals stay publicly readable.**
-  - *Why:* `GET ?action=stats` serves the daily totals unsuppressed, to
-    anyone who has the web app URL, and the URL is in `count.js`, on every
-    page. They are totals, never single page views, but a small one can say
-    more than it seems: a referring site seen once on one day, for example.
-    `stats.html` holds back every count under 5; this endpoint does not. The
-    plan asked for it this way; whether it stays is your call.
-  - *Options:*
-    1. Keep it as it is. Nothing to do.
-    2. A token: `Code.gs` would answer `?action=stats` only with a
-       `&token=` matching a Script Property, and the full URL, token
-       included, would go in a repository **secret** `STATS_SOURCE_URL`
-       (S2). Not built; it is a small change to `Code.gs` and its test.
-    3. CSV only: drop `?action=stats` from `Code.gs` and use the published
-       CSV in S2. A published tab is public too, but its address is not
-       written anywhere on the site. Also a small change, not built.
-  - *Where:* tell whoever builds the next wave which one; there is no
-    setting for it.
-  - *Check:* for 2 or 3, `curl -L "<the URL above>?action=stats"` (without
-    a token) prints no `rows`.
+- [ ] **S3. Confirm that the raw daily totals stay private.** Built that
+  way in wave 2's review; yours to reverse.
+  - *What was decided:* `GET ?action=stats` used to serve the daily totals,
+    unsuppressed, to anyone with the web app URL, which is in `count.js` on
+    every page, while `stats.html` promised that no count under 5 and no
+    single day's count is ever published. A small daily total can say more
+    than it seems: a referring site seen once on one day, for example. So
+    the endpoint now answers only the token in S1, and the page's promise
+    holds from the day counting starts.
+  - *If you would rather they were public:* say so. `Code.gs` would drop the
+    token check, and `stats.html`'s "Where the raw totals live" and "Two
+    limits" paragraphs (in `scripts/build-content.js`) would have to say
+    that the daily totals, unsuppressed, can be read at the counter's
+    address.
+  - *Check:* after S1, `curl -L "<the URL above>?action=stats"`, without a
+    token, prints `{"status":"refused",...}` and no `rows`.
 
 - [ ] **S4. Decide whether the Assay's grade should be counted at all.**
   - *What:* when the Assay grades a pasted job ad, that page view's count
     carries the grade: `assay-high`, `assay-workable` or `assay-marginal`.
     The ad itself never leaves the page, but the grade is derived from it.
-    The Assay's own note says only "the ad is never sent", which is true
-    either way.
+    The label beside the Assay's button says "in-browser · the ad is never
+    sent", and its result note "the ad is never sent"; both are true either
+    way. (The label used to say "nothing sent", which stopped being true
+    when the grade began to be counted; wave 2's review corrected it.)
+    `stats.html` names the grade among the features a page view can carry.
   - *Where:* if it should not be counted, say so: it is one line in
     `modules/interactives.js` (the `window.mks.track('assay-' + a.cls)`
     call), and `tests/count.test.js` and `tests/stats.test.js` would change
@@ -255,15 +271,15 @@ privacy".
   five numbers.**
   - *When:* the weeks run Monday to Sunday, Amsterdam time, and each Monday's
     run adds the week just ended. Counting starts once S1 is done and this
-    branch is live, so the first four full weeks are complete about five
-    Mondays later.
+    branch is live; the days before the first Monday are in no figure, so
+    the first four full weeks are complete about five Mondays later.
   - *What:* from `stats.html`'s week-by-week table, for each of those four
     weeks: messages through the contact form, CV downloads, lens-link visits
     (a proxy, and an upper bound: arrivals through a role link, since the
     totals cannot say whether that reader went on to a case study), the
     share of homepage views that reached Contact, and page views for scale.
     Brief uses stays empty until Phase 4.1 builds The Brief. Record a `<5`
-    as `<5`, not a guess.
+    or a `held` as it stands, not a guess.
   - *Where:* `docs/plan.md` → "Progress" → Phase 1, step 5: the four weeks'
     Monday dates and their figures. Every weekly version is also kept in git
     (`git log -p content/stats.json`).

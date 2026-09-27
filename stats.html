@@ -64,8 +64,11 @@
                 redesign will be judged against.
             </p>
             <p>
-                Every figure is a count of page views. With no id there is no way to tell two pages read by one
-                person from two people reading one page each, so nothing here claims to count people.
+                Every figure but the contact messages is a count of page views. With no id there is no way to tell
+                two pages read by one person from two people reading one page each, so nothing here claims to count
+                people. And the counts are a floor, not a census: a count that reaches the endpoint while it is busy
+                (more than 30 in a minute, or the sheet in use for longer than a second or two) is dropped rather
+                than kept waiting, so that the contact form never waits behind the counter.
             </p>
         </section>
 
@@ -80,7 +83,7 @@
             <p>What will appear here, with every figure under 5 held back:</p>
             <ul class="st-list">
                 <li>the five numbers below, for the last week, for all time, and week by week;</li>
-                <li>page views by page, by role lens and by screen width;</li>
+                <li>page views by page, by role lens and by window width;</li>
                 <li>the sites readers came from, by host name only;</li>
                 <li>which features were used, and how far down a page readers got;</li>
                 <li>the kilobytes transferred per page view.</li>
@@ -94,11 +97,11 @@
             <ul class="st-five">
                 <li class="st-card">
                     <h3>Messages through the contact form</h3>
-                    <p class="st-def">Submissions the form&rsquo;s endpoint accepted. Email sent straight to my address is not in this figure: a click on the address shows up under features, but whether a message followed cannot be known.</p>
+                    <p class="st-def">Submissions the form&rsquo;s endpoint accepted, bar those sent with JavaScript on from a browser that asks not to be tracked. Email sent straight to my address is not in this figure: a click on the address shows up under features, but whether a message followed cannot be known.</p>
                 </li>
                 <li class="st-card">
                     <h3>CV downloads</h3>
-                    <p class="st-def">Page views in which a CV download link was clicked. A click, which is not quite a finished download.</p>
+                    <p class="st-def">Page views in which a CV link was clicked, counted once however many of the CV links were used. A click, which is not quite a finished download.</p>
                 </li>
                 <li class="st-card">
                     <h3>Lens-link visits, a proxy</h3>
@@ -110,7 +113,7 @@
                 </li>
                 <li class="st-card">
                     <h3>Brief uses</h3>
-                    <p class="st-def">Times The Brief is run. It is not live yet, so there is nothing to count; the figure appears here once it is.</p>
+                    <p class="st-def">Page views in which The Brief was run: the planned successor to the Assay, which is to turn a pasted job ad into an honest fit and a one-page dossier tailored to it. It is not built yet, so there is nothing to count; the figure appears here once it is.</p>
                 </li>
             </ul>
         </section>
@@ -128,6 +131,7 @@
   &quot;deepest&quot;: &quot;contact&quot;,
   &quot;features&quot;: [
     &quot;cv-download-hero&quot;,
+    &quot;cv-download&quot;,
     &quot;receipt-open&quot;
   ],
   &quot;ref&quot;: &quot;www.linkedin.com&quot;,
@@ -138,11 +142,14 @@
                 <dt><code>page</code>, <code>lens</code>, <code>deepest</code></dt>
                 <dd>The page, the role lens in its address if there was one, and the id of the furthest section reached.</dd>
                 <dt><code>features</code></dt>
-                <dd>Up to 20 names of things used on the page, such as a CV link or the carbon receipt.</dd>
+                <dd>
+                    Up to 20 names of things used on the page, such as a CV link or the carbon receipt, and, if the
+                    Assay graded a job ad, the grade it gave. Never the ad itself.
+                </dd>
                 <dt><code>ref</code></dt>
                 <dd>The host name of the site you came from; empty if there was none, or if it was this site.</dd>
                 <dt><code>vp</code></dt>
-                <dd>Screen width as one of three classes: <code>s</code> under 600 px, <code>m</code> up to 1023 px, <code>l</code> wider.</dd>
+                <dd>The browser window&rsquo;s width as one of three classes: <code>s</code> under 600 px, <code>m</code> up to 1023 px, <code>l</code> wider.</dd>
                 <dt><code>kb</code></dt>
                 <dd>Kilobytes transferred for the page, from the browser&rsquo;s Resource Timing API.</dd>
                 <dt><code>v</code></dt>
@@ -150,38 +157,51 @@
             </dl>
             <h3>Never collected</h3>
             <ul class="st-list">
-                <li>No cookies and no browser storage: nothing is written to your device.</li>
+                <li>
+                    No cookie, and no browser storage: the count neither reads nor writes any, so nothing it sends can
+                    be tied to your device. (The site itself remembers a few of your choices in your browser &mdash; the
+                    theme, low-energy mode, the reading speed, whether you have seen the intro &mdash; and sends none
+                    of them anywhere.)
+                </li>
                 <li>No id of any kind, so two page views cannot be tied to each other, or to you.</li>
                 <li>
                     No IP address. The count goes to a Google Apps Script web app, the one the contact form already
                     uses, and Apps Script does not give the script the sender&rsquo;s address, so it cannot be stored
                     even by mistake. Google, which runs the endpoint, receives the request as it receives any other.
                 </li>
-                <li>No browser, device or operating system, and no screen size beyond the three classes above.</li>
+                <li>No browser, device or operating system, and no screen or window size beyond the three classes above.</li>
                 <li>No time finer than the day the count arrives.</li>
                 <li>No full referring address, only its host name, and nothing you type into the page.</li>
             </ul>
             <p>
                 <strong>If your browser sends Do Not Track or Global Privacy Control, nothing is sent at all</strong>,
-                and you are in none of these figures.
+                and you are in none of these figures. A message you send through the contact form is not counted
+                either, with one exception: with JavaScript off, the form cannot pass the signal on, and the message
+                is counted as one message.
             </p>
             <h3>How the figures are made safe to publish</h3>
             <p>
                 Any count under 5 is shown as &lt;5 and left out of every percentage, and referring sites
-                with fewer than 5 page views are counted together. Page, lens, section and feature names the
-                site does not use are counted as other, so a made-up count cannot put words on this page. A referring
-                site cannot be checked that way, so it is named only once it reaches 5, and never as a link.
+                with fewer than 5 page views are counted together. Where the rows of a table add up to a
+                total shown on this page, as page views by page do, a lone &lt;5 would be the total less the rest, so
+                the smallest figure beside it is held back as well; a percentage is given only between two figures that
+                are both shown. Every figure covers whole weeks, Monday to Sunday, so no single day&rsquo;s count can be
+                taken out of them. Page, lens, section and feature names the site does not use are counted as other, so
+                a made-up count cannot put words on this page. A referring site cannot be checked that way, so it is
+                named only once it reaches 5, and never as a link.
             </p>
             <p>
-                One limit, stated plainly: the all-time totals are rebuilt every week, so comparing two versions of
-                this page can narrow down a weekly change its own column shows as &lt;5. No count for a single day
-                is ever published.
+                Two limits, stated plainly. Where two figures are held back together, what they add up to can still
+                be worked out, though not either one. And the all-time totals are rebuilt every week, so comparing two
+                versions of this page can narrow down a weekly change its own column shows as &lt;5. No count for a
+                single day is ever published.
             </p>
             <h3>Where the raw totals live</h3>
             <p>
                 The daily totals &mdash; a date, a field, a value and a count, never a single page view &mdash; are
-                kept in a Google Sheet in my own Google account. Once a week a scheduled job reads them, suppresses
-                them and rebuilds this page. Only the suppressed totals you see here are written into the
+                kept in a Google Sheet in my own Google account. The counter&rsquo;s endpoint hands them over only to a
+                request carrying a key that the scheduled job keeps as a secret; once a week that job reads them,
+                suppresses them and rebuilds this page. Only the suppressed totals you see here are written into the
                 site&rsquo;s public repository, in <code>content/stats.json</code>; the code that does it is
                 <code>scripts/fetch-stats.js</code>.
             </p>

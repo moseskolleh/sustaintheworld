@@ -1,6 +1,6 @@
 // COUNT: one cookieless POST per page view, as the page is hidden or left, and
 // none under Do Not Track or GPC. Exactly these keys (google-apps-script/README.md):
-// {"v":1,"page":"index","lens":"","deepest":"contact","features":["cv-download-hero","module-dossier"],"ref":"www.linkedin.com","vp":"m","kb":284}
+// {"v":1,"page":"index","lens":"","deepest":"contact","features":["cv-download-hero","cv-download","module-dossier"],"ref":"www.linkedin.com","vp":"m","kb":284}
 (() => {
     const ok = (s) => typeof s === 'string' && /^[a-z0-9-]{1,40}$/.test(s);
     const mks = (window.mks = window.mks || {});
@@ -30,9 +30,12 @@
     }));
     if (io) parts.forEach((el) => io.observe(el));
 
+    // "cv-download": this view used a CV link, whichever.
     document.addEventListener('click', (e) => {
         const el = e.target.closest && e.target.closest('[data-analytics]');
-        if (el) mks.track(el.getAttribute('data-analytics'));
+        const name = el && el.getAttribute('data-analytics');
+        mks.track(name);
+        if (/^cv-download-/.test(name)) mks.track('cv-download');
     });
 
     let sent = false;

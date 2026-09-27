@@ -63,7 +63,7 @@ const SECTIONS = `
     <header id="home"><h1>Hero</h1></header>
     <main id="main">
         <nav class="play-index"><a href="#two">jump</a></nav>
-        <section id="one"><button type="button" data-analytics="cv-download-hero">CV</button></section>
+        <section id="one"><button type="button" data-analytics="cv-download-hero">CV</button><a href="#one" data-analytics="cv-download-nav">CV</a></section>
         <section id="two">
             <section id="inner">nested, not top-level</section>
             <button type="button" data-analytics="listen"><svg><use href="#i-waveform"></use></svg><span>Listen</span></button>
@@ -217,8 +217,24 @@ function load(options = {}) {
     p.window.mks.track('assay-high');
     p.leave();
     const f = p.payload().features || [];
-    assert(JSON.stringify(f) === JSON.stringify(['cv-download-hero', 'listen', 'module-dossier', 'assay-high']),
+    assert(JSON.stringify(f) === JSON.stringify(['cv-download-hero', 'cv-download', 'listen', 'module-dossier', 'assay-high']),
         `features: clicks on [data-analytics] (even on an icon inside one) and mks.track(), each once, in order (${f.join(', ')})`);
+
+    // Every CV link has a name of its own, and a view that used any of them
+    // also carries "cv-download", once: the CV-downloads figure counts page
+    // views, and two CV links clicked in one view are one of those.
+    const two = load();
+    two.click('[data-analytics="cv-download-nav"]');
+    two.click('[data-analytics="cv-download-hero"]');
+    two.click('[data-analytics="cv-download-nav"]');
+    two.leave();
+    const t = two.payload().features || [];
+    assert(JSON.stringify(t) === JSON.stringify(['cv-download-nav', 'cv-download', 'cv-download-hero']),
+        `features: two CV links in one view send both names and "cv-download" once (${t.join(', ')})`);
+    const none = load();
+    none.click('[data-analytics="listen"]');
+    none.leave();
+    assert(!(none.payload().features || []).includes('cv-download'), 'features: a view with no CV link clicked does not carry "cv-download"');
     assert(!('trackEvent' in p.window), 'features: mks.track is the one name for it, with no window.trackEvent beside it');
 
     const many = load();
@@ -401,6 +417,45 @@ function load(options = {}) {
         'deepest: every one is an id the server accepts, and the last is #contact');
 }
 
+// Every CV link and every email link on a page that counts its visits has a
+// hook, or its clicks are missing from the CV-downloads figure and from the
+// features table. The text-only field report's two once had none.
+{
+    const pages = fs.readdirSync(ROOT).filter(f => f.endsWith('.html') && /<script[^>]*src="(?:\/sustaintheworld\/)?count\.js"/.test(read(f)));
+    const bare = [];
+    pages.forEach((rel) => {
+        const doc = new JSDOM(read(rel)).window.document;
+        doc.querySelectorAll('a[href$="Moses_Kolleh_Sesay_CV.pdf"]').forEach((a) => {
+            if (!/^cv-download-[a-z0-9-]+$/.test(a.getAttribute('data-analytics') || '')) bare.push(`${rel}: CV link "${a.textContent.trim()}"`);
+        });
+        doc.querySelectorAll('a[href^="mailto:"]').forEach((a) => {
+            if (!a.hasAttribute('data-analytics')) bare.push(`${rel}: email link "${a.textContent.trim()}"`);
+        });
+    });
+    assert(pages.includes('field-report.html') && bare.length === 0,
+        `Hooks: every CV link is a cv-download-* hook and every email link a hook, on every counted page (${bare.join('; ') || 'all hooked'})`);
+    // The terminal's `cv` command fetches the CV without a link on the page.
+    const { run } = require('./harness.js');
+    const tracked = [];
+    const { window } = run('dark', {
+        before: (w) => {
+            w.mks = { track: n => tracked.push(n) };
+            w.HTMLAnchorElement.prototype.click = () => {};   // jsdom cannot follow a download
+        }
+    });
+    window.mks.terminal.open();
+    window.document.getElementById('ftInput').value = 'cv';
+    window.document.querySelector('.ft-line').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+    assert(tracked.join() === 'cv-download-terminal,cv-download', `Hooks: the terminal's cv command counts as a CV download too (${tracked.join(', ') || 'nothing'})`);
+
+    // The Assay's grade is counted, so its label cannot say nothing is sent;
+    // what it can say is that the ad is not.
+    const tracksGrade = /mks\.track\(\s*'assay-'/.test(read('modules/interactives.js'));
+    const label = new JSDOM(INDEX).window.document.querySelector('.assay-privacy').textContent;
+    assert(!tracksGrade || (!/nothing sent/.test(label) && /the ad is never sent/.test(label)),
+        `Hooks: while the Assay's grade is counted, its label says the ad is never sent, not that nothing is ("${label.trim()}")`);
+}
+
 // Every hook name in the markup must be one the counter will keep: a name it
 // silently drops is a feature nobody ever sees used. Every page and every
 // module is read, so a hook added anywhere is held to the same rule.
@@ -425,8 +480,40 @@ function load(options = {}) {
         `Hooks: the nav's Listen control, the player's introduction and the Assay's grades are among them (${[...distinct].filter(n => /^(listen|assay-)/.test(n)).join(', ')})`);
 }
 
-// Two suites above finish asynchronously; report once both have.
-let pendingSuites = 2;
+// A message sent from a browser that asks not to be tracked says so, and
+// Code.gs leaves it out of the public contact tally: stats.html promises
+// such a visitor is in none of its figures, and the endpoint cannot see the
+// request's headers to know. A message from any other browser says nothing.
+(async () => {
+    const { run } = require('./harness.js');
+    const bodies = {};
+    for (const [label, prop, value] of [['plain', null, null], ['GPC', 'globalPrivacyControl', true], ['DNT', 'doNotTrack', '1']]) {
+        const { window, clock } = run('dark', {
+            clock: true,
+            before: (w) => { if (prop) Object.defineProperty(w.navigator, prop, { configurable: true, get: () => value }); }
+        });
+        const sent = [];
+        window.fetch = async (url, opts) => { sent.push({ url, opts }); return { ok: true, json: async () => ({ status: 'success' }) }; };
+        const doc = window.document;
+        doc.getElementById('name').value = 'Ada';
+        doc.getElementById('email').value = 'ada@example.com';
+        doc.getElementById('message').value = 'A question about groundwater.';
+        doc.getElementById('contactForm').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
+        await clock.tick(20);
+        const post = sent.find(c => c.url === GAS);
+        bodies[label] = post ? JSON.parse(post.opts.body) : null;
+        window.close();
+    }
+    assert(!!bodies.plain && !('count' in bodies.plain), 'Contact: a message from an ordinary browser carries no count field');
+    assert(!!bodies.GPC && bodies.GPC.count === false, 'Contact: under Global Privacy Control the message says count: false');
+    assert(!!bodies.DNT && bodies.DNT.count === false, 'Contact: under Do Not Track too');
+    // tests/apps-script.test.js holds Code.gs to its side: told count: false,
+    // it records and sends the message and leaves the tally alone.
+    finish();
+})();
+
+// Three suites above finish asynchronously; report once all have.
+let pendingSuites = 3;
 function finish() {
     if (--pendingSuites > 0) return;
     if (failures > 0) {

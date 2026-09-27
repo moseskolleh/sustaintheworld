@@ -556,7 +556,7 @@ rule makes that cheap.
 ## Progress
 
 What branch `claude/plan-implementation-soh954` implements so far, step by step,
-checked against the code and the test runs on 2026-09-27 (`npm test`: 1307
+checked against the code and the test runs on 2026-09-27 (`npm test`: 1382
 passing in sixteen suites; `npm run smoke` in Chromium: passes; the new
 Firefox pass has not run yet, see 6.7). ✓ done · ◐ partial, with the reason ·
 ✗ waiting on Moses. Everything Moses has to supply is listed, with where it
@@ -657,9 +657,13 @@ the steps below.
     between their neighbours (the parallels were 60 points each).
 
 **Phase 1 — wave 2.** Built and tested, but not counting yet: both halves
-of its "done when" wait on Moses. Counts arrive once he publishes the new
-`Code.gs` (owner checklist S1), and `stats.html` fills once
-`STATS_SOURCE_URL` is set (S2). The payload test is green.
+of its "done when" wait on Moses. Counts arrive once he sets `STATS_TOKEN`
+and publishes the new `Code.gs` (owner checklist S1), and `stats.html` fills
+once the secret `STATS_SOURCE_URL` is set (S2) and a first full week has
+ended. The payload test is green. The wave's review confirmed 29 findings,
+one a blocker (the raw daily totals were readable by anyone while
+`stats.html` promised no single day's count is ever published); all are
+fixed, and what they changed is folded into the steps below and 6.6-6.7.
 
 1. ✓ **A cookieless, first-party counter**: `count.js` (3 KB, 2 KB
    gzipped), deferred on all seven pages; the 404 page names itself. It
@@ -678,7 +682,13 @@ of its "done when" wait on Moses. Counts arrive once he publishes the new
    `script.google.com`, where a visitor signed in to Google has session
    cookies) and cannot be told not to for one request; a keepalive fetch
    outlives the page the same way and leaves them out. `tests/html.test.js`
-   fails if anything calls `sendBeacon`. ✗ Counting starts when Moses
+   fails if anything calls `sendBeacon`. A count waits at most 1.5 s for the
+   lock it shares with the contact form, and past 30 a minute is dropped
+   before asking, so a burst of page views cannot make a message time out;
+   `stats.html` says the counts are therefore a floor. A contact message
+   sent under Do Not Track or GPC carries `count: false`, and `Code.gs`
+   leaves it out of the contact tally (one sent with JavaScript off cannot
+   say so, and the page names that exception). ✗ Counting starts when Moses
    publishes the new `Code.gs` (S1).
 2. ✓ **The no-third-party rule stays honest.** `tests/html.test.js` allows
    one off-site address in any script the site ships: the deployment, and
@@ -686,32 +696,49 @@ of its "done when" wait on Moses. Counts arrive once he publishes the new
    count apart: exactly the documented keys, no cookie, no `Referer`, once
    per page view, every page's count accepted by `Code.gs`'s own schema
    check, and nothing under Do Not Track, Global Privacy Control or with
-   JavaScript off. `tests/count.test.js` (67 assertions) and
-   `tests/apps-script.test.js` (64) hold the two ends to the same schema.
+   JavaScript off. `tests/count.test.js` (75 assertions) and
+   `tests/apps-script.test.js` (80) hold the two ends to the same schema.
    Every other browser context in smoke opens with Global Privacy Control
    on, so a test run never sends a real count.
 3. ✓ **The hooks are wired, and the Plausible/Cloudflare block is gone.**
-   All 25 `data-analytics` names now on the site (23 when this plan was
+   All 27 `data-analytics` names now on the site (23 when this plan was
    written) are counted when clicked, and so are the on-demand modules as
-   they are fetched (`module-<name>`), the contact form being sent, and the
-   Assay's grade; the ad itself never leaves the page. A test fails if the
-   site uses a hook name the counter would not keep. ✗ Whether the grade
-   should be counted at all (S4).
+   they are fetched (`module-<name>`), the contact form being sent, the
+   terminal's `cv` command, and the Assay's grade; the ad itself never
+   leaves the page, and the label by the Assay's button now says so ("the
+   ad is never sent", not "nothing sent"). Any CV link clicked also adds
+   one shared name, `cv-download`, once per page view. A test fails if the
+   site uses a hook name the counter would not keep, or if a counted page
+   has a CV or email link without a hook (the field report's two had
+   none). ✗ Whether the grade should be counted at all (S4).
 4. ◐ **`stats.html`, public.** Built: in the sitemap, linked from the
-   footers of the homepage, case studies, research and itself, under a
-   105 KB budget (90 KB today), with a privacy note that prints a literal
-   example payload and lists what is never collected. The weekly Action
-   (`.github/workflows/stats.yml`, Mondays 04:17 UTC) reads the daily totals,
-   from `?action=stats` or from the sheet published as CSV, suppresses every
-   count under 5 (and groups referrers under 5, and counts names the site
-   does not use as "other"), writes `content/stats.json`, rebuilds the page,
-   runs `npm test` and commits. The build refuses a `stats.json` that holds
-   a count under 5 or a daily row. Partial because it has no figures yet:
-   ✗ `STATS_SOURCE_URL` (S2, after S1). ✗ Whether the daily totals at
-   `?action=stats`, which are not suppressed and which anyone with the URL
-   can read, stay public (S3).
+   footers of the homepage, case studies, research, AI, Weighed and itself,
+   and from the field report and the 404 page, under a 105 KB budget (91 KB
+   today), with a privacy note that prints a literal example payload and
+   lists what is never collected. The weekly Action
+   (`.github/workflows/stats.yml`, Mondays 04:17 UTC) reads the daily totals
+   from `?action=stats`, which answers only the `STATS_TOKEN` token (the
+   rows are not suppressed, and the address is in `count.js`), suppresses
+   every count under 5 (and groups referrers under 5, and counts names the
+   site does not use as "other"), writes `content/stats.json`, rebuilds the
+   page, runs `npm test` and commits. Suppression holds against
+   subtraction: every page view has one page and one window class, so
+   those tables add up to the page views shown beside them, and the known
+   lenses to the lens-link visits and the weeks to all time; a lone "<5"
+   would be the total less the rest, so the smallest figure beside it is
+   held back too, marked "held", through any chain of sums. Every figure is
+   whole Monday-to-Sunday weeks, all time ending last Sunday, and nothing
+   is published before the first full week has ended, so no single day's
+   count can be taken out of them. The build refuses a `stats.json` that
+   holds a count under 5, one subtraction would give away, a part week,
+   today, or a daily row. A smoke check draws the page full from fixture
+   totals and fails if a table splits a word or the page scrolls sideways
+   at 320-430px. Partial because it has no figures yet: ✗ `STATS_TOKEN` and
+   the secret `STATS_SOURCE_URL` (S1, S2). ✗ Moses to confirm the raw daily
+   totals stay private (S3).
 5. ◐ **The five numbers** are defined in `scripts/fetch-stats.js` and on
-   `stats.html`: contact submissions; CV downloads (clicks on a CV link);
+   `stats.html`: contact submissions; CV downloads (page views in which any
+   CV link was clicked, counted once however many were);
    lens-link visits, as a proxy (page views that arrived through a role
    link, an upper bound, since the daily totals are kept field by field and
    cannot say whether that reader went on to a case study); the share of
@@ -772,14 +799,14 @@ started.
    for low-energy mode too. ✓ The time-zone table is `assets/timezones.json`,
    fetched when the journey map arrives; the map's paths were re-encoded as
    relative steps, pixel-identical, to make room for it in the on-demand
-   budget (69 of 72 KB). ◐ Everything the core shares with the modules hangs
+   budget (69 of 72 KB). ✓ Everything the core shares with the modules hangs
    off `window.mks` (`mks.load`, `mks.storage`, `mks.track`, `mks.terminal`,
    `mks.narration` and the rest), and a test fails if an old name comes
-   back; but six top-level functions in `script.js` (`revealTarget`,
-   `focusTarget`, `jumpTo`, `handleHashReveal`, `setMenuOpen`,
-   `mksLoadFor`) are still globals, left because wrapping them meant
-   re-indenting long unchanged stretches while three other lanes edited the
-   same file.
+   back. The six top-level function declarations `script.js` still had
+   (`revealTarget`, `focusTarget`, `jumpTo`, `handleHashReveal`,
+   `setMenuOpen`, `mksLoadFor`), each a property of `window` in a classic
+   script, are `const` now, and a test fails if any shipped script declares
+   a function at the top level again.
 7. ◐ **CI.** ✓ `push` runs on `main` only, and a newer commit on a pull
    request cancels the older run. ✓ Node 22 (`engines`:
    `^22.22.0 || >=24.8.0`, which html-validate needs). ✓ Chromium pinned to
@@ -790,7 +817,10 @@ started.
    after another; a new
    suite runs the day it exists. ✓ axe-core in smoke on every page at
    1440×900 and 390×844 in both themes, and on the homepage's open states
-   (0 violations); html-validate on every page in `npm test`. ✓ A budget
+   (0 violations); html-validate on every page in `npm test`, not in smoke
+   as this step says: on the source files it needs no browser, runs in the
+   first seconds of every CI job, and names the file and line to fix, and
+   what scripts add after load is covered by axe in smoke. ✓ A budget
    for `carbon-ai.html` (106 KB of 111 KB), and smoke compares every
    budgeted page's measured first view with its estimate. ◐ A Firefox pass
    is a CI job of its own, but it has never run: no Firefox build was

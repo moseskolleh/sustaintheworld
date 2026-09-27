@@ -141,6 +141,19 @@ a { color: var(--primary-green); }
     padding: 40px 24px 80px;
 }
 
+/* The quiet footer every page on this stylesheet carries, this one and the
+   generated ones: where a reader finds what the visit counter sends. */
+.ca-foot {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px 40px;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+.ca-foot a { color: var(--text-secondary); }
+.ca-foot a:hover,
+.ca-foot a:focus-visible { color: var(--primary-green); }
+
 .ca-back {
     display: inline-flex;
     align-items: center;

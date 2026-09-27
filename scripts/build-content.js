@@ -465,7 +465,7 @@ const EXAMPLE_PAYLOAD = {
     page: 'index',
     lens: '',
     deepest: 'contact',
-    features: ['cv-download-hero', 'receipt-open'],
+    features: ['cv-download-hero', 'cv-download', 'receipt-open'],
     ref: 'www.linkedin.com',
     vp: 'l',
     kb: 287
@@ -485,8 +485,9 @@ const daySpan = (a, b) => {
     return `${dayOf(a)} &ndash; ${dayOf(b)}`;
 };
 
-// A published count is a whole number or "<5"; null means there is no
-// figure to give (no complete week yet, or nothing it could be worked out from).
+// A published count is a whole number, "<5", or "held" (5 or more, hidden
+// so that a figure under 5 beside it cannot be worked out); null means there
+// is no figure to give (a share with a hidden side, or no Brief yet).
 const figure = (v) => {
     if (v === null || v === undefined) return '&mdash;';
     if (typeof v === 'number') return String(v).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -509,10 +510,12 @@ const PAGE_NAMES = {
     'stats': 'Open counts (this page)',
     '404': 'Page not found (404)'
 };
+// The width of the browser window, which is not always the screen's: a
+// desktop window at half width is in the middle class.
 const VIEWPORT_NAMES = {
-    s: 'Phone (under 600 px wide)',
-    m: 'Tablet or narrow window (600&ndash;1023 px)',
-    l: 'Desktop (1024 px and wider)'
+    s: 'Under 600 px, as on a phone',
+    m: '600&ndash;1023 px, a tablet or a narrow window',
+    l: '1024 px and wider, as on a desktop'
 };
 
 /** The five numbers, defined once for both the empty and the counting page. */
@@ -521,13 +524,16 @@ function fiveNumbers(stats) {
         {
             key: 'contact',
             name: 'Messages through the contact form',
-            def: 'Submissions the form&rsquo;s endpoint accepted. Email sent straight to my address is not in this figure: ' +
-                 'a click on the address shows up under features, but whether a message followed cannot be known.'
+            def: 'Submissions the form&rsquo;s endpoint accepted, bar those sent with JavaScript on from a browser that ' +
+                 'asks not to be tracked. ' +
+                 'Email sent straight to my address is not in this figure: a click on the address shows up under ' +
+                 'features, but whether a message followed cannot be known.'
         },
         {
             key: 'cvDownloads',
             name: 'CV downloads',
-            def: 'Page views in which a CV download link was clicked. A click, which is not quite a finished download.'
+            def: 'Page views in which a CV link was clicked, counted once however many of the CV links were used. ' +
+                 'A click, which is not quite a finished download.'
         },
         {
             key: 'lensVisits',
@@ -547,9 +553,9 @@ function fiveNumbers(stats) {
         {
             key: 'briefUses',
             name: 'Brief uses',
-            def: stats.briefLive
-                ? 'Page views in which The Brief was run.'
-                : 'Times The Brief is run. It is not live yet, so there is nothing to count; the figure appears here once it is.'
+            def: 'Page views in which The Brief was run: the planned successor to the Assay, which is to turn a pasted ' +
+                 'job ad into an honest fit and a one-page dossier tailored to it.' +
+                 (stats.briefLive ? '' : ' It is not built yet, so there is nothing to count; the figure appears here once it is.')
         }
     ];
 }
@@ -609,8 +615,11 @@ ${five.map((n) => {
                 redesign will be judged against.
             </p>
             <p>
-                Every figure is a count of page views. With no id there is no way to tell two pages read by one
-                person from two people reading one page each, so nothing here claims to count people.
+                Every figure but the contact messages is a count of page views. With no id there is no way to tell
+                two pages read by one person from two people reading one page each, so nothing here claims to count
+                people. And the counts are a floor, not a census: a count that reaches the endpoint while it is busy
+                (more than 30 in a minute, or the sheet in use for longer than a second or two) is dropped rather
+                than kept waiting, so that the contact form never waits behind the counter.
             </p>
         </section>`;
 
@@ -627,7 +636,7 @@ ${five.map((n) => {
             <p>What will appear here, with every figure under ${stats.suppressBelow} held back:</p>
             <ul class="st-list">
                 <li>the five numbers below, for the last week, for all time, and week by week;</li>
-                <li>page views by page, by role lens and by screen width;</li>
+                <li>page views by page, by role lens and by window width;</li>
                 <li>the sites readers came from, by host name only;</li>
                 <li>which features were used, and how far down a page readers got;</li>
                 <li>the kilobytes transferred per page view.</li>
@@ -643,31 +652,30 @@ ${fiveCards(null)}
     // --- once there are totals ---------------------------------------------
     let counted = '';
     if (collecting) {
+        // scripts/fetch-stats.js writes a counting file only once a full week
+        // has ended, and scripts/lib/content.js refuses one without it.
         const { period, week, headline, breakdown, bytes } = stats;
-        const hasWeek = !!week;
-        const weekHead = hasWeek ? `Week of ${daySpan(week.start, week.end)}` : '';
-        const cols = (first) => (hasWeek ? [first, weekHead, 'All time'] : [first, 'All time']);
-        const cells = (w, a, fmt = figure) => (hasWeek
-            ? `<td class="st-num">${fmt(w)}</td><td class="st-num">${fmt(a)}</td>`
-            : `<td class="st-num">${fmt(a)}</td>`);
+        const weekHead = `Week of ${daySpan(week.start, week.end)}`;
+        const cols = first => [first, weekHead, 'All time'];
+        const cells = (w, a, fmt = figure) => `<td class="st-num">${fmt(w)}</td><td class="st-num">${fmt(a)}</td>`;
 
-        // The week's caveat, if it has one, as a line of its own: an empty
-        // template line would leave trailing whitespace in the page.
-        const weekNote = !hasWeek
-            ? 'The first full week, Monday to Sunday, has not finished yet, so there are no weekly figures until the Monday after it does.'
-            : week.partial ? 'Counting began part-way through that week, so its figures cover only part of it.' : '';
         const status = `
         <section class="st-block st-status" aria-labelledby="st-status-h">
             <h2 id="st-status-h">What these figures cover</h2>
             <p>
                 Counted from <strong>${dayOf(period.first)}</strong> to <strong>${dayOf(period.last)}</strong>
-                (${period.days} day${period.days === 1 ? '' : 's'}): <strong>${figure(headline.all.visits)}</strong> page views in all${hasWeek
-                    ? `, <strong>${figure(headline.week.visits)}</strong> of them in the week of ${daySpan(week.start, week.end)}` : ''}.
-                Fetched on ${dayOf(stats.asOf)}; the page is rebuilt every Monday.${weekNote ? `
-                ${weekNote}` : ''}
+                (${period.days / 7} week${period.days === 7 ? '' : 's'}): <strong>${figure(headline.all.visits)}</strong> page views in all,
+                <strong>${figure(headline.week.visits)}</strong> of them in the week of ${daySpan(week.start, week.end)}.
+                Fetched on ${dayOf(stats.asOf)}; the page is rebuilt every Monday.
+            </p>
+            <p>
+                Every figure covers whole weeks, Monday to Sunday. If counting began mid-week, the figures start on
+                the Monday after, and the week still running is left out until it has ended.
             </p>
             <p class="st-key">
                 <strong>${small}</strong> means fewer than ${stats.suppressBelow}: too few to publish, and left out of every percentage.
+                <strong>held</strong> means ${stats.suppressBelow} or more, held back because, with the figures beside it, it
+                would give away one that is fewer than ${stats.suppressBelow}.
                 <strong>&mdash;</strong> means there is no figure to give.
             </p>
         </section>`;
@@ -679,13 +687,13 @@ ${fiveCards(null)}
 ${fiveCards((n) => {
         if (n.key === 'briefUses' && !stats.briefLive) return '<div><dt>Status</dt><dd>not live yet</dd></div>';
         const fmt = n.share ? percent : figure;
-        return (hasWeek ? `<div><dt>${weekHead}</dt><dd>${fmt(headline.week[n.key])}</dd></div>` : '') +
+        return `<div><dt>${weekHead}</dt><dd>${fmt(headline.week[n.key])}</dd></div>` +
             `<div><dt>All time</dt><dd>${fmt(headline.all[n.key])}</dd></div>`;
     })}
         </section>`;
 
         const weekRows = stats.weeks.map(w => `                        <tr>
-                            <th scope="row">${daySpan(w.start, w.end)}${w.partial ? ' <span class="st-def">part of a week</span>' : ''}</th>
+                            <th scope="row">${daySpan(w.start, w.end)}</th>
                             <td class="st-num">${figure(w.visits)}</td>
                             <td class="st-num">${figure(w.contact)}</td>
                             <td class="st-num">${figure(w.cvDownloads)}</td>
@@ -722,8 +730,9 @@ ${breakdownTable('page', 'Page views by page', 'Page', k => (k === 'other' ? 'An
             <h3>By role lens</h3>
             <p>Page views that arrived with <code>?lens=</code> in the address; the rest had none.</p>
 ${breakdownTable('lens', 'Page views by role lens', 'Lens', k => (k === 'other' ? 'Any other name <span class="st-def">not a lens this site has</span>' : esc(lensNames[k] || k)), true)}
-            <h3>By screen width</h3>
-${breakdownTable('vp', 'Page views by screen width', 'Screen', k => VIEWPORT_NAMES[k] || esc(k), true)}
+            <h3>By window width</h3>
+            <p>The width of the browser window, which on a desktop is not always the width of the screen.</p>
+${breakdownTable('vp', 'Page views by window width', 'Window', k => VIEWPORT_NAMES[k] || esc(k), true)}
         </section>`;
 
         const refSection = `
@@ -732,12 +741,12 @@ ${breakdownTable('vp', 'Page views by screen width', 'Screen', k => VIEWPORT_NAM
             <p>
                 The host name of the site a reader followed a link from, and nothing else of its address. Sites with
                 fewer than ${stats.suppressBelow} page views, anything that is not a plain host name, and anything past the top
-                fifteen are counted together. None of these is a link: the counter&rsquo;s endpoint is public, and a
-                list of links would be an open invitation to referrer spam.
+                fifteen are counted together. A page view with no referring site (typed, bookmarked, or a link
+                within this site) is not in this table. None of these is a link: the counter&rsquo;s endpoint is
+                public, and a list of links would be an open invitation to referrer spam.
             </p>
-${breakdownTable('ref', 'Page views by referring site', 'Came from', k => (k === ''
-        ? 'No referring site <span class="st-def">typed, bookmarked, or from within this site</span>'
-        : k === 'other' ? 'Every other site, together' : `<span class="st-host">${esc(k)}</span>`), false)}
+${breakdownTable('ref', 'Page views by referring site', 'Came from', k => (k === 'other'
+        ? 'Every other site, together' : `<span class="st-host">${esc(k)}</span>`), false)}
         </section>`;
 
         const featureSection = `
@@ -779,7 +788,8 @@ ${table('Kilobytes transferred per page view', cols('Per page view'), [
             </p>
             <p>
                 This is network transfer only: what the browser reports receiving for the page and everything it
-                loaded, measured with the Resource Timing API, as the carbon receipt in the homepage footer is. It is
+                loaded, measured with the Resource Timing API. Unlike the carbon receipt in the homepage footer, a
+                file the browser already had counts as nothing here, because nothing was transferred for it. It is
                 not the energy used by your device, the network or the servers, and it is not a carbon figure.
             </p>
         </section>`;
@@ -800,11 +810,14 @@ ${table('Kilobytes transferred per page view', cols('Per page view'), [
                 <dt><code>page</code>, <code>lens</code>, <code>deepest</code></dt>
                 <dd>The page, the role lens in its address if there was one, and the id of the furthest section reached.</dd>
                 <dt><code>features</code></dt>
-                <dd>Up to 20 names of things used on the page, such as a CV link or the carbon receipt.</dd>
+                <dd>
+                    Up to 20 names of things used on the page, such as a CV link or the carbon receipt, and, if the
+                    Assay graded a job ad, the grade it gave. Never the ad itself.
+                </dd>
                 <dt><code>ref</code></dt>
                 <dd>The host name of the site you came from; empty if there was none, or if it was this site.</dd>
                 <dt><code>vp</code></dt>
-                <dd>Screen width as one of three classes: <code>s</code> under 600 px, <code>m</code> up to 1023 px, <code>l</code> wider.</dd>
+                <dd>The browser window&rsquo;s width as one of three classes: <code>s</code> under 600 px, <code>m</code> up to 1023 px, <code>l</code> wider.</dd>
                 <dt><code>kb</code></dt>
                 <dd>Kilobytes transferred for the page, from the browser&rsquo;s Resource Timing API.</dd>
                 <dt><code>v</code></dt>
@@ -812,38 +825,51 @@ ${table('Kilobytes transferred per page view', cols('Per page view'), [
             </dl>
             <h3>Never collected</h3>
             <ul class="st-list">
-                <li>No cookies and no browser storage: nothing is written to your device.</li>
+                <li>
+                    No cookie, and no browser storage: the count neither reads nor writes any, so nothing it sends can
+                    be tied to your device. (The site itself remembers a few of your choices in your browser &mdash; the
+                    theme, low-energy mode, the reading speed, whether you have seen the intro &mdash; and sends none
+                    of them anywhere.)
+                </li>
                 <li>No id of any kind, so two page views cannot be tied to each other, or to you.</li>
                 <li>
                     No IP address. The count goes to a Google Apps Script web app, the one the contact form already
                     uses, and Apps Script does not give the script the sender&rsquo;s address, so it cannot be stored
                     even by mistake. Google, which runs the endpoint, receives the request as it receives any other.
                 </li>
-                <li>No browser, device or operating system, and no screen size beyond the three classes above.</li>
+                <li>No browser, device or operating system, and no screen or window size beyond the three classes above.</li>
                 <li>No time finer than the day the count arrives.</li>
                 <li>No full referring address, only its host name, and nothing you type into the page.</li>
             </ul>
             <p>
                 <strong>If your browser sends Do Not Track or Global Privacy Control, nothing is sent at all</strong>,
-                and you are in none of these figures.
+                and you are in none of these figures. A message you send through the contact form is not counted
+                either, with one exception: with JavaScript off, the form cannot pass the signal on, and the message
+                is counted as one message.
             </p>
             <h3>How the figures are made safe to publish</h3>
             <p>
                 Any count under ${stats.suppressBelow} is shown as ${small} and left out of every percentage, and referring sites
-                with fewer than ${stats.suppressBelow} page views are counted together. Page, lens, section and feature names the
-                site does not use are counted as other, so a made-up count cannot put words on this page. A referring
-                site cannot be checked that way, so it is named only once it reaches ${stats.suppressBelow}, and never as a link.
+                with fewer than ${stats.suppressBelow} page views are counted together. Where the rows of a table add up to a
+                total shown on this page, as page views by page do, a lone ${small} would be the total less the rest, so
+                the smallest figure beside it is held back as well; a percentage is given only between two figures that
+                are both shown. Every figure covers whole weeks, Monday to Sunday, so no single day&rsquo;s count can be
+                taken out of them. Page, lens, section and feature names the site does not use are counted as other, so
+                a made-up count cannot put words on this page. A referring site cannot be checked that way, so it is
+                named only once it reaches ${stats.suppressBelow}, and never as a link.
             </p>
             <p>
-                One limit, stated plainly: the all-time totals are rebuilt every week, so comparing two versions of
-                this page can narrow down a weekly change its own column shows as ${small}. No count for a single day
-                is ever published.
+                Two limits, stated plainly. Where two figures are held back together, what they add up to can still
+                be worked out, though not either one. And the all-time totals are rebuilt every week, so comparing two
+                versions of this page can narrow down a weekly change its own column shows as ${small}. No count for a
+                single day is ever published.
             </p>
             <h3>Where the raw totals live</h3>
             <p>
                 The daily totals &mdash; a date, a field, a value and a count, never a single page view &mdash; are
-                kept in a Google Sheet in my own Google account. Once a week a scheduled job reads them, suppresses
-                them and rebuilds this page. Only the suppressed totals you see here are written into the
+                kept in a Google Sheet in my own Google account. The counter&rsquo;s endpoint hands them over only to a
+                request carrying a key that the scheduled job keeps as a secret; once a week that job reads them,
+                suppresses them and rebuilds this page. Only the suppressed totals you see here are written into the
                 site&rsquo;s public repository, in <code>content/stats.json</code>; the code that does it is
                 <code>scripts/fetch-stats.js</code>.
             </p>

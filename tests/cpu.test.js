@@ -59,6 +59,15 @@ const key = (window, k, target, init) => {
         const left = OLD.filter(k => k in window);
         assert(left.length === 0, `Globals: none of the old names is left on window (${left.join(', ') || 'none'})`);
         assert(!('hold' in window) && !('releaseHold' in window), 'Globals: the hold that keeps a jump on target is the core\'s own, not a name on window');
+        // A classic script's top-level function declaration is a property of
+        // window, as these six were until they became const.
+        const own = ['mksLoadFor', 'revealTarget', 'focusTarget', 'jumpTo', 'handleHashReveal', 'setMenuOpen'].filter(k => k in window);
+        assert(own.length === 0, `Globals: the core's jump, focus and menu functions are its own, not names on window (${own.join(', ') || 'none'})`);
+        const declared = [];
+        ['script.js', 'count.js', ...MODULE_FILES].forEach((rel) => {
+            (read(rel).match(/^(?:async\s+)?function\s*\*?\s*[\w$]+/gm) || []).forEach(m => declared.push(`${rel}: ${m}`));
+        });
+        assert(declared.length === 0, `Globals: no shipped script declares a function at the top level, where it would land on window (${declared.join(', ') || 'none'})`);
         const marked = ['dossier', 'terminal', 'interactives', 'dispatch'].filter(m => mks.loaded[m] !== true);
         assert(marked.length === 0, `Globals: every module marks itself in mks.loaded (unmarked: ${marked.join(', ') || 'none'})`);
 
@@ -204,7 +213,7 @@ const key = (window, k, target, init) => {
         const intro = !!doc.getElementById('preloader');
         assert(intro === expectIntro, `Motion: low-energy mode ${eco} — the intro ${expectIntro ? 'plays' : 'is skipped'} (the mode is restored before the intro asks)`);
         assert(doc.getElementById('ecoModeLabel').textContent === `Low-energy mode: ${eco}`, `Motion: the footer switch names the restored mode (${eco})`);
-        await wait(0);   // the counters' microtask, before the window goes
+        await wait(0);   // the player's manifest check settles before the window goes
         window.close();
     }
 

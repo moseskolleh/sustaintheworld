@@ -5,13 +5,15 @@ name: Open counts
 # changed. Only suppressed aggregates are ever committed; the raw daily
 # totals stay in the owner's Google Sheet.
 #
-# STATS_SOURCE_URL is a repository variable (Settings → Secrets and
-# variables → Actions → Variables): the Apps Script web app the contact form
-# uses, with ?action=stats, or the "Daily" sheet published as CSV. A secret
-# of the same name wins over the variable, for a URL that carries a token.
-# Until one is set, scripts/fetch-stats.js says so and changes nothing, the
-# tests pass on the unchanged files, and there is nothing to commit — this
-# job stays green before the counter is switched on.
+# STATS_SOURCE_URL is a repository secret (Settings → Secrets and variables
+# → Actions → Secrets): the Apps Script web app the contact form uses, with
+# ?action=stats&token= and the script's STATS_TOKEN, which it needs because
+# those daily totals are not suppressed. A repository variable of the same
+# name is read if there is no secret, for a source with no token in it (the
+# "Daily" sheet published as CSV). Until one is set, scripts/fetch-stats.js
+# says so and changes nothing, the tests pass on the unchanged files, and
+# there is nothing to commit — this job stays green before the counter is
+# switched on, and before its first full week has ended.
 
 on:
   schedule:

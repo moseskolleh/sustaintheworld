@@ -11,7 +11,11 @@
 // half of this file drives those the same way: what one visit adds, that a
 // second visit the same day adds to the same rows, that a payload which is
 // not exactly schema v1 changes nothing, and that the contact form still
-// behaves exactly as it did.
+// behaves exactly as it did: that the counter waits for the shared lock
+// only briefly, and not at all past its per-minute ceiling, so a burst of
+// counts cannot make a message time out; that a message from a browser that
+// asks not to be tracked is not counted; and that the unsuppressed daily
+// totals are served to the weekly build's token and to nobody else.
 //
 // Run with: node tests/apps-script.test.js
 
@@ -100,7 +104,7 @@ function world(props = {}, options = {}) {
     const cache = new Map();
     const mail = [];
     const errors = [];
-    const lock = { taken: 0, released: 0, refuse: false };
+    const lock = { taken: 0, released: 0, refuse: false, waits: [] };
     let now = options.now || NOW;
 
     const ctx = vm.createContext({});
@@ -159,7 +163,7 @@ function world(props = {}, options = {}) {
         },
         LockService: {
             getScriptLock: () => ({
-                tryLock: () => { if (lock.refuse) return false; lock.taken++; return true; },
+                tryLock: (ms) => { lock.waits.push(ms); if (lock.refuse) return false; lock.taken++; return true; },
                 releaseLock() { lock.released++; }
             })
         },
@@ -272,7 +276,10 @@ const postCount = (w, payload, extra = {}) => w.ctx.doPost({
     parameter: { action: 'count', ...extra },
     postData: { type: 'text/plain', contents: typeof payload === 'string' ? payload : JSON.stringify(payload) }
 });
-const getStats = (w, extra = {}) => w.ctx.doGet({ parameter: { action: 'stats', ...extra } });
+// The weekly build's token; a world made with STATS_TOKEN set to it serves
+// the rows to getStats, and to no request without it.
+const TOKEN = 'a-long-random-string-only-the-weekly-build-has';
+const getStats = (w, extra = {}) => w.ctx.doGet({ parameter: { action: 'stats', token: TOKEN, ...extra } });
 
 const TODAY = '2026-09-26';
 const daily = (w, tab = 'Daily') => (w.tab(tab) || []).slice(1);
@@ -425,7 +432,7 @@ const snapshot = (w) => JSON.stringify(Array.from(w.sheets.entries()).map(([n, s
 
 // --- GET ?action=stats serves the rows --------------------------------------
 {
-    const w = world();
+    const w = world({ STATS_TOKEN: TOKEN });
     const tab = w.ctx.getDailySheet(w.ctx.getConfig(), 'Daily');
     tab.appendRow(['2025-08-01', 'visits', '', 9]);     // more than 400 days before 2026-09-26
     tab.appendRow(['2025-09-01', 'visits', '', 7]);
@@ -451,8 +458,70 @@ const snapshot = (w) => JSON.stringify(Array.from(w.sheets.entries()).map(([n, s
     const health = JSON.parse(w.ctx.doGet({ parameter: {} }).getContent());
     assert(health.status === 'ok' && !('rows' in health), 'Stats: without ?action=stats, GET is still the plain health check');
 
-    const broken = JSON.parse(getStats(world({ SPREADSHEET_ID: '' })).getContent());
+    const broken = JSON.parse(getStats(world({ SPREADSHEET_ID: '', STATS_TOKEN: TOKEN })).getContent());
     assert(!('rows' in broken) && broken.status === 'error', 'Stats: a failure has no rows at all, so a build cannot mistake it for a week of zeros');
+}
+
+// --- ...and only to the weekly build's token ---------------------------------
+// The rows are unsuppressed, and this deployment's address is in count.js on
+// every page; stats.html promises that no count under 5 and no single day's
+// count is ever published.
+{
+    const w = world({ STATS_TOKEN: TOKEN });
+    postCount(w, beacon);
+    const refused = (label, parameter, props) => {
+        const target = props ? world(props) : w;
+        if (props) postCount(target, beacon);
+        const body = JSON.parse(target.ctx.doGet({ parameter: { action: 'stats', ...parameter } }).getContent());
+        assert(body.status === 'refused' && !('rows' in body) && !/linkedin|visits/.test(JSON.stringify(body)),
+            `Stats: ${label} is refused, with no rows (${body.status})`);
+    };
+    refused('a request with no token', {});
+    refused('a wrong token', { token: 'guess' });
+    refused('the token less its last character', { token: TOKEN.slice(0, -1) });
+    refused('the token with a character added', { token: `${TOKEN}x` });
+    refused('the test tab without the token', { test: '1' });
+    refused('any request while STATS_TOKEN is unset', { token: '' }, {});
+    refused('...even one whose token is "null"', { token: 'null' }, {});
+
+    const body = JSON.parse(getStats(w).getContent());
+    assert(Array.isArray(body.rows) && body.rows.some(r => r[1] === 'ref' && r[2] === 'www.linkedin.com'), 'Stats: the right token gets the rows');
+    assert(w.ctx.sameSecret(TOKEN, TOKEN) && !w.ctx.sameSecret('', TOKEN) && !w.ctx.sameSecret(undefined, TOKEN) && !w.ctx.sameSecret(TOKEN.toUpperCase(), TOKEN),
+        'Stats: the token check matches the exact string only');
+}
+
+// --- A count never keeps a message waiting ------------------------------------
+// Counts and messages share the script lock. A message waits up to 15 s for
+// it; a count waits briefly, and past a ceiling a minute does not ask at all,
+// so a burst of page views cannot queue in front of someone's message.
+{
+    const w = world();
+    postCount(w, beacon);
+    const countWait = w.lock.waits[w.lock.waits.length - 1];
+    postJson(w, valid);
+    // A message takes the lock twice: once for its row, once for the tally.
+    const [rowWait, tallyWait] = w.lock.waits.slice(-2);
+    assert(countWait <= 2000 && tallyWait <= 2000, `Lock: a count waits at most 2 s for the lock the form shares (${countWait} ms, the contact tally ${tallyWait} ms)`);
+    assert(rowWait >= 10000, `Lock: a message still waits as long as it always did for its own row (${rowWait} ms)`);
+
+    const burst = world();
+    const cap = burst.ctx.COUNT_MAX_PER_MINUTE;
+    for (let i = 0; i < cap + 10; i++) postCount(burst, beacon);
+    assert(cell(burst, 'visits', '') === cap && burst.lock.taken === cap,
+        `Lock: past ${cap} counts in a minute, the rest are dropped before the lock is asked for (${burst.lock.taken} taken for ${cap + 10})`);
+    const sent = JSON.parse(postJson(burst, valid).getContent());
+    assert(sent.status === 'success' && burst.rows.length === 2, 'Lock: a message sent in the middle of that burst is recorded');
+    burst.setNow(NOW + 60 * 1000);
+    postCount(burst, beacon);
+    assert(cell(burst, 'visits', '') === cap + 1, 'Lock: the next minute counts again');
+
+    const busy = world();
+    busy.lock.refuse = true;
+    postCount(busy, beacon);
+    busy.lock.refuse = false;
+    const after = JSON.parse(postJson(busy, valid).getContent());
+    assert(after.status === 'success' && busy.rows.length === 2 && busy.tab('Daily').length === 2,
+        'Lock: a count that could not have the lock is dropped, and the next message is recorded and counted');
 }
 
 // --- The contact form still works, and counts itself ----------------------
@@ -472,6 +541,13 @@ const snapshot = (w) => JSON.stringify(Array.from(w.sheets.entries()).map(([n, s
     assert(daily(w).length === 1, 'Contact + counter: contact is one row a day, not one per message');
     assert(w.errors.length === 0, `Contact + counter: nothing was logged as an error (${w.errors.join(' | ')})`);
 
+    // The site's script says count: false when the browser sends Do Not
+    // Track or Global Privacy Control; stats.html promises such a visitor is
+    // in none of its figures.
+    const quiet = world();
+    const quietOut = JSON.parse(postJson(quiet, { ...valid, count: false }).getContent());
+    assert(quietOut.status === 'success' && quiet.rows.length === 2 && quiet.mail.length === 1 && quiet.tab('Daily') === null,
+        'Contact + counter: a message marked count: false is recorded and sent, and not counted');
     const noCount = world();
     noCount.ctx.addToDaily = () => { throw new Error('sheet unavailable'); };
     const saved = JSON.parse(postJson(noCount, valid).getContent());

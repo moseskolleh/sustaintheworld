@@ -1,13 +1,16 @@
 // Tests for the open counts: scripts/fetch-stats.js, the content/stats.json
 // guard in scripts/lib/content.js, and stats.html.
 //
-// stats.html makes three promises in public: no count under 5 is ever
-// published, no daily row ever reaches the repository, and a page view sends
-// exactly the fields it shows. Each is checked here against fixture rows —
-// CI has no network and no counter — including rows written to break them:
-// small cells, made-up names, a referrer that is an IP address, a date the
-// calendar does not have. The guards have to fire on those, not merely pass
-// on today's empty file.
+// stats.html makes these promises in public: no count under 5 is ever
+// published, not even one a reader could work out by subtracting the
+// figures around it from a total; no single day's count and no daily row
+// ever reaches the repository; and a page view sends exactly the fields it
+// shows. Each is checked here against fixture rows — CI has no network and
+// no counter — including rows written to break them: small cells, a lone
+// small cell in a table that adds up to a total, made-up names, a referrer
+// that is an IP address, a date the calendar does not have, counting that
+// starts mid-week or has not yet run a week. The guards have to fire on
+// those, not merely pass on today's empty file.
 //
 // Run with: node tests/stats.test.js
 
@@ -45,11 +48,17 @@ const CONTRACT_KEYS = ['v', 'page', 'lens', 'deepest', 'features', 'ref', 'vp', 
 //
 // Counting runs from Wednesday 2 September to Monday 5 October 2026 (34
 // days); "today" is that Monday, so the last complete week is 28 September
-// to 4 October. Every day carries the same totals, so the expected figures
-// below can be worked out by hand; the planted rows are listed after.
+// to 4 October. Only whole weeks are published, so the figures run from
+// Monday 7 September: the two days before it and today are in none of them.
+// Every day carries the same totals, so the expected figures below can be
+// worked out by hand; the planted rows are listed after. Like the real
+// counter's, every page view here has one page and one window class, so
+// those tables add up to the page views.
 const TODAY = '2026-10-05';
-const FIRST = '2026-09-02';
+const COUNTED = '2026-09-02';
+const FIRST = '2026-09-07';
 const WEEK = { start: '2026-09-28', end: '2026-10-04' };
+const HELD = fetchStats.HELD;
 
 function days(from, to) {
     const out = [];
@@ -59,7 +68,7 @@ function days(from, to) {
 
 function fixtureRows() {
     const rows = [];
-    days(FIRST, TODAY).forEach((d) => {
+    days(COUNTED, TODAY).forEach((d) => {
         rows.push(
             [d, 'visits', '', 20],
             [d, 'kb', '', 5000],                       // 250 KB a page view
@@ -71,7 +80,8 @@ function fixtureRows() {
             [d, 'deepest', 'contact', 3],              // a quarter of homepage views
             [d, 'deepest', 'about', 9],
             [d, 'feature', 'cv-download-hero', 1],
-            [d, 'ref', '', 10],
+            [d, 'feature', 'cv-download', 1],          // what count.js adds with any CV link
+            [d, 'ref', '', 10],                        // never written by Code.gs; skipped
             [d, 'ref', 'www.linkedin.com', 5],
             [d, 'ref', 'mid.example.net', 1],
             [d, 'vp', 'l', 12],
@@ -79,7 +89,9 @@ function fixtureRows() {
         );
     });
     rows.push(
-        // Small cells, inside the last week.
+        // Small cells, inside the last week. The nav CV link on 1 October was
+        // clicked in the same page view as that day's hero one, so the view
+        // counts once: count.js sent "cv-download" once.
         ['2026-09-30', 'lens', 'sustainable-ai', 2],
         ['2026-10-01', 'feature', 'cv-download-nav', 1],
         ['2026-09-29', 'ref', 'small.example.org', 1],
@@ -92,10 +104,14 @@ function fixtureRows() {
         ['2026-09-10', 'contact', '', 1],
         ['2026-09-11', 'contact', '', 1],
         ['2026-09-12', 'contact', '', 1],
-        // Names the site does not use: counted, but only as "other".
+        // Names the site does not use: counted, but only as "other". Each is
+        // a whole page view posted to the public endpoint, with its own page
+        // and window class, as Code.gs would total it.
+        ['2026-09-15', 'visits', '', 9], ['2026-09-15', 'kb', '', 2250], ['2026-09-15', 'vp', 'l', 9],
         ['2026-09-15', 'page', 'evil-page', 9],
         ['2026-09-15', 'feature', 'visit-spam-dot-com', 6],
         ['2026-09-15', 'lens', 'hacker', 5],
+        ['2026-09-10', 'visits', '', 10], ['2026-09-10', 'kb', '', 2500], ['2026-09-10', 'vp', 's', 10], ['2026-09-10', 'page', 'research', 10],
         ['2026-09-10', 'ref', '10.0.0.1', 7],
         ['2026-09-10', 'ref', 'https://evil.example/path', 3],
         // Rows that must be dropped outright.
@@ -195,7 +211,8 @@ function walk(value, visit, where = '') {
     ['index', 'case-studies', 'research', 'carbon-ai', 'field-report', 'stats', '404'].forEach((p) => {
         assert(known.pages.has(p), `Known: page "${p}"`);
     });
-    ['cv-download-hero', 'cv-download-nav', 'receipt-open', 'contact-form-submit', 'module-dossier', 'module-terminal', 'module-interactives', 'module-dispatch']
+    ['cv-download-hero', 'cv-download-nav', 'cv-download-fieldreport', 'email-fieldreport', 'cv-download', 'receipt-open',
+        'contact-form-submit', 'module-dossier', 'module-terminal', 'module-interactives', 'module-dispatch']
         .forEach((f) => assert(known.features.has(f), `Known: feature "${f}"`));
     // The counter names a module fetched on demand "module-<name>"; the bare
     // name is not something it sends, so it is not a name the page may show.
@@ -221,21 +238,22 @@ function walk(value, visit, where = '') {
 // ===================================================================
 {
     assert(stats.status === 'collecting', 'Transform: rows make a collecting file');
-    assert(stats.period.first === FIRST && stats.period.last === TODAY && stats.period.days === 34,
-        `Transform: the period runs from the first to the last date (${stats.period.first} to ${stats.period.last}, ${stats.period.days} days)`);
-    assert(stats.week.start === WEEK.start && stats.week.end === WEEK.end && stats.week.partial === false,
+    assert(stats.period.first === FIRST && stats.period.last === WEEK.end && stats.period.days === 28,
+        `Transform: the period is whole weeks, from the first Monday counted to last Sunday (${stats.period.first} to ${stats.period.last}, ${stats.period.days} days)`);
+    assert(stats.week.start === WEEK.start && stats.week.end === WEEK.end && Object.keys(stats.week).length === 2,
         `Transform: "last week" is the last complete Monday-to-Sunday week (${stats.week.start} to ${stats.week.end})`);
     assert(stats.asOf === TODAY, 'Transform: asOf is the day it ran');
 
     // The five numbers, by hand. Last week: 7 days of the daily totals plus
-    // the planted rows dated inside it.
+    // the planted rows dated inside it. All time: 28 days, 7 September on.
     const w = stats.headline.week;
     const a = stats.headline.all;
-    assert(w.visits === 140 && a.visits === 680, `Five: page views for scale (${w.visits}, ${a.visits})`);
+    assert(w.visits === 140 && a.visits === 579, `Five: page views for scale, today and the days before the first Monday left out (${w.visits}, ${a.visits})`);
     assert(w.contact === SMALL, `Five: 3 contact messages last week are published as "${SMALL}" (${w.contact})`);
     assert(a.contact === 6, `Five: 6 contact messages in all (${a.contact})`);
-    assert(w.cvDownloads === 8 && a.cvDownloads === 35, `Five: CV downloads add up every cv-download* name (${w.cvDownloads}, ${a.cvDownloads})`);
-    assert(w.lensVisits === 23 && a.lensVisits === 104, `Five: lens visits count known lenses and not "other" (${w.lensVisits}, ${a.lensVisits})`);
+    assert(w.cvDownloads === 7 && a.cvDownloads === 28,
+        `Five: CV downloads are page views with any CV link, so the view that used two counts once (${w.cvDownloads}, ${a.cvDownloads})`);
+    assert(w.lensVisits === 23 && a.lensVisits === 86, `Five: lens visits count known lenses and not "other" (${w.lensVisits}, ${a.lensVisits})`);
     assert(w.contactShare === 0.25 && a.contactShare === 0.25, `Five: a quarter of homepage views reached Contact (${w.contactShare}, ${a.contactShare})`);
     assert(w.briefUses === null && a.briefUses === null && stats.briefLive === false, 'Five: Brief uses are null while the site has no Brief');
 
@@ -246,14 +264,20 @@ function walk(value, visit, where = '') {
     assert(live.briefLive === true && live.headline.week.briefUses === 6 && live.headline.all.briefUses === 8,
         `Five: Brief uses are counted once the site has a Brief (${live.headline.week.briefUses}, ${live.headline.all.briefUses})`);
 
-    // Week by week, newest first; the first week started on a Wednesday.
-    assert(stats.weeks.length === 5, `Weeks: one line per week back to the first (${stats.weeks.length})`);
-    assert(stats.weeks[0].start === WEEK.start, 'Weeks: newest first');
-    assert(stats.weeks[4].start === '2026-08-31' && stats.weeks[4].partial === true, 'Weeks: the first week is marked partial');
-    assert(stats.weeks[1].contact === SMALL && stats.weeks[2].contact === SMALL, 'Weeks: the weekly contact counts under 5 are suppressed too');
+    // Week by week, newest first; counting began on a Wednesday, and that
+    // part week is not a line of its own: it is in no figure at all.
+    assert(stats.weeks.length === 4, `Weeks: one line per whole week back to the first Monday (${stats.weeks.length})`);
+    assert(stats.weeks[0].start === WEEK.start && stats.weeks[3].start === FIRST, 'Weeks: newest first, the oldest starting on the first Monday');
+    assert(stats.weeks.every(w => Object.keys(w).join() === 'start,end,visits,contact,cvDownloads,lensVisits,contactShare,briefUses'),
+        'Weeks: every line is a whole week, with no part-week marker');
+    assert(stats.weeks[3].contact === SMALL && stats.weeks[2].contact === SMALL, 'Weeks: the weekly contact counts under 5 are suppressed too');
+    const { start, end, ...newest } = stats.weeks[0];
+    assert(JSON.stringify(newest) === JSON.stringify(stats.headline.week), 'Weeks: the newest line is last week, figure for figure');
+    const weekSum = stats.weeks.reduce((n, x) => n + x.visits, 0);
+    assert(weekSum === a.visits, `Weeks: while they reach back to the start, the weeks add up to all time, and no day is left over (${weekSum}, ${a.visits})`);
 
-    // Bytes: 5000 KB over 20 page views, every day.
-    assert(stats.bytes.all.meanKb === 250 && stats.bytes.all.medianDayKb === 250 && stats.bytes.all.days === 34,
+    // Bytes: 250 KB a page view, every day, the planted ones included.
+    assert(stats.bytes.all.meanKb === 250 && stats.bytes.all.medianDayKb === 250 && stats.bytes.all.days === 28,
         `Bytes: mean and median day from kb and visits (${JSON.stringify(stats.bytes.all)})`);
 }
 
@@ -268,6 +292,12 @@ function walk(value, visit, where = '') {
     const lens = stats.breakdown.lens;
     const sai = lens.find(r => r.key === 'sustainable-ai');
     assert(sai && sai.week === SMALL && sai.all === SMALL, 'Suppression: a lens with 2 page views is "<5" in both columns');
+    // The known lenses add up to the lens-link visits, 86 in all: shown
+    // beside them, water's 84 would give away the 2.
+    const water = lens.find(r => r.key === 'water');
+    assert(water && water.week === HELD && water.all === HELD,
+        `Suppression: the one other lens is held back with it, in both columns, and marked "${HELD}", not "${SMALL}" (${water && water.week}, ${water && water.all})`);
+    assert(stats.headline.all.lensVisits === 86, 'Suppression: ...while the total itself stays shown');
     assert(lens[lens.length - 1].key === 'other', 'Order: "other" comes last');
 
     const ref = stats.breakdown.ref;
@@ -281,49 +311,114 @@ function walk(value, visit, where = '') {
 
     // Twenty hosts over the line: only the top fifteen are named.
     const many = [];
-    for (let i = 0; i < 20; i++) many.push(['2026-09-29', 'ref', `site${String(i).padStart(2, '0')}.example.com`, 5 + i]);
-    const capped = fetchStats.transform(fetchStats.cleanRows(many.concat([['2026-09-29', 'visits', '', 300]]), known, TODAY).rows, { today: TODAY, known });
+    for (let i = 0; i < 20; i++) many.push(['2026-09-28', 'ref', `site${String(i).padStart(2, '0')}.example.com`, 5 + i]);
+    const capped = fetchStats.transform(fetchStats.cleanRows(many.concat([['2026-09-28', 'visits', '', 300]]), known, TODAY).rows, { today: TODAY, known });
     const cappedNamed = capped.breakdown.ref.filter(r => r.key !== 'other');
     assert(cappedNamed.length === 15 && cappedNamed[0].key === 'site19.example.com', `Referrers: at most fifteen are named, largest first (${cappedNamed.length})`);
     assert(capped.breakdown.ref.find(r => r.key === 'other').all === 5 + 6 + 7 + 8 + 9, 'Referrers: the rest are folded into other');
 
-    // A share is only ever made from two published counts.
-    const thin = fetchStats.transform(fetchStats.cleanRows([
+    // A share is only ever made from two published counts. (Every row in
+    // these small cases is dated in the last week, which starts on a Monday.)
+    const one = (rows) => fetchStats.transform(fetchStats.cleanRows(rows, known, TODAY).rows, { today: TODAY, known });
+    const thin = one([
         ['2026-09-29', 'visits', '', 40], ['2026-09-29', 'page', 'index', 40], ['2026-09-29', 'deepest', 'contact', 4],
-        ['2026-09-30', 'visits', '', 3], ['2026-09-30', 'page', 'index', 3], ['2026-09-30', 'deepest', 'contact', 3]
-    ], known, TODAY).rows, { today: TODAY, known });
+        ['2026-09-30', 'visits', '', 3], ['2026-09-30', 'page', 'index', 3], ['2026-09-30', 'deepest', 'contact', 3],
+        ['2026-09-28', 'visits', '', 1]
+    ]);
     assert(thin.headline.all.contactShare === 0.163, `Share: 7 of 43 is published (${thin.headline.all.contactShare})`);
-    const thinner = fetchStats.transform(fetchStats.cleanRows([
-        ['2026-09-29', 'visits', '', 40], ['2026-09-29', 'page', 'index', 40], ['2026-09-29', 'deepest', 'contact', 4]
-    ], known, TODAY).rows, { today: TODAY, known });
+    const thinner = one([['2026-09-28', 'visits', '', 40], ['2026-09-28', 'page', 'index', 40], ['2026-09-28', 'deepest', 'contact', 4]]);
     assert(thinner.headline.all.contactShare === null, 'Share: 4 of 40 is not — the part is under 5');
-    const tiny = fetchStats.transform(fetchStats.cleanRows([
-        ['2026-09-29', 'visits', '', 4], ['2026-09-29', 'kb', '', 900], ['2026-09-29', 'page', 'index', 4], ['2026-09-29', 'deepest', 'contact', 4]
-    ], known, TODAY).rows, { today: TODAY, known });
+    const tiny = one([['2026-09-28', 'visits', '', 4], ['2026-09-28', 'kb', '', 900], ['2026-09-28', 'page', 'index', 4], ['2026-09-28', 'deepest', 'contact', 4]]);
     assert(tiny.headline.all.contactShare === null && tiny.bytes.all === null, 'Share: nothing is derived from 4 page views, bytes included');
 
     // A day with too few page views cannot set the median on its own.
-    const median = fetchStats.transform(fetchStats.cleanRows([
-        ['2026-09-29', 'visits', '', 10], ['2026-09-29', 'kb', '', 2000],
+    const median = one([
+        ['2026-09-28', 'visits', '', 10], ['2026-09-28', 'kb', '', 2000],
         ['2026-09-30', 'visits', '', 1], ['2026-09-30', 'kb', '', 9000]
-    ], known, TODAY).rows, { today: TODAY, known });
+    ]);
     assert(median.bytes.all.medianDayKb === 200 && median.bytes.all.days === 1 && median.bytes.all.meanKb === 1000,
         `Bytes: a day with one page view counts in the mean but not the median (${JSON.stringify(median.bytes.all)})`);
 
     // Suppressed rows are listed by name, so their order cannot rank them.
-    const order = fetchStats.transform(fetchStats.cleanRows([
-        ['2026-09-29', 'visits', '', 30], ['2026-09-29', 'feature', 'module-terminal', 4], ['2026-09-29', 'feature', 'module-dossier', 1],
-        ['2026-09-29', 'feature', 'receipt-open', 9]
-    ], known, TODAY).rows, { today: TODAY, known });
+    const order = one([
+        ['2026-09-28', 'visits', '', 30], ['2026-09-28', 'feature', 'module-terminal', 4], ['2026-09-28', 'feature', 'module-dossier', 1],
+        ['2026-09-28', 'feature', 'receipt-open', 9]
+    ]);
     assert(order.breakdown.feature.map(r => r.key).join(',') === 'receipt-open,module-dossier,module-terminal',
         `Order: published first, then suppressed by name (${order.breakdown.feature.map(r => r.key).join(',')})`);
 
-    // No complete week yet: nothing weekly at all.
-    const young = fetchStats.transform(fetchStats.cleanRows([['2026-10-01', 'visits', '', 30]], known, '2026-10-03').rows,
-        { today: '2026-10-03', known });
-    assert(young.week === null && young.headline.week === null && young.weeks.length === 0 && young.bytes.week === null,
-        'Weeks: before the first full week ends there are no weekly figures');
-    assert(young.breakdown.page.every(r => r.week === null), 'Weeks: ...and no weekly column in the breakdowns');
+    // Before a whole week has ended there is nothing to publish at all: a
+    // "week" of one day would be a single day's count, twice over.
+    const young = (from, to, today) => fetchStats.transform(fetchStats.cleanRows(days(from, to).map(d => [d, 'visits', '', 9]), known, today).rows,
+        { today, known });
+    assert(young('2026-10-01', '2026-10-03', '2026-10-03') === null, 'Whole weeks: three days of counting publish nothing');
+    assert(young('2026-10-04', '2026-10-04', '2026-10-05') === null, 'Whole weeks: counting that began on a Sunday publishes nothing the next day');
+    assert(young('2026-10-05', '2026-10-05', '2026-10-05') === null, 'Whole weeks: nor does a first day that is today');
+    assert(young('2026-10-07', '2026-10-12', '2026-10-12') === null,
+        'Whole weeks: counting from a Wednesday publishes nothing on the next Monday, as the empty page promises');
+    const firstWeek = young('2026-10-07', '2026-10-19', '2026-10-19');
+    assert(firstWeek && firstWeek.period.first === '2026-10-12' && firstWeek.period.days === 7 && firstWeek.headline.all.visits === 63,
+        `Whole weeks: ...and on the Monday after its first full week, that week alone (${firstWeek && JSON.stringify(firstWeek.period)})`);
+    assert(content.checkStats(firstWeek).length === 0, 'Whole weeks: that first file passes the guard');
+}
+
+// --- a hidden figure cannot be worked out from the ones around it -----------
+// The rows from the review that found it: every page view has one page and
+// one window class, so those tables add up to the page views shown beside
+// them, and a lone "<5" was the total less the rest.
+{
+    const D = '2026-09-28';
+    const rows = [[D, 'visits', '', 40], [D, 'page', 'index', 30], [D, 'page', 'case-studies', 8], [D, 'page', '404', 2],
+        [D, 'vp', 'l', 25], [D, 'vp', 'm', 12], [D, 'vp', 's', 3], [D, 'lens', 'water', 12], [D, 'lens', 'climate-risk', 2]];
+    const s = fetchStats.transform(fetchStats.cleanRows(rows, known, TODAY).rows, { today: TODAY, known });
+    const got = (metric, col) => Object.fromEntries(s.breakdown[metric].map(r => [r.key, r[col]]));
+    const recoverable = (total, cells) => {
+        const hidden = Object.values(cells).filter(v => typeof v !== 'number');
+        return hidden.length === 1 && typeof total === 'number';
+    };
+    ['all', 'week'].forEach((col) => {
+        const page = got('page', col);
+        const vp = got('vp', col);
+        const lens = got('lens', col);
+        const h = s.headline[col];
+        assert(!recoverable(h.visits, page) && page['404'] === SMALL && page['case-studies'] === HELD && page.index === 30,
+            `Complements (${col}): 404's 2 page views stay hidden, with case studies' 8 held beside them (${JSON.stringify(page)})`);
+        assert(!recoverable(h.visits, vp) && vp.s === SMALL && vp.m === HELD && vp.l === 25,
+            `Complements (${col}): so do the 3 on phones, with the 12 on tablets held (${JSON.stringify(vp)})`);
+        assert(!recoverable(h.lensVisits, lens) && lens['climate-risk'] === SMALL && lens.water === HELD && h.lensVisits === 14,
+            `Complements (${col}): and the lens beside the lens-link visits (${JSON.stringify(lens)})`);
+    });
+    assert(s.headline.all.visits === 40 && content.checkStats(s).length === 0, 'Complements: the totals stay shown, and the file passes the guard');
+
+    // A hidden 0 gives nothing away, so nothing is held back for one: the
+    // week before, 404 had no page views.
+    const zero = fetchStats.transform(fetchStats.cleanRows([
+        ['2026-09-21', 'visits', '', 3], ['2026-09-21', 'page', '404', 3], ['2026-09-21', 'vp', 'l', 3],
+        [D, 'visits', '', 40], [D, 'page', 'index', 30], [D, 'page', 'research', 10], [D, 'vp', 'l', 40]
+    ], known, TODAY).rows, { today: TODAY, known });
+    const zp = Object.fromEntries(zero.breakdown.page.map(r => [r.key, r.week]));
+    assert(zp['404'] === SMALL && zp.index === 30 && zp.research === 10, `Complements: a week's 0 is "<5" and holds nothing else back (${JSON.stringify(zp)})`);
+
+    // Across the week-by-week table: the weeks add up to all time, so one
+    // week's "<5" beside the others would be all time less the rest.
+    const weekly = fetchStats.transform(fetchStats.cleanRows([
+        ['2026-09-14', 'contact', '', 9], ['2026-09-21', 'contact', '', 7], [D, 'contact', '', 2],
+        ['2026-09-14', 'visits', '', 50], ['2026-09-21', 'visits', '', 50], [D, 'visits', '', 50]
+    ], known, TODAY).rows, { today: TODAY, known });
+    const c = weekly.weeks.map(x => x.contact);
+    assert(weekly.headline.all.contact === 18 && c.join() === `${SMALL},${HELD},9`,
+        `Complements: a week's 2 contact messages stay hidden, and the smallest other week is held (${c.join(', ')} of ${weekly.headline.all.contact})`);
+    assert(weekly.headline.week.contact === c[0] && content.checkStats(weekly).length === 0, 'Complements: ...in the headline too, and the guard agrees');
+
+    // A chain: last week's page views held back in the week-by-week table
+    // would come straight back as the sum of last week's pages, which then
+    // gives the small week away. The pages column is held back as well.
+    const chain = fetchStats.transform(fetchStats.cleanRows([
+        ['2026-09-21', 'visits', '', 3], ['2026-09-21', 'page', 'index', 3], ['2026-09-21', 'vp', 'l', 3],
+        [D, 'visits', '', 30], [D, 'page', 'index', 20], [D, 'page', 'research', 10], [D, 'vp', 'l', 30]
+    ], known, TODAY).rows, { today: TODAY, known });
+    assert(content.checkStats(chain).length === 0 && chain.weeks[1].visits === SMALL,
+        `Complements: through a chain of sums, nothing hidden can be worked out (weeks ${chain.weeks.map(x => x.visits).join(', ')}; last week's pages ${chain.breakdown.page.map(r => `${r.key} ${r.week}`).join(', ')})`);
 }
 
 // --- the same totals from JSON and from CSV -------------------------------
@@ -374,7 +469,24 @@ function walk(value, visit, where = '') {
         ['a lowered suppression threshold', s => { s.suppressBelow = 1; }],
         ['a made-up status', s => { s.status = 'live'; }],
         ['weekly figures with no week', s => { s.week = null; }],
-        ['a week with no weekly figures', s => { s.headline.week = null; }]
+        ['a week with no weekly figures', s => { s.headline.week = null; }],
+        ['a lone "<5" beside the figures it can be subtracted from (water shown beside sustainable-ai)', s => {
+            const water = s.breakdown.lens.find(r => r.key === 'water');
+            water.week = 21;
+            water.all = 84;
+        }],
+        ['a lone "<5" in the week-by-week table, given away by all time', s => {
+            s.headline.all.contact = 18;
+            [1, 2, 3].forEach((i) => { s.weeks[i].contact = 5; });
+        }],
+        ['all time running on into today', s => { s.period.last = TODAY; s.period.days = 29; }],
+        ['a part week at the start of the period', s => { s.period.first = COUNTED; s.period.days = 33; }],
+        ['a week that is not Monday to Sunday', s => { s.week.start = '2026-09-27'; }],
+        ['last week given as two different figures', s => { s.weeks[0].visits = 141; }],
+        ['a share beside a hidden count', s => { s.breakdown.page.find(r => r.key === 'index').all = HELD; }],
+        ['a referrer row with no host', s => { s.breakdown.ref.push({ key: '', week: 9, all: 9 }); }],
+        ['a named referrer held back', s => { s.breakdown.ref.push({ key: 'held.example.com', week: HELD, all: HELD }); }],
+        ['a part-week marker', s => { s.weeks[3].partial = true; }]
     ];
     cases.forEach(([label, spoil]) => {
         const s = clone();
@@ -422,9 +534,23 @@ const page = (s) => new JSDOM(renderStats({ stats: s, lenses })).window.document
 
     const text = doc.body.textContent.replace(/\s+/g, ' ');
     assert(/Do Not Track or Global Privacy Control, nothing is sent at all/.test(text), 'Privacy: says DNT and GPC visitors send nothing');
-    assert(/No IP address/.test(text) && /No cookies/.test(text) && /No id of any kind/.test(text), 'Privacy: lists what is never collected');
+    // Code.gs counts a message sent with JavaScript off, which cannot pass
+    // the signal on; the page has to say so rather than promise otherwise.
+    assert(/with JavaScript off, the form cannot pass the signal on, and the message is counted/.test(text),
+        'Privacy: names the one way a DNT or GPC visitor is still counted');
+    assert(/No IP address/.test(text) && /No cookie/.test(text) && /No id of any kind/.test(text), 'Privacy: lists what is never collected');
+    // The site does keep a few choices in the browser (theme, low-energy
+    // mode, reading speed, the intro), so the claim is the count's, not the site's.
+    assert(!/nothing is written to your device/.test(text) && /the count neither reads nor writes any/.test(text) && /theme, low-energy mode/.test(text),
+        'Privacy: the no-storage claim is made for the count, and the site\'s own remembered choices are named');
     assert(/Any count under 5 is shown as <5/.test(text), 'Privacy: says cells under 5 are suppressed');
-    assert(/Google Sheet in my own Google account/.test(text), 'Privacy: says where the raw daily totals live');
+    assert(/a lone <5 would be the total less the rest, so the smallest figure beside it is held back as well/.test(text),
+        'Privacy: says a figure is held back where subtraction would give a small one away');
+    assert(/Every figure covers whole weeks/.test(text) && /No count for a single day is ever published/.test(text), 'Privacy: whole weeks, and no single day');
+    assert(/grade it gave\. Never the ad itself/.test(text), 'Privacy: says the Assay\'s grade is among the features, and the ad never is');
+    assert(/window/.test(doc.querySelector('.st-fields').textContent) && !/Screen width/.test(text), 'Privacy: vp is the window\'s width, not the screen\'s');
+    assert(/Google Sheet in my own Google account/.test(text) && /a key that the scheduled job keeps as a secret/.test(text),
+        'Privacy: says where the raw daily totals live, and that only the weekly job can read them');
 }
 
 // --- the empty state, as committed ---------------------------------------------
@@ -468,19 +594,47 @@ const page = (s) => new JSDOM(renderStats({ stats: s, lenses })).window.document
     const html = renderStats({ stats, lenses });
     assert(!/evil|visit-spam|hacker|10\.0\.0\.1|small\.example/.test(html), 'Counting: nothing made up or suppressed reaches the page');
 
-    const young = fetchStats.transform(fetchStats.cleanRows([['2026-10-01', 'visits', '', 30]], known, '2026-10-03').rows, { today: '2026-10-03', known });
-    const ydoc = page(young);
-    assert(/first full week, Monday to Sunday, has not finished yet/.test(ydoc.body.textContent.replace(/\s+/g, ' ')), 'Counting: before the first full week, says why there is no weekly column');
-    assert(!/Week of/.test(ydoc.body.textContent), 'Counting: ...and shows none');
+    // Complements are "held", never "<5", which would be false of them, and
+    // the key says what each means.
+    const waterRow = lensRows.find(tr => /Water/i.test(tr.querySelector('th').textContent));
+    assert(waterRow && /held/.test(waterRow.textContent) && !/<5/.test(waterRow.textContent) && waterRow.lastElementChild.textContent === '—',
+        'Counting: a figure held back beside a small one reads "held", with no share');
+    const key = doc.querySelector('.st-key').textContent.replace(/\s+/g, ' ');
+    assert(/<5 means fewer than 5/.test(key) && /held means 5 or more/.test(key), 'Counting: the key explains both "<5" and "held"');
+    assert(/Every figure covers whole weeks, Monday to Sunday/.test(doc.querySelector('.st-status').textContent.replace(/\s+/g, ' ')),
+        'Counting: says every figure covers whole weeks');
+    assert(!/part of a week/.test(doc.body.textContent), 'Counting: there is no part week to mark');
+    const bytesText = doc.querySelector('[aria-labelledby="st-bytes-h"]').textContent.replace(/\s+/g, ' ');
+    assert(/Unlike the carbon receipt/.test(bytesText) && !/as the carbon receipt in the homepage footer is/.test(bytesText),
+        'Counting: the bytes section says how its measure differs from the carbon receipt\'s, not that they are the same');
+    const refText = doc.querySelector('[aria-labelledby="st-ref-h"]').textContent;
+    assert(!/No referring site/.test(refText) && /no referring site .* is not in this table/i.test(refText.replace(/\s+/g, ' ')),
+        'Counting: the referrer table has no "no referrer" row (Code.gs never stores one), and says so');
+
+    // Without a whole week there is no counting file to draw: the guard
+    // refuses one.
+    const noWeek = JSON.parse(JSON.stringify(stats));
+    noWeek.week = null;
+    noWeek.headline.week = null;
+    assert(content.checkStats(noWeek).some(p => /week is missing/.test(p)), 'Counting: a counting file without a whole week is refused');
 }
 
 // --- the page is linked, listed and budgeted --------------------------------------
 {
-    ['index.html', 'case-studies.html', 'research.html', 'stats.html'].forEach((file) => {
+    ['index.html', 'case-studies.html', 'research.html', 'stats.html', 'carbon-ai.html'].forEach((file) => {
         const doc = new JSDOM(fs.readFileSync(path.join(ROOT, file), 'utf8')).window.document;
         const link = doc.querySelector('footer a[href="stats.html"]');
         assert(!!link && /open counts/i.test(link.textContent), `Footer: ${file} links to the open counts`);
     });
+    // Every page counts its visits, so every page leads to what that sends:
+    // the field report from its note on the counter, the 404 page from its
+    // links (it can be served at any address, so its links are absolute).
+    const counted = fs.readdirSync(ROOT).filter(f => f.endsWith('.html') && /<script[^>]*src="(?:\/sustaintheworld\/)?count\.js"/.test(fs.readFileSync(path.join(ROOT, f), 'utf8')));
+    const unlinked = counted.filter(f => !new JSDOM(fs.readFileSync(path.join(ROOT, f), 'utf8')).window.document
+        .querySelector('a[href="stats.html"], a[href="/sustaintheworld/stats.html"]'));
+    assert(counted.length >= 7 && unlinked.length === 0, `Links: every page that counts its visits links to the open counts (${unlinked.join(', ') || `all ${counted.length}`})`);
+    const homeFoot = new JSDOM(fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8')).window.document.querySelector('footer a[href="stats.html"]').textContent;
+    assert(/what this site counts, and what it never collects/.test(homeFoot), 'Footer: the homepage link reads as two things, what is counted and what never is');
     const profile = JSON.parse(fs.readFileSync(path.join(ROOT, 'content', 'profile.json'), 'utf8'));
     assert(profile.pages.some(p => p.path === 'stats.html'), 'Sitemap: stats.html is one of the pages in profile.json');
     assert(/stats\.html/.test(fs.readFileSync(path.join(ROOT, 'sitemap.xml'), 'utf8')), 'Sitemap: lists stats.html');
@@ -574,7 +728,12 @@ function run(env) {
         '/signin': [200, 'text/html', '<!doctype html><title>Sign in</title>'],
         '/down': [503, 'text/plain', 'unavailable'],
         '/gone': [404, 'text/plain', 'not found'],
-        '/empty': [200, 'application/json', JSON.stringify({ v: 1, rows: [] })]
+        '/empty': [200, 'application/json', JSON.stringify({ v: 1, rows: [] })],
+        // Code.gs's own replies: a sheet it could not read this time, and a
+        // request without the right token.
+        '/busy': [200, 'application/json', JSON.stringify({ status: 'error', message: 'The counts are unavailable right now.' })],
+        '/refused': [200, 'application/json', JSON.stringify({ status: 'refused', message: 'The counts are read by the site\'s weekly build, with a token.' })],
+        '/young': [200, 'application/json', JSON.stringify({ v: 1, rows: [[today, 'visits', '', 12]] })]
     };
     const seen = [];
     const server = http.createServer((req, res) => {
@@ -602,6 +761,20 @@ function run(env) {
         reset();
         r = await run({ STATS_OUT: out, STATS_SOURCE_URL: `${base}/empty` });
         assert(r.code === 0 && untouched() && /no daily totals yet/.test(r.out), 'Script: a source with no rows yet leaves the file alone');
+
+        reset();
+        r = await run({ STATS_OUT: out, STATS_SOURCE_URL: `${base}/busy` });
+        assert(r.code === 0 && untouched() && /could not read its sheet/.test(r.out),
+            `Script: the endpoint's own error reply (a sheet it could not read) is a skip, not a configuration failure (${r.code})`);
+
+        reset();
+        r = await run({ STATS_OUT: out, STATS_SOURCE_URL: `${base}/refused` });
+        assert(r.code === 1 && untouched() && /refused the request/.test(r.out) && /STATS_TOKEN/.test(r.out),
+            'Script: a refused token is a configuration mistake, and fails, naming the token');
+
+        reset();
+        r = await run({ STATS_OUT: out, STATS_SOURCE_URL: `${base}/young` });
+        assert(r.code === 0 && untouched() && /no full week/.test(r.out), 'Script: counts with no whole week yet publish nothing, and pass');
 
         reset();
         r = await run({ STATS_OUT: out, STATS_SOURCE_URL: `${base}/signin` });

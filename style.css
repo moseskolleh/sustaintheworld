@@ -610,10 +610,6 @@ body.light-mode .hero-availability {
 }
 
 /* Week-1 conversion additions: nav CV link, contact availability, form privacy */
-.nav-cv i {
-    margin-right: 5px;
-    color: var(--primary-green);
-}
 
 .contact-open {
     display: inline-flex;
@@ -632,11 +628,6 @@ body.light-mode .hero-availability {
     margin-bottom: 0;
     font-size: 0.8rem;
     color: var(--text-secondary);
-}
-
-.form-privacy i {
-    color: var(--primary-green);
-    flex-shrink: 0;
 }
 
 /* Mid-scroll conversion band — catches warm visitors before the very end */
@@ -1009,7 +1000,6 @@ body.light-mode .hero-availability {
 
 .assay-actions { display: flex; align-items: center; gap: 14px; margin-top: 12px; flex-wrap: wrap; }
 .assay-privacy { color: var(--text-dim); display: inline-flex; align-items: center; gap: 6px; }
-.assay-privacy i { color: var(--primary-green); }
 
 .assay-samples { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
 .assay-sample {
@@ -1228,11 +1218,6 @@ body.light-mode .btn-primary {
 
 body.light-mode .hero-photo-caption {
     background: rgba(255, 255, 255, 0.55);
-}
-
-.hero-photo-caption i {
-    color: var(--primary-green);
-    margin-right: 4px;
 }
 
 .scroll-indicator {
@@ -1498,11 +1483,6 @@ body.light-mode .hero-photo-caption {
     color: var(--text-primary);
 }
 
-.portrait-location i {
-    color: var(--primary-green);
-    margin-right: 6px;
-}
-
 .about-lead {
     font-family: var(--font-display);
     font-size: 1.35rem;
@@ -1542,12 +1522,6 @@ body.light-mode .hero-photo-caption {
     transition: var(--transition);
 }
 
-.chip i {
-    color: var(--primary-green);
-    margin-right: 6px;
-    font-size: 0.7rem;
-}
-
 .chip:hover {
     border-color: var(--primary-green);
     transform: translateY(-2px);
@@ -1575,12 +1549,6 @@ body.light-mode .hero-photo-caption {
 .fact-card:hover {
     border-color: var(--line-color);
     transform: translateY(-4px);
-}
-
-.fact-card i {
-    font-size: 1.4rem;
-    color: var(--primary-green);
-    margin-top: 4px;
 }
 
 .fact-card h3 {
@@ -2215,19 +2183,8 @@ html.js .project-details {
     transition: var(--transition);
 }
 
-.toolkit-proof i {
-    font-size: 0.7rem;
-    color: var(--primary-green);
-    margin-left: 4px;
-    transition: var(--transition);
-}
-
 .toolkit-proof:hover {
     color: var(--primary-green);
-}
-
-.toolkit-proof:hover i {
-    transform: translateX(4px);
 }
 
 .badge-grid {
@@ -2311,11 +2268,6 @@ html.js .project-details {
     margin-bottom: 16px;
 }
 
-.education-top i {
-    font-size: 1.5rem;
-    color: var(--primary-green);
-}
-
 .education-card h3 {
     font-size: 1.1rem;
     margin-bottom: 6px;
@@ -2395,13 +2347,6 @@ html.js .project-details {
 .contact-card:hover {
     border-color: var(--primary-green);
     transform: translateX(6px);
-}
-
-.contact-card i {
-    font-size: 1.3rem;
-    color: var(--primary-green);
-    width: 28px;
-    text-align: center;
 }
 
 .contact-card h3 {
@@ -2598,6 +2543,11 @@ body.light-mode .form-status.error {
     color: var(--text-secondary);
 }
 
+/* On a phone two in a row read, and tap, as one block without a gap. */
+.footer-fieldreport + .footer-fieldreport {
+    margin-top: 10px;
+}
+
 .footer-fieldreport a:hover {
     color: var(--primary-green);
 }
@@ -2671,6 +2621,8 @@ html.js .reveal.visible {
     html.js .reveal { opacity: 1; transform: none; }
     /* An anchor jump is not animated across 11,000px either. */
     html { scroll-behavior: auto; }
+    /* At 0.01ms its visibility was still hidden as focus went to Close. */
+    .lightbox.active { transition: none !important; }
 }
 
 /* Drawn as it nears the screen, sized by estimate until then (script.js

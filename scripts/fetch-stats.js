@@ -13,13 +13,21 @@
 // and nothing else:
 //
 //   - it reads the daily rows, [date, metric, key, count], either as the
-//     Apps Script endpoint's JSON ({"v":1,"rows":[...]}, from ?action=stats)
-//     or as a CSV the owner published with the header date,metric,key,count;
-//   - it adds them up into last week, all time, and one line per week;
+//     Apps Script endpoint's JSON ({"v":1,"rows":[...]}, from
+//     ?action=stats&token=..., which answers no one without the token) or
+//     as a CSV the owner published with the header date,metric,key,count;
+//   - it adds them up in whole weeks, Monday to Sunday: last week, all time
+//     from the first full week to last Sunday, and one line per week. The
+//     days before the first Monday, and today, are in no figure at all, so
+//     no sum of the figures can leave a single day's count behind;
 //   - every published count under 5 becomes the string "<5" and is left out
 //     of every share, and referrer hosts under 5 fold into "other";
+//   - where the rows of a table add up to a total shown beside them, a lone
+//     "<5" would be the total less the rest, so the smallest figure beside
+//     it is held back too, as the string "held", until nothing hidden can be
+//     worked out (protect);
 //   - it writes those totals to content/stats.json, never a daily row, and
-//     scripts/lib/content.js refuses the file if either rule is broken.
+//     scripts/lib/content.js refuses the file if any of that is broken.
 //
 // WHY SUPPRESS. A count that small can single a reader out: one page view
 // from a small firm's intranet on a Tuesday is a person, not a statistic.
@@ -35,9 +43,11 @@
 // WHEN THERE IS NOTHING TO FETCH. With STATS_SOURCE_URL unset, or the source
 // unreachable, it says why and exits 0 without touching content/stats.json:
 // the weekly Action must not go red because the counter has not been switched
-// on yet, or because Google had a bad minute. A source that answers with
-// something that is not stats (a sign-in page, a CSV with the wrong header)
-// is a configuration mistake, and that does fail.
+// on yet, or because Google had a bad minute, and the same goes for the
+// endpoint's own "error" reply, which is what a sheet that could not be
+// read looks like from here. A source that answers with something that is
+// not stats (a sign-in page, a CSV with the wrong header, a refusal of the
+// token) is a configuration mistake, and that does fail.
 //
 // Nothing read from the source is ever printed. On a public repository the
 // Action's log is public too, and the unsuppressed rows are exactly what must
@@ -46,7 +56,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { checkStats } = require('./lib/content.js');
+const { checkStats, peel } = require('./lib/content.js');
 
 const ROOT = path.join(__dirname, '..');
 // STATS_OUT exists for tests/stats.test.js, which runs this script end to end
@@ -55,6 +65,9 @@ const OUT = process.env.STATS_OUT ? path.resolve(process.env.STATS_OUT) : path.j
 
 const SUPPRESS_BELOW = 5;
 const SMALL = `<${SUPPRESS_BELOW}`;
+// A count of 5 or more hidden so that a smaller one beside it cannot be
+// worked out. It is not "<5": that would say something false about it.
+const HELD = 'held';
 const TIME_ZONE = 'Europe/Amsterdam';           // the date the Apps Script counts in
 const METRICS = ['visits', 'page', 'lens', 'deepest', 'feature', 'ref', 'vp', 'kb', 'contact'];
 const UNKEYED = ['visits', 'kb', 'contact'];
@@ -69,9 +82,11 @@ const COMMENT = [
     'the weekly Action (.github/workflows/stats.yml) overwrites it, and npm run build:content',
     'turns it into stats.html.',
     '',
-    'Only suppressed aggregates are ever written here. Every count under 5 is the string "<5"',
-    'and is left out of every share; referrer hosts under 5 are grouped as "other"; no daily',
-    'row is kept. scripts/lib/content.js fails the build if any of that is broken.',
+    'Only suppressed aggregates of whole Monday-to-Sunday weeks are ever written here. Every',
+    'count under 5 is the string "<5" and is left out of every share; a larger count that would',
+    'let one be worked out by subtraction is the string "held"; referrer hosts under 5 are',
+    'grouped as "other"; no daily row is kept. scripts/lib/content.js fails the build if any of',
+    'that is broken.',
     '',
     'status "not-collecting" means no totals have been fetched yet, and the page says so.'
 ];
@@ -93,6 +108,8 @@ const EMPTY = {
 };
 
 class SourceError extends Error {}
+// The endpoint answered, but could not read its sheet this time.
+class SourceBusy extends Error {}
 
 // ------------------------------------------------------------------
 // Dates. Everything is a plain YYYY-MM-DD string compared as text, with
@@ -185,6 +202,15 @@ function parseSource(text) {
         } catch (err) {
             // Not err.message: it quotes the text it choked on.
             throw new SourceError('the source looks like JSON but does not parse');
+        }
+        // Code.gs answers "refused" without the right token, and "error"
+        // when its sheet could not be read (a Sheets timeout, most often).
+        if (data && data.status === 'refused') {
+            throw new SourceError('the counter endpoint refused the request. STATS_SOURCE_URL needs &token= set to the ' +
+                'Apps Script\'s STATS_TOKEN property, and the Apps Script needs that property set');
+        }
+        if (data && data.status === 'error' && !('rows' in data)) {
+            throw new SourceBusy('the counter endpoint could not read its sheet this time');
         }
         if (!data || data.v !== 1 || !Array.isArray(data.rows)) {
             throw new SourceError('the JSON is not {"v":1,"rows":[...]}. Is STATS_SOURCE_URL the counter endpoint with ?action=stats?');
@@ -317,9 +343,10 @@ function normaliseRow(raw, known, today) {
             if (key === '') return { drop: 'feature has no name' };
             return { date, metric, key: known.features.has(key) ? key : 'other', count };
         case 'ref': {
-            // '' is a page view with no referrer, or one from this site.
+            // Code.gs adds nothing for a page view with no referrer, or one
+            // from this site, so there is no such row to read.
             const host = key.toLowerCase();
-            if (host === '') return { date, metric, key: '', count };
+            if (host === '') return { skip: true };
             return { date, metric, key: HOST.test(host) && !IPV4.test(host) ? host : 'other', count };
         }
         default:
@@ -342,16 +369,22 @@ function cleanRows(rawRows, known, today) {
 // Adding up
 // ------------------------------------------------------------------
 
-const publish = (n) => (n >= SUPPRESS_BELOW ? n : SMALL);
+/**
+ * A count on its way to the page. It is hidden when it is under 5, and may
+ * be hidden later however large it is, when showing it would let a hidden
+ * one be worked out (protect, below); then it is "held", not "<5".
+ */
+const cell = (n) => ({ n, hidden: n < SUPPRESS_BELOW });
+const shown = (c) => (!c.hidden ? c.n : c.n < SUPPRESS_BELOW ? SMALL : HELD);
 
 /**
- * A share, only from two counts that could each be published. A share over
- * 100% means the two totals disagree with each other; no number is better
- * than a wrong one.
+ * A share, only between two counts that are both shown: a share and either
+ * one of its counts give the other away. A share over 100% means the two
+ * totals disagree with each other; no number is better than a wrong one.
  */
 function share(part, whole) {
-    if (part < SUPPRESS_BELOW || whole < SUPPRESS_BELOW || part > whole) return null;
-    return Math.round((part / whole) * 1000) / 1000;
+    if (!part || !whole || part.hidden || whole.hidden || part.n > whole.n) return null;
+    return Math.round((part.n / whole.n) * 1000) / 1000;
 }
 
 /** { metric: Map(key → summed count) } over the rows dated within [from, to]. */
@@ -367,77 +400,105 @@ function totals(rows, from, to) {
 
 const sum = (map, keep = () => true) => Array.from(map).reduce((n, [k, v]) => n + (keep(k) ? v : 0), 0);
 
+// Every CV link has a data-analytics name of its own (cv-download-hero,
+// cv-download-nav, ...), and count.js adds this one name as well, once per
+// page view, the first time any of them is clicked.
+const CV = 'cv-download';
+
 /**
  * The five numbers from docs/plan.md, Phase 1 step 5, plus page views for
- * scale. Each is defined as closely as daily per-field totals allow:
+ * scale, as cells. Each is defined as closely as daily per-field totals allow:
  *
- *   contact       accepted contact-form submissions
- *   cvDownloads   page views in which a feature named cv-download* was used
+ *   contact       accepted contact-form submissions, bar those from a browser
+ *                 that asked not to be tracked (Code.gs)
+ *   cvDownloads   page views in which any CV link was clicked: the one shared
+ *                 name, so a view that used two CV links counts once
  *   lensVisits    page views that arrived with a known ?lens=. The plan asks
  *                 for lens visits that REACH a case study, but the totals are
  *                 kept per field, not per visit, so lens and section cannot be
  *                 joined. This is the closest honest proxy — an upper bound —
  *                 and stats.html labels it as one.
- *   contactShare  views whose deepest section was #contact, over homepage
- *                 views. #contact exists only on the homepage.
  *   briefUses     the brief-run feature; null until the site has a Brief
+ *
+ * (The fifth, the share of homepage views that reached #contact, is made
+ * once suppression is done: see transform.) `row(name)` hands back the
+ * feature table's own cell where the same count is shown there too, so the
+ * two can never disagree.
  */
-function headline(t, known) {
+function figures(t, known, row = () => null) {
+    const feature = name => row(name) || cell(t.feature.get(name) || 0);
     return {
-        visits: publish(sum(t.visits)),
-        contact: publish(sum(t.contact)),
-        cvDownloads: publish(sum(t.feature, k => k.startsWith('cv-download'))),
-        lensVisits: publish(sum(t.lens, k => k !== 'other')),
-        contactShare: share(t.deepest.get('contact') || 0, t.page.get('index') || 0),
-        briefUses: known.features.has('brief-run') ? publish(t.feature.get('brief-run') || 0) : null
+        visits: cell(sum(t.visits)),
+        contact: cell(sum(t.contact)),
+        cvDownloads: feature(CV),
+        lensVisits: cell(sum(t.lens, k => k !== 'other')),
+        briefUses: known.features.has('brief-run') ? feature('brief-run') : null
     };
 }
 
 /**
- * Published cells first, largest first; then the suppressed ones in name
- * order, so the order cannot hint at which small count is larger; "other"
- * last.
- */
-function ordered(entries) {
-    const rank = ([k, n]) => (k === 'other' ? 2 : n >= SUPPRESS_BELOW ? 0 : 1);
-    return entries.slice().sort((a, b) => rank(a) - rank(b) ||
-        (rank(a) === 0 ? b[1] - a[1] : 0) || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
-}
-
-/**
  * One table per field: a row per key, with last week and all time side by
- * side. The rows are fixed by the all-time totals, so both columns always
- * describe the same keys.
+ * side, as cells. The rows are fixed by the all-time totals, so both columns
+ * always describe the same keys.
  */
-function breakdown(all, week) {
+function tables(all, week) {
     const out = {};
     BREAKDOWNS.forEach((metric) => {
-        let allMap = new Map(all[metric]);
-        let weekMap = week ? new Map(week[metric]) : null;
-
+        let allMap = all[metric];
+        let weekMap = week[metric];
         if (metric === 'ref') {
             // Hosts under 5 (and past the top few) are grouped, in both columns.
-            const listed = new Set(ordered(Array.from(allMap).filter(([k, n]) => k !== '' && k !== 'other' && n >= SUPPRESS_BELOW))
-                .slice(0, REFERRERS_LISTED).map(([k]) => k));
+            const listed = new Set(Array.from(allMap).filter(([k, n]) => k !== 'other' && n >= SUPPRESS_BELOW)
+                .sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1)).slice(0, REFERRERS_LISTED).map(([k]) => k));
             const fold = (map) => {
                 const folded = new Map();
                 map.forEach((n, k) => {
-                    const key = k === '' || listed.has(k) ? k : 'other';
+                    const key = listed.has(k) ? k : 'other';
                     folded.set(key, (folded.get(key) || 0) + n);
                 });
                 return folded;
             };
             allMap = fold(allMap);
-            if (weekMap) weekMap = fold(weekMap);
+            weekMap = fold(weekMap);
         }
-
-        out[metric] = ordered(Array.from(allMap)).map(([key, n]) => ({
-            key,
-            week: weekMap ? publish(weekMap.get(key) || 0) : null,
-            all: publish(n)
-        }));
+        out[metric] = Array.from(allMap).map(([key, n]) => ({ key, week: cell(weekMap.get(key) || 0), all: cell(n) }));
     });
     return out;
+}
+
+/**
+ * Complementary suppression. A cell under 5 is hidden, but where the cells
+ * of a sum are all shown bar one, the one is the total less the rest: 50
+ * page views, 47 of them on the homepage and the research page shown as
+ * "<5", is 3 on the research page. So while any hidden count other than 0
+ * can be worked out, from one sum or from a chain of them, the smallest
+ * shown cell in the sum that gave it away is hidden too. A hidden 0 that
+ * can be worked out is left alone: that nobody did something singles
+ * nobody out, and hiding a second cell for it would only take information
+ * away. Each pass hides one more cell, so this ends.
+ */
+function protect(sums) {
+    for (;;) {
+        const known = new Map();
+        sums.forEach(s => s.cells.forEach((c) => { if (!c.hidden) known.set(c, c.n); }));
+        const leak = peel(sums, known).find(f => f.cell.n !== 0 || f.value !== 0);
+        if (!leak) return;
+        const partner = leak.sum.cells.filter(c => !c.hidden).sort((a, b) => a.n - b.n)[0];
+        // Only totals that do not add up (a hand-edited sheet) leave no cell
+        // to hide; checkStats() then refuses the file rather than publish it.
+        if (!partner) return;
+        partner.hidden = true;
+    }
+}
+
+/**
+ * Shown rows first, largest first; then the hidden ones in name order, so
+ * the order cannot hint at which hidden count is larger; "other" last.
+ */
+function ordered(rows) {
+    const rank = r => (r.key === 'other' ? 2 : r.all.hidden ? 1 : 0);
+    return rows.slice().sort((a, b) => rank(a) - rank(b) ||
+        (rank(a) === 0 ? b.all.n - a.all.n : 0) || (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
 }
 
 /**
@@ -469,34 +530,76 @@ function bytes(rows, from, to) {
 }
 
 /**
- * Clean rows in, the whole of content/stats.json out.
+ * Clean rows in, the whole of content/stats.json out, or null while no
+ * full week has ended yet.
  *
- * "Last week" is the last complete Monday-to-Sunday week before `today` (an
- * Amsterdam date): the Action runs early on Monday, when Monday's own totals
- * have barely begun.
+ * Every figure covers whole Monday-to-Sunday weeks. "Last week" is the last
+ * one before `today` (an Amsterdam date): the Action runs early on Monday,
+ * when Monday's own totals have barely begun. "All time" runs from the first
+ * Monday on or after the first counted day to that Sunday. Were it to take
+ * in the days before that Monday, or today, all time less the weeks would
+ * be a part week's count, or a single day's.
  */
 function transform(rows, { today, known }) {
     if (!rows.length) return null;
 
-    const dates = rows.map(r => r.date).sort();
-    const first = dates[0];
-    const last = dates[dates.length - 1];
-
+    const counted = rows.reduce((d, r) => (r.date < d ? r.date : d), rows[0].date);
+    const first = mondayOf(counted) === counted ? counted : addDays(mondayOf(counted), 7);
     const weekStart = addDays(mondayOf(today), -7);
     const weekEnd = addDays(weekStart, 6);
-    const hasWeek = weekEnd >= first;
+    if (weekStart < first) return null;
+    const last = weekEnd;
 
-    const all = totals(rows, first, last);
-    const week = hasWeek ? totals(rows, weekStart, weekEnd) : null;
-
-    const weeks = [];
-    if (hasWeek) {
-        for (let start = weekStart; addDays(start, 6) >= first && weeks.length < WEEKS_KEPT; start = addDays(start, -7)) {
-            const end = addDays(start, 6);
-            weeks.push(Object.assign({ start, end, partial: start < first }, headline(totals(rows, start, end), known)));
-        }
+    const spans = [];
+    for (let start = weekStart; start >= first && spans.length < WEEKS_KEPT; start = addDays(start, -7)) {
+        spans.push({ start, end: addDays(start, 6), t: totals(rows, start, addDays(start, 6)) });
     }
+    const all = totals(rows, first, last);
+    const table = tables(all, spans[0].t);
+    const row = col => name => (table.feature.find(r => r.key === name) || {})[col] || null;
+    const allFig = figures(all, known, row('all'));
+    const weekFig = spans.map((s, i) => figures(s.t, known, i === 0 ? row('week') : undefined));
 
+    // Every sum a reader of the page can do (the same list checkStats makes
+    // from the published file): each page view has one page and one window
+    // class, the known lenses add up to the lens-link visits, and while the
+    // week-by-week lines reach back to the first week they add up to all time.
+    const sums = [];
+    [['all', allFig], ['week', weekFig[0]]].forEach(([col, f]) => {
+        sums.push({ cells: [f.visits, ...table.page.map(r => r[col])] });
+        sums.push({ cells: [f.visits, ...table.vp.map(r => r[col])] });
+        sums.push({ cells: [f.lensVisits, ...table.lens.filter(r => r.key !== 'other').map(r => r[col])] });
+    });
+    if (spans[spans.length - 1].start === first) {
+        Object.keys(allFig).forEach((k) => {
+            if (allFig[k]) sums.push({ cells: [allFig[k], ...weekFig.map(w => w[k])] });
+        });
+    }
+    protect(sums.filter(s => s.cells.length > 1));
+
+    // Homepage views that reached #contact: from the table's own cells for
+    // the two columns it is shown beside, so a hidden one stays hidden.
+    const find = (metric, key) => table[metric].find(r => r.key === key) || {};
+    const reached = (col, t) => (col
+        ? share(find('deepest', 'contact')[col], find('page', 'index')[col])
+        : share(cell(t.deepest.get('contact') || 0), cell(t.page.get('index') || 0)));
+    const publishFigures = (f, contactShare) => ({
+        visits: shown(f.visits),
+        contact: shown(f.contact),
+        cvDownloads: shown(f.cvDownloads),
+        lensVisits: shown(f.lensVisits),
+        contactShare,
+        briefUses: f.briefUses ? shown(f.briefUses) : null
+    });
+    const weeks = spans.map((s, i) => Object.assign({ start: s.start, end: s.end },
+        publishFigures(weekFig[i], reached(i === 0 ? 'week' : null, s.t))));
+
+    const breakdown = {};
+    BREAKDOWNS.forEach((metric) => {
+        breakdown[metric] = ordered(table[metric]).map(r => ({ key: r.key, week: shown(r.week), all: shown(r.all) }));
+    });
+
+    const { start, end, ...lastWeek } = weeks[0];
     return {
         $comment: COMMENT,
         v: 1,
@@ -504,11 +607,11 @@ function transform(rows, { today, known }) {
         asOf: today,
         suppressBelow: SUPPRESS_BELOW,
         period: { first, last, days: daysBetween(first, last) },
-        week: hasWeek ? { start: weekStart, end: weekEnd, partial: weekStart < first } : null,
+        week: { start, end },
         briefLive: known.features.has('brief-run'),
-        headline: { week: week ? headline(week, known) : null, all: headline(all, known) },
-        breakdown: breakdown(all, week),
-        bytes: { week: hasWeek ? bytes(rows, weekStart, weekEnd) : null, all: bytes(rows, first, last) },
+        headline: { week: lastWeek, all: publishFigures(allFig, reached('all')) },
+        breakdown,
+        bytes: { week: bytes(rows, weekStart, weekEnd), all: bytes(rows, first, last) },
         weeks
     };
 }
@@ -578,6 +681,7 @@ async function main() {
     try {
         parsed = parseSource(text);
     } catch (err) {
+        if (err instanceof SourceBusy) return skip(`${host}: ${err.message}. The next run will try again; if every run says this, the Apps Script's executions log says why.`);
         if (err instanceof SourceError) return fail(`${host}: ${err.message}.`);
         throw err;
     }
@@ -595,6 +699,10 @@ async function main() {
     }
 
     const stats = transform(rows, { today, known });
+    if (!stats) {
+        return skip(`${host} has counts, but no full week of them, Monday to Sunday, has ended yet. ` +
+            'Nothing is published until one has.');
+    }
     const problems = checkStats(stats);
     if (problems.length) {
         return fail(`the totals failed validation, so nothing was written:\n  - ${problems.join('\n  - ')}`);
@@ -617,9 +725,11 @@ if (require.main === module) {
 module.exports = {
     SUPPRESS_BELOW,
     SMALL,
+    HELD,
     METRICS,
     EMPTY,
     SourceError,
+    SourceBusy,
     parseCsv,
     parseSource,
     knownNames,

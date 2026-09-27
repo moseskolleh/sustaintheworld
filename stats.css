@@ -59,13 +59,17 @@
     text-align: left;
     vertical-align: top;
     border-bottom: 1px solid var(--border);
-    overflow-wrap: anywhere;
+    /* Breaks a word only if it cannot fit at all. "anywhere" here let the
+       table squeeze the label column and split "Sustainable" and
+       "Homepage" at 320-390px to make room for the numbers. */
+    overflow-wrap: break-word;
 }
 .st-table thead th { font-size: 0.75rem; color: var(--text-secondary); font-weight: 600; }
 .st-table tbody th { font-weight: 400; }
 .st-table .st-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .st-table thead .st-num { white-space: normal; }
-.st-host { font-family: var(--font-mono, 'IBM Plex Mono', monospace); font-size: 0.8rem; }
+/* A host name has no spaces to break at, and can be long. */
+.st-host { font-family: var(--font-mono, 'IBM Plex Mono', monospace); font-size: 0.8rem; overflow-wrap: anywhere; }
 
 .st-payload {
     margin: 12px 0 16px;

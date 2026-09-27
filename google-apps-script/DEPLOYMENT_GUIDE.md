@@ -5,7 +5,8 @@ This Google Apps Script receives the portfolio's contact-form submissions,
 writes each one to a Google Sheet and emails the owner. The same deployment
 keeps the site's own visit counts: `POST ?action=count` takes the one small
 payload `count.js` sends per page view and adds it to daily totals, and
-`GET ?action=stats` serves those totals to the weekly build of `stats.html`.
+`GET ?action=stats&token=...` serves those totals to the weekly build of
+`stats.html`, and to nothing without the token.
 Everything below describes the current `Code.gs`; if the editor still holds
 an older copy (one without `handleSubmission`, or without `handleCount`),
 paste the current file in and redeploy as a new version (see *Updating an
@@ -51,6 +52,7 @@ once, in the project itself:
 | `OWNER_EMAIL` | yes | Where submission notifications are sent. Without it, submissions are still recorded but nobody is emailed |
 | `SHEET_NAME` | no | Tab to write to. Defaults to `Responses`, and is created (with its header row) if missing |
 | `TURNSTILE_SECRET` | no | Cloudflare Turnstile secret key. When present, every submission must carry a valid token |
+| `STATS_TOKEN` | for the counts | Any long random string. `GET ?action=stats` serves the unsuppressed daily visit totals only to a request with `&token=` equal to it, and to nobody while it is unset. The weekly build of `stats.html` keeps the same string in the repository secret `STATS_SOURCE_URL` |
 
 4. Click **Save script properties**
 5. Choose `testConfiguration` in the function menu and click **Run** — it
@@ -151,23 +153,24 @@ Check the sheet.
 The visit counter can be tested without moving the public numbers: `&test=1`
 on either action uses a `DailyTest` tab instead of `Daily`. In the editor,
 pick `testCounter` in the function menu and press **Run**; the execution log
-should say `Counter OK: 8 DailyTest rows for today, e.g. [...]` (on a later
+should say `Counter OK: 9 DailyTest rows for today, e.g. [...]` (on a later
 run the same day, the same rows count up). Over HTTP, the same thing:
 
 ```bash
 curl -L "YOUR_WEB_APP_URL?action=count&test=1" \
   -H "Content-Type: text/plain;charset=utf-8" \
-  --data '{"v":1,"page":"index","lens":"","deepest":"contact","features":["cv-download-hero","module-dossier"],"ref":"www.linkedin.com","vp":"m","kb":284}'
+  --data '{"v":1,"page":"index","lens":"","deepest":"contact","features":["cv-download-hero","cv-download","module-dossier"],"ref":"www.linkedin.com","vp":"m","kb":284}'
 # (an empty reply, whether the payload was accepted or not)
 
-curl -L "YOUR_WEB_APP_URL?action=stats&test=1"
+curl -L "YOUR_WEB_APP_URL?action=stats&test=1&token=YOUR_STATS_TOKEN"
 # {"v":1,"rows":[["2026-09-27","visits","",1],["2026-09-27","page","index",1],...]}
 ```
 
 Without `&test=1`, `?action=stats` returns the real daily totals, which is
-what the Open counts Action reads. If it returns the health check instead
-(`{"status":"ok",...}`), the live deployment is older than the counter:
-redeploy as a new version.
+what the Open counts Action reads. Without the right `&token=` it returns
+`{"status":"refused",...}` and no rows. If it returns the health check
+instead (`{"status":"ok",...}`), the live deployment is older than the
+counter: redeploy as a new version.
 
 ---
 
@@ -192,12 +195,16 @@ redeploy as a new version.
 - **Visit counter**: `POST ?action=count` accepts only the counter's payload,
   exactly (the eight keys of schema v1, each of the right type, at most 20
   features), and adds one to the day's totals on the `Daily` tab; anything
-  else is dropped without a word, and the reply is always empty. Each
-  accepted contact-form submission also adds one to the day's `contact`
-  total
-- **Daily totals, served**: `GET ?action=stats` returns
+  else is dropped without a word, and the reply is always empty. A count
+  waits at most 1.5 s for the lock the contact form shares, and past 30 a
+  minute is dropped without asking, so counts never keep a message waiting.
+  Each accepted contact-form submission also adds one to the day's
+  `contact` total, unless the site's script marks it `count: false` (the
+  browser sent Do Not Track or Global Privacy Control)
+- **Daily totals, served**: `GET ?action=stats&token=...` returns
   `{"v":1,"rows":[[date, metric, key, count], ...]}` for the last 400 days,
-  for the weekly build of `stats.html`. On failure the reply has no `rows`,
+  for the weekly build of `stats.html`, and only with the `STATS_TOKEN`
+  token: the rows are not suppressed. On failure the reply has no `rows`,
   so a build stops rather than publish zeros
 
 ---
@@ -335,11 +342,15 @@ hostile. `google-apps-script/README.md` explains each defence; in short:
    and the reply never says why. Every string it stores is limited to
    letters, digits, dots, hyphens, underscores and a port's colon, in
    plain-text cells, so none can become a formula
-8. **The daily totals are public**: anyone with the web app URL (it is in
-   `count.js`, on every page) can read `?action=stats`, and a tab published
-   as CSV is public too. Neither is suppressed; `stats.html` suppresses every
-   count under 5 before anything is published. Whether the raw totals stay
-   readable is the owner's decision (`docs/owner-checklist.md`, S3)
+8. **The daily totals are not public**: they are not suppressed, and the web
+   app URL is in `count.js` on every page, so `?action=stats` answers only a
+   request whose `&token=` matches the `STATS_TOKEN` script property (and
+   nobody while it is unset), compared in constant time. The weekly Action
+   holds the same string in the repository secret `STATS_SOURCE_URL`.
+   `stats.html` suppresses every count under 5 before anything is
+   published, and promises the raw totals are not public; a `Daily` tab
+   published as CSV would break that promise (`docs/owner-checklist.md`,
+   S2 and S3)
 
 ---
 
@@ -363,9 +374,11 @@ hostile. `google-apps-script/README.md` explains each defence; in short:
   rate limit
 
 ### No visit counts arrive
-- Check the live version: `curl -L "YOUR_WEB_APP_URL?action=stats"` should
-  print `{"v":1,"rows":[...]}`. The health check instead means the
-  deployment is older than the counter: redeploy as a new version
+- Check the live version: `curl -L "YOUR_WEB_APP_URL?action=stats&token=YOUR_STATS_TOKEN"`
+  should print `{"v":1,"rows":[...]}`. The health check instead means the
+  deployment is older than the counter: redeploy as a new version.
+  `{"status":"refused",...}` means the token is wrong, or `STATS_TOKEN` is
+  not set
 - Run `testCounter`: it should log `Counter OK` and write to `DailyTest`
 - Your own browser sends nothing if it has Do Not Track or Global Privacy
   Control on, and a count is sent only when the tab is hidden or closed
@@ -375,7 +388,14 @@ hostile. `google-apps-script/README.md` explains each defence; in short:
 ### The Open counts Action fails
 - "the JSON is not {"v":1,"rows":[...]}": `STATS_SOURCE_URL` points at a
   deployment older than the counter, or at something else. Redeploy, or
-  correct the variable
+  correct the secret
+- "the counter endpoint refused the request": the `&token=` in
+  `STATS_SOURCE_URL` does not match the script's `STATS_TOKEN` property, or
+  the property is not set
+- A notice, not a failure, "the counter endpoint could not read its sheet
+  this time": the script could not open the sheet (a Sheets timeout, most
+  often). The next run tries again; if every run says it, **Executions**
+  in the editor has `statsResponse failed` lines with the reason
 - "the CSV does not start with the header date,metric,key,count": the CSV
   published is not the `Daily` tab
 - "none of the N row(s) ... could be read", after lines such as "date is not
@@ -421,7 +441,8 @@ the live version is newer than a change to `Code.gs` in this repository
 (`git log -- google-apps-script/Code.gs`). The visit counter needs a version
 from 2026-09-27 or later: `?action=count` and `?action=stats` do not exist
 before it. A quick outside check: `curl -L "YOUR_WEB_APP_URL?action=stats"`
-prints `{"v":1,"rows":[...]}` only on a version that has them.
+prints `{"status":"refused",...}` (or, with the token, `{"v":1,"rows":[...]}`)
+only on a version that has them.
 
 ---
 

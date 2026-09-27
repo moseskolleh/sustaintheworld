@@ -440,18 +440,6 @@ html:not(.js) .cs-lenses { display: none; }
     line-height: 1.55;
 }
 
-/* The quiet footer every generated page carries. */
-.ca-foot {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 24px 40px;
-    font-size: 0.8rem;
-    color: var(--text-secondary);
-}
-.ca-foot a { color: var(--text-secondary); }
-.ca-foot a:hover,
-.ca-foot a:focus-visible { color: var(--primary-green); }
-
 /* -------------------------------------------------------------------
    Narrow screens
    ------------------------------------------------------------------- */

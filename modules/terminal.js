@@ -114,6 +114,8 @@
         },
         cv: () => {
             print('fetching Moses_Kolleh_Sesay_CV.pdf …');
+            // A CV download like any CV link's (count.js adds cv-download for those).
+            if (typeof mks.track === 'function') { mks.track('cv-download-terminal'); mks.track('cv-download'); }
             const a = document.createElement('a');
             a.href = 'assets/Moses_Kolleh_Sesay_CV.pdf';
             a.download = '';

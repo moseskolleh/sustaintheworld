@@ -59,7 +59,7 @@ used, is in the repository's README, under "The visit counter and privacy".
 **The payload, schema v1.** Exactly these eight keys, and nothing else:
 
 ```
-{"v":1,"page":"index","lens":"","deepest":"contact","features":["cv-download-hero","module-dossier"],"ref":"www.linkedin.com","vp":"m","kb":284}
+{"v":1,"page":"index","lens":"","deepest":"contact","features":["cv-download-hero","cv-download","module-dossier"],"ref":"www.linkedin.com","vp":"m","kb":284}
 ```
 
 | Key | What it holds |
@@ -83,22 +83,30 @@ features, a `kb` outside 0 to 100000. `tests/apps-script.test.js` and
 on a `Daily` tab, created on first use, in long format: `date` (Europe/Amsterdam),
 `metric`, `key`, `count`. `metric` is `visits`, `page`, `lens`, `deepest`,
 `feature`, `ref`, `vp`, `kb` (the day's summed KB) or `contact` (one per
-accepted contact-form submission). An empty lens, deepest or ref adds no row.
-A visit updates the day's rows in place, under the same lock as the contact
-form, so the tab grows by distinct keys per day, not by visits. Nothing is
+accepted contact-form submission, unless the site's script says the browser
+sent Do Not Track or Global Privacy Control). An empty lens, deepest or ref
+adds no row. A visit updates the day's rows in place, under the same lock as
+the contact form, so the tab grows by distinct keys per day, not by visits.
+A count waits for that lock at most 1.5 s, and past 30 counts a minute is
+dropped before asking, so counts never keep a message waiting. Nothing is
 suppressed here: the build of `stats.html` hides small counts before
 anything is published.
 
-**Reading it.** `GET ?action=stats` returns `{"v":1,"rows":[[date, metric, key, count], ...]}`
-for the last 400 days. On failure the reply has no `rows` at all, so a build
-stops rather than publishing zeros. Alternatively, publish the `Daily` tab as
-CSV (File → Share → Publish to web); its header row is `date,metric,key,count`.
-Note that both are the raw totals, small counts included, and both are public.
+**Reading it.** `GET ?action=stats&token=<STATS_TOKEN>` returns
+`{"v":1,"rows":[[date, metric, key, count], ...]}` for the last 400 days.
+These are the raw totals, small counts included, and this address is in
+`count.js` on every page, so without a `token` equal to the `STATS_TOKEN`
+script property, or while that property is unset, the reply is
+`{"status":"refused",...}` and no rows. If the sheet cannot be read, the
+reply is `{"status":"error",...}` and no rows, so a build stops rather than
+publishing zeros (and tries again the next week). A `Daily` tab published as
+CSV (File → Share → Publish to web; header `date,metric,key,count`) also
+works as a source, but anyone with its link can read it, unsuppressed.
 
 **Testing it without moving the numbers.** Add `&test=1` to either action and
 it uses a `DailyTest` tab instead: `POST ?action=count&test=1` with a payload,
-then `GET ?action=stats&test=1` to read it back. `testCounter()` in the editor
-does exactly that.
+then `GET ?action=stats&test=1&token=<STATS_TOKEN>` to read it back.
+`testCounter()` in the editor does exactly that.
 
 **After changing `Code.gs`,** publish it as a new version of the *existing*
 deployment (Deploy → Manage deployments → Edit → Version: New version), so the

@@ -4,9 +4,9 @@
  * Receives contact-form submissions from the portfolio, appends them to a
  * Google Sheet, and emails the owner. It also keeps the site's own visit
  * counts: POST ?action=count takes the one small payload count.js sends per
- * page view and adds it to daily totals, and GET ?action=stats serves those
- * totals as JSON for the weekly build of stats.html. See "The visit counter"
- * below and README.md for the payload.
+ * page view and adds it to daily totals, and GET ?action=stats&token=...
+ * serves those totals as JSON for the weekly build of stats.html, to that
+ * build alone. See "The visit counter" below and README.md for the payload.
  *
  * This endpoint is PUBLIC (anyone can POST to it), so everything below is
  * written on the assumption that the payload is hostile. Four things this
@@ -44,6 +44,11 @@
  *     OWNER_EMAIL       required. Where notifications are sent.
  *     TURNSTILE_SECRET  optional. When set, every submission must carry a
  *                       valid Cloudflare Turnstile token. See README.
+ *     STATS_TOKEN       needed to read the visit counts. GET ?action=stats
+ *                       answers only a request whose &token= matches it, and
+ *                       nobody at all while it is unset. Any long random
+ *                       string; the weekly build keeps the same one in the
+ *                       repository secret STATS_SOURCE_URL.
  */
 
 // ---------------------------------------------------------------------------
@@ -65,6 +70,15 @@ var GLOBAL_MAX_SUBMISSIONS_PER_HOUR = 200;
 // to retry. Apps Script's own execution ceiling is well above this.
 var LOCK_TIMEOUT_MS = 15000;
 
+// A count waits far less, and a count past the ceiling below does not wait
+// at all. Both share the one lock with the contact form, and a count is the
+// one that can be dropped: a queue of them in front of a message would make
+// the message time out, and the counter exists to measure the form, not to
+// compete with it. At a second or so of lock time per count, 30 a minute
+// leaves the lock free most of the time; this site sees far fewer.
+var COUNT_LOCK_TIMEOUT_MS = 1500;
+var COUNT_MAX_PER_MINUTE = 30;
+
 var FIELD_LIMITS = { name: 200, email: 200, subject: 300, message: 5000 };
 
 function getConfig() {
@@ -73,7 +87,8 @@ function getConfig() {
     spreadsheetId: props.getProperty('SPREADSHEET_ID'),
     sheetName: props.getProperty('SHEET_NAME') || DEFAULT_SHEET_NAME,
     ownerEmail: props.getProperty('OWNER_EMAIL'),
-    turnstileSecret: props.getProperty('TURNSTILE_SECRET')
+    turnstileSecret: props.getProperty('TURNSTILE_SECRET'),
+    statsToken: props.getProperty('STATS_TOKEN')
   };
 }
 
@@ -262,7 +277,7 @@ function appendSubmission(config, row) {
 // what each one means):
 //
 //   {"v":1,"page":"index","lens":"","deepest":"contact",
-//    "features":["cv-download-hero","module-dossier"],
+//    "features":["cv-download-hero","cv-download","module-dossier"],
 //    "ref":"www.linkedin.com","vp":"m","kb":284}
 //
 // Nothing in it identifies anyone: there is no id, and Apps Script does not
@@ -281,16 +296,23 @@ function appendSubmission(config, row) {
 // lens, deepest or ref adds nothing: "no lens" is visits minus the lens rows.
 //
 // Small counts are NOT suppressed here. The build of stats.html does that
-// before anything is published, from GET ?action=stats or the tab
-// published as CSV.
+// before anything is published. So GET ?action=stats, which serves these
+// rows as they are, answers only a request carrying the STATS_TOKEN script
+// property as &token=, and nobody while it is unset: this deployment's
+// address is in count.js on every page, and stats.html promises that no
+// count under 5 and no single day's count is ever published.
+//
+// Counts are best effort. One that finds the lock busy for more than
+// COUNT_LOCK_TIMEOUT_MS, or arrives past COUNT_MAX_PER_MINUTE, is dropped,
+// so the contact form never waits behind the counter.
 //
 // A payload that is not exactly schema v1 is dropped without a word. The
 // endpoint is public, and a reply that explained the rejection would only
 // help someone shape a better fake.
 //
 // ?test=1 on either action uses a "DailyTest" tab instead, so a health check
-// can send a real payload and read it back without moving the public
-// numbers. testCounter() below does exactly that from the editor.
+// can send a real payload and read it back (with the token) without moving
+// the public numbers. testCounter() below does exactly that from the editor.
 
 var DAILY_SHEET = 'Daily';
 var DAILY_TEST_SHEET = 'DailyTest';
@@ -385,7 +407,8 @@ function getDailySheet(config, name) {
 
 /**
  * Adds [metric, key, amount] increments to today's totals, inside the same
- * lock the contact form uses.
+ * lock the contact form uses, waiting for it no longer than a count may
+ * (COUNT_LOCK_TIMEOUT_MS).
  *
  * Today's rows are always the block at the bottom of the tab: every write is
  * for today, and a new day starts below the last one. So this reads upwards
@@ -397,7 +420,7 @@ function getDailySheet(config, name) {
  */
 function addToDaily(config, sheetName, increments) {
   var lock = LockService.getScriptLock();
-  if (!lock.tryLock(LOCK_TIMEOUT_MS)) {
+  if (!lock.tryLock(COUNT_LOCK_TIMEOUT_MS)) {
     throw new Error('Could not acquire the sheet lock');
   }
 
@@ -471,6 +494,22 @@ function readDaily(config, sheetName) {
 }
 
 /**
+ * True while this minute has had fewer than COUNT_MAX_PER_MINUTE counts, and
+ * counts this one. Checked before the lock is asked for, so a burst past the
+ * ceiling costs a cache read each and never touches the sheet. The cache is
+ * not atomic, so two counts at once can both slip under the ceiling; it is a
+ * brake, not an exact limit.
+ */
+function countThisMinute() {
+  var cache = CacheService.getScriptCache();
+  var key = 'count-minute-' + Math.floor(Date.now() / 60000);
+  var n = parseInt(cache.get(key), 10) || 0;
+  if (n >= COUNT_MAX_PER_MINUTE) return false;
+  cache.put(key, String(n + 1), 120);
+  return true;
+}
+
+/**
  * POST ?action=count. Always answers with an empty body, accepted or not:
  * nothing reads the reply, and nothing about a rejection is worth saying.
  */
@@ -486,6 +525,7 @@ function handleCount(e, config) {
       return emptyResponse();
     }
     if (!isBeaconV1(payload)) return emptyResponse();
+    if (!countThisMinute()) return emptyResponse();
 
     var test = e.parameter && e.parameter.test === '1';
     addToDaily(config, test ? DAILY_TEST_SHEET : DAILY_SHEET, beaconIncrements(payload));
@@ -496,12 +536,36 @@ function handleCount(e, config) {
 }
 
 /**
- * GET ?action=stats: {"v":1,"rows":[[date, metric, key, count], ...]}.
- * On failure the reply has no rows at all, rather than an empty list, so a
- * build that reads it stops instead of publishing a week of zeros.
+ * Whether two strings are the same, taking as long to say no to a near miss
+ * as to a wild guess, so the time a refusal takes cannot spell out the
+ * token a character at a time.
+ */
+function sameSecret(given, secret) {
+  var a = String(given == null ? '' : given);
+  var b = String(secret == null ? '' : secret);
+  var diff = a.length ^ b.length;
+  for (var i = 0; i < b.length; i++) {
+    diff |= (i < a.length ? a.charCodeAt(i) : 0) ^ b.charCodeAt(i);
+  }
+  return diff === 0;
+}
+
+/**
+ * GET ?action=stats&token=...: {"v":1,"rows":[[date, metric, key, count], ...]}.
+ *
+ * Without the right token, or with no STATS_TOKEN set at all, the reply is
+ * status "refused" and no rows: the rows are unsuppressed, and the address
+ * is public. On a failure to read them it is status "error" and no rows,
+ * rather than an empty list, so a build that reads it stops instead of
+ * publishing a week of zeros; the build treats that one as passing, and
+ * tries again the next week.
  */
 function statsResponse(e, config) {
-  var test = e && e.parameter && e.parameter.test === '1';
+  var params = (e && e.parameter) || {};
+  if (!config.statsToken || !sameSecret(params.token, config.statsToken)) {
+    return jsonResponse('refused', 'The counts are read by the site\'s weekly build, with a token.');
+  }
+  var test = params.test === '1';
   try {
     var rows = readDaily(config, test ? DAILY_TEST_SHEET : DAILY_SHEET);
     return ContentService.createTextOutput(JSON.stringify({ v: 1, rows: rows }))
@@ -531,7 +595,8 @@ function emptyResponse() {
 /**
  * Handles GET requests — a health check that reveals nothing about the
  * spreadsheet behind it. The previous version printed the spreadsheet's name
- * to anyone who loaded the URL. ?action=stats serves the daily visit totals.
+ * to anyone who loaded the URL. ?action=stats serves the daily visit totals,
+ * and only with the right &token= (see statsResponse).
  */
 function doGet(e) {
   if (e && e.parameter && e.parameter.action === 'stats') {
@@ -667,11 +732,17 @@ function handleSubmission(data, config) {
     ]);
 
     // One more on today's contact total. The message is already safe in the
-    // sheet, so a count that fails must not fail the submission.
-    try {
-      addToDaily(config, DAILY_SHEET, [['contact', '', 1]]);
-    } catch (countError) {
-      console.error('Contact count failed: ' + countError);
+    // sheet, so a count that fails must not fail the submission. The site's
+    // script sends count: false when the browser asks not to be tracked (Do
+    // Not Track or Global Privacy Control), as stats.html promises; a form
+    // posted without JavaScript cannot say, and Apps Script does not show
+    // this script the request's headers, so that one is counted.
+    if (data.count !== false) {
+      try {
+        addToDaily(config, DAILY_SHEET, [['contact', '', 1]]);
+      } catch (countError) {
+        console.error('Contact count failed: ' + countError);
+      }
     }
 
     // Notify the owner only. The submitter's address goes in replyTo so a
@@ -796,7 +867,7 @@ function testCapture() {
  * Sends one sample visit through the real counter path into the DailyTest
  * tab, and reads it back, without moving the public numbers. A health check
  * can do the same over HTTP: POST the payload to ?action=count&test=1, then
- * GET ?action=stats&test=1.
+ * GET ?action=stats&test=1&token=<STATS_TOKEN>.
  */
 function testCounter() {
   doPost({
@@ -805,7 +876,7 @@ function testCounter() {
       type: 'text/plain',
       contents: JSON.stringify({
         v: 1, page: 'index', lens: '', deepest: 'contact',
-        features: ['cv-download-hero', 'module-dossier'],
+        features: ['cv-download-hero', 'cv-download', 'module-dossier'],
         ref: 'www.linkedin.com', vp: 'm', kb: 284
       })
     }

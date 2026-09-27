@@ -24,12 +24,15 @@
 //     covered, leaves content invisible, shows a [hidden] element or a
 //     control only a script could drive, or hides the contact form
 //   - a skip link, nav link or Back that does not land where it says; a
-//     theme switch or nav item off the bar; back to top over a control
+//     theme switch or nav item off the bar; back to top over a control; a
+//     lightbox that opens without taking focus, reduced motion included
 //   - more than one listen control, a nav bar that moves when it appears,
 //     a player that covers more than 20% of a phone screen or the send
 //     button, or a recording fetched unasked
 //   - an Assay that grades a mismatched ad well, or sends anything
 //   - a clipped dropdown or an unreadable number on carbon-ai.html
+//   - stats.html, drawn full from fixture totals, splitting a word in a
+//     table to make room for the figures, or scrolling sideways, on a phone
 //   - a jump that misses once sections are drawn at their real height, a
 //     page that moves under a reader going back up, a section find-in-page
 //     or print cannot reach, a loop running off screen, or a page busy on
@@ -273,6 +276,7 @@ async function visit(context, page, rel, origin) {
 
     await exerciseNavigation(browser, origin);
     await exerciseCpu(browser, origin);
+    await exerciseStatsPage(browser, origin);
 
     // The top nav at every desktop width: one line per item, nothing past the
     // right edge. It used to wrap "Case studies" and "AI, Weighed" at every
@@ -636,7 +640,123 @@ async function exerciseNavigation(browser, origin) {
         if (await shown()) ok(`back to top: shown at the very bottom of the page at ${size.width}x${size.height}`);
         else bad(`back to top: hidden at the very bottom of the page at ${size.width}x${size.height}`);
     }
+
+    // The photo lightbox takes focus as it opens, keeps Tab on its one
+    // control, and hands focus back on Escape, with reduced motion as well.
+    // The global reduced-motion rule once stretched its instant visibility
+    // flip to 0.01ms, so Close was still hidden when focus was sent to it,
+    // and focus stayed on the photo behind the modal.
+    await p.setViewportSize({ width: 390, height: 844 });
+    for (const reducedMotion of ['reduce', 'no-preference']) {
+        await p.emulateMedia({ reducedMotion });
+        await p.evaluate(async () => {
+            const card = document.querySelector('.gallery-open').closest('.project-card');
+            if (card && !card.classList.contains('expanded')) card.querySelector('.project-toggle').click();
+            await new Promise(r => setTimeout(r, 800));
+            document.querySelector('.gallery-open').focus();
+        });
+        const focused = () => p.evaluate(() => {
+            const el = document.activeElement;
+            return el.id ? `#${el.id}` : `${el.tagName.toLowerCase()}.${el.className}`;
+        });
+        await p.keyboard.press('Enter');
+        const opened = await focused();
+        await p.keyboard.press('Tab');
+        const kept = await focused();
+        await p.keyboard.press('Escape');
+        await p.waitForTimeout(400);
+        const back = await p.evaluate(() => ({
+            open: document.getElementById('lightbox').classList.contains('active'),
+            on: document.activeElement.className
+        }));
+        const tag = `lightbox, ${reducedMotion === 'reduce' ? 'reduced motion' : 'with motion'}`;
+        if (opened === '#lightboxClose' && kept === '#lightboxClose' && !back.open && back.on === 'gallery-open') {
+            ok(`${tag}: focus goes to Close as it opens, stays there on Tab, and returns to the photo on Escape`);
+        } else {
+            bad(`${tag}: focus on opening was on ${opened}, after Tab on ${kept}, after Escape ${back.open ? 'the dialog was still open' : `on .${back.on}`}`);
+        }
+    }
     await phone.close();
+}
+
+// ------------------------------------------------------------------
+// stats.html with figures in it
+// ------------------------------------------------------------------
+// The page is committed empty until counting starts, so it is drawn here as
+// it will look, from fixture totals put through the real fetch-stats.js and
+// renderer, and served in place of the committed file. A table's label must
+// never split a word to make room for the figures (at 320-390px the tables
+// once broke "Sustainable AI" after "Sustainabl" and "Homepage" after
+// "Homepag"), and the page must not scroll sideways. Host names may break
+// anywhere: they have no spaces to break at.
+async function exerciseStatsPage(browser, origin) {
+    const fetchStats = require('./fetch-stats.js');
+    const { renderStats } = require('./build-content.js');
+    const { lenses, projects } = require('./lib/content.js').loadAll();
+    const known = fetchStats.knownNames();
+    const today = '2026-10-05';                        // a Monday
+    const sections = ['journey', 'about', 'experience', 'projects', 'skills', 'contact'].concat(projects.caseStudies.map(c => c.id));
+    const draw = (perDay, weeks) => {
+        const rows = [];
+        const n = f => Math.max(1, Math.round(perDay * f));
+        const others = ['case-studies', 'research', 'carbon-ai', 'field-report', 'stats', '404'];
+        for (let d = fetchStats.addDays(today, -7 * weeks); d < today; d = fetchStats.addDays(d, 1)) {
+            rows.push([d, 'visits', '', perDay], [d, 'kb', '', perDay * 260]);
+            others.forEach(p => rows.push([d, 'page', p, n(0.06)]));
+            rows.push([d, 'page', 'index', perDay - others.length * n(0.06)]);
+            rows.push([d, 'vp', 's', n(0.4)], [d, 'vp', 'm', n(0.1)], [d, 'vp', 'l', perDay - n(0.4) - n(0.1)]);
+            known.lenses.forEach(l => rows.push([d, 'lens', l, n(0.1)]));
+            known.features.forEach(f => rows.push([d, 'feature', f, n(0.05)]));
+            sections.forEach(id => rows.push([d, 'deepest', id, n(0.05)]));
+            rows.push([d, 'ref', 'www.linkedin.com', n(0.1)]);
+            for (let h = 0; h < 16; h++) rows.push([d, 'ref', `referring-site-${h}.example-company.com`, n(0.02)]);
+        }
+        const stats = fetchStats.transform(fetchStats.cleanRows(rows, known, today).rows, { today, known });
+        return renderStats({ stats, lenses });
+    };
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const page = await context.newPage();
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    for (const [label, html] of [['a modest five weeks', draw(20, 5)], ['a busy quarter, five-figure totals', draw(500, 12)]]) {
+        await context.unroute('**/stats.html');
+        await context.route('**/stats.html', route => route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: html }));
+        const trouble = [];
+        for (const width of [320, 360, 375, 390, 414, 430, 1440]) {
+            await page.setViewportSize({ width, height: 844 });
+            await page.goto(`${origin}/stats.html`, { waitUntil: 'load' });
+            await page.evaluate(() => document.fonts.ready);
+            const found = await page.evaluate(() => {
+                const split = [];
+                const range = document.createRange();
+                document.querySelectorAll('.st-table th, .st-table td').forEach((cell) => {
+                    const walk = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT);
+                    for (let node = walk.nextNode(); node; node = walk.nextNode()) {
+                        if (node.parentElement.closest('.st-host')) continue;
+                        const text = node.textContent;
+                        let top = null;
+                        for (let i = 0; i < text.length; i++) {
+                            range.setStart(node, i);
+                            range.setEnd(node, i + 1);
+                            const r = range.getClientRects()[0];
+                            if (!r) continue;
+                            if (top !== null && r.top > top + 2 && /[\p{L}\p{N}]/u.test(text[i]) && /[\p{L}\p{N}]/u.test(text[i - 1])) {
+                                split.push(`"${text.trim()}" after "${text.slice(0, i).trim()}"`);
+                            }
+                            top = r.top;
+                        }
+                    }
+                });
+                return { split, wide: document.documentElement.scrollWidth > innerWidth };
+            });
+            if (found.split.length) trouble.push(`${width}px: ${found.split.slice(0, 4).join('; ')}`);
+            if (found.wide) trouble.push(`${width}px: the page scrolls sideways`);
+        }
+        if (trouble.length) trouble.forEach(t => bad(`stats.html full (${label}) — ${t}`));
+        else ok(`stats.html full (${label}): no table splits a word, and nothing scrolls sideways, 320-430px and 1440px`);
+    }
+    if (errors.length) errors.forEach(e => bad(`stats.html full: uncaught ${e}`));
+    await context.close();
 }
 
 // ------------------------------------------------------------------

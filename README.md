@@ -20,11 +20,11 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 - **[Case studies](case-studies.html), evidence-first**: the same six projects as **problem → method → artifact → result**. Every result carries the basis it rests on and says plainly whether you can check it from outside; every artifact says whether it is public, available on request, or held by the client. See [Content pipeline](#content-pipeline)
 - **Role-specific lenses**: `case-studies.html?lens=water`, `?lens=climate-risk`, `?lens=sustainable-ai` — shareable views that reframe the portfolio for one kind of role. They **reorder and frame, they never filter**: every case study stays on the page in every view, because a view that hides inconvenient work is a CV that lies by omission. Without JavaScript the switcher steps aside and every case study shows in the default view
 - **[Research outputs](research.html)**: theses, reports, datasets, code and tools, each labelled public / on request / held by the client. No DOI, journal or conference is named anywhere, because none of this work has one — and a test fails the build if one ever appears without proof
-- **[Open counts](stats.html)**: what the site's own cookieless counter has counted, rebuilt weekly — the five numbers that say whether the site works, page views by page, lens and screen width, referrers, features used and bytes per page view. Every count under 5 reads `<5`, and the page prints the exact payload a page view sends. See [Open counts](#open-counts)
+- **[Open counts](stats.html)**: what the site's own cookieless counter has counted, rebuilt weekly — the five numbers that say whether the site works, page views by page, lens and window width, referrers, features used and bytes per page view, in whole weeks. Every count under 5 reads `<5`, a figure that would let one be worked out by subtraction reads `held`, and the page prints the exact payload a page view sends. See [Open counts](#open-counts)
 - **Borehole core-log experience timeline**: career history logged the way a geologist logs a core — depth is time, every layer is a chapter
 - **"AI, Weighed" live widget**: a homepage slice of the EcoPrompt Coach research — model × workload × grid → energy, carbon, water, in units people can feel
 - **Evidence-first skills**: no invented percentages — every tool links to the project where it earned its place, plus real field numbers (164 water points itemized, 70% strike rate)
-- **The Assay**: paste a job ad beside the contact form and get an honest fit, graded in the browser with nothing sent. It lists matched evidence with links, and gaps (languages, years of experience, named tools, consulting-firm or director-level experience, financial modelling, a PhD or a law degree), first when they cap the grade; right to work, visa, clearance, driving licence, relocation and the level of English are named as things to confirm with Moses, never guessed. General skills (stakeholders, data, delivery, international work, research) count towards a grade but never make one: an ad with nothing from his own field is "Different field" Its facts about him come from `content/profile.json`
+- **The Assay**: paste a job ad beside the contact form and get an honest fit, graded in the browser; the ad itself is never sent (the page view's count carries the grade, see [The visit counter and privacy](#the-visit-counter-and-privacy)). It lists matched evidence with links, and gaps (languages, years of experience, named tools, consulting-firm or director-level experience, financial modelling, a PhD or a law degree), first when they cap the grade; right to work, visa, clearance, driving licence, relocation and the level of English are named as things to confirm with Moses, never guessed. General skills (stakeholders, data, delivery, international work, research) count towards a grade but never make one: an ad with nothing from his own field is "Different field" Its facts about him come from `content/profile.json`
 - **Field Notes**: short essays connecting boreholes, scenario storytelling and sustainable AI
 - **Modern design**: dark theme with vibrant green accents, light mode, responsive layout, full SEO/social metadata (Open Graph, JSON-LD, sitemap)
 - **Comprehensive sections**: journey, about (with CV download), experience, projects with photo dossiers, AI cost widget, skills, education, field notes, contact form
@@ -391,11 +391,15 @@ The suites, and the failure each one exists to prevent:
   lenses reorder without ever dropping a case study; and the validator is fed
   deliberately fabricated links to prove it still rejects them.
 - **`stats.test.js`** — the open counts: every published count is 5 or more
-  or reads `<5`, no share is made from a suppressed count, small referrers are
-  grouped, names the site does not use are published only as "other", no daily
-  row reaches `content/stats.json`, and the payload `stats.html` shows has
-  exactly the counter's fields. The fetcher runs end to end against a local
-  server, and stays green with no source configured.
+  or reads `<5`, and no `<5` can be worked out by subtraction, from one table
+  or a chain of them (the rows the review that found it used are the test);
+  figures are whole weeks, with nothing published before the first one ends;
+  no share is made from a hidden count, small referrers are grouped, names
+  the site does not use are published only as "other", no daily row reaches
+  `content/stats.json`, and the payload `stats.html` shows has exactly the
+  counter's fields. The fetcher runs end to end against a local server, and
+  stays green with no source configured, no whole week yet, or a sheet the
+  endpoint could not read this time.
 - **`html.test.js`** — button types, named landmarks, dialog semantics, image
   dimensions, labelled controls, resolvable links, valid JSON-LD, and no
   stylesheet, script, preload or preconnect pointing off this origin. The one
@@ -411,18 +415,23 @@ The suites, and the failure each one exists to prevent:
   counter's end of it: a visit adds to the right daily totals and a second
   one increments them in place, anything that is not exactly schema v1
   (an extra key, a wrong type, 21 features, a huge `kb`) changes nothing,
-  the lock is taken, `?test=1` stays off the public tab, `?action=stats`
-  serves the rows, and each contact message is counted. It cannot tell you
+  the lock is taken (a count waits for it at most 1.5 s, and past 30 a
+  minute not at all, so counts never keep a message waiting), `?test=1`
+  stays off the public tab, `?action=stats` serves the rows to the right
+  token and to nobody else, and each contact message is counted unless the
+  site says the browser asked not to be tracked. It cannot tell you
   the live deployment is configured; `docs/owner-checklist.md` says how to
   check.
 - **`count.test.js`** — the visit counter's payload, field by field: the page
   (404 names itself), the lens the visit arrived with, the deepest part of
   `<main>` reached (one IntersectionObserver, no scroll handler), features
-  clicked or fetched, deduplicated and capped at 20, the referrer's host and
-  nothing more of it, the viewport class and the KB transferred; one count
-  per page view, none under Do Not Track or GPC, never an error. Every
-  payload is run through the server's own schema check, and every
-  `data-analytics` name on the site must be one the counter keeps.
+  clicked or fetched, deduplicated and capped at 20 (two CV links in one view
+  add `cv-download` once), the referrer's host and nothing more of it, the
+  viewport class and the KB transferred; one count per page view, none under
+  Do Not Track or GPC, never an error; and a contact message sent under
+  either says `count: false`. Every payload is run through the server's own
+  schema check, every `data-analytics` name on the site must be one the
+  counter keeps, and every CV and email link on a counted page must have one.
 - **`navigation.test.js`** — an in-page link updates the address (so Back
   works) and moves focus to its target, Back and Forward land there again and
   reopen a closed dossier, the theme switch sits in the nav bar and names what
@@ -522,21 +531,37 @@ suite that goes red on a calendar date is one people learn to ignore.
 `scripts/fetch-stats.js` writes. A weekly Action (`.github/workflows/stats.yml`,
 Mondays early UTC, or by hand) fetches the counter's daily totals, suppresses
 them, rebuilds the page, runs `npm test` and commits the two files if they
-changed. The raw daily rows never enter the repository, and
-`scripts/lib/content.js` fails the build if a count under 5, a named referrer
-under 5 or any field it does not know gets into `content/stats.json`.
+changed. The raw daily rows never enter the repository.
 
-To switch it on, first publish the current `google-apps-script/Code.gs` as a
-new version of the existing deployment, so that `?action=count` and
-`?action=stats` exist. Then set the repository variable `STATS_SOURCE_URL`
-(Settings → Secrets and variables → Actions → Variables) to either the Apps
-Script web app URL (`?action=stats` is added if it is missing) or the `Daily`
-sheet published as CSV. Do it in that order: an older deployment answers
-`?action=stats` with its health check, and the Action fails on that rather
-than mistake it for an empty week. A secret of the same name takes
-precedence, for a URL that carries a token. Until one is set, the Action says
-so and commits nothing, and the page says counting has not started. The steps,
-and how to check each, are items S1 to S3 in
+What is published is whole weeks only, Monday to Sunday: last week, all time
+from the first full week to last Sunday, and one line per week. The days
+before the first Monday and the week still running are in no figure, so no
+sum of the figures leaves a single day's count behind, and nothing is
+published at all until a full week has ended. Every count under 5 is `"<5"`.
+Where a table adds up to a total shown beside it (pages and window classes
+to page views, the known lenses to lens-link visits, the weeks to all time),
+a lone `"<5"` would be the total less the rest, so the smallest figure
+beside it is held back too, as `"held"`, until nothing hidden can be worked
+out, through any chain of such sums. `scripts/lib/content.js` fails the build
+if a count under 5, one that subtraction would give away, a part week, today,
+a named referrer under 5 or any field it does not know gets into
+`content/stats.json`.
+
+To switch it on, first give the Apps Script a `STATS_TOKEN` script property
+(any long random string) and publish the current
+`google-apps-script/Code.gs` as a new version of the existing deployment, so
+that `?action=count` and `?action=stats` exist. `?action=stats` answers only
+a request with `&token=` set to that string: its rows are not suppressed, and
+the deployment's address is in `count.js` on every page. Then make the web
+app URL with `?action=stats&token=<the string>` a repository **secret**
+`STATS_SOURCE_URL` (Settings → Secrets and variables → Actions). Do it in
+that order: an older deployment answers `?action=stats` with its health
+check, and the Action fails on that rather than mistake it for an empty
+week. The `Daily` sheet published as CSV also works as the source, but a
+published tab is readable by anyone who has its link, which `stats.html`
+says is not the case. Until the secret is set, the Action says so and
+commits nothing, and the page says counting has not started. The steps, and
+how to check each, are items S1 and S2 in
 [docs/owner-checklist.md](docs/owner-checklist.md). To run it locally:
 
 ```bash
@@ -560,9 +585,12 @@ it only to match what he said, then run `npm run voice:intro` again.
 
 The site counts its own page views, so that each later change to it can be
 judged against what readers actually do ([docs/plan.md](docs/plan.md),
-Phase 1). It uses no analytics service, sets no cookie and writes nothing to
-the visitor's device. All of it is `count.js`: 3 KB (2 KB gzipped), loaded
-deferred on every page and counted in each page's budget.
+Phase 1). It uses no analytics service, and the count sets no cookie and
+reads or writes no browser storage. (The site itself remembers the theme,
+low-energy mode, the reading speed and whether the intro has played, in the
+visitor's own browser, and sends none of it.) All of it is `count.js`: 3 KB
+(2 KB gzipped), loaded deferred on every page and counted in each page's
+budget.
 
 **Status.** Built and tested, but not yet counting: the live Apps Script has
 to be published again with the counter's code first (item S1 in
@@ -578,7 +606,7 @@ left (`visibilitychange` to hidden, or `pagehide`), and never a second for the
 same page view. This is the whole of one, exactly as `count.js` sends it:
 
 ```json
-{"v":1,"page":"index","lens":"","deepest":"contact","features":["cv-download-hero","module-dossier"],"ref":"www.linkedin.com","vp":"m","kb":284}
+{"v":1,"page":"index","lens":"","deepest":"contact","features":["cv-download-hero","cv-download","module-dossier"],"ref":"www.linkedin.com","vp":"m","kb":284}
 ```
 
 | Key | What it holds |
@@ -587,9 +615,9 @@ same page view. This is the whole of one, exactly as `count.js` sends it:
 | `page` | the page's file name without `.html` (`index`, `case-studies`, `research`, `carbon-ai`, `field-report`, `stats`), or `404` |
 | `lens` | the `?lens=` the page view arrived with, or `""` |
 | `deepest` | the id of the furthest top-level part of `<main>` that came on screen: on the homepage one of the nine sections the nav links to, from `journey` to `contact`; `csGrid` on the case studies; `""` on the pages that have no such part |
-| `features` | up to 20 distinct names of things used: the site's `data-analytics` hooks (25 today, such as `cv-download-hero` and `receipt-open`), `module-<name>` for each on-demand module fetched, `contact-form-submit`, and the Assay's grade (`assay-high`, `assay-workable`, `assay-marginal`) |
+| `features` | up to 20 distinct names of things used: the site's `data-analytics` hooks (27 today, such as `cv-download-hero` and `receipt-open`), `cv-download` once for a view that used any CV link (the CV-downloads figure counts page views), `cv-download-terminal` when the field terminal's `cv` command fetches the CV, `module-<name>` for each on-demand module fetched, `contact-form-submit`, and the Assay's grade (`assay-high`, `assay-workable`, `assay-marginal`) |
 | `ref` | the referring site's host only (`www.linkedin.com`); `""` if there was none, or it was this site |
-| `vp` | screen width as a class: `s` under 600 px, `m` under 1024 px, `l` wider |
+| `vp` | the browser window's width as a class: `s` under 600 px, `m` under 1024 px, `l` wider |
 | `kb` | whole KB this page view transferred, from the browser's Resource Timing API, so a cached revisit counts as the near-zero it is |
 
 **What is never sent or stored.**
@@ -600,8 +628,8 @@ same page view. This is the whole of one, exactly as `count.js` sends it:
 - No `Referer` header and no full referring address, only its host.
 - Nothing typed into the page. The Assay's grade is counted; the job ad
   pasted into it never leaves the page.
-- No IP address, browser, device or operating system, and no screen size
-  beyond the three classes. Apps Script does not give the script the
+- No IP address, browser, device or operating system, and no screen or
+  window size beyond the three classes. Apps Script does not give the script the
   sender's address or headers, so there is nothing to store even by mistake.
   Google, which runs the endpoint, receives the request as it receives any
   other.
@@ -611,7 +639,11 @@ same page view. This is the whole of one, exactly as `count.js` sends it:
 (`navigator.doNotTrack` is `"1"` or `navigator.globalPrivacyControl` is
 `true`), `count.js` stops before it adds a single listener, and nothing is
 sent. With JavaScript off, nothing is sent either. If `script.js` fails to
-load, the counter still counts, since it does not depend on it.
+load, the counter still counts, since it does not depend on it. A contact
+message from such a browser carries `count: false`, and `Code.gs` leaves it
+out of the daily contact total; a message sent with JavaScript off cannot
+say so (Apps Script does not show the script the request's headers), and is
+counted.
 
 **Why a keepalive `fetch`, not `sendBeacon`.** The plan named
 `navigator.sendBeacon`, the usual way to send something as a page closes. It
@@ -632,12 +664,14 @@ only a payload that is exactly the one above in shape — those eight keys and
 no others, each of the right type, at most 20 features, `kb` from 0 to
 100,000 — and silently drops anything else. It then adds one to a handful of
 daily totals in a `Daily` tab of Moses's Google Sheet, under the same lock the
-contact form uses: `date` (Amsterdam), `metric`, `key`, `count`. No single page
-view is kept. `GET ?action=stats` serves those daily totals, and once a week
-an Action suppresses them and rebuilds [stats.html](stats.html) (see
-[Open counts](#open-counts)). The daily totals at `?action=stats` are not
-suppressed and anyone with the address can read them; whether they stay that
-way is Moses's decision (item S3 in the owner checklist).
+contact form uses, waiting for it at most 1.5 s, and not at all past 30
+counts a minute, so a burst of page views never keeps a contact message
+waiting (a dropped count makes the figures a floor, as `stats.html` says):
+`date` (Amsterdam), `metric`, `key`, `count`. No single page view is kept.
+`GET ?action=stats&token=...` serves those daily totals to the weekly Action,
+which holds the token as a secret, and to nobody else; once a week the Action
+suppresses them and rebuilds [stats.html](stats.html) (see
+[Open counts](#open-counts)).
 
 **Seen from the page.** The count is a request like any other, so once it has
 gone (after the tab has been hidden once), the footer's carbon badge shows a
@@ -690,7 +724,9 @@ What CI runs every page in, on every pull request:
 
 - ✅ Chromium, the build pinned by `playwright-core` — so Chrome and Edge,
   which share its engine
-- ✅ Firefox, the build pinned by `playwright-core` (142 at the moment)
+- ◐ Firefox, the build pinned by `playwright-core` (142 at the moment): the
+  job is in CI, and its first run is on the pull request that adds it; this
+  becomes ✅ once that run has passed
 - ✅ Phone width (390×844) and desktop (1440×900), in both themes, for the
   accessibility checks — a browser window at that size, not a real phone
 

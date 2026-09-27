@@ -215,10 +215,10 @@ const mksLoadWarn = (err) => {
 // in-page anchor into one of these loads the module before the page scrolls
 // there, so a shared /#ydi lands on a working widget rather than an empty box.
 const INTERACTIVE_HOSTS = '#ecoprompt, #ydi, #anatomy, #assay, #receiptPanel, #receiptBtn';
-function mksLoadFor(target) {
+const mksLoadFor = (target) => {
     if (!target || typeof target.closest !== 'function') return;
     if (target.closest(INTERACTIVE_HOSTS)) mksLoad('interactives').catch(mksLoadWarn);
-}
+};
 
 // ===================================
 // WITHOUT JAVASCRIPT, AND LATE
@@ -363,7 +363,7 @@ const navMenu = document.getElementById('navMenu');
 // Expand a collapsed dossier or the receipt panel that contains a deep-link
 // target, so shared links like /#strikeWidget or /#receiptPanel actually reveal
 // the feature instead of landing on a closed accordion.
-function revealTarget(target) {
+const revealTarget = (target) => {
     if (!target || !target.closest) return false;
     let expanded = false;
     const card = target.closest('.project-card');
@@ -377,16 +377,16 @@ function revealTarget(target) {
         if (rb) { rb.click(); expanded = true; }
     }
     return expanded;
-}
+};
 
 // Focus is what makes a jump real to a keyboard or a screen reader: without
 // it the next Tab starts from the link that was pressed, so the skip link
 // skipped nothing. A section gets tabindex="-1" (focusable, never a Tab
 // stop) only when it needs one. preventScroll: the scroll is the caller's.
-function focusTarget(target) {
+const focusTarget = (target) => {
     if (target.tabIndex < 0 && !target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
     target.focus({ preventScroll: true });
-}
+};
 
 // Section 05's widgets grow when their module arrives, and a jump into or
 // past it is what fetches it: a first jump to Skills stopped 318px short.
@@ -423,7 +423,7 @@ const hold = (land) => {
 // Fetch what the target needs, open the dossier or receipt around it (and
 // give that a moment to push things into place), then scroll and focus. A
 // target waiting to fade in is shown at once: it sits 26px low until then.
-function jumpTo(target, behavior, focus, wait) {
+const jumpTo = (target, behavior, focus, wait) => {
     mksLoadFor(target);
     const fade = target.closest('.reveal:not(.visible)');
     if (fade) {
@@ -440,7 +440,7 @@ function jumpTo(target, behavior, focus, wait) {
     };
     if (revealTarget(target)) setTimeout(land, 240);
     else if (wait) setTimeout(land, 0); else land();
-}
+};
 
 // The address each jump was handled for: Back and Forward fire popstate
 // and, when the fragment changes, hashchange too. The second is dropped.
@@ -478,7 +478,7 @@ inPageLinks.forEach((anchor, index) => {
 // Direct hits (a shared link, Back and Forward, a typed fragment) land the
 // same way, a task later so the browser's own scroll restoring comes first.
 // A shared link on arrival is not focused: nobody has pressed anything yet.
-function handleHashReveal(e) {
+const handleHashReveal = (e) => {
     if (location.href === jumpedTo) return;
     jumpedTo = location.href;
     if (!location.hash || location.hash === '#') {
@@ -499,17 +499,17 @@ function handleHashReveal(e) {
     let target;
     try { target = document.querySelector(location.hash); } catch (err) { return; }
     if (target) jumpTo(target, scrollMotion(), !!e, true);
-}
+};
 window.addEventListener('popstate', handleHashReveal);
 window.addEventListener('hashchange', handleHashReveal);
 if (location.hash) window.addEventListener('load', () => setTimeout(() => handleHashReveal(null), 320));
 
-function setMenuOpen(open) {
+const setMenuOpen = (open) => {
     if (!navToggle || !navMenu) return;
     navMenu.classList.toggle('active', open);
     navToggle.classList.toggle('active', open);
     navToggle.setAttribute('aria-expanded', String(open));
-}
+};
 
 if (navToggle && navMenu) {
     navToggle.addEventListener('click', () => {
@@ -715,11 +715,9 @@ if (statsSection && 'IntersectionObserver' in window) {
     }, observerOptions);
     counterObserver.observe(statsSection);
 
-    // Zeroed before the next paint, only if they will count up from it. The
-    // microtask waits for low-energy mode, restored further down this file.
-    Promise.resolve().then(() => {
-        if (countersMove()) counters.forEach(counter => { still(counter, true); counter.textContent = '0'; });
-    });
+    // Zeroed before the first paint, only if they will count up from it.
+    // Low-energy mode, which decides that too, is restored at the top.
+    if (countersMove()) counters.forEach(counter => { still(counter, true); counter.textContent = '0'; });
 }
 
 // ===================================
@@ -1132,6 +1130,8 @@ if (contactForm) {
             submitted_at: new Date().toISOString(),
             source: 'Portfolio Website'
         };
+        // Kept out of the public tally (stats.html), as DNT and GPC ask.
+        if (navigator.doNotTrack === '1' || navigator.globalPrivacyControl === true) formData.count = false;
 
         const submitBtn = contactForm.querySelector('.btn-submit');
         const originalBtnContent = submitBtn ? submitBtn.innerHTML : '';
