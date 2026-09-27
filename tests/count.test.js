@@ -214,12 +214,12 @@ function load(options = {}) {
     p.click('[data-analytics="listen"] use');
     p.window.mks.track('module-dossier');
     ['Bad Name', '', undefined, null, 42, 'x'.repeat(41), 'semi;colon'].forEach(n => p.window.mks.track(n));
-    p.window.trackEvent('assay-high');
+    p.window.mks.track('assay-high');
     p.leave();
     const f = p.payload().features || [];
     assert(JSON.stringify(f) === JSON.stringify(['cv-download-hero', 'listen', 'module-dossier', 'assay-high']),
         `features: clicks on [data-analytics] (even on an icon inside one) and mks.track(), each once, in order (${f.join(', ')})`);
-    assert(p.window.trackEvent === p.window.mks.track, 'features: window.trackEvent is the same function as window.mks.track');
+    assert(!('trackEvent' in p.window), 'features: mks.track is the one name for it, with no window.trackEvent beside it');
 
     const many = load();
     for (let i = 0; i < 25; i++) many.window.mks.track(`f-${i}`);

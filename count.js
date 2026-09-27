@@ -5,8 +5,7 @@
     const ok = (s) => typeof s === 'string' && /^[a-z0-9-]{1,40}$/.test(s);
     const mks = (window.mks = window.mks || {});
     const features = [];
-    // trackEvent is the older name, still called by a module.
-    mks.track = window.trackEvent = (name) => {
+    mks.track = (name) => {
         if (ok(name) && features.length < 20 && !features.includes(name)) features.push(name);
     };
 

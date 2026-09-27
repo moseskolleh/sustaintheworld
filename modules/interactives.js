@@ -728,9 +728,9 @@ window.mks.share = (() => {
         result.innerHTML = html;
         document.dispatchEvent(new CustomEvent('mks:layout'));   // new links, for back to top to keep clear of
         if (clearBtn) clearBtn.hidden = false;
-        // count.js records it; trackEvent is the name it had before mks.track.
-        const track = window.mks.track || window.trackEvent;
-        if (typeof track === 'function') track('assay-' + a.cls);
+        // count.js records the grade (never the ad); with count.js blocked
+        // there is no mks.track, and nothing to record it in.
+        if (typeof window.mks.track === 'function') window.mks.track('assay-' + a.cls);
     };
 
     runBtn.addEventListener('click', assay);

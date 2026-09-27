@@ -213,10 +213,13 @@ function parseSource(text) {
 /**
  * Pages, lenses, section ids and feature names, read from the site's own
  * source, so a made-up name posted to the public endpoint cannot reach the
- * public page. A feature is known if the markup names it in data-analytics,
- * if it is an on-demand module (as "module-" and its file name, the name the
- * counter gives a module once it has been fetched), or if a script tracks it
- * by a literal name.
+ * public page. A feature is known if a page or a script names it in
+ * data-analytics (a module writes some of its own controls, such as the
+ * player's offer of the introduction), if it is an on-demand module (as
+ * "module-" and its file name, the name the counter gives a module once it
+ * has been fetched), if it is one of the Assay's grades (as "assay-" and the
+ * grade's class, the name it sends), or if a script tracks it by a literal
+ * name.
  */
 function knownNames(root = ROOT) {
     const rootFiles = fs.readdirSync(root);
@@ -235,8 +238,15 @@ function knownNames(root = ROOT) {
     });
     scripts.forEach((file) => {
         const js = fs.readFileSync(file, 'utf8');
-        for (const m of js.matchAll(/\b(?:track|trackEvent)\(\s*['"]([a-z0-9-]{1,40})['"]/g)) features.add(m[1]);
+        for (const m of js.matchAll(/\bdata-analytics="([a-z0-9-]{1,40})"/g)) features.add(m[1]);
+        // A whole literal only: track('assay-' + grade) names no feature.
+        for (const m of js.matchAll(/\btrack\(\s*['"]([a-z0-9-]{1,40})['"]\s*\)/g)) features.add(m[1]);
     });
+    // The Assay composes its name from the grade's class, so read the classes.
+    const assay = path.join(modulesDir, 'interactives.js');
+    if (fs.existsSync(assay)) {
+        for (const m of fs.readFileSync(assay, 'utf8').matchAll(/\bcls = '([a-z0-9-]{1,33})'/g)) features.add(`assay-${m[1]}`);
+    }
 
     const lenses = JSON.parse(fs.readFileSync(path.join(root, 'content', 'lenses.json'), 'utf8'));
     return {

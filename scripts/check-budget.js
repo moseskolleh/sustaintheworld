@@ -45,7 +45,7 @@ const MB = 1024 * 1024;
 
 // ------------------------------------------------------------------
 // Budgets. The headroom is not uniform: the report prints each figure as a
-// share of its ceiling, and in September 2026 that ran from 72% (the field
+// share of its ceiling, and in September 2026 that ran from 74% (the field
 // report over the wire) to 96% (the on-demand total: the wave-1 review's
 // fixes filled it to within 100 bytes, until the journey map shed 1.6 KB of
 // path points that drew nothing, then 3.6 KB more written as steps, which
@@ -95,9 +95,9 @@ const BUDGETS = {
         max: 12 * KB,
         readme: 'the footer calls it "the whole portfolio in 9 KB" — this is what keeps that true'
     },
-    // The same page as a visit costs it: its HTML gzipped, and the visit
-    // counter, the one script it loads. The footer's figure above is the file
-    // a reader can save; this is what reaching it transfers.
+    // The same page as a visit costs it: its HTML gzipped, the visit counter
+    // (the one script it loads) and its icon. The footer's figure above is
+    // the file a reader can save; this is what reaching it transfers.
     fieldReportWire: {
         label: 'Text-only field report, over the wire (with its visit counter)',
         max: 8 * KB,
@@ -144,7 +144,9 @@ const PAGE_BUDGETS = {
     'index.html': 'criticalWire',
     'case-studies.html': 'caseStudiesWire',
     'research.html': 'researchWire',
-    'carbon-ai.html': 'carbonAiWire'
+    'carbon-ai.html': 'carbonAiWire',
+    'stats.html': 'statsWire',
+    'field-report.html': 'fieldReportWire'
 };
 
 const fmt = (bytes) => (bytes >= MB ? `${(bytes / MB).toFixed(2)} MB` : `${(bytes / KB).toFixed(0)} KB`);
@@ -186,6 +188,14 @@ function criticalAssets(page = 'index.html') {
 
     // Anything explicitly preloaded is, by definition, on the critical path.
     (html.match(/<link[^>]+rel=["']preload["'][^>]*>/gi) || []).forEach((tag) => {
+        const m = tag.match(/href=["']([^"']+)["']/i);
+        if (m) add(m[1]);
+    });
+
+    // The icon: a browser asks for it on arrival, on every page. It is about
+    // 200 bytes, but on the 6 KB field report that was most of the room
+    // between this estimate and what a browser measured.
+    (html.match(/<link[^>]+rel=["']icon["'][^>]*>/gi) || []).forEach((tag) => {
         const m = tag.match(/href=["']([^"']+)["']/i);
         if (m) add(m[1]);
     });

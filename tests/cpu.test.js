@@ -62,13 +62,14 @@ const key = (window, k, target, init) => {
         const marked = ['dossier', 'terminal', 'interactives', 'dispatch'].filter(m => mks.loaded[m] !== true);
         assert(marked.length === 0, `Globals: every module marks itself in mks.loaded (unmarked: ${marked.join(', ') || 'none'})`);
 
-        // No shipped script hangs a new name on window. window.trackEvent is
-        // the counter's older name for mks.track, kept until nothing calls it.
+        // No shipped script hangs a new name on window, the visit counter
+        // included: its mks.track once had window.trackEvent beside it, the
+        // name the old analytics dispatcher used, kept until nothing called it.
         const assigned = [];
-        ['script.js', ...MODULE_FILES].forEach((rel) => {
+        ['script.js', 'count.js', ...MODULE_FILES].forEach((rel) => {
             (read(rel).match(/\bwindow\.[A-Za-z_$][\w$]*\s*=(?!=)/g) || []).forEach((m) => {
                 const name = m.match(/window\.([\w$]+)/)[1];
-                if (name !== 'mks' && name !== 'trackEvent') assigned.push(`${rel}: window.${name}`);
+                if (name !== 'mks') assigned.push(`${rel}: window.${name}`);
             });
         });
         assert(assigned.length === 0, `Globals: nothing else is assigned to window (${assigned.join(', ') || 'none'})`);

@@ -200,6 +200,12 @@ function walk(value, visit, where = '') {
     // The counter names a module fetched on demand "module-<name>"; the bare
     // name is not something it sends, so it is not a name the page may show.
     assert(!known.features.has('dossier'), 'Known: a module is known by the name the counter sends, not its bare file name');
+    // Hooks a module writes into the page, and the Assay's grades, which it
+    // sends as "assay-<class>": each was counted as "other" until the names
+    // were read from the modules as well as the pages.
+    ['listen', 'listen-intro', 'assay-copy', 'assay-contact', 'assay-high', 'assay-workable', 'assay-marginal']
+        .forEach((f) => assert(known.features.has(f), `Known: feature "${f}"`));
+    assert(!known.features.has('assay-'), 'Known: the start of a composed name (track(\'assay-\' + grade)) is not a feature');
     ['water', 'climate-risk', 'sustainable-ai'].forEach(l => assert(known.lenses.has(l), `Known: lens "${l}"`));
     assert(known.ids.has('contact') && known.ids.has('groundwater'), 'Known: section ids from the homepage and the case studies');
 

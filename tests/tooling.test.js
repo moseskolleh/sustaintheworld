@@ -116,6 +116,14 @@ const clockChecks = (async () => {
     const measured = budget.measure().measured;
     assert(entries.every(([, key]) => typeof measured[key] === 'number' && measured[key] > 0), 'Budget map: every budgeted page is measured');
     assert(budget.PAGE_BUDGETS['carbon-ai.html'] === 'carbonAiWire', 'Budget map: AI, Weighed has a first-view budget');
+    // A page budget no browser measures is an estimate nobody checks: the
+    // open counts page and the field report's wire budget arrived in the
+    // same wave as this map, and neither was in it.
+    const mapped = new Set(Object.values(budget.PAGE_BUDGETS));
+    const unmapped = Object.keys(budget.BUDGETS).filter(k => /Wire$/.test(k) && !mapped.has(k));
+    assert(unmapped.length === 0, `Budget map: every page's wire budget is measured in a browser too (not: ${unmapped.join(', ') || 'none'})`);
+    assert(budget.criticalAssets('field-report.html').includes('assets/favicon.svg'),
+        'Budget map: a first view counts the icon, which a browser asks for on arrival');
 }
 
 clockChecks.then(() => {
