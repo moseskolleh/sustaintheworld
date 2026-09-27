@@ -22,6 +22,7 @@ const PAGES = [
     'carbon-ai.html',
     'case-studies.html',
     'research.html',
+    'stats.html',
     'field-report.html',
     '404.html'
 ];

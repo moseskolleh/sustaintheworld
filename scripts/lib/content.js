@@ -140,6 +140,184 @@ function checkLanguages(languages) {
     return problems;
 }
 
+// ------------------------------------------------------------------
+// content/stats.json — what the visit counter publishes
+//
+// scripts/fetch-stats.js writes this file from the counter's daily totals,
+// and stats.html is built from it. The promise stats.html makes is that no
+// count under 5 is ever published and no daily row ever reaches the
+// repository, so that promise is checked here, on every build, rather than
+// trusted to the script that wrote the file: a hand-edit, or a bug in the
+// fetcher, fails `npm test` instead of shipping.
+//
+// The shape is closed. Any property the validator does not know is refused,
+// which is what keeps a "rows" array — or any other raw detail — out.
+//
+// Problems name the field and the rule, never the value: the fetcher prints
+// them in a public Action log, and an unsuppressed count is exactly the thing
+// that must not appear there.
+// ------------------------------------------------------------------
+const STATS_STATUSES = ['not-collecting', 'collecting'];
+const STATS_MIN_SUPPRESSION = 5;
+const STATS_COUNTS = ['visits', 'contact', 'cvDownloads', 'lensVisits', 'briefUses'];
+const STATS_BREAKDOWNS = ['page', 'lens', 'vp', 'ref', 'feature', 'deepest'];
+const STATS_KEYS = ['$comment', 'v', 'status', 'asOf', 'suppressBelow', 'period', 'week', 'briefLive',
+    'headline', 'breakdown', 'bytes', 'weeks'];
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const REF_HOST = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/;
+
+function checkStats(stats) {
+    const at = 'content/stats.json';
+    if (!stats || typeof stats !== 'object' || Array.isArray(stats)) return [`${at}: is not an object`];
+
+    const problems = [];
+    const isObj = (o) => !!o && typeof o === 'object' && !Array.isArray(o);
+    const onlyKeys = (o, allowed, where) => {
+        Object.keys(o).filter(k => !allowed.includes(k))
+            .forEach(k => problems.push(`${at}: ${where} has a field "${k}" the page does not publish — only suppressed totals belong here`));
+    };
+    const date = (v, where) => {
+        if (typeof v !== 'string' || !ISO_DATE.test(v)) problems.push(`${at}: ${where} is not a YYYY-MM-DD date`);
+    };
+
+    onlyKeys(stats, STATS_KEYS, 'the file');
+    if (stats.v !== 1) problems.push(`${at}: v must be 1`);
+    if (!STATS_STATUSES.includes(stats.status)) problems.push(`${at}: status must be one of ${STATS_STATUSES.join(', ')}`);
+
+    const floor = stats.suppressBelow;
+    if (!Number.isInteger(floor) || floor < STATS_MIN_SUPPRESSION) {
+        problems.push(`${at}: suppressBelow must be a whole number of at least ${STATS_MIN_SUPPRESSION}`);
+        return problems;            // every count check below depends on it
+    }
+    const small = `<${floor}`;
+    const count = (v, where) => {
+        if (v === null || v === small || (Number.isInteger(v) && v >= floor)) return;
+        problems.push(`${at}: ${where} is neither "${small}" nor a whole number of at least ${floor} — a count under ${floor} must never be published`);
+    };
+    const share = (v, where) => {
+        if (v === null || (typeof v === 'number' && v >= 0 && v <= 1)) return;
+        problems.push(`${at}: ${where} must be null or a fraction between 0 and 1`);
+    };
+    const headline = (h, where, extra = []) => {
+        if (h === null) return;
+        if (!isObj(h)) { problems.push(`${at}: ${where} is not an object`); return; }
+        onlyKeys(h, STATS_COUNTS.concat('contactShare', extra), where);
+        STATS_COUNTS.forEach(k => count(h[k] === undefined ? null : h[k], `${where}.${k}`));
+        share(h.contactShare === undefined ? null : h.contactShare, `${where}.contactShare`);
+    };
+
+    // The empty state is honest only if it carries no numbers at all.
+    if (stats.status === 'not-collecting') {
+        ['asOf', 'period', 'week', 'headline', 'breakdown', 'bytes'].forEach((k) => {
+            if (stats[k] !== null) problems.push(`${at}: status is "not-collecting" but ${k} is not null`);
+        });
+        if (!Array.isArray(stats.weeks) || stats.weeks.length) problems.push(`${at}: status is "not-collecting" but weeks is not empty`);
+        return problems;
+    }
+
+    date(stats.asOf, 'asOf');
+    if (!isObj(stats.period)) {
+        problems.push(`${at}: period is missing`);
+    } else {
+        onlyKeys(stats.period, ['first', 'last', 'days'], 'period');
+        date(stats.period.first, 'period.first');
+        date(stats.period.last, 'period.last');
+        if (stats.period.first > stats.period.last) problems.push(`${at}: period.first is after period.last`);
+        if (stats.period.last > stats.asOf) problems.push(`${at}: period.last is after asOf`);
+        if (!Number.isInteger(stats.period.days) || stats.period.days < 1) problems.push(`${at}: period.days is not a positive whole number`);
+    }
+    if (stats.week !== null) {
+        if (!isObj(stats.week)) problems.push(`${at}: week is not an object`);
+        else {
+            onlyKeys(stats.week, ['start', 'end', 'partial'], 'week');
+            date(stats.week.start, 'week.start');
+            date(stats.week.end, 'week.end');
+        }
+    }
+    if (typeof stats.briefLive !== 'boolean') problems.push(`${at}: briefLive must be true or false`);
+
+    // A weekly figure needs a week, and a week needs its figures: the page
+    // reads one to label the other.
+    const noWeek = stats.week === null;
+    if (isObj(stats.headline) && (stats.headline.week === null) !== noWeek) {
+        problems.push(`${at}: headline.week must be present exactly when week is`);
+    }
+    if (isObj(stats.bytes) && noWeek && stats.bytes.week !== null) {
+        problems.push(`${at}: bytes.week is given, but there is no week`);
+    }
+    if (isObj(stats.breakdown) && noWeek && STATS_BREAKDOWNS.some(m => (stats.breakdown[m] || []).some(r => r.week !== null))) {
+        problems.push(`${at}: a breakdown has weekly figures, but there is no week`);
+    }
+
+    if (!isObj(stats.headline)) {
+        problems.push(`${at}: headline is missing`);
+    } else {
+        onlyKeys(stats.headline, ['week', 'all'], 'headline');
+        headline(stats.headline.week, 'headline.week');
+        headline(stats.headline.all, 'headline.all');
+        if (stats.headline.all === null) problems.push(`${at}: headline.all is missing`);
+    }
+
+    if (!isObj(stats.breakdown)) {
+        problems.push(`${at}: breakdown is missing`);
+    } else {
+        onlyKeys(stats.breakdown, STATS_BREAKDOWNS, 'breakdown');
+        STATS_BREAKDOWNS.forEach((metric) => {
+            const rows = stats.breakdown[metric];
+            if (!Array.isArray(rows)) { problems.push(`${at}: breakdown.${metric} is not a list`); return; }
+            rows.forEach((r, i) => {
+                const where = `breakdown.${metric}[${i}]`;
+                if (!isObj(r)) { problems.push(`${at}: ${where} is not an object`); return; }
+                onlyKeys(r, ['key', 'week', 'all'], where);
+                if (typeof r.key !== 'string') problems.push(`${at}: ${where}.key is not a string`);
+                // A referrer is published as a bare host, or not at all.
+                if (metric === 'ref' && !(r.key === '' || r.key === 'other' || REF_HOST.test(r.key))) {
+                    problems.push(`${at}: ${where}.key is not a host name`);
+                }
+                count(r.week, `${where}.week`);
+                count(r.all, `${where}.all`);
+            });
+        });
+        // Grouping is the point: only hosts with 5 or more may be named.
+        (stats.breakdown.ref || []).forEach((r, i) => {
+            if (r.key !== '' && r.key !== 'other' && r.all === small) {
+                problems.push(`${at}: breakdown.ref[${i}] names a host with fewer than ${floor} page views — it belongs in "other"`);
+            }
+        });
+    }
+
+    if (!isObj(stats.bytes)) {
+        problems.push(`${at}: bytes is missing`);
+    } else {
+        onlyKeys(stats.bytes, ['week', 'all'], 'bytes');
+        ['week', 'all'].forEach((p) => {
+            const b = stats.bytes[p];
+            if (b === null) return;
+            if (!isObj(b)) { problems.push(`${at}: bytes.${p} is not an object`); return; }
+            onlyKeys(b, ['meanKb', 'medianDayKb', 'days'], `bytes.${p}`);
+            if (!Number.isInteger(b.meanKb) || b.meanKb < 0) problems.push(`${at}: bytes.${p}.meanKb is not a whole number of KB`);
+            if (b.medianDayKb !== null && (!Number.isInteger(b.medianDayKb) || b.medianDayKb < 0)) {
+                problems.push(`${at}: bytes.${p}.medianDayKb is not null or a whole number of KB`);
+            }
+            if (!Number.isInteger(b.days) || b.days < 0) problems.push(`${at}: bytes.${p}.days is not a whole number`);
+        });
+    }
+
+    if (!Array.isArray(stats.weeks)) {
+        problems.push(`${at}: weeks is not a list`);
+    } else {
+        stats.weeks.forEach((w, i) => {
+            headline(w, `weeks[${i}]`, ['start', 'end', 'partial']);
+            if (isObj(w)) {
+                date(w.start, `weeks[${i}].start`);
+                date(w.end, `weeks[${i}].end`);
+            }
+        });
+    }
+
+    return problems;
+}
+
 /**
  * Reads everything and returns it validated, or throws with every problem
  * listed at once — one run of the build should tell you all of them.
@@ -150,8 +328,9 @@ function loadAll() {
     const research = load('research');
     const lenses = load('lenses');
     const narration = load('narration');
+    const stats = load('stats');
 
-    const problems = [];
+    const problems = checkStats(stats);
     const lensIds = lenses.lenses.map(l => l.id);
 
     // --- case studies ---------------------------------------------------
@@ -255,7 +434,7 @@ function loadAll() {
         throw new Error(`content failed validation:\n  - ${problems.join('\n  - ')}`);
     }
 
-    return { profile, projects, research, lenses, narration, lensIds };
+    return { profile, projects, research, lenses, narration, stats, lensIds };
 }
 
 /** Case studies for a lens: matching ones first, the rest after. Never filtered. */
@@ -277,5 +456,6 @@ module.exports = {
     urlProblem,
     checkAvailability,
     checkLanguages,
+    checkStats,
     orderForLens
 };

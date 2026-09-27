@@ -20,6 +20,7 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 - **[Case studies](case-studies.html), evidence-first**: the same six projects as **problem → method → artifact → result**. Every result carries the basis it rests on and says plainly whether you can check it from outside; every artifact says whether it is public, available on request, or held by the client. See [Content pipeline](#content-pipeline)
 - **Role-specific lenses**: `case-studies.html?lens=water`, `?lens=climate-risk`, `?lens=sustainable-ai` — shareable views that reframe the portfolio for one kind of role. They **reorder and frame, they never filter**: every case study stays on the page in every view, because a view that hides inconvenient work is a CV that lies by omission. Without JavaScript the switcher steps aside and every case study shows in the default view
 - **[Research outputs](research.html)**: theses, reports, datasets, code and tools, each labelled public / on request / held by the client. No DOI, journal or conference is named anywhere, because none of this work has one — and a test fails the build if one ever appears without proof
+- **[Open counts](stats.html)**: what the site's own cookieless counter has counted, rebuilt weekly — the five numbers that say whether the site works, page views by page, lens and screen width, referrers, features used and bytes per page view. Every count under 5 reads `<5`, and the page prints the exact payload a page view sends. See [Open counts](#open-counts)
 - **Borehole core-log experience timeline**: career history logged the way a geologist logs a core — depth is time, every layer is a chapter
 - **"AI, Weighed" live widget**: a homepage slice of the EcoPrompt Coach research — model × workload × grid → energy, carbon, water, in units people can feel
 - **Evidence-first skills**: no invented percentages — every tool links to the project where it earned its place, plus real field numbers (164 water points itemized, 70% strike rate)
@@ -385,6 +386,12 @@ The suites, and the failure each one exists to prevent:
   result a basis; no artifact claims to be public without a working link; the
   lenses reorder without ever dropping a case study; and the validator is fed
   deliberately fabricated links to prove it still rejects them.
+- **`stats.test.js`** — the open counts: every published count is 5 or more
+  or reads `<5`, no share is made from a suppressed count, small referrers are
+  grouped, names the site does not use are published only as "other", no daily
+  row reaches `content/stats.json`, and the payload `stats.html` shows has
+  exactly the counter's fields. The fetcher runs end to end against a local
+  server, and stays green with no source configured.
 - **`html.test.js`** — button types, named landmarks, dialog semantics, image
   dimensions, labelled controls, resolvable links, valid JSON-LD, and no
   stylesheet, script, preload or preconnect pointing off this origin. The one
@@ -462,6 +469,7 @@ Everything derived now comes from `content/`:
 | `content/lenses.json` | the role-specific views |
 | `content/research.json` | `research.html` |
 | `content/narration.json` | `voice-scripts.js` |
+| `content/stats.json` | `stats.html`, the open counts (written weekly by `scripts/fetch-stats.js`) |
 
 ```bash
 npm run build:content     # regenerate everything derived from content/
@@ -503,6 +511,31 @@ they still fire on content nobody has written yet.
 confirmed the open-ended facts (the "Present" role in particular) were still
 true. When that goes stale the test prints a notice rather than failing — a
 suite that goes red on a calendar date is one people learn to ignore.
+
+### Open counts
+
+`stats.html` is built from `content/stats.json`, which only
+`scripts/fetch-stats.js` writes. A weekly Action (`.github/workflows/stats.yml`,
+Mondays early UTC, or by hand) fetches the counter's daily totals, suppresses
+them, rebuilds the page, runs `npm test` and commits the two files if they
+changed. The raw daily rows never enter the repository, and
+`scripts/lib/content.js` fails the build if a count under 5, a named referrer
+under 5 or any field it does not know gets into `content/stats.json`.
+
+To switch it on, set the repository variable `STATS_SOURCE_URL` (Settings →
+Secrets and variables → Actions → Variables) to either the Apps Script web app
+URL (`?action=stats` is added if it is missing) or the `Daily` sheet published
+as CSV. A secret of the same name takes precedence, for a URL that carries a
+token. Until one is set, the Action says so and commits nothing, and the page
+says counting has not started. To run it locally:
+
+```bash
+STATS_SOURCE_URL='<url>' node scripts/fetch-stats.js && npm run build:content
+```
+
+The sheet's date column should be formatted as plain text; dates Apps Script
+serialises as instants are read back to the Amsterdam date, anything else is
+dropped and counted in the log. Nothing read from the source is ever printed.
 
 ### Editing the narration
 
@@ -575,6 +608,7 @@ every run of `npm test`, and the build fails when they are exceeded.
 | Largest single image | ~200 KB | 220 KB |
 | Every image in the repository | ~3.23 MB | 3.5 MB |
 | Recorded narration: Moses's introduction (0 KB until he records it) | 0 KB | 800 KB |
+| Open counts page, over the wire (fonts included; empty today) | ~88 KB | 105 KB |
 
 **What the estimate used to miss.** An earlier version of this table said
 234 KB. Opening the page in a real browser measured over 500 KB. Two things

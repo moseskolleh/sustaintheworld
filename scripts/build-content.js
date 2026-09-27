@@ -16,6 +16,9 @@
 //   case-studies.html   problem → method → artifact → result, per project,
 //                       with role lenses
 //   research.html       research outputs and how to reproduce them
+//   stats.html          what the visit counter has counted, suppressed
+//                       below 5, and exactly what it sends (content/stats.json,
+//                       which scripts/fetch-stats.js writes once a week)
 //   sitemap.xml         every page, with a lastmod that is not in the future
 //   voice-scripts.js    the narration module, from content/narration.json
 //   index.html          the JSON-LD block only, between its markers
@@ -101,7 +104,7 @@ function statusChip(entry) {
     return `<span class="cs-status cs-status-${entry.status}" title="${esc(explain + held)}">${esc(label)}</span>`;
 }
 
-function pageShell({ title, description, canonical, heroTag, heroTitle, heroLead, main, bodyEnd = '', icons = ['i-arrow-right'] }) {
+function pageShell({ title, description, canonical, heroTag, heroTitle, heroLead, main, bodyEnd = '', icons = ['i-arrow-right'], current = '', styles = [] }) {
     // A page that runs a script says so before first paint (html.js), so its
     // stylesheet can offer the controls that script drives and hide them
     // when it cannot run. A page with no script has nothing to announce.
@@ -137,7 +140,8 @@ function pageShell({ title, description, canonical, heroTag, heroTitle, heroLead
     <link rel="preload" as="font" type="font/woff2" href="assets/fonts/space-grotesk-latin.woff2" crossorigin>
     <link rel="preload" as="font" type="font/woff2" href="assets/fonts/inter-latin.woff2" crossorigin>
     <link rel="preload" as="font" type="font/woff2" href="assets/fonts/ibm-plex-mono-latin-400.woff2" crossorigin>
-    <link rel="stylesheet" href="carbon-ai.css">
+    <link rel="stylesheet" href="carbon-ai.css">${styles.map(href => `
+    <link rel="stylesheet" href="${esc(href)}">`).join('')}
     <link rel="stylesheet" href="content.css">
     <script defer src="count.js"></script>
 </head>
@@ -164,6 +168,9 @@ function pageShell({ title, description, canonical, heroTag, heroTitle, heroLead
         </header>
 ${main}
     </main>
+    <footer class="ca-foot">
+        <p><a href="stats.html"${current === 'stats.html' ? ' aria-current="page"' : ''}>Open counts</a>: what this site counts about its visits, and what it never collects.</p>
+    </footer>
 ${bodyEnd}
 </body>
 </html>
@@ -447,6 +454,419 @@ ${reproSection}`;
 }
 
 // ------------------------------------------------------------------
+// stats.html — the counter's published totals
+// ------------------------------------------------------------------
+
+// The whole of what one page view sends, as the counter's contract fixes it
+// (docs/plan.md, Phase 1). The page prints it literally, and
+// tests/stats.test.js fails if its keys ever differ from the contract's.
+const EXAMPLE_PAYLOAD = {
+    v: 1,
+    page: 'index',
+    lens: '',
+    deepest: 'contact',
+    features: ['cv-download-hero', 'receipt-open'],
+    ref: 'www.linkedin.com',
+    vp: 'l',
+    kb: 287
+};
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const dayOf = (d) => {
+    const [y, m, dd] = d.split('-');
+    return `${Number(dd)} ${MONTHS[Number(m) - 1]} ${y}`;
+};
+/** "21&ndash;27 Sep 2026", or "29 Sep &ndash; 5 Oct 2026" across a month. */
+const daySpan = (a, b) => {
+    const [ya, ma] = a.split('-');
+    const [yb, mb] = b.split('-');
+    if (ya === yb && ma === mb) return `${Number(a.slice(8))}&ndash;${dayOf(b)}`;
+    if (ya === yb) return `${dayOf(a).slice(0, -5)} &ndash; ${dayOf(b)}`;
+    return `${dayOf(a)} &ndash; ${dayOf(b)}`;
+};
+
+// A published count is a whole number or "<5"; null means there is no
+// figure to give (no complete week yet, or nothing it could be worked out from).
+const figure = (v) => {
+    if (v === null || v === undefined) return '&mdash;';
+    if (typeof v === 'number') return String(v).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return esc(v);
+};
+const percent = (v) => {
+    if (v === null || v === undefined) return '&mdash;';
+    return v > 0 && v < 0.005 ? '&lt;1%' : `${Math.round(v * 100)}%`;
+};
+/** A share of page views, only between two counts that were both published. */
+const shareOf = (part, whole) => (typeof part === 'number' && typeof whole === 'number' && whole > 0 && part <= whole
+    ? percent(part / whole) : '&mdash;');
+
+const PAGE_NAMES = {
+    'index': 'Homepage',
+    'case-studies': 'Case studies',
+    'research': 'Research outputs',
+    'carbon-ai': 'AI, Weighed',
+    'field-report': 'Field report (text only)',
+    'stats': 'Open counts (this page)',
+    '404': 'Page not found (404)'
+};
+const VIEWPORT_NAMES = {
+    s: 'Phone (under 600 px wide)',
+    m: 'Tablet or narrow window (600&ndash;1023 px)',
+    l: 'Desktop (1024 px and wider)'
+};
+
+/** The five numbers, defined once for both the empty and the counting page. */
+function fiveNumbers(stats) {
+    return [
+        {
+            key: 'contact',
+            name: 'Messages through the contact form',
+            def: 'Submissions the form&rsquo;s endpoint accepted. Email sent straight to my address is not in this figure: ' +
+                 'a click on the address shows up under features, but whether a message followed cannot be known.'
+        },
+        {
+            key: 'cvDownloads',
+            name: 'CV downloads',
+            def: 'Page views in which a CV download link was clicked. A click, which is not quite a finished download.'
+        },
+        {
+            key: 'lensVisits',
+            name: 'Lens-link visits, a proxy',
+            def: 'Page views that arrived through a role link such as <code>case-studies.html?lens=water</code>. ' +
+                 'What I want to know is how many of those go on to read a case study, but the totals are kept field ' +
+                 'by field, not visit by visit, so the lens and how far the reader got cannot be joined. This counts ' +
+                 'the arrivals, so the real figure is at most this.'
+        },
+        {
+            key: 'contactShare',
+            share: true,
+            name: 'Homepage views that reached Contact',
+            def: 'The share of homepage views whose furthest section was <code>#contact</code>, the last one on the page. ' +
+                 'Given only when both counts are 5 or more.'
+        },
+        {
+            key: 'briefUses',
+            name: 'Brief uses',
+            def: stats.briefLive
+                ? 'Page views in which The Brief was run.'
+                : 'Times The Brief is run. It is not live yet, so there is nothing to count; the figure appears here once it is.'
+        }
+    ];
+}
+
+function renderStats(data) {
+    const { stats, lenses } = data;
+    const collecting = stats.status === 'collecting';
+    const five = fiveNumbers(stats);
+    const small = `&lt;${stats.suppressBelow}`;
+
+    const lensNames = {};
+    lenses.lenses.forEach((l) => { lensNames[l.id] = l.shortLabel || l.label; });
+
+    // Tables are built to fit a 320 px screen. The one that cannot, the
+    // week-by-week grid, scrolls inside its own box rather than pushing the
+    // page sideways; that box is focusable so it can be scrolled from the
+    // keyboard, and named so that focus announces something. A named
+    // <section> is the native element for the region role that needs.
+    const table = (label, head, body, wide = false) => {
+        const box = wide ? 'section' : 'div';
+        return `
+            <${box} class="st-table-wrap"${wide ? ` aria-label="${esc(label)}" tabindex="0"` : ''}>
+                <table class="st-table${wide ? ' st-wide' : ''}">
+                    <caption class="sr-only">${esc(label)}</caption>
+                    <thead><tr>${head.map((h, i) => `<th scope="col"${i ? ' class="st-num"' : ''}>${h}</th>`).join('')}</tr></thead>
+                    <tbody>
+${body.join('\n')}
+                    </tbody>
+                </table>
+            </${box}>`;
+    };
+
+    // The five numbers as cards: a name, the figures once there are any, and
+    // exactly what is being counted.
+    const fiveCards = (values) => `
+            <ul class="st-five">
+${five.map((n) => {
+        const v = values ? values(n) : '';
+        return `                <li class="st-card">
+                    <h3>${n.name}</h3>${v ? `
+                    <dl class="st-values">${v}</dl>` : ''}
+                    <p class="st-def">${n.def}</p>
+                </li>`;
+    }).join('\n')}
+            </ul>`;
+
+    const fiveIntro = '<p>The measures that say whether the site is doing its job, chosen before any of them was counted.</p>';
+
+    const why = `
+        <section class="st-block" aria-labelledby="st-why-h">
+            <h2 id="st-why-h">Why count at all</h2>
+            <p>
+                Every change I plan for this site is a bet about what a recruiter does on it: that the evidence
+                should come sooner, that a shorter homepage gets read further, that a link framed for one kind of
+                role lands better than a general one. Without counts none of those bets can be checked, so the site
+                measures itself first and changes second. Four weeks of these numbers are the baseline the homepage
+                redesign will be judged against.
+            </p>
+            <p>
+                Every figure is a count of page views. With no id there is no way to tell two pages read by one
+                person from two people reading one page each, so nothing here claims to count people.
+            </p>
+        </section>`;
+
+    // --- before counting starts --------------------------------------------
+    const empty = `
+        <section class="st-block st-empty" aria-labelledby="st-empty-h">
+            <h2 id="st-empty-h">Counting has not started yet</h2>
+            <p>
+                The counter is built and this page is ready for it, but no totals have reached it yet. Once counting
+                is switched on, a scheduled job reads the daily totals every Monday morning and rebuilds this page.
+                The first weekly figures appear on the Monday after the first full week of counting, Monday to
+                Sunday; the baseline needs four of those.
+            </p>
+            <p>What will appear here, with every figure under ${stats.suppressBelow} held back:</p>
+            <ul class="st-list">
+                <li>the five numbers below, for the last week, for all time, and week by week;</li>
+                <li>page views by page, by role lens and by screen width;</li>
+                <li>the sites readers came from, by host name only;</li>
+                <li>which features were used, and how far down a page readers got;</li>
+                <li>the kilobytes transferred per page view.</li>
+            </ul>
+        </section>
+
+        <section class="st-block" aria-labelledby="st-five-h">
+            <h2 id="st-five-h">The five numbers</h2>
+            ${fiveIntro}
+${fiveCards(null)}
+        </section>`;
+
+    // --- once there are totals ---------------------------------------------
+    let counted = '';
+    if (collecting) {
+        const { period, week, headline, breakdown, bytes } = stats;
+        const hasWeek = !!week;
+        const weekHead = hasWeek ? `Week of ${daySpan(week.start, week.end)}` : '';
+        const cols = (first) => (hasWeek ? [first, weekHead, 'All time'] : [first, 'All time']);
+        const cells = (w, a, fmt = figure) => (hasWeek
+            ? `<td class="st-num">${fmt(w)}</td><td class="st-num">${fmt(a)}</td>`
+            : `<td class="st-num">${fmt(a)}</td>`);
+
+        // The week's caveat, if it has one, as a line of its own: an empty
+        // template line would leave trailing whitespace in the page.
+        const weekNote = !hasWeek
+            ? 'The first full week, Monday to Sunday, has not finished yet, so there are no weekly figures until the Monday after it does.'
+            : week.partial ? 'Counting began part-way through that week, so its figures cover only part of it.' : '';
+        const status = `
+        <section class="st-block st-status" aria-labelledby="st-status-h">
+            <h2 id="st-status-h">What these figures cover</h2>
+            <p>
+                Counted from <strong>${dayOf(period.first)}</strong> to <strong>${dayOf(period.last)}</strong>
+                (${period.days} day${period.days === 1 ? '' : 's'}): <strong>${figure(headline.all.visits)}</strong> page views in all${hasWeek
+                    ? `, <strong>${figure(headline.week.visits)}</strong> of them in the week of ${daySpan(week.start, week.end)}` : ''}.
+                Fetched on ${dayOf(stats.asOf)}; the page is rebuilt every Monday.${weekNote ? `
+                ${weekNote}` : ''}
+            </p>
+            <p class="st-key">
+                <strong>${small}</strong> means fewer than ${stats.suppressBelow}: too few to publish, and left out of every percentage.
+                <strong>&mdash;</strong> means there is no figure to give.
+            </p>
+        </section>`;
+
+        const fiveSection = `
+        <section class="st-block" aria-labelledby="st-five-h">
+            <h2 id="st-five-h">The five numbers</h2>
+            ${fiveIntro}
+${fiveCards((n) => {
+        if (n.key === 'briefUses' && !stats.briefLive) return '<div><dt>Status</dt><dd>not live yet</dd></div>';
+        const fmt = n.share ? percent : figure;
+        return (hasWeek ? `<div><dt>${weekHead}</dt><dd>${fmt(headline.week[n.key])}</dd></div>` : '') +
+            `<div><dt>All time</dt><dd>${fmt(headline.all[n.key])}</dd></div>`;
+    })}
+        </section>`;
+
+        const weekRows = stats.weeks.map(w => `                        <tr>
+                            <th scope="row">${daySpan(w.start, w.end)}${w.partial ? ' <span class="st-def">part of a week</span>' : ''}</th>
+                            <td class="st-num">${figure(w.visits)}</td>
+                            <td class="st-num">${figure(w.contact)}</td>
+                            <td class="st-num">${figure(w.cvDownloads)}</td>
+                            <td class="st-num">${figure(w.lensVisits)}</td>
+                            <td class="st-num">${percent(w.contactShare)}</td>
+                            <td class="st-num">${stats.briefLive ? figure(w.briefUses) : 'not live'}</td>
+                        </tr>`);
+        const weeksSection = !weekRows.length ? '' : `
+        <section class="st-block" aria-labelledby="st-weeks-h">
+            <h2 id="st-weeks-h">Week by week</h2>
+            <p>One row per Monday-to-Sunday week, newest first. The first four complete weeks are the baseline.</p>
+${table('The five numbers, week by week', ['Week', 'Page views', 'Contact', 'CV', 'Lens links', 'Reached Contact', 'Brief'], weekRows, true)}
+        </section>`;
+
+        // One breakdown: a row per key with both periods side by side, and
+        // optionally the all-time share of every page view.
+        const visitsAll = headline.all.visits;
+        const breakdownTable = (metric, label, first, name, withShare) => {
+            const rows = breakdown[metric];
+            if (!rows.length) return '            <p class="st-none">Nothing counted here yet.</p>';
+            const head = cols(first).concat(withShare ? ['Share, all time'] : []);
+            const body = rows.map(r => `                        <tr>
+                            <th scope="row">${name(r.key)}</th>
+                            ${cells(r.week, r.all)}${withShare ? `<td class="st-num">${shareOf(r.all, visitsAll)}</td>` : ''}
+                        </tr>`);
+            return table(label, head, body);
+        };
+
+        const pagesSection = `
+        <section class="st-block" aria-labelledby="st-pages-h">
+            <h2 id="st-pages-h">Page views</h2>
+            <h3>By page</h3>
+${breakdownTable('page', 'Page views by page', 'Page', k => (k === 'other' ? 'Any other name <span class="st-def">not a page this site has</span>' : esc(PAGE_NAMES[k] || k)), true)}
+            <h3>By role lens</h3>
+            <p>Page views that arrived with <code>?lens=</code> in the address; the rest had none.</p>
+${breakdownTable('lens', 'Page views by role lens', 'Lens', k => (k === 'other' ? 'Any other name <span class="st-def">not a lens this site has</span>' : esc(lensNames[k] || k)), true)}
+            <h3>By screen width</h3>
+${breakdownTable('vp', 'Page views by screen width', 'Screen', k => VIEWPORT_NAMES[k] || esc(k), true)}
+        </section>`;
+
+        const refSection = `
+        <section class="st-block" aria-labelledby="st-ref-h">
+            <h2 id="st-ref-h">Where readers came from</h2>
+            <p>
+                The host name of the site a reader followed a link from, and nothing else of its address. Sites with
+                fewer than ${stats.suppressBelow} page views, anything that is not a plain host name, and anything past the top
+                fifteen are counted together. None of these is a link: the counter&rsquo;s endpoint is public, and a
+                list of links would be an open invitation to referrer spam.
+            </p>
+${breakdownTable('ref', 'Page views by referring site', 'Came from', k => (k === ''
+        ? 'No referring site <span class="st-def">typed, bookmarked, or from within this site</span>'
+        : k === 'other' ? 'Every other site, together' : `<span class="st-host">${esc(k)}</span>`), false)}
+        </section>`;
+
+        const featureSection = `
+        <section class="st-block" aria-labelledby="st-features-h">
+            <h2 id="st-features-h">Features used</h2>
+            <p>
+                A feature counts once per page view in which it was used: a tracked link or button was pressed, or
+                a part of the page that loads on demand was loaded. Only names the site&rsquo;s own code uses are
+                listed by name; anything else posted to the endpoint is counted as other.
+            </p>
+${breakdownTable('feature', 'Page views by feature used', 'Feature', k => (k === 'other' ? 'Any other name' : `<code>${esc(k)}</code>`), false)}
+        </section>`;
+
+        const deepestSection = `
+        <section class="st-block" aria-labelledby="st-deepest-h">
+            <h2 id="st-deepest-h">How far readers got</h2>
+            <p>The furthest top-level section each page view reached, by its id, on whichever page it was.</p>
+${breakdownTable('deepest', 'Page views by furthest section reached', 'Furthest section', k => (k === 'other' ? 'Any other name' : `<code>#${esc(k)}</code>`), false)}
+        </section>`;
+
+        const kb = k => b => (b && b[k] !== null ? `${figure(b[k])}&nbsp;KB` : '&mdash;');
+        const bytesSection = `
+        <section class="st-block" aria-labelledby="st-bytes-h">
+            <h2 id="st-bytes-h">Bytes per page view</h2>
+${table('Kilobytes transferred per page view', cols('Per page view'), [
+    `                        <tr>
+                            <th scope="row">Mean</th>
+                            ${cells(bytes.week, bytes.all, kb('meanKb'))}
+                        </tr>`,
+    `                        <tr>
+                            <th scope="row">Median day</th>
+                            ${cells(bytes.week, bytes.all, kb('medianDayKb'))}
+                        </tr>`
+])}
+            <p>
+                The mean is every kilobyte counted over every page view. The totals are kept by day, so a median of
+                single page views is not something they can give; the median day is the middle of the daily means,
+                over days with ${stats.suppressBelow} or more page views.
+            </p>
+            <p>
+                This is network transfer only: what the browser reports receiving for the page and everything it
+                loaded, measured with the Resource Timing API, as the carbon receipt in the homepage footer is. It is
+                not the energy used by your device, the network or the servers, and it is not a carbon figure.
+            </p>
+        </section>`;
+
+        counted = status + fiveSection + weeksSection + pagesSection + refSection + featureSection + deepestSection + bytesSection;
+    }
+
+    // --- what is sent: the same in both states -----------------------------
+    const privacy = `
+        <section class="st-block st-privacy" aria-labelledby="st-privacy-h">
+            <h2 id="st-privacy-h">What a page view sends, and what it never does</h2>
+            <p>
+                One count per page view, sent as the page is closed or hidden. This example is the whole of one,
+                set out on separate lines here; the real one is a single line of text.
+            </p>
+            <pre class="st-payload"><code>${esc(JSON.stringify(EXAMPLE_PAYLOAD, null, 2))}</code></pre>
+            <dl class="st-fields">
+                <dt><code>page</code>, <code>lens</code>, <code>deepest</code></dt>
+                <dd>The page, the role lens in its address if there was one, and the id of the furthest section reached.</dd>
+                <dt><code>features</code></dt>
+                <dd>Up to 20 names of things used on the page, such as a CV link or the carbon receipt.</dd>
+                <dt><code>ref</code></dt>
+                <dd>The host name of the site you came from; empty if there was none, or if it was this site.</dd>
+                <dt><code>vp</code></dt>
+                <dd>Screen width as one of three classes: <code>s</code> under 600 px, <code>m</code> up to 1023 px, <code>l</code> wider.</dd>
+                <dt><code>kb</code></dt>
+                <dd>Kilobytes transferred for the page, from the browser&rsquo;s Resource Timing API.</dd>
+                <dt><code>v</code></dt>
+                <dd>The version of this format, so a change to it cannot pass unnoticed.</dd>
+            </dl>
+            <h3>Never collected</h3>
+            <ul class="st-list">
+                <li>No cookies and no browser storage: nothing is written to your device.</li>
+                <li>No id of any kind, so two page views cannot be tied to each other, or to you.</li>
+                <li>
+                    No IP address. The count goes to a Google Apps Script web app, the one the contact form already
+                    uses, and Apps Script does not give the script the sender&rsquo;s address, so it cannot be stored
+                    even by mistake. Google, which runs the endpoint, receives the request as it receives any other.
+                </li>
+                <li>No browser, device or operating system, and no screen size beyond the three classes above.</li>
+                <li>No time finer than the day the count arrives.</li>
+                <li>No full referring address, only its host name, and nothing you type into the page.</li>
+            </ul>
+            <p>
+                <strong>If your browser sends Do Not Track or Global Privacy Control, nothing is sent at all</strong>,
+                and you are in none of these figures.
+            </p>
+            <h3>How the figures are made safe to publish</h3>
+            <p>
+                Any count under ${stats.suppressBelow} is shown as ${small} and left out of every percentage, and referring sites
+                with fewer than ${stats.suppressBelow} page views are counted together. Page, lens, section and feature names the
+                site does not use are counted as other, so a made-up count cannot put words on this page. A referring
+                site cannot be checked that way, so it is named only once it reaches ${stats.suppressBelow}, and never as a link.
+            </p>
+            <p>
+                One limit, stated plainly: the all-time totals are rebuilt every week, so comparing two versions of
+                this page can narrow down a weekly change its own column shows as ${small}. No count for a single day
+                is ever published.
+            </p>
+            <h3>Where the raw totals live</h3>
+            <p>
+                The daily totals &mdash; a date, a field, a value and a count, never a single page view &mdash; are
+                kept in a Google Sheet in my own Google account. Once a week a scheduled job reads them, suppresses
+                them and rebuilds this page. Only the suppressed totals you see here are written into the
+                site&rsquo;s public repository, in <code>content/stats.json</code>; the code that does it is
+                <code>scripts/fetch-stats.js</code>.
+            </p>
+        </section>`;
+
+    const main = `${why}
+${collecting ? counted : empty}
+${privacy}`;
+
+    return pageShell({
+        title: 'Open counts — Moses Kolleh Sesay',
+        description: 'What this portfolio counts about its own page views and why: five numbers, suppressed below 5, and the exact payload a page view sends. No cookies, no ids, no analytics service.',
+        canonical: `${SITE}stats.html`,
+        heroTag: 'WHAT IS COUNTED &middot; WHY &middot; WHAT NEVER IS',
+        heroTitle: 'Open <span class="ca-accent">counts</span>',
+        heroLead: 'This site counts its own page views, with no cookies, no ids and no analytics service, so each change to it can be judged against what readers actually do. Everything it counts is published here, and so is exactly what it sends.',
+        main,
+        current: 'stats.html',
+        styles: ['stats.css']
+    });
+}
+
+// ------------------------------------------------------------------
 // sitemap.xml
 // ------------------------------------------------------------------
 function renderSitemap(data) {
@@ -677,6 +1097,7 @@ function main() {
     const outputs = [
         ['case-studies.html', renderCaseStudies(data)],
         ['research.html', renderResearch(data)],
+        ['stats.html', renderStats(data)],
         ['sitemap.xml', renderSitemap(data)],
         ['voice-scripts.js', renderVoiceScripts(data)],
         ['index.html', injectJsonLd(data)],
@@ -707,7 +1128,12 @@ function main() {
         process.exit(1);
     }
 
-    console.log(`\n  ${data.projects.caseStudies.length} case studies · ${data.research.outputs.length} research outputs · ${data.lenses.lenses.length} lenses\n`);
+    console.log(`\n  ${data.projects.caseStudies.length} case studies · ${data.research.outputs.length} research outputs · ${data.lenses.lenses.length} lenses · counts ${data.stats.status}\n`);
 }
 
-main();
+// Run as a script it builds; required (by tests/stats.test.js) it only lends
+// its renderers, so a test can draw stats.html from fixture totals without
+// writing anything.
+if (require.main === module) main();
+
+module.exports = { renderStats, EXAMPLE_PAYLOAD };

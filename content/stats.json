@@ -1,0 +1,24 @@
+{
+  "$comment": [
+    "WRITTEN by scripts/fetch-stats.js from the counter's daily totals. Do not edit by hand:",
+    "the weekly Action (.github/workflows/stats.yml) overwrites it, and npm run build:content",
+    "turns it into stats.html.",
+    "",
+    "Only suppressed aggregates are ever written here. Every count under 5 is the string \"<5\"",
+    "and is left out of every share; referrer hosts under 5 are grouped as \"other\"; no daily",
+    "row is kept. scripts/lib/content.js fails the build if any of that is broken.",
+    "",
+    "status \"not-collecting\" means no totals have been fetched yet, and the page says so."
+  ],
+  "v": 1,
+  "status": "not-collecting",
+  "asOf": null,
+  "suppressBelow": 5,
+  "period": null,
+  "week": null,
+  "briefLive": false,
+  "headline": null,
+  "breakdown": null,
+  "bytes": null,
+  "weeks": []
+}

@@ -111,6 +111,15 @@ const BUDGETS = {
         max: 120 * KB,
         readme: 'generated from content/projects.json — text only, no images'
     },
+    // Sized for the page once it is full, not for today's empty state (about
+    // 88 KB), so the weekly Action cannot turn red just because counting
+    // started: twelve weeks of lines, fifteen referrers and every feature the
+    // site names came to about 90 KB from a fixture.
+    statsWire: {
+        label: 'Open counts page, over the wire (with fonts)',
+        max: 105 * KB,
+        readme: 'generated from content/stats.json — text only, no images'
+    },
     researchWire: {
         label: 'Research outputs page, over the wire (with fonts)',
         max: 110 * KB,
@@ -247,6 +256,7 @@ function measure() {
         criticalWire: critical.reduce((n, a) => n + a.wire, 0),
         onDemand: onDemand.reduce((n, a) => n + a.wire, 0),
         caseStudiesWire: pageWire('case-studies.html'),
+        statsWire: pageWire('stats.html'),
         researchWire: pageWire('research.html'),
         carbonAiWire: pageWire('carbon-ai.html'),
         largestImage: images.reduce((n, f) => Math.max(n, sizeOf(f) || 0), 0),

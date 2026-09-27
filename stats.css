@@ -1,0 +1,82 @@
+/* ===================================================================
+   OPEN COUNTS — stats.html only
+   Layered on carbon-ai.css like the other generated pages, and kept in a
+   file of its own so the case studies and research pages do not carry rules
+   they never use. It loads before content.css; every rule here is on an st-
+   class, which content.css never styles, so neither can undo the other.
+
+   Plain tables and cards, no charts: the figures are few, often "<5", and a
+   bar drawn from a suppressed count would be a picture of nothing.
+   =================================================================== */
+
+.st-block { margin-bottom: 38px; max-width: 78ch; }
+.st-block h2 { margin: 0 0 12px; font-size: 1.2rem; color: var(--primary-green); }
+.st-block h3 { margin: 22px 0 8px; font-size: 1rem; }
+.st-block p { line-height: 1.7; }
+.st-block code { color: var(--primary-green); font-size: 0.88em; }
+.st-list { padding-left: 20px; line-height: 1.7; }
+.st-key { font-size: 0.85rem; color: var(--text-secondary); }
+
+.st-five {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 14px;
+}
+.st-card {
+    padding: 16px 18px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--card-bg);
+}
+.st-card h3 { margin: 0 0 10px; }
+.st-values { display: flex; flex-wrap: wrap; gap: 6px 24px; margin: 0 0 10px; }
+.st-values dt { font-size: 0.75rem; color: var(--text-secondary); }
+.st-values dd {
+    margin: 0;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.6rem;
+    color: var(--primary-green);
+    font-variant-numeric: tabular-nums;
+}
+.st-def {
+    display: block;
+    font-size: 0.8rem;
+    line-height: 1.55;
+    color: var(--text-secondary);
+    font-weight: 400;
+}
+.st-card .st-def { margin: 0; }
+
+/* Only the week-by-week grid is wider than a phone; it scrolls in its box. */
+.st-table-wrap { overflow-x: auto; margin: 8px 0 14px; }
+.st-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.st-wide { min-width: 560px; }
+.st-table th,
+.st-table td {
+    padding: 7px 10px 7px 0;
+    text-align: left;
+    vertical-align: top;
+    border-bottom: 1px solid var(--border);
+    overflow-wrap: anywhere;
+}
+.st-table thead th { font-size: 0.75rem; color: var(--text-secondary); font-weight: 600; }
+.st-table tbody th { font-weight: 400; }
+.st-table .st-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.st-table thead .st-num { white-space: normal; }
+.st-host { font-family: var(--font-mono, 'IBM Plex Mono', monospace); font-size: 0.8rem; }
+
+.st-payload {
+    margin: 12px 0 16px;
+    padding: 14px 16px;
+    background: var(--darker-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+.st-fields dt { margin-top: 10px; }
+.st-fields dd { margin: 2px 0 0; font-size: 0.88rem; color: var(--text-secondary); line-height: 1.6; }
