@@ -265,8 +265,9 @@ function appendSubmission(config, row) {
 //    "features":["cv-download-hero","module-dossier"],
 //    "ref":"www.linkedin.com","vp":"m","kb":284}
 //
-// Nothing in it identifies anyone: there is no id, and Apps Script never
-// sees the visitor's IP address or user agent, so there is none to store.
+// Nothing in it identifies anyone: there is no id, and Apps Script does not
+// give this script the visitor's IP address or user agent, so there is none
+// to store.
 // Each accepted payload adds one to a handful of daily totals in a "Daily"
 // tab, in long format:
 //

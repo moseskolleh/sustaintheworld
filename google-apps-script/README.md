@@ -51,7 +51,10 @@ is hidden or left. It sends nothing at all when the browser has Do Not Track or
 Global Privacy Control on. The request carries no cookies and no referrer
 (`fetch` with `keepalive`, `credentials: 'omit'`; `sendBeacon` would have sent
 the visitor's Google cookies along to `script.google.com`), and Apps Script
-never sees the visitor's IP address or user agent.
+does not give the script the visitor's IP address or user agent, so it has
+none to store. (Google, which runs the endpoint, receives the request as it
+receives any other.) The privacy model in full, and why `sendBeacon` was not
+used, is in the repository's README, under "The visit counter and privacy".
 
 **The payload, schema v1.** Exactly these eight keys, and nothing else:
 
@@ -177,11 +180,17 @@ See **`DEPLOYMENT_GUIDE.md`** for complete documentation including:
 
 ## 🌐 Integration with SustainTheWorld Website
 
-The portfolio's contact form already posts here: `GOOGLE_APPS_SCRIPT_URL` in
-`script.js` (with JavaScript) and the form's `action` in `index.html` (without
-it) both hold the deployment's URL and must match it. `tests/apps-script.test.js`
-runs this script against stand-ins for Google's services; it cannot see the
-live deployment. To check that, follow items C1 to C3 in
+The portfolio's contact form already posts here, and so does its visit
+counter. The deployment's URL is written in three places, and all three must
+match it: `GOOGLE_APPS_SCRIPT_URL` in `script.js` (the form with JavaScript),
+the form's `action` in `index.html` (without it), and the address in
+`count.js`, with `?action=count` added. `tests/html.test.js` fails if they
+disagree. Outside the code, the repository variable `STATS_SOURCE_URL` holds
+it too, for the weekly Open counts Action.
+
+`tests/apps-script.test.js` runs this script against stand-ins for Google's
+services; it cannot see the live deployment. To check that, follow items C1
+to C3 (the contact form) and S1 to S3 (the counter) in
 [`docs/owner-checklist.md`](../docs/owner-checklist.md).
 
 ## 📞 Support

@@ -12,8 +12,16 @@ check it. A path such as `content/profile.json` → `experience[4].teamSize`
 means that file, then that field (lists count from 0). After editing anything
 in `content/`, run `npm run build:content` and then `npm test`.
 
-Last updated with wave 1 of the plan (Phase 0 and the narration steps of
-Phases 2.5 and 4.3), 2026-09-26.
+Last updated with wave 2 of the plan (Phase 1, the visit counter and open
+counts, and Phase 6 steps 3, 6 and 7), 2026-09-27. Wave 1 covered Phase 0 and
+the narration steps of Phases 2.5 and 4.3.
+
+**Before this branch reaches the live site,** run the one-line check at the
+top of S1, and if you can, do C2 (publish the current `Code.gs`, which now
+includes the visit counter). The site's new visit counter posts to the same
+deployment as the contact form, and the 2025 versions of the script would
+record every page view as a message and email it to you; if the check says
+the live script might be one of those, C2 must come first.
 
 ---
 
@@ -24,9 +32,10 @@ The repository can test `google-apps-script/Code.gs` against stand-ins
 its settings or its deployment. A form that fails silently is the most
 expensive bug a portfolio can have, so do these three in order.
 
-The site posts to this deployment, written in two places that must agree:
-`GOOGLE_APPS_SCRIPT_URL` in `script.js` and the contact form's `action` in
-`index.html`:
+The site posts to this deployment, written in three places that must agree
+(`npm test` fails if they do not): `GOOGLE_APPS_SCRIPT_URL` in `script.js`,
+the contact form's `action` in `index.html`, and the visit counter's address
+in `count.js`, which adds `?action=count`:
 
 ```
 https://script.google.com/macros/s/AKfycbzgyqRUmu0d2UFjb0WxbYyoDbO8F9jVnlvIQnNAfMU0v8JFpH5KAefy4z9BNoQqd68/exec
@@ -48,27 +57,38 @@ https://script.google.com/macros/s/AKfycbzgyqRUmu0d2UFjb0WxbYyoDbO8F9jVnlvIQnNAf
     (or the tab `SHEET_NAME` names) and `Configuration OK`. Anything else
     names what is missing.
   - *Unlocks:* submissions land in the right sheet and reach you by email.
+    The visit counts (S1) go in the same spreadsheet, on a `Daily` tab the
+    script creates, so the same `SPREADSHEET_ID` serves both.
 
-- [ ] **C2. Redeploy the Apps Script as a new version, after #41 and #42.**
+- [ ] **C2. Redeploy the Apps Script as a new version, after #41 and #42,
+  and now the visit counter.**
   - *Why:* PR #41 (merged 2026-09-02) added the JavaScript-free form path, and
     PR #42 (merged 2026-09-24) fixed it: before #42, every JavaScript-free
     submission was answered "Something went wrong" and "undefined", even when
-    it had been recorded. Editing code in the editor does not change the live
-    endpoint; only a new deployment version does.
+    it had been recorded. Wave 2 (2026-09-27) added the visit counter's two
+    actions, `?action=count` and `?action=stats`, to the same file. Editing
+    code in the editor does not change the live endpoint; only a new
+    deployment version does. One publish of the current file covers all
+    three.
+  - *When:* before this branch is merged to `main`, if you can (see S1).
   - *Steps:*
-    1. Open `google-apps-script/Code.gs` in this repository (unchanged since
-       2026-09-23), copy all of it, and paste it over the code in the
-       editor. Save.
+    1. Open `google-apps-script/Code.gs` in this repository (last changed
+       2026-09-27, when the visit counter was added), copy all of it, and
+       paste it over the code in the editor. Save.
     2. **Deploy → Manage deployments** → select the active **Web app**
        deployment → **Edit** (pencil) → **Version: New version** → **Deploy**.
        Keep **Execute as: Me** and **Who has access: Anyone**.
     3. Still in **Manage deployments**, check that the deployment's Web app
        URL is exactly the one above. If it differs, the site is posting
-       somewhere else: either use that deployment, or put its URL in both
-       `script.js` and `index.html`.
+       somewhere else: either use that deployment, or put its URL in
+       `script.js`, `index.html` and `count.js` (there with `?action=count`
+       after it).
   - *Check:* Manage deployments shows the active deployment at a new version
-    dated today, and the editor's `handleSubmission` contains
-    `var reply = function (status, message)` (the #42 fix).
+    dated today; the editor's `handleSubmission` contains
+    `var reply = function (status, message)` (the #42 fix), and the file has a
+    `function handleCount` (the counter). From outside,
+    `curl -L "<the URL above>?action=stats"` now prints `{"v":1,"rows":[...]}`
+    instead of the health check.
   - *Unlocks:* the no-JavaScript form, which wave 1 made reachable, tells the
     visitor the truth.
 
@@ -102,12 +122,158 @@ https://script.google.com/macros/s/AKfycbzgyqRUmu0d2UFjb0WxbYyoDbO8F9jVnlvIQnNAf
   - *Check:* two new rows in the sheet's `Responses` tab, or the tab
     `SHEET_NAME` names (Source "Portfolio Website" for the first, empty for
     the second, since the form itself sends no source), and two emails
-    titled "New Submission from …" in the `OWNER_EMAIL` inbox. Replying to
+    titled "New Submission from …" in the `OWNER_EMAIL` inbox. Once C2 has
+    published the counter, the `Daily` tab's `contact` row for today counts
+    them too (2, if nothing else was sent that day). Replying to
     one should address the visitor's email. If a row is missing, open
     **Executions** in the Apps Script editor; a failed request is logged
     there with its reason.
   - *Unlocks:* Phase 0 step 9 is done: the form is known to work, not
     assumed to.
+
+---
+
+## Switch on the visit counter and the open counts (Phase 1)
+
+Wave 2 built a cookieless visit counter (`count.js`, on every page), its end
+in `Code.gs` (`POST ?action=count` adds a page view to daily totals, and
+`GET ?action=stats` serves them), and `stats.html` with a weekly Action that
+fills it. None of it counts anything until S1 and S2 are done. What is sent,
+what never is, and why, is in the README under "The visit counter and
+privacy".
+
+- [ ] **S1. Publish the counter, then run `testCounter()` once.**
+  - *First, before this branch is merged to `main`:* find out how old the
+    live script is. Run `curl -L "<the URL above>"` (or open that address in
+    a browser). If the reply is an HTML page rather than one line of JSON
+    (the old page says "Form Response Capture API" and names the
+    spreadsheet), the live script is from before 2026-08-05, and may be one
+    of the 2025 versions, which record any POST as a contact message and
+    email it to you. Once the site ships `count.js`, that would be one row
+    and one email per page view, so publish (below) before merging. If it prints `{"status":"ok",...}`, the live script is
+    from 2026-08-05 or later: it reads a count as a message with no name and
+    refuses it, recording nothing, so merging first is harmless, and nothing
+    is counted until you publish.
+  - *Where:* this is the same publish as C2: paste the current
+    `google-apps-script/Code.gs`, then **Deploy → Manage deployments** →
+    the active Web app deployment → **Edit** → **Version: New version** →
+    **Deploy**. It must be a new version of the *existing* deployment, not a
+    **New deployment**: that would get a new URL, and `script.js`,
+    `index.html`, `count.js` and `STATS_SOURCE_URL` would all have to change.
+  - *Then:* in the editor, pick `testCounter` in the function menu and press
+    **Run**. The execution log should say
+    `Counter OK: 8 DailyTest rows for today, e.g. [...]`. It writes only to a
+    `DailyTest` tab, created on the first run; `Daily`, where the real counts
+    go, is untouched. (Do not test with `testCapture`: it writes a real
+    contact row and adds one to the public contact count.)
+  - *Check:* `curl -L "<the URL above>?action=stats"` prints
+    `{"v":1,"rows":[...]}`; before the publish it printed the health check.
+    Once the branch is live, open a page of the site in a browser with
+    neither Do Not Track nor Global Privacy Control on, switch to another
+    tab, and run the same `curl` again: today's `visits` row has gone up by
+    one.
+  - *Unlocks:* counts arriving daily, the first half of Phase 1's "done
+    when"; and S2.
+
+- [ ] **S2. Set the repository variable `STATS_SOURCE_URL`** (after S1).
+  - *What:* the web app URL with `?action=stats`, that is
+    `https://script.google.com/macros/s/AKfycbzgyqRUmu0d2UFjb0WxbYyoDbO8F9jVnlvIQnNAfMU0v8JFpH5KAefy4z9BNoQqd68/exec?action=stats`
+    (the script adds `?action=stats` if you leave it off). Or, instead, the
+    `Daily` tab published as CSV: in the sheet, **File → Share → Publish to
+    web** → the `Daily` tab and **Comma-separated values (.csv)** →
+    **Publish**, and copy that link. `Code.gs` writes the date column as
+    plain text; if it has been reformatted, set it back (**Format → Number →
+    Plain text**), or those rows are dropped.
+  - *Where:* GitHub → the repository → **Settings → Secrets and variables →
+    Actions → Variables** → **New repository variable**, name
+    `STATS_SOURCE_URL`. If the URL carries a token (S3), make it a
+    **secret** of the same name instead: the Action prefers the secret, and
+    never prints the URL.
+  - *Order:* after S1. Before it, `?action=stats` answers with the health
+    check, and the Action fails rather than publish that.
+  - *If `main` is protected:* the Action commits `content/stats.json` and
+    `stats.html` straight to `main` as `github-actions[bot]`. If a branch
+    rule blocks direct pushes, let GitHub Actions bypass it, or the weekly
+    commit fails.
+  - *Check:* the Action runs from `main`, so after this branch is merged:
+    **Actions → Open counts → Run workflow**. Its "Fetch the week's totals"
+    step prints `fetch-stats: N row(s) from script.google.com (json), <first
+    day> to <last day> → content/stats.json`, or
+    `script.google.com has no daily totals yet` if nothing has been counted;
+    when the figures changed, a commit "Update the open counts (weekly
+    totals, suppressed below 5)" appears on `main`. After that it runs by
+    itself every Monday at 04:17 UTC.
+  - *Unlocks:* `stats.html` shows real figures, every one under 5 held back,
+    instead of "Counting has not started yet": the second half of Phase 1's
+    "done when".
+
+- [ ] **S3. Decide whether the raw daily totals stay publicly readable.**
+  - *Why:* `GET ?action=stats` serves the daily totals unsuppressed, to
+    anyone who has the web app URL, and the URL is in `count.js`, on every
+    page. They are totals, never single page views, but a small one can say
+    more than it seems: a referring site seen once on one day, for example.
+    `stats.html` holds back every count under 5; this endpoint does not. The
+    plan asked for it this way; whether it stays is your call.
+  - *Options:*
+    1. Keep it as it is. Nothing to do.
+    2. A token: `Code.gs` would answer `?action=stats` only with a
+       `&token=` matching a Script Property, and the full URL, token
+       included, would go in a repository **secret** `STATS_SOURCE_URL`
+       (S2). Not built; it is a small change to `Code.gs` and its test.
+    3. CSV only: drop `?action=stats` from `Code.gs` and use the published
+       CSV in S2. A published tab is public too, but its address is not
+       written anywhere on the site. Also a small change, not built.
+  - *Where:* tell whoever builds the next wave which one; there is no
+    setting for it.
+  - *Check:* for 2 or 3, `curl -L "<the URL above>?action=stats"` (without
+    a token) prints no `rows`.
+
+- [ ] **S4. Decide whether the Assay's grade should be counted at all.**
+  - *What:* when the Assay grades a pasted job ad, that page view's count
+    carries the grade: `assay-high`, `assay-workable` or `assay-marginal`.
+    The ad itself never leaves the page, but the grade is derived from it.
+    The Assay's own note says only "the ad is never sent", which is true
+    either way.
+  - *Where:* if it should not be counted, say so: it is one line in
+    `modules/interactives.js` (the `window.mks.track('assay-' + a.cls)`
+    call), and `tests/count.test.js` and `tests/stats.test.js` would change
+    with it.
+  - *Check:* once removed, `modules/interactives.js` no longer calls
+    `mks.track` with an `assay-` name, and `npm test` passes.
+
+- [ ] **S5. Confirm the wording of `stats.html`.**
+  - *What:* it speaks in the first person: "Every change I plan for this
+    site is a bet about what a recruiter does on it…" and "kept in a Google
+    Sheet in my own Google account".
+  - *Where:* the page is generated; its text is in `scripts/build-content.js`
+    (`renderStats` and the functions around it). Edit there, then run
+    `npm run build:content` and `npm test`.
+  - *Check:* <https://moseskolleh.github.io/sustaintheworld/stats.html>,
+    once live, reads the way you would say it.
+
+- [ ] **S6. After four full weeks of counting, record the baseline for the
+  five numbers.**
+  - *When:* the weeks run Monday to Sunday, Amsterdam time, and each Monday's
+    run adds the week just ended. Counting starts once S1 is done and this
+    branch is live, so the first four full weeks are complete about five
+    Mondays later.
+  - *What:* from `stats.html`'s week-by-week table, for each of those four
+    weeks: messages through the contact form, CV downloads, lens-link visits
+    (a proxy, and an upper bound: arrivals through a role link, since the
+    totals cannot say whether that reader went on to a case study), the
+    share of homepage views that reached Contact, and page views for scale.
+    Brief uses stays empty until Phase 4.1 builds The Brief. Record a `<5`
+    as `<5`, not a guess.
+  - *Where:* `docs/plan.md` → "Progress" → Phase 1, step 5: the four weeks'
+    Monday dates and their figures. Every weekly version is also kept in git
+    (`git log -p content/stats.json`).
+  - *Note:* your own page views count too, unless your browser sends Do Not
+    Track or Global Privacy Control. Turn one of them on in your browser's
+    privacy settings to leave yourself out of the baseline.
+  - *Unlocks:* Phase 1 is done, and Phase 2 can be judged against real
+    figures ("How to know it worked" in the plan).
+  - *Check:* the figures in `docs/plan.md` match `content/stats.json` →
+    `weeks` for the same four weeks.
 
 ---
 

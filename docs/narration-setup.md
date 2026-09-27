@@ -125,7 +125,7 @@ cd sustaintheworld
 npm install
 ```
 
-Node 22.22 or newer (Node 20 reached end of life in April 2026, and html-validate, which `npm test` runs, needs 22.22). `node --version` to check.
+Node 22.22 or later in the 22 line, or 24.8 or newer (Node 20 reached end of life in April 2026, and html-validate, which `npm test` runs, needs one of those; `engines` in `package.json` says the same). `node --version` to check.
 
 ### Step 2 — put the key in your shell
 

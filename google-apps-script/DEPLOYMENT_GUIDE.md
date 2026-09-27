@@ -2,15 +2,19 @@
 ## Deployment Guide
 
 This Google Apps Script receives the portfolio's contact-form submissions,
-writes each one to a Google Sheet and emails the owner. Everything below
-describes the current `Code.gs`; if the editor still holds an older copy (one
-without `htmlResponse` or `handleSubmission`), paste the current file in and
-redeploy as a new version (see *Updating an Existing Deployment* at the end
-of this guide).
+writes each one to a Google Sheet and emails the owner. The same deployment
+keeps the site's own visit counts: `POST ?action=count` takes the one small
+payload `count.js` sends per page view and adds it to daily totals, and
+`GET ?action=stats` serves those totals to the weekly build of `stats.html`.
+Everything below describes the current `Code.gs`; if the editor still holds
+an older copy (one without `handleSubmission`, or without `handleCount`),
+paste the current file in and redeploy as a new version (see *Updating an
+Existing Deployment* at the end of this guide).
 
 To check that the live site's form really works end to end, follow
-[`docs/owner-checklist.md`](../docs/owner-checklist.md) (items C1 to C3). The tests in
-this repository run `Code.gs` against stand-ins for Google's services
+[`docs/owner-checklist.md`](../docs/owner-checklist.md) (items C1 to C3); to
+switch the counter on, items S1 to S3. The tests in this repository run
+`Code.gs` against stand-ins for Google's services
 (`tests/apps-script.test.js`); they cannot see the live deployment.
 
 ---
@@ -43,7 +47,7 @@ once, in the project itself:
 
 | Property | Required | Value |
 | --- | --- | --- |
-| `SPREADSHEET_ID` | yes | The id from the sheet's URL — `docs.google.com/spreadsheets/d/`**`<this part>`**`/edit` |
+| `SPREADSHEET_ID` | yes | The id from the sheet's URL — `docs.google.com/spreadsheets/d/`**`<this part>`**`/edit`. The visit counts go in the same spreadsheet, on a `Daily` tab the script creates |
 | `OWNER_EMAIL` | yes | Where submission notifications are sent. Without it, submissions are still recorded but nobody is emailed |
 | `SHEET_NAME` | no | Tab to write to. Defaults to `Responses`, and is created (with its header row) if missing |
 | `TURNSTILE_SECRET` | no | Cloudflare Turnstile secret key. When present, every submission must carry a valid token |
@@ -107,15 +111,20 @@ The URL will look like:
 https://script.google.com/macros/s/XXXXXXXXXXXXXXXXXXXXX/exec
 ```
 
-The site holds this URL in **two** places, and both must match the live
-deployment: `GOOGLE_APPS_SCRIPT_URL` in `script.js` (the JavaScript path) and
+The site holds this URL in **three** places, and all must match the live
+deployment: `GOOGLE_APPS_SCRIPT_URL` in `script.js` (the JavaScript path),
 the contact form's `action` attribute in `index.html` (the JavaScript-free
-path). A new deployment gets a new URL; a new *version* of an existing
-deployment keeps it (see below), which is why updates should be done that way.
+path), and the address in `count.js`, the visit counter, with
+`?action=count` added (`tests/html.test.js` fails if they disagree). The
+repository variable `STATS_SOURCE_URL`, which the weekly Open counts Action
+reads, holds it too. A new deployment gets a new URL; a new *version* of an
+existing deployment keeps it (see below), which is why updates should be done
+that way.
 
 ### Step 4: Test Your Deployment
 
-A GET is a health check that reveals nothing about the sheet:
+A plain GET is a health check that reveals nothing about the sheet (a GET
+with `?action=stats` is the exception, below):
 
 ```bash
 curl -L "YOUR_WEB_APP_URL"
@@ -139,6 +148,27 @@ redirect target, which only answers a GET.
 cannot read the reply, so it reports success whether or not the row landed.
 Check the sheet.
 
+The visit counter can be tested without moving the public numbers: `&test=1`
+on either action uses a `DailyTest` tab instead of `Daily`. In the editor,
+pick `testCounter` in the function menu and press **Run**; the execution log
+should say `Counter OK: 8 DailyTest rows for today, e.g. [...]` (on a later
+run the same day, the same rows count up). Over HTTP, the same thing:
+
+```bash
+curl -L "YOUR_WEB_APP_URL?action=count&test=1" \
+  -H "Content-Type: text/plain;charset=utf-8" \
+  --data '{"v":1,"page":"index","lens":"","deepest":"contact","features":["cv-download-hero","module-dossier"],"ref":"www.linkedin.com","vp":"m","kb":284}'
+# (an empty reply, whether the payload was accepted or not)
+
+curl -L "YOUR_WEB_APP_URL?action=stats&test=1"
+# {"v":1,"rows":[["2026-09-27","visits","",1],["2026-09-27","page","index",1],...]}
+```
+
+Without `&test=1`, `?action=stats` returns the real daily totals, which is
+what the Open counts Action reads. If it returns the health check instead
+(`{"status":"ok",...}`), the live deployment is older than the counter:
+redeploy as a new version.
+
 ---
 
 ## 📊 Features
@@ -157,8 +187,18 @@ Check the sheet.
 - **Owner notification**: one email per submission to `OWNER_EMAIL`, with the
   visitor in `replyTo`. A failed email never fails the submission; the row is
   already written
-- **Health check**: a GET returns `{"status":"ok", "message": …}` and says
-  nothing about the sheet behind it
+- **Health check**: a GET without `?action=stats` returns
+  `{"status":"ok", "message": …}` and says nothing about the sheet behind it
+- **Visit counter**: `POST ?action=count` accepts only the counter's payload,
+  exactly (the eight keys of schema v1, each of the right type, at most 20
+  features), and adds one to the day's totals on the `Daily` tab; anything
+  else is dropped without a word, and the reply is always empty. Each
+  accepted contact-form submission also adds one to the day's `contact`
+  total
+- **Daily totals, served**: `GET ?action=stats` returns
+  `{"v":1,"rows":[[date, metric, key, count], ...]}` for the last 400 days,
+  for the weekly build of `stats.html`. On failure the reply has no `rows`,
+  so a build stops rather than publish zeros
 
 ---
 
@@ -174,6 +214,18 @@ Every cell in a submission row is formatted as plain text, and any value that
 Sheets would read as a formula is stored with a leading `'` (see Security).
 Nothing else a submission carries is stored: the honeypot and the Turnstile
 token are read and then dropped, and any other field is ignored.
+
+The visit counts go on a second tab, `Daily`, created on first use, with one
+row per day and (metric, key), never one per page view:
+
+| date | metric | key | count |
+|------|--------|-----|-------|
+| `2026-09-26` (Europe/Amsterdam) | `visits`, `page`, `lens`, `deepest`, `feature`, `ref`, `vp`, `kb` or `contact` | e.g. `index`, `www.linkedin.com`; empty for `visits`, `kb` and `contact` | how many page views that day had it; for `kb`, the day's KB summed, and for `contact`, the messages accepted |
+
+The first three columns are written as plain text; keep them that way,
+especially the date, if the tab is published as CSV. `DailyTest` has the same
+shape and takes only `&test=1` requests. `google-apps-script/README.md`
+explains every field of the payload.
 
 ---
 
@@ -279,6 +331,15 @@ hostile. `google-apps-script/README.md` explains each defence; in short:
 6. **Access**: the deployment must be "Anyone" for the site's form to work
    (Step 3). "Anyone with Google account" suits only a form whose users all
    sign in to Google
+7. **The counter**: a payload that is not exactly schema v1 changes nothing,
+   and the reply never says why. Every string it stores is limited to
+   letters, digits, dots, hyphens, underscores and a port's colon, in
+   plain-text cells, so none can become a formula
+8. **The daily totals are public**: anyone with the web app URL (it is in
+   `count.js`, on every page) can read `?action=stats`, and a tab published
+   as CSV is public too. Neither is suppressed; `stats.html` suppresses every
+   count under 5 before anything is published. Whether the raw totals stay
+   readable is the owner's decision (`docs/owner-checklist.md`, S3)
 
 ---
 
@@ -300,6 +361,30 @@ hostile. `google-apps-script/README.md` explains each defence; in short:
 - `testCapture` sends one submission through `doPost` from inside the editor.
   It writes a real row, and a second run within 15 seconds is refused by the
   rate limit
+
+### No visit counts arrive
+- Check the live version: `curl -L "YOUR_WEB_APP_URL?action=stats"` should
+  print `{"v":1,"rows":[...]}`. The health check instead means the
+  deployment is older than the counter: redeploy as a new version
+- Run `testCounter`: it should log `Counter OK` and write to `DailyTest`
+- Your own browser sends nothing if it has Do Not Track or Global Privacy
+  Control on, and a count is sent only when the tab is hidden or closed
+- Open **Executions**: `handleCount failed` lines carry the reason. A payload
+  that was rejected for its shape leaves no line, by design
+
+### The Open counts Action fails
+- "the JSON is not {"v":1,"rows":[...]}": `STATS_SOURCE_URL` points at a
+  deployment older than the counter, or at something else. Redeploy, or
+  correct the variable
+- "the CSV does not start with the header date,metric,key,count": the CSV
+  published is not the `Daily` tab
+- "none of the N row(s) ... could be read", after lines such as "date is not
+  YYYY-MM-DD": the published tab's date column is not plain text
+  (Format → Number → Plain text)
+- "the source answered with a web page, not stats": usually a Google
+  sign-in page, which means the deployment's access is not "Anyone" or the
+  tab is not published to the web. A deployment from before 2026-08-05 also
+  answers with a page (its old health check): redeploy
 
 ### The site says "Something went wrong" but the row is there
 - The deployment is older than the current `Code.gs`: an earlier version
@@ -333,7 +418,10 @@ Editing `Code.gs` (or pasting a new version into the Apps Script editor) does
 The web app URL stays the same, so no site changes are needed. Manage
 deployments lists each version with its date, which is how to tell whether
 the live version is newer than a change to `Code.gs` in this repository
-(`git log -- google-apps-script/Code.gs`).
+(`git log -- google-apps-script/Code.gs`). The visit counter needs a version
+from 2026-09-27 or later: `?action=count` and `?action=stats` do not exist
+before it. A quick outside check: `curl -L "YOUR_WEB_APP_URL?action=stats"`
+prints `{"v":1,"rows":[...]}` only on a version that has them.
 
 ---
 

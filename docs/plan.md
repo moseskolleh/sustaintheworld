@@ -556,10 +556,11 @@ rule makes that cheap.
 ## Progress
 
 What branch `claude/plan-implementation-soh954` implements so far, step by step,
-checked against the code and the test runs on 2026-09-26 (`npm test`: 892
-passing in twelve suites; `npm run smoke`: passes). ✓ done · ◐ partial, with
-the reason · ✗ waiting on Moses. Everything Moses has to supply is listed, with
-where it goes, in [owner-checklist.md](owner-checklist.md).
+checked against the code and the test runs on 2026-09-27 (`npm test`: 1307
+passing in sixteen suites; `npm run smoke` in Chromium: passes; the new
+Firefox pass has not run yet, see 6.7). ✓ done · ◐ partial, with the reason ·
+✗ waiting on Moses. Everything Moses has to supply is listed, with where it
+goes, in [owner-checklist.md](owner-checklist.md).
 
 **Phase 0 — wave 1.** Not done as a phase yet: step 9 waits on Moses, and
 step 4 has the leftover named below, which is his too. Its "done when" tests
@@ -655,7 +656,68 @@ the steps below.
     for it, losslessly, by dropping path points that sit on a straight line
     between their neighbours (the parallels were 60 points each).
 
-**Phase 1** — not started.
+**Phase 1 — wave 2.** Built and tested, but not counting yet: both halves
+of its "done when" wait on Moses. Counts arrive once he publishes the new
+`Code.gs` (owner checklist S1), and `stats.html` fills once
+`STATS_SOURCE_URL` is set (S2). The payload test is green.
+
+1. ✓ **A cookieless, first-party counter**: `count.js` (3 KB, 2 KB
+   gzipped), deferred on all seven pages; the 404 page names itself. It
+   sends the page, the lens, the deepest part of `<main>` reached, the
+   features used, the referrer's host, a viewport class and the KB this
+   page view transferred, plus a format version, as one POST the first time
+   the page is hidden or left; nothing under Do Not Track, Global Privacy
+   Control or with JavaScript off. `Code.gs` takes it at `?action=count`,
+   accepts only that exact shape, and adds it to daily totals on a `Daily`
+   tab under the contact form's `LockService` lock. No id is sent, no
+   cookie, and Apps Script gives the script no IP address to store.
+   **The transport is not `navigator.sendBeacon`, as step 1 says, but
+   `fetch` with `keepalive: true`,** `credentials: 'omit'`,
+   `referrerPolicy: 'no-referrer'` and `mode: 'no-cors'`. sendBeacon always
+   sends the browser's cookies for the address it posts to (here
+   `script.google.com`, where a visitor signed in to Google has session
+   cookies) and cannot be told not to for one request; a keepalive fetch
+   outlives the page the same way and leaves them out. `tests/html.test.js`
+   fails if anything calls `sendBeacon`. ✗ Counting starts when Moses
+   publishes the new `Code.gs` (S1).
+2. ✓ **The no-third-party rule stays honest.** `tests/html.test.js` allows
+   one off-site address in any script the site ships: the deployment, and
+   the same with `?action=count`. `npm run smoke` takes a real browser's
+   count apart: exactly the documented keys, no cookie, no `Referer`, once
+   per page view, every page's count accepted by `Code.gs`'s own schema
+   check, and nothing under Do Not Track, Global Privacy Control or with
+   JavaScript off. `tests/count.test.js` (67 assertions) and
+   `tests/apps-script.test.js` (64) hold the two ends to the same schema.
+   Every other browser context in smoke opens with Global Privacy Control
+   on, so a test run never sends a real count.
+3. ✓ **The hooks are wired, and the Plausible/Cloudflare block is gone.**
+   All 25 `data-analytics` names now on the site (23 when this plan was
+   written) are counted when clicked, and so are the on-demand modules as
+   they are fetched (`module-<name>`), the contact form being sent, and the
+   Assay's grade; the ad itself never leaves the page. A test fails if the
+   site uses a hook name the counter would not keep. ✗ Whether the grade
+   should be counted at all (S4).
+4. ◐ **`stats.html`, public.** Built: in the sitemap, linked from the
+   footers of the homepage, case studies, research and itself, under a
+   105 KB budget (90 KB today), with a privacy note that prints a literal
+   example payload and lists what is never collected. The weekly Action
+   (`.github/workflows/stats.yml`, Mondays 04:17 UTC) reads the daily totals,
+   from `?action=stats` or from the sheet published as CSV, suppresses every
+   count under 5 (and groups referrers under 5, and counts names the site
+   does not use as "other"), writes `content/stats.json`, rebuilds the page,
+   runs `npm test` and commits. The build refuses a `stats.json` that holds
+   a count under 5 or a daily row. Partial because it has no figures yet:
+   ✗ `STATS_SOURCE_URL` (S2, after S1). ✗ Whether the daily totals at
+   `?action=stats`, which are not suppressed and which anyone with the URL
+   can read, stay public (S3).
+5. ◐ **The five numbers** are defined in `scripts/fetch-stats.js` and on
+   `stats.html`: contact submissions; CV downloads (clicks on a CV link);
+   lens-link visits, as a proxy (page views that arrived through a role
+   link, an upper bound, since the daily totals are kept field by field and
+   cannot say whether that reader went on to a case study); the share of
+   homepage views whose deepest section was Contact; and Brief uses, empty
+   until Phase 4.1. ✗ The four-week baseline: it needs S1, S2 and four full
+   weeks of counting; Moses records it here (S6). Baseline: not yet recorded.
 
 **Phase 2.** 2.2 ◐ the nav numbers are gone (Phase 0.5), but it still has 12
 items and the hero still has three buttons. 2.5 ✓ one Listen control in the
@@ -681,7 +743,60 @@ move to `content/brief.json`. 4.2 and 4.4 not started.
 
 **Phase 5** — not started (5.2, 5.5 and 5.6 ✗ Moses).
 
-**Phase 6.** 6.3 ◐ the counters respect reduced motion and low-energy mode;
-the rest of the step is not started. Other steps not started.
+**Phase 6 — steps 3, 6 and 7 in wave 2.** Steps 1, 2, 4, 5 and 8–11 not
+started.
+
+3. ✓ **CPU.** The nine homepage sections below the hero get
+   `content-visibility: auto` once JavaScript runs, and only where the
+   browser anchors scrolling (`@supports (overflow-anchor: auto)`): Safari
+   has no scroll anchoring and was not tested, so it draws every section as
+   before. Sections the reader
+   has passed are drawn once scrolling rests, so reading back up after a jump
+   or a dragged scroll bar moves nothing; smoke re-tests the jump landings,
+   the scroll-spy, find-in-page and printing with sections not yet drawn.
+   Every looping animation, the pulse included, runs on transform and
+   opacity and pauses out of view and in a hidden tab; `relayout()` runs at
+   most once a frame; the counters respect reduced motion (wave 1). Measured
+   by the lane at 4× CPU slowdown in Chromium (medians of 15 loads before,
+   10 after): layout on load 238 → 125 ms, the longest task 238 → 110 ms,
+   and the idle main thread 1,023 → 16 ms per 3 s at the top of the page.
+   This run of smoke measured 5 ms at the top and 7 ms mid-page per 2 s,
+   against a 100 ms ceiling. On the way, the portrait's stated height was
+   found wrong (640 for a 640×960 image, a 159px jump as it loaded); it is
+   fixed, and a test checks every image's stated shape against its file.
+6. ◐ **JS hygiene.** ✓ One `keydown` handler on `document` routes every key
+   by layer (terminal, lightbox, player, menu, page), so one Escape closes
+   one layer; the other page-wide listeners that hear keys only watch for
+   the reader taking over (the jump hold lets go, the journey map starts
+   loading). ✓ One reduced-motion helper, `mks.motionOK()`, which answers
+   for low-energy mode too. ✓ The time-zone table is `assets/timezones.json`,
+   fetched when the journey map arrives; the map's paths were re-encoded as
+   relative steps, pixel-identical, to make room for it in the on-demand
+   budget (69 of 72 KB). ◐ Everything the core shares with the modules hangs
+   off `window.mks` (`mks.load`, `mks.storage`, `mks.track`, `mks.terminal`,
+   `mks.narration` and the rest), and a test fails if an old name comes
+   back; but six top-level functions in `script.js` (`revealTarget`,
+   `focusTarget`, `jumpTo`, `handleHashReveal`, `setMenuOpen`,
+   `mksLoadFor`) are still globals, left because wrapping them meant
+   re-indenting long unchanged stretches while three other lanes edited the
+   same file.
+7. ◐ **CI.** ✓ `push` runs on `main` only, and a newer commit on a pull
+   request cancels the older run. ✓ Node 22 (`engines`:
+   `^22.22.0 || >=24.8.0`, which html-validate needs). ✓ Chromium pinned to
+   the build `playwright-core` 1.56.1 names (141.0.7390.37), cached in CI.
+   ✓ Suites run side by side, one process each, and the timing suites on a
+   fake clock: `test:unit` takes about 8 s here for sixteen suites (about
+   30 s of work on four cores), where twelve used to take about 17 s one
+   after another; a new
+   suite runs the day it exists. ✓ axe-core in smoke on every page at
+   1440×900 and 390×844 in both themes, and on the homepage's open states
+   (0 violations); html-validate on every page in `npm test`. ✓ A budget
+   for `carbon-ai.html` (106 KB of 111 KB), and smoke compares every
+   budgeted page's measured first view with its estimate. ◐ A Firefox pass
+   is a CI job of its own, but it has never run: no Firefox build was
+   available to try it, so its first CI run on the pull request is its first
+   real run (its path was exercised in Chromium with the Chromium-only byte
+   counts off). Not started: comparing smoke screenshots with a baseline,
+   left until after the Phase 2 redesign, which would change every one.
 
 **Phase 7** — not started.
