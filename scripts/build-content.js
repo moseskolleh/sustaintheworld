@@ -166,7 +166,7 @@ ${main}
 ${bodyEnd}
 </body>
 </html>
-`;
+`.replace(/[ \t]+$/gm, '');   // an empty optional part leaves an indented blank line (lint:html)
 }
 
 // ------------------------------------------------------------------

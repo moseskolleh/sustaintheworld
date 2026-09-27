@@ -2,8 +2,9 @@
 // ===================================================================
 // SMOKE — the site in a real browser
 //
-//     npm run smoke                 every page, headless Chromium
-//     npm run smoke -- --screens    also save a screenshot per page to .smoke/
+//     npm run smoke                      every page, headless Chromium
+//     npm run smoke -- --browser firefox the same pass in Firefox
+//     npm run smoke -- --screens         also save a screenshot per page to .smoke/
 //
 // The jsdom suites in tests/ exercise the logic; this exercises the page.
 // It serves the repository the way GitHub Pages does (text gzipped, images
@@ -13,6 +14,8 @@
 //   - an uncaught exception or a console error on load
 //   - a request that fails, or that leaves this origin at all
 //   - an on-demand module that does not arrive when its feature is used
+//   - an accessibility violation axe-core can find, on any page, at desktop
+//     and phone width, in either theme (see the end of this file)
 //   - a first view heavier than scripts/check-budget.js claims
 //   - a page that, with JavaScript off (or script.js blocked or late), is
 //     covered, leaves content invisible, shows a [hidden] element or a
@@ -33,9 +36,17 @@
 // figure comes in above it, this fails.
 //
 // Which browser: $SMOKE_CHROME if set, else Playwright's own Chromium if it
-// is installed, else the system Chrome (GitHub's ubuntu runners ship one).
-// With none of those, the run is skipped with a message — unless
-// --require is passed, in which case it fails, which is what CI wants.
+// is installed, else the system Chrome. CI installs the Chromium build that
+// matches the pinned playwright-core, so a run there is repeatable rather
+// than whatever Chrome the runner image shipped that week. With none of
+// those, the run is skipped with a message — unless --require is passed, in
+// which case it fails, which is what CI wants.
+//
+// With --browser firefox it uses Playwright's Firefox ($SMOKE_FIREFOX, or
+// the build `npx playwright-core install firefox` puts in place; a stock
+// Firefox cannot be driven). Everything runs the same except the byte
+// counts, which come from the Chrome DevTools Protocol: Firefox has no
+// equivalent, so the weights are checked in the Chromium run only.
 // ===================================================================
 
 const fs = require('fs');
@@ -48,9 +59,18 @@ const ROOT = path.join(__dirname, '..');
 const args = process.argv.slice(2);
 const SCREENS = args.includes('--screens');
 const REQUIRE = args.includes('--require');
+const BROWSER = (() => {
+    const i = args.findIndex(a => a === '--browser' || a.startsWith('--browser='));
+    if (i === -1) return 'chromium';
+    return (args[i].includes('=') ? args[i].split('=')[1] : args[i + 1] || '').toLowerCase();
+})();
+const CHROMIUM = BROWSER === 'chromium';
 const PORT = 8123 + Math.floor(Math.random() * 1000);
 
-const PAGES = ['index.html', 'case-studies.html', 'research.html', 'carbon-ai.html', 'field-report.html', '404.html'];
+// Every page at the root, the homepage first. Read from the directory so a
+// new page is covered the day it exists, not the day someone lists it.
+const PAGES = fs.readdirSync(ROOT).filter(f => f.endsWith('.html'))
+    .sort((a, b) => (b === 'index.html') - (a === 'index.html') || a.localeCompare(b));
 
 // ------------------------------------------------------------------
 // A static server that behaves like the host: gzip for text, nothing else.
@@ -85,10 +105,18 @@ const server = http.createServer((req, res) => {
 // ------------------------------------------------------------------
 // Find a browser
 // ------------------------------------------------------------------
-function findBrowser(chromium) {
+function findBrowser(engine) {
+    if (!CHROMIUM) {
+        if (process.env.SMOKE_FIREFOX) return { executablePath: process.env.SMOKE_FIREFOX, label: process.env.SMOKE_FIREFOX };
+        try {
+            const p = engine.executablePath();
+            if (p && fs.existsSync(p)) return { executablePath: p, label: 'Playwright Firefox' };
+        } catch (e) { /* not installed */ }
+        return null;
+    }
     if (process.env.SMOKE_CHROME) return { executablePath: process.env.SMOKE_CHROME, label: process.env.SMOKE_CHROME };
     try {
-        const p = chromium.executablePath();
+        const p = engine.executablePath();
         if (p && fs.existsSync(p)) return { executablePath: p, label: 'Playwright Chromium' };
     } catch (e) { /* not installed */ }
     for (const candidate of ['google-chrome', 'google-chrome-stable', 'chromium', 'chromium-browser']) {
@@ -121,11 +149,15 @@ async function visit(context, page, rel, origin) {
     page.on('requestfailed', (r) => failed.push(`${r.url()} — ${(r.failure() || {}).errorText}`));
     page.on('request', (r) => { if (!r.url().startsWith(origin)) foreign.push(r.url()); });
 
-    const cdp = await context.newCDPSession(page);
-    await cdp.send('Network.enable');
+    // Bytes over the wire come from the DevTools protocol, which only
+    // Chromium speaks; in Firefox the weights go unmeasured (see the top).
+    const cdp = CHROMIUM ? await context.newCDPSession(page) : null;
     const sizes = new Map();
-    cdp.on('Network.responseReceived', (e) => sizes.set(e.requestId, { url: e.response.url, bytes: 0 }));
-    cdp.on('Network.loadingFinished', (e) => { const s = sizes.get(e.requestId); if (s) s.bytes = e.encodedDataLength; });
+    if (cdp) {
+        await cdp.send('Network.enable');
+        cdp.on('Network.responseReceived', (e) => sizes.set(e.requestId, { url: e.response.url, bytes: 0 }));
+        cdp.on('Network.loadingFinished', (e) => { const s = sizes.get(e.requestId); if (s) s.bytes = e.encodedDataLength; });
+    }
 
     await page.goto(`${origin}/${rel}`, { waitUntil: 'networkidle' });
     await page.waitForTimeout(600);
@@ -134,17 +166,23 @@ async function visit(context, page, rel, origin) {
     const arrivalBytes = arrival.reduce((n, s) => n + s.bytes, 0);
     const bytesSince = () => Array.from(sizes.values()).reduce((n, s) => n + s.bytes, 0) - arrivalBytes;
 
-    return { errors, foreign, failed, arrival, arrivalBytes, bytesSince, cdp };
+    return { errors, foreign, failed, arrival, arrivalBytes, bytesSince, cdp, measured: !!cdp };
 }
 
 (async () => {
-    let chromium;
-    try { chromium = require('playwright-core').chromium; }
+    if (!['chromium', 'firefox'].includes(BROWSER)) {
+        console.error(`  ✗ --browser ${BROWSER}: this smoke test runs in chromium or firefox`);
+        process.exit(1);
+    }
+    let engine;
+    try { engine = require('playwright-core')[BROWSER]; }
     catch (e) { console.error('  playwright-core is not installed — run `npm install`'); process.exit(1); }
 
-    const browserSpec = findBrowser(chromium);
+    const browserSpec = findBrowser(engine);
     if (!browserSpec) {
-        const msg = 'no Chromium found (set SMOKE_CHROME=/path/to/chrome)';
+        const msg = CHROMIUM
+            ? 'no Chromium found (set SMOKE_CHROME=/path/to/chrome)'
+            : 'no Playwright Firefox found (run `npx playwright-core install firefox`, or set SMOKE_FIREFOX)';
         if (REQUIRE) { console.error(`  ✗ ${msg}`); process.exit(1); }
         console.log(`  smoke: skipped — ${msg}`);
         process.exit(0);
@@ -152,14 +190,18 @@ async function visit(context, page, rel, origin) {
 
     await new Promise((r) => server.listen(PORT, '127.0.0.1', r));
     const origin = `http://127.0.0.1:${PORT}`;
-    const browser = await chromium.launch({ executablePath: browserSpec.executablePath, args: ['--no-sandbox', '--disable-dev-shm-usage'] });
+    const browser = await engine.launch({
+        executablePath: browserSpec.executablePath,
+        args: CHROMIUM ? ['--no-sandbox', '--disable-dev-shm-usage'] : []
+    });
     const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
     if (SCREENS) fs.mkdirSync(path.join(ROOT, '.smoke'), { recursive: true });
 
-    console.log(`\n  Smoke test in ${browserSpec.label}\n`);
+    console.log(`\n  Smoke test in ${browserSpec.label} ${browser.version()}\n`);
 
-    // The budget script's first-view estimate, to hold the measurement against.
-    const estimate = require('./check-budget.js').measure().measured.criticalWire;
+    // The budget script's first-view estimates, to hold the measurements against.
+    const budget = require('./check-budget.js');
+    const estimates = budget.measure().measured;
 
     const results = {};
     for (const rel of PAGES) {
@@ -170,26 +212,36 @@ async function visit(context, page, rel, origin) {
         if (r.errors.length) r.errors.forEach(e => bad(e)); else ok('no console errors, no uncaught exceptions');
         if (r.failed.length) r.failed.forEach(f => bad(`request failed: ${f}`)); else ok('every request succeeded');
         if (r.foreign.length) r.foreign.forEach(f => bad(`left the origin: ${f}`)); else ok('no request left this origin');
-        ok(`arrival: ${fmt(r.arrivalBytes)} over the wire in ${r.arrival.length} requests`);
+        if (r.measured) ok(`arrival: ${fmt(r.arrivalBytes)} over the wire in ${r.arrival.length} requests`);
 
         if (rel === 'index.html') await exerciseHomepage(page, r, origin);
         if (rel === 'index.html') await exerciseAssay(page, r);
         if (rel === 'carbon-ai.html') await exerciseCarbonTool(page, r);
 
-        if (SCREENS) await page.screenshot({ path: path.join(ROOT, '.smoke', rel.replace('.html', '.png')) });
+        if (SCREENS) await page.screenshot({ path: path.join(ROOT, '.smoke', (CHROMIUM ? '' : `${BROWSER}-`) + rel.replace('.html', '.png')) });
         await page.close();
     }
 
     await checkWithoutJs(browser, origin);
 
-    // The homepage's measured first view against the budget's estimate. A
-    // little slack for HTTP overhead, which the estimate does not model.
-    const home = results['index.html'];
-    if (home.arrivalBytes <= estimate * 1.02) {
-        ok(`index.html: measured first view ${fmt(home.arrivalBytes)} is within the budget's estimate of ${fmt(estimate)}`);
-    } else {
-        bad(`index.html: measured first view ${fmt(home.arrivalBytes)} exceeds the budget's estimate of ${fmt(estimate)} — check-budget.js is missing something the page fetches on load`);
-    }
+    // Each budgeted page's measured first view against the budget's
+    // estimate. The estimate counts bodies; every response also carries a
+    // status line and headers, which it does not model — about 210 bytes a
+    // response from this server — so each request is allowed 300 bytes on
+    // top. (A flat 2% did that job for the homepage, but on a 90 KB page it
+    // left room for barely one more request.) The pages come from
+    // check-budget.js, so a page that gains a budget there is measured here.
+    if (!CHROMIUM) ok(`first-view weights: not measured in ${BROWSER} (no DevTools protocol) — the Chromium run checks them`);
+    else Object.entries(budget.PAGE_BUDGETS).forEach(([rel, key]) => {
+        const r = results[rel];
+        const estimate = estimates[key];
+        if (!r) return bad(`${rel}: has a budget in check-budget.js but is not a page here`);
+        if (r.arrivalBytes <= estimate + 300 * r.arrival.length) {
+            ok(`${rel}: measured first view ${fmt(r.arrivalBytes)} is within the budget's estimate of ${fmt(estimate)}`);
+        } else {
+            bad(`${rel}: measured first view ${fmt(r.arrivalBytes)} exceeds the budget's estimate of ${fmt(estimate)} — check-budget.js is missing something the page fetches on load`);
+        }
+    });
 
     await exerciseNavigation(browser, origin);
 
@@ -225,6 +277,8 @@ async function visit(context, page, rel, origin) {
     }
 
     await exerciseNarration(browser, origin);
+
+    await accessibilityPass(browser, origin);
 
     await browser.close();
     server.close();
@@ -571,7 +625,7 @@ async function exerciseHomepage(page, r, origin) {
     await page.mouse.wheel(0, 300);
     await page.waitForTimeout(800);
     const mapSvg = await page.$('#journeyMapFrame svg');
-    if (mapSvg) ok(`journey map arrived on first scroll (+${fmt(r.bytesSince())})`); else bad('journey map did not load after scrolling');
+    if (mapSvg) ok(`journey map arrived on first scroll${r.measured ? ` (+${fmt(r.bytesSince())})` : ''}`); else bad('journey map did not load after scrolling');
 
     // The manifest lists no recording, so the listen control is there only
     // if this browser has a speech voice. Headless Chromium has none; a
@@ -618,7 +672,7 @@ async function exerciseHomepage(page, r, origin) {
     await page.keyboard.press('Escape');
 
     if (r.errors.length) r.errors.forEach(e => bad(e)); else ok('still no errors after using every feature');
-    ok(`using every feature above fetched ${fmt(r.bytesSince())} more — modules, the map, and every image scrolled past`);
+    if (r.measured) ok(`using every feature above fetched ${fmt(r.bytesSince())} more — modules, the map, and every image scrolled past`);
 }
 
 // ------------------------------------------------------------------
@@ -1263,4 +1317,192 @@ async function checkWithoutJs(browser, origin) {
         }
         await context.close();
     }));
+}
+
+// ------------------------------------------------------------------
+// Accessibility: axe-core on every page, at two sizes, in both themes
+//
+// An audit once took the site from 241 axe violations to none, and nothing
+// held it there. This does. Every page is loaded at 1440×900 and 390×844, in
+// the dark theme and the light one, axe-core is injected from node_modules
+// (so nothing leaves this origin), and any violation fails the run. The
+// homepage is also checked scrolled through — the only time section 05's
+// interactives, the journey map and every reveal are in the page — and in
+// the states a visitor opens: a dossier, the Assay's verdict on an ad it
+// finds gaps in, the carbon receipt, the docked narration player, the menu
+// on a phone and the terminal, each checked on its own. The homepage and
+// carbon-ai.html are checked once more with their scripts blocked, which is
+// the layout a reader without JavaScript gets (every nav link on show,
+// every dossier open, the calculator's note in place of the calculator).
+//
+// Each size and theme gets its own browser context with reduced motion, so
+// axe judges what a reader settles on rather than an element halfway
+// through a transition. The four run side by side.
+// ------------------------------------------------------------------
+const AXE_PATH = require.resolve('axe-core/axe.min.js');
+const AXE_VIEWS = [];
+[{ width: 1440, height: 900 }, { width: 390, height: 844 }].forEach((viewport) => {
+    ['dark', 'light'].forEach((theme) => AXE_VIEWS.push({ viewport, theme, name: `${viewport.width}×${viewport.height} ${theme}` }));
+});
+
+// The pages whose script swaps in a different layout, so the one a reader
+// without JavaScript gets is checked as well. (With the scripts blocked the
+// theme cannot be applied either: those two are checked in dark only.)
+const AXE_NO_SCRIPT = ['index.html', 'carbon-ai.html'];
+
+// What the player offers once Moses has recorded his introduction (see
+// exerciseNarration): served in place of today's empty manifest, so the
+// player is checked with the offer it will carry. Nothing is played.
+const AXE_MANIFEST = { tracks: { intro: {
+    file: 'assets/audio/intro.mp3', bytes: silentMp3().length, grams: 0.013, seconds: 5, voiceKind: 'recorded', voiceTitle: 'Moses Kolleh Sesay'
+} } };
+
+async function axeRun(page, scope) {
+    if (!(await page.evaluate(() => !!window.axe))) await page.addScriptTag({ path: AXE_PATH });
+    return page.evaluate(async (sel) => {
+        const result = await window.axe.run(sel || document, { resultTypes: ['violations'] });
+        return result.violations.map(v => ({ id: v.id, help: v.help, targets: v.nodes.map(n => n.target.join(' ')) }));
+    }, scope || null);
+}
+
+async function accessibilityPass(browser, origin) {
+    const t0 = Date.now();
+    const found = new Map();     // page · state · rule · element → the views it failed in
+    const states = new Map();    // page → the states checked
+    const trouble = [];          // a state that could not be opened, or an axe run that threw
+    const note = (rel, state, view, violations) => {
+        if (!states.has(rel)) states.set(rel, new Set());
+        states.get(rel).add(state);
+        violations.forEach(v => v.targets.forEach((target) => {
+            const key = [rel, state, v.id, target].join('\t');
+            if (!found.has(key)) found.set(key, { rel, state, id: v.id, help: v.help, target, views: [] });
+            found.get(key).views.push(view.name);
+        }));
+    };
+
+    await Promise.all(AXE_VIEWS.map(view => axeView(browser, origin, view, note, trouble)));
+
+    const version = require('axe-core/package.json').version;
+    console.log(`\n  Accessibility — axe-core ${version}, ${AXE_VIEWS.map(v => v.name).join(', ')} (${((Date.now() - t0) / 1000).toFixed(0)} s)\n`);
+    trouble.forEach(t => bad(t));
+    PAGES.forEach((rel) => {
+        const mine = Array.from(found.values()).filter(f => f.rel === rel);
+        const checked = Array.from(states.get(rel) || []);
+        if (!mine.length) return ok(`${rel}: no violations (${checked.join(', ')})`);
+        mine.forEach(f => bad(`${rel}, ${f.state}: [${f.id}] ${f.target} — ${f.help} (${f.views.join('; ')})`));
+    });
+}
+
+async function axeView(browser, origin, view, note, trouble) {
+    // axe goes in as an inline script, which a Content-Security-Policy would
+    // otherwise be entitled to refuse.
+    const context = await browser.newContext({ viewport: view.viewport, colorScheme: view.theme, reducedMotion: 'reduce', bypassCSP: true });
+    // The homepage keeps its theme in localStorage; field-report.html follows
+    // the system setting, which colorScheme sets. Pages with one theme simply
+    // get checked in it twice.
+    await context.addInitScript((theme) => {
+        try { localStorage.setItem('theme', theme); } catch (e) { /* storage blocked */ }
+    }, view.theme);
+    // A speech voice, as nearly every real browser has and headless ones do
+    // not, so the nav shows its listen control and the player can open.
+    await context.addInitScript(STAND_IN_VOICE);
+    await context.route('**/assets/audio/voice-manifest.json', (route) => route.fulfill({ json: AXE_MANIFEST }));
+    // Four more visits to every page: none of them may reach a real endpoint
+    // (the contact form's, or anything added later), whatever the page does.
+    await context.route((url) => !url.href.startsWith(origin), (route) => route.abort());
+    const attempt = async (what, fn) => {
+        try { await fn(); } catch (e) { trouble.push(`${what} (${view.name}): ${String(e.message || e).split('\n')[0]}`); }
+    };
+    try {
+        for (const rel of PAGES) {
+            const page = await context.newPage();
+            await attempt(`${rel}: axe on arrival`, async () => {
+                await page.goto(`${origin}/${rel}`, { waitUntil: 'load' });
+                await page.evaluate(async () => { if (document.fonts) await document.fonts.ready; });
+                await page.waitForTimeout(250);
+                note(rel, 'on arrival', view, await axeRun(page));
+            });
+            if (rel === 'index.html') await axeHomepageStates(page, view, note, attempt);
+            await page.close();
+            if (!AXE_NO_SCRIPT.includes(rel)) continue;
+            const bare = await context.newPage();
+            await bare.route('**/*.js', (route) => route.abort());
+            await attempt(`${rel}: axe with its scripts blocked`, async () => {
+                await bare.goto(`${origin}/${rel}`, { waitUntil: 'load' });
+                await bare.waitForFunction(() => !document.documentElement.classList.contains('js'), null, { timeout: 5000 });
+                note(rel, 'scripts blocked', view, await axeRun(bare));
+            });
+            await bare.close();
+        }
+    } finally {
+        await context.close();
+    }
+}
+
+async function axeHomepageStates(page, view, note, attempt) {
+    const rel = 'index.html';
+    const within = { timeout: 5000 };
+
+    await attempt(`${rel}: axe scrolled through`, async () => {
+        await page.evaluate(async () => {
+            for (let y = 0; y < document.documentElement.scrollHeight; y += innerHeight * 0.8) {
+                scrollTo(0, y);
+                await new Promise(r => setTimeout(r, 50));
+            }
+        });
+        await page.waitForFunction(() => window.mksLoaded && window.mksLoaded.interactives, null, within);
+        await page.evaluate(() => scrollTo(0, 0));
+        await page.waitForTimeout(250);
+        note(rel, 'scrolled through', view, await axeRun(page));
+    });
+
+    const dossier = '.project-card[data-project="groundwater"]';
+    await attempt(`${rel}: axe with a dossier open`, async () => {
+        await page.click(`${dossier} .project-toggle`, within);
+        await page.waitForSelector('#boreholeGame svg', within);
+        note(rel, 'a dossier open', view, await axeRun(page, dossier));
+    });
+
+    // The Assay's verdict, with rows for what matched and for the gaps.
+    await attempt(`${rel}: axe on the Assay's verdict`, async () => {
+        await page.fill('#assayInput', 'ESG Reporting Consultant for CSRD and ESRS. Fluent Dutch. ' +
+            '5+ years at a Big Four firm. Hands-on SAP. GHG accounting and stakeholder engagement.');
+        await page.click('#assayRun', within);
+        await page.waitForSelector('#assayResult .assay-row-gap', within);
+        note(rel, 'the Assay\'s verdict', view, await axeRun(page, '#assay'));
+    });
+
+    // The page's own carbon receipt, printed from the footer.
+    await attempt(`${rel}: axe on the carbon receipt`, async () => {
+        await page.click('#receiptBtn', within);
+        await page.waitForSelector('#receiptBody :first-child', within);
+        note(rel, 'the carbon receipt', view, await axeRun(page, '#receiptPanel'));
+        await page.click('#receiptBtn', within);
+    });
+
+    // The docked player, opened from the nav, offering the introduction.
+    await attempt(`${rel}: axe on the narration player`, async () => {
+        await page.click('#listenBtn', within);
+        await page.waitForSelector('#dispatchBar .dispatch-offer', { state: 'visible', ...within });
+        note(rel, 'the narration player', view, await axeRun(page, '#dispatchBar'));
+        await page.click('#listenBtn', within);   // a second press stops and closes
+        await page.waitForSelector('#dispatchBar', { state: 'hidden', ...within });
+    });
+
+    // On a phone the nav's links sit behind the menu button.
+    if (await page.isVisible('#navToggle')) {
+        await attempt(`${rel}: axe with the menu open`, async () => {
+            await page.click('#navToggle', within);
+            await page.waitForSelector('#navMenu.active', within);
+            note(rel, 'the menu open', view, await axeRun(page, '.navbar'));
+            await page.keyboard.press('Escape');
+        });
+    }
+
+    await attempt(`${rel}: axe on the terminal`, async () => {
+        await page.click('#terminalToggle', within);
+        await page.waitForSelector('.field-terminal.open', within);
+        note(rel, 'the terminal', view, await axeRun(page, '.field-terminal'));
+        await page.keyboard.press('Escape');
+    });
 }

@@ -681,6 +681,7 @@ body.light-mode .hero-availability {
 }
 
 .receipt {
+    margin: 0;   /* it is a <figure> */
     font-family: var(--font-mono);
     background: #f5f3ea;
     color: #1a1a1a;
@@ -3301,6 +3302,7 @@ body.light-mode .journey-map-readout {
 }
 
 .impact-seg {
+    overflow: hidden;   /* the label shows over the bar only, never the empty track (axe: 1.4:1) */
     display: flex;
     align-items: center;
     justify-content: center;

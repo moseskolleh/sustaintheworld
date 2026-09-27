@@ -346,14 +346,14 @@ function assert(cond, msg) {
 // away and show the same generic error it shows when the network is down.
 const formChecks = (async () => {
     const submit = async (respond) => {
-        const { window } = run('dark');
+        const { window, clock } = run('dark', { clock: true });
         const doc = window.document;
         window.fetch = respond;
         doc.getElementById('name').value = 'Ada';
         doc.getElementById('email').value = 'ada@example.com';
         doc.getElementById('message').value = 'A question about groundwater.';
         doc.getElementById('contactForm').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
-        await new Promise((resolve) => setTimeout(resolve, 20));
+        await clock.tick(20);
         return doc.getElementById('formStatus');
     };
     const answer = (body) => async () => ({ ok: true, json: async () => body });
@@ -375,14 +375,14 @@ const formChecks = (async () => {
 
     // --- Bug 9: a copy button gets its icon back after "Copied ✓" ---
     {
-        const { window } = run('dark');
+        const { window, clock } = run('dark', { clock: true });
         const btn = window.document.getElementById('anatomyCopy');
         const before = btn.innerHTML;
         window.navigator.clipboard = { writeText: async () => {} };
         await window.mksShare.copy('x', btn);
         await window.mksShare.copy('x', btn);   // pressed again while it still says Copied
         assert(/Copied/.test(btn.textContent), 'Bug9: the button confirms the copy');
-        await new Promise((resolve) => setTimeout(resolve, 1800));
+        await clock.tick(1800);
         assert(btn.innerHTML === before && !!btn.querySelector('svg'), 'Bug9: the button is restored with its icon');
     }
 })();

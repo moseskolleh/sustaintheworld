@@ -309,10 +309,11 @@ npm test          # everything below
 |---|---|
 | `npm run build:check` | every generated page still matches `content/` |
 | `npm run fonts:check` | the committed fonts still hash to their manifest and every stylesheet's `@font-face` block is current |
-| `npm run test:unit` | the twelve suites in `tests/`, listed below (892 passing assertions on 2026-09-26) |
+| `npm run lint:html` | every page is valid HTML ([html-validate](https://html-validate.org/)'s recommended rules; the two relaxations are explained in `.htmlvalidate.cjs`) |
+| `npm run test:unit` | every `tests/*.test.js`, side by side, one process per suite, so a new suite runs the day it exists: the thirteen listed below (862 passing assertions on 2026-09-26) |
 | `npm run map:check` | the committed `journey-map.svg` still matches its generator |
 | `npm run budget` | the weights this README quotes (see [Performance](#performance)) |
-| `npm run smoke` | every page in a real browser: no errors, no failed or off-origin requests, every on-demand module arrives when used, and the measured first view is no heavier than the budget claims; every page again with JavaScript off, and the homepage with `script.js` blocked and late; the skip link, Back, the theme switch, back to top and the nav bar at every width; the listen control and its player; the Assay; and the carbon-ai page's dropdowns and numbers (its own CI job; needs Chromium) |
+| `npm run smoke` | every page in a real browser: no errors, no failed or off-origin requests, every on-demand module arrives when used, no axe-core violation at 1440×900 or 390×844 in either theme, and each budgeted page's measured first view no heavier than the budget claims; every page again with JavaScript off, and the homepage with `script.js` blocked and late; the skip link, Back, the theme switch, back to top and the nav bar at every width; the listen control and its player; the Assay; and the carbon-ai page's dropdowns and numbers (its own CI job; needs Chromium — `-- --browser firefox` runs it in Firefox, which CI also does) |
 | `npm run mcp:verify` | the pinned MCP package still hashes to the reviewed tarball (needs network) |
 
 The suites, and the failure each one exists to prevent:
@@ -405,11 +406,18 @@ The suites, and the failure each one exists to prevent:
   to it, lands under the nav bar and stays there, and
   at 390x844 back to top never covers a control from the hero to the footer,
   yet shows on the last screen.
+- **`tooling.test.js`** — the machinery under the rest: the runner fails when
+  any suite fails and keeps each suite's output in one block, `npm test` runs
+  it rather than a hand-kept list of suites, the fake clock fires timers in
+  order and only when told, and every page with a first-view budget exists
+  and is measured.
 
 The jsdom harness (`tests/harness.js`) evaluates `script.js` and then every
 file in `modules/`, so the suites see the page the way a visitor who used
 every feature would — and a module that declared anything at the top level,
-or reached for storage directly, fails `resilience.test.js`.
+or reached for storage directly, fails `resilience.test.js`. A suite that
+tests timing passes `clock: true` and moves time with `await clock.tick(ms)`
+instead of sleeping, so a 1.7-second timeout costs nothing to test.
 
 ## Content pipeline
 
@@ -508,11 +516,16 @@ To change the color scheme, edit the CSS variables in `style.css`:
 
 ## Browser Support
 
-- ✅ Chrome (latest)
-- ✅ Firefox (latest)
-- ✅ Safari (latest)
-- ✅ Edge (latest)
-- ✅ Mobile browsers (iOS Safari, Chrome Mobile)
+What CI runs every page in, on every pull request:
+
+- ✅ Chromium, the build pinned by `playwright-core` — so Chrome and Edge,
+  which share its engine
+- ✅ Firefox, the build pinned by `playwright-core` (142 at the moment)
+- ✅ Phone width (390×844) and desktop (1440×900), in both themes, for the
+  accessibility checks — a browser window at that size, not a real phone
+
+Safari (WebKit) is not tested, on a Mac or an iPhone. Nothing on the site is
+knowingly specific to one engine, but this list claims only what CI runs.
 
 ## Performance
 
@@ -528,6 +541,7 @@ every run of `npm test`, and the build fails when they are exceeded.
 | Everything a full visit adds on demand (modules, scripts, map) | ~71 KB | 72 KB |
 | Case studies page, over the wire (fonts included) | ~93 KB | 120 KB |
 | Research outputs page, over the wire (fonts included) | ~88 KB | 110 KB |
+| AI, Weighed (`carbon-ai.html`), over the wire (fonts included) | ~104 KB | 111 KB |
 | Text-only field report, whole page | ~9 KB | 12 KB |
 | Largest single image | ~200 KB | 220 KB |
 | Every image in the repository | ~3.24 MB | 3.5 MB |
@@ -631,9 +645,16 @@ aspirational:
 - Single-letter shortcuts stand down while a form control has focus
 - No duplicate `id`s, no focusable element inside an `aria-hidden` container
 
-Not machine-checked, and worth a manual pass when the design changes: contrast
-ratios, focus-visible styling, and screen-reader flow through the interactive
-widgets.
+`npm run smoke` adds axe-core in a real browser: every page at 1440×900 and
+390×844 in both themes, and the homepage again with a dossier, the Assay's
+verdict, the carbon receipt, the player, the terminal and the phone menu
+open, and with its script blocked. Any violation fails, contrast included —
+but axe fails only what it can decide, and text over an image or a gradient
+it leaves for a person to review.
+
+Not machine-checked, and worth a manual pass when the design changes:
+contrast over images and gradients, focus-visible styling, and screen-reader
+flow through the interactive widgets.
 
 ## Contact
 

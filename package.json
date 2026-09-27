@@ -4,14 +4,18 @@
   "private": true,
   "description": "Portfolio website for Moses Kolleh Sesay — static site; pages derived from content/ by npm run build:content",
   "license": "MIT",
+  "engines": {
+    "node": "^22.22.0 || >=24.8.0"
+  },
   "scripts": {
-    "test": "npm run build:check && npm run fonts:check && npm run test:unit && npm run map:check && npm run budget",
+    "test": "npm run build:check && npm run fonts:check && npm run lint:html && npm run test:unit && npm run map:check && npm run budget",
     "build:content": "node scripts/build-content.js",
     "build:check": "node scripts/build-content.js --check",
     "fonts:build": "node scripts/build-fonts.js",
     "fonts:check": "node scripts/build-fonts.js --check",
     "smoke": "node scripts/smoke.js",
-    "test:unit": "node tests/bugs.test.js && node tests/resilience.test.js && node tests/nojs.test.js && node tests/carbon.test.js && node tests/assay.test.js && node tests/voice.test.js && node tests/narration.test.js && node tests/content.test.js && node tests/portfolio.test.js && node tests/html.test.js && node tests/apps-script.test.js && node tests/navigation.test.js",
+    "test:unit": "node scripts/run-tests.js",
+    "lint:html": "html-validate \"*.html\" \"google-apps-script/*.html\"",
     "budget": "node scripts/check-budget.js",
     "mcp:verify": "node scripts/verify-mcp-pin.js",
     "map:build": "node scripts/generate-journey-map.js",
@@ -23,7 +27,9 @@
     "voice:check": "FISH_AUDIO_API_BASE=http://127.0.0.1:8199 FISH_AUDIO_API_KEY=mock FISH_AUDIO_FORMAT=wav node scripts/generate-voice.js --sections --force"
   },
   "devDependencies": {
+    "axe-core": "4.13.0",
     "d3-geo": "3.1.1",
+    "html-validate": "11.16.0",
     "jsdom": "^26.1.0",
     "playwright-core": "1.56.1",
     "subset-font": "2.4.0",

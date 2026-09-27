@@ -106,7 +106,27 @@ const BUDGETS = {
         label: 'Research outputs page, over the wire (with fonts)',
         max: 110 * KB,
         readme: 'generated from content/research.json — text only, no images'
+    },
+    // "AI, Weighed" carries its calculator and the emission-factor data on
+    // arrival, so it is the heaviest page after the homepage and it went
+    // unbudgeted until a real browser measured it at 106 KB. The ceiling is
+    // that measurement plus 5%, not the usual headroom: budgets only ratchet
+    // down, and this one starts where the page already is.
+    carbonAiWire: {
+        label: 'AI, Weighed (carbon-ai.html), over the wire (with fonts)',
+        max: 111 * KB,
+        readme: 'the calculator and its emission-factor data arrive with the page'
     }
+};
+
+// The pages whose whole first view is budgeted, and the measurement that
+// holds each. `npm run smoke` loads every one of them in a browser and fails
+// if what it transfers comes in above the estimate here.
+const PAGE_BUDGETS = {
+    'index.html': 'criticalWire',
+    'case-studies.html': 'caseStudiesWire',
+    'research.html': 'researchWire',
+    'carbon-ai.html': 'carbonAiWire'
 };
 
 const fmt = (bytes) => (bytes >= MB ? `${(bytes / MB).toFixed(2)} MB` : `${(bytes / KB).toFixed(0)} KB`);
@@ -165,8 +185,8 @@ function criticalAssets(page = 'index.html') {
     });
 
     // An <img> without loading="lazy" is fetched during the first view.
-    // The lightbox's empty <img src=""> is not a request, so it is skipped
-    // by the sizeOf() check above.
+    // The lightbox's <img> has no src until an image is opened, so it adds
+    // nothing.
     (html.match(/<img[^>]*>/gi) || []).forEach((tag) => {
         if (/loading=["']lazy["']/i.test(tag)) return;
         const m = tag.match(/src=["']([^"']+)["']/i);
@@ -219,6 +239,7 @@ function measure() {
         onDemand: onDemand.reduce((n, a) => n + a.wire, 0),
         caseStudiesWire: pageWire('case-studies.html'),
         researchWire: pageWire('research.html'),
+        carbonAiWire: pageWire('carbon-ai.html'),
         largestImage: images.reduce((n, f) => Math.max(n, sizeOf(f) || 0), 0),
         allImages: images.reduce((n, f) => n + (sizeOf(f) || 0), 0),
         introAudio: audio.reduce((n, f) => n + (sizeOf(f) || 0), 0),
@@ -278,4 +299,4 @@ function report() {
 
 if (require.main === module) report();
 
-module.exports = { BUDGETS, measure, criticalAssets, onDemandAssets };
+module.exports = { BUDGETS, PAGE_BUDGETS, measure, criticalAssets, onDemandAssets };

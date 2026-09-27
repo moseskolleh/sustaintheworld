@@ -215,7 +215,8 @@ function assert(cond, msg) {
 
 // The behaviour itself: ask for narration on a browser with no speech engine
 // and no recording, and see what the player actually does. play() awaits the
-// manifest fetch, so the result lands a tick later.
+// manifest fetch, so the result lands a tick later — on the harness's fake
+// clock, so the 150 ms below cost nothing.
 function finish() {
     if (failures > 0) {
         console.log(`\n${failures} assertion(s) failed`);
@@ -228,13 +229,13 @@ function finish() {
 }
 
 {
-    const { window } = run('dark', { speech: 'none' });
+    const { window, clock } = run('dark', { speech: 'none', clock: true });
     const doc = window.document;
     const fd = window.FieldDispatch;
 
     fd.play('hero');
 
-    setTimeout(() => {
+    clock.tick(150).then(() => {
         const bar = doc.getElementById('dispatchBar');
 
         assert(!bar.hidden, 'Dead player: the bar stays up to explain itself rather than vanishing');
@@ -262,5 +263,5 @@ function finish() {
         assert(!threw, `Dead player: pressing retry does not throw (${threw && threw.message})`);
 
         finish();
-    }, 150);
+    });
 }

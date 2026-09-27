@@ -1394,7 +1394,7 @@
                         <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-phone"></use></svg>
                         <div>
                             <h3>Phone</h3>
-                            <p>+31 659 361 423</p>
+                            <p>+31&nbsp;659&nbsp;361&nbsp;423</p>
                         </div>
                     </a>
                     <div class="contact-card">
@@ -1476,7 +1476,7 @@
                 <!-- The Receipt: this page prints its own itemised carbon bill -->
                 <button class="receipt-btn mono-label" id="receiptBtn" type="button" aria-expanded="false" aria-controls="receiptPanel" data-analytics="receipt-open">&#129534; print this page&rsquo;s carbon receipt</button>
                 <div class="receipt-panel" id="receiptPanel" hidden>
-                    <div class="receipt" id="receiptBody" role="figure" aria-label="Itemised carbon receipt for this page load"></div>
+                    <figure class="receipt" id="receiptBody" aria-label="Itemised carbon receipt for this page load"></figure>
                     <button class="receipt-download btn btn-secondary btn-small" id="receiptDownload" type="button" data-analytics="receipt-download"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-share-nodes"></use></svg> Share / save PNG</button>
                     <canvas id="receiptCanvas" width="720" height="10" aria-hidden="true" hidden></canvas>
                 </div>
@@ -1498,9 +1498,10 @@
          lives in script.js. -->
     <div class="lightbox" id="lightbox" role="dialog" aria-modal="true"
          aria-labelledby="lightboxCaption" aria-hidden="true" tabindex="-1">
+        <!-- [html-validate-disable-block hidden-focusable, element-required-attributes -- closed, it is visibility:hidden, so the button is out of the tab order; script.js sets the src] -->
         <button type="button" class="lightbox-close" id="lightboxClose" aria-label="Close image">&times;</button>
         <figure class="lightbox-figure">
-            <img id="lightboxImage" src="" alt="">
+            <img id="lightboxImage" alt="">
             <figcaption id="lightboxCaption"></figcaption>
         </figure>
     </div>

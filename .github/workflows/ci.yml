@@ -1,35 +1,89 @@
 name: CI
 
+# A pull request is tested as a pull request; main is tested again once it
+# lands. Pushes to other branches are not tested on their own, because every
+# one of them that matters becomes a pull request — running both used to
+# test each PR commit twice.
 on:
   push:
+    branches: [main]
   pull_request:
     branches: [main]
+
+# A newer commit on the same pull request makes the older run pointless, so
+# it is cancelled: pull requests share one group per ref. Each push to main
+# gets a group of its own, so none is ever cancelled or queued behind
+# another — each run is the record for the commit it tested.
+concurrency:
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - run: npm ci
       - run: npm test
 
   # The jsdom suites above exercise the logic; this opens every page in a
   # real browser and fails on console errors, failed or off-origin requests,
-  # an on-demand module that does not arrive, or a first view heavier than
-  # the budget estimates. It uses the Chrome the runner image ships with.
+  # an on-demand module that does not arrive, an accessibility violation
+  # axe-core can find, a first view heavier than the budget estimates, and
+  # the rest of the list at the top of scripts/smoke.js.
+  #
+  # The browser is the Chromium build that matches the pinned playwright-core,
+  # not the runner's own Chrome, which changes whenever the image does: a
+  # smoke failure should mean the site changed, not the runner.
   smoke:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run smoke -- --require
-        env:
-          SMOKE_CHROME: /usr/bin/google-chrome
+      - name: Read the pinned playwright-core version
+        id: playwright
+        run: echo "version=$(node -p "require('playwright-core/package.json').version")" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ms-playwright-${{ runner.os }}-chromium-${{ steps.playwright.outputs.version }}
+      # Downloads the browser only on a cache miss; the system libraries it
+      # needs are installed either way.
+      - run: npx playwright-core install --with-deps chromium
+      - run: npm run smoke -- --require --browser chromium
+
+  # The same pass in Firefox, which the README says the site supports. The
+  # byte counts come from the Chrome DevTools Protocol, so they are checked
+  # in the Chromium job only; everything else runs here too.
+  smoke-firefox:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Read the pinned playwright-core version
+        id: playwright
+        run: echo "version=$(node -p "require('playwright-core/package.json').version")" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ms-playwright-${{ runner.os }}-firefox-${{ steps.playwright.outputs.version }}
+      - run: npx playwright-core install --with-deps firefox
+      - run: npm run smoke -- --require --browser firefox

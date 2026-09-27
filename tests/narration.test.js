@@ -26,7 +26,9 @@ function assert(cond, msg) {
     }
 }
 
-const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+// Every suite here runs on the harness's fake clock: `await clock.tick(ms)`
+// stands for ms of real time without spending it, so the fakes below
+// schedule on window.setTimeout — the same clock — not on Node's.
 const click = (window, node) => node.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }));
 
 // What voice-intro.js writes once Moses has recorded his introduction.
@@ -45,12 +47,12 @@ const WITH_INTRO = { tracks: { intro: INTRO_TRACK } };
 function fakeSpeech(window, spoken) {
     const queue = [];
     let speaking = null;
-    const fire = (u, type) => setTimeout(() => { if (u['on' + type]) u['on' + type]({ type }); }, 0);
+    const fire = (u, type) => window.setTimeout(() => { if (u['on' + type]) u['on' + type]({ type }); }, 0);
     const startNext = () => {
         if (speaking || !queue.length) return;
         const u = speaking = queue.shift();
         spoken.push(u.text);
-        u.timer = setTimeout(() => { if (speaking === u) { speaking = null; fire(u, 'end'); startNext(); } }, 15);
+        u.timer = window.setTimeout(() => { if (speaking === u) { speaking = null; fire(u, 'end'); startNext(); } }, 15);
     };
     const synth = {
         getVoices: () => [{ name: 'Fake', lang: 'en-GB', localService: true, default: true }],
@@ -58,7 +60,7 @@ function fakeSpeech(window, spoken) {
         cancel() {
             const s = speaking;
             speaking = null;
-            if (s) { clearTimeout(s.timer); fire(s, 'error'); }
+            if (s) { window.clearTimeout(s.timer); fire(s, 'error'); }
             queue.splice(0).forEach(u => fire(u, 'error'));
         },
         pause() {}, resume() {},
@@ -76,7 +78,7 @@ function fakeAudio(window, played, delay) {
         played.push(this.getAttribute('src'));
         return new Promise((resolve, reject) => {
             this.pending = reject;
-            setTimeout(() => { if (this.pending === reject) { this.pending = null; resolve(); } }, delay);
+            window.setTimeout(() => { if (this.pending === reject) { this.pending = null; resolve(); } }, delay);
         });
     };
     proto.pause = function () {
@@ -93,7 +95,7 @@ function fakeAudio(window, played, delay) {
 const slowFetch = (window, delay, body, asked) => {
     window.fetch = (url) => {
         if (asked) asked.push(String(url));
-        return new Promise((resolve) => setTimeout(() => resolve({
+        return new Promise((resolve) => window.setTimeout(() => resolve({
             ok: !!body,
             json: async () => body
         }), delay));
@@ -104,7 +106,8 @@ const slowFetch = (window, delay, body, asked) => {
     // --- A cancelled utterance must not drive the next section ------------
     {
         const spoken = [];
-        const { window } = run('dark', {
+        const { window, clock } = run('dark', {
+            clock: true,
             before: (w) => {
                 fakeSpeech(w, spoken);
                 slowFetch(w, 0, EMPTY);   // no recording: this is the browser voice alone
@@ -113,12 +116,12 @@ const slowFetch = (window, delay, body, asked) => {
         const scripts = window.VoiceScripts.byId;
 
         window.FieldDispatch.play('about');
-        await wait(30);
+        await clock.tick(30);
         assert(spoken.length > 0, 'Switching setup: the first section started speaking');
 
         const mark = spoken.length;
         window.FieldDispatch.play('projects');
-        await wait(600);
+        await clock.tick(600);
         const after = spoken.slice(mark);
 
         const strays = after.filter(line => !scripts.projects.text.includes(line.trim()));
@@ -133,7 +136,8 @@ const slowFetch = (window, delay, body, asked) => {
     {
         const spoken = [];
         const asked = [];
-        const { window } = run('dark', {
+        const { window, clock } = run('dark', {
+            clock: true,
             before: (w) => {
                 fakeSpeech(w, spoken);
                 slowFetch(w, 0, EMPTY, asked);
@@ -167,7 +171,7 @@ const slowFetch = (window, delay, body, asked) => {
         // The player hangs below the nav bar, so jumps have to clear it too.
         bar.getBoundingClientRect = () => ({ top: 80, bottom: 180, left: 8, right: 382, width: 374, height: 100 });
         click(window, btn);
-        await wait(30);
+        await clock.tick(30);
         assert(!bar.hidden && btn.getAttribute('aria-expanded') === 'true', 'Docked: a press opens the player');
         assert(doc.documentElement.style.scrollPaddingTop === '188px', `Docked: while open, jumps and Tab stops land below the player (scroll-padding-top ${doc.documentElement.style.scrollPaddingTop || 'unset'})`);
         assert(window.FieldDispatch.state().playing === 'about', `Docked: it reads the section in view (${window.FieldDispatch.state().playing})`);
@@ -179,19 +183,19 @@ const slowFetch = (window, delay, body, asked) => {
         const [prev, next] = Array.from(bar.querySelectorAll('.dispatch-step'));
         assert(/Next section: the experience log/.test(next.getAttribute('aria-label')), `Steps: "next" names where it goes (${next.getAttribute('aria-label')})`);
         click(window, next);
-        await wait(30);
+        await clock.tick(30);
         assert(window.FieldDispatch.state().playing === 'experience', 'Steps: next reads the following section');
         assert(!bar.hidden, 'Steps: moving on does not close the player under the listener');
         click(window, prev);
         click(window, prev);
-        await wait(30);
+        await clock.tick(30);
         assert(window.FieldDispatch.state().playing === 'journey', 'Steps: previous goes back a section at a time');
 
         window.FieldDispatch.play('hero');
-        await wait(10);
+        await clock.tick(10);
         assert(prev.getAttribute('aria-disabled') === 'true' && !prev.disabled, 'Steps: at the first section, "previous" says it is unavailable but keeps focus');
         click(window, prev);
-        await wait(10);
+        await clock.tick(10);
         assert(window.FieldDispatch.state().playing === 'hero', 'Steps: …and does nothing when pressed');
 
         // Closing hands the keyboard back.
@@ -202,9 +206,9 @@ const slowFetch = (window, delay, body, asked) => {
         assert(doc.activeElement === btn, 'Close: focus returns to the Listen button, not the top of the page');
 
         click(window, btn);
-        await wait(20);
+        await clock.tick(20);
         click(window, btn);
-        await wait(20);
+        await clock.tick(20);
         assert(bar.hidden && window.FieldDispatch.state().playing === null, 'Close: a second press of Listen stops and closes');
 
         assert(/Playback speed 1×/.test(bar.querySelector('.dispatch-rate').getAttribute('aria-label')), 'Speed: the button\'s name includes what it shows');
@@ -215,7 +219,8 @@ const slowFetch = (window, delay, body, asked) => {
     {
         const spoken = [];
         const played = [];
-        const { window } = run('dark', {
+        const { window, clock } = run('dark', {
+            clock: true,
             before: (w) => {
                 fakeSpeech(w, spoken);
                 fakeAudio(w, played, 5);
@@ -228,13 +233,13 @@ const slowFetch = (window, delay, body, asked) => {
         const introBtn = bar.querySelector('.dispatch-intro');
 
         window.FieldDispatch.play('about');
-        await wait(60);   // the manifest has arrived
+        await clock.tick(60);   // the manifest has arrived
         assert(!offer.hidden, 'Intro: once the manifest lists it, the player offers it');
         assert(introBtn.textContent === 'Hear Moses introduce himself · 612 KB', `Intro: labelled with its transfer before the press (${introBtn.textContent})`);
         assert(played.length === 0, 'Intro: nothing is fetched until it is asked for');
 
         click(window, introBtn);
-        await wait(20);
+        await clock.tick(20);
         assert(played.length === 1 && played[0] === 'assets/audio/intro.mp3', `Intro: the press plays his recording (${played.join(', ') || 'nothing'})`);
         const state = window.FieldDispatch.state();
         assert(state.playing === 'intro', 'Intro: the player is on the introduction');
@@ -253,18 +258,19 @@ const slowFetch = (window, delay, body, asked) => {
             intro: Object.assign({}, INTRO_TRACK, { voiceKind: 'synthetic' }),
             hero: { file: 'assets/audio/hero.mp3', bytes: 344442, grams: 0.118 }
         } };
-        const { window } = run('dark', {
+        const { window, clock } = run('dark', {
+            clock: true,
             before: (w) => {
                 fakeSpeech(w, spoken);
                 fakeAudio(w, played, 5);
                 slowFetch(w, 0, synthetic);
             }
         });
-        await wait(10);
+        await clock.tick(10);
         const bar = window.document.getElementById('dispatchBar');
 
         window.FieldDispatch.play('hero');
-        await wait(40);
+        await clock.tick(40);
         assert(played.length === 0 && spoken.length > 0, 'Only Moses: a section track in the manifest is never played — sections use the browser voice');
         assert(bar.querySelector('.dispatch-offer').hidden, 'Only Moses: an "intro" that is not a recording is never offered');
         assert(await window.FieldDispatch.playIntro() === false && played.length === 0, 'Only Moses: …and cannot be played another way');
@@ -274,7 +280,8 @@ const slowFetch = (window, delay, body, asked) => {
     {
         const spoken = [];
         const played = [];
-        const { window } = run('dark', {
+        const { window, clock } = run('dark', {
+            clock: true,
             before: (w) => {
                 fakeSpeech(w, spoken);
                 fakeAudio(w, played, 200);
@@ -283,37 +290,38 @@ const slowFetch = (window, delay, body, asked) => {
         });
         const doc = window.document;
         const bar = doc.getElementById('dispatchBar');
-        await wait(10);   // the manifest is in
+        await clock.tick(10);   // the manifest is in
 
         await window.FieldDispatch.playIntro();
-        await wait(20);
+        await clock.tick(20);
         assert(played.length === 1, 'Close before start setup: the recording was asked to play');
         click(window, doc.querySelector('.dispatch-close'));
-        await wait(20);
+        await clock.tick(20);
         assert(bar.hidden && !bar.classList.contains('dispatch-failed'), 'Close before start: the player closes instead of reporting a blocked recording');
 
         await window.FieldDispatch.playIntro();
-        await wait(20);
+        await clock.tick(20);
         window.FieldDispatch.play('projects');
-        await wait(20);
+        await clock.tick(20);
         assert(!bar.classList.contains('dispatch-failed') && window.FieldDispatch.state().playing === 'projects', 'Switch before start: the section plays without the failure styling');
     }
 
     // --- No voice, but a recording: the control still has something to say
     {
         const played = [];
-        const { window } = run('dark', {
+        const { window, clock } = run('dark', {
+            clock: true,
             speech: 'none',
             before: (w) => {
                 fakeAudio(w, played, 5);
                 slowFetch(w, 0, WITH_INTRO);
             }
         });
-        await wait(10);
+        await clock.tick(10);
         const doc = window.document;
         assert(!doc.getElementById('navListen').hidden, 'No voice, recording: the control is shown for Moses\'s introduction');
         click(window, doc.getElementById('listenBtn'));
-        await wait(30);
+        await clock.tick(30);
         assert(played.length === 1 && window.FieldDispatch.state().playing === 'intro', 'No voice, recording: Listen plays him rather than failing');
     }
 
@@ -324,13 +332,14 @@ const slowFetch = (window, delay, body, asked) => {
     // one just pressed, and focus fell to <body>.
     for (const [body, what] of [[WITH_INTRO, 'a recording'], [EMPTY, 'no recording']]) {
         const asked = [];
-        const { window } = run('dark', {
+        const { window, clock } = run('dark', {
+            clock: true,
             speech: 'none',
             before: (w) => {
                 fakeAudio(w, [], 5);
                 w.fetch = (url, opts) => {
                     asked.push(opts && opts.cache);
-                    return new Promise((resolve) => setTimeout(() => resolve({ ok: true, json: async () => body }), 40));
+                    return new Promise((resolve) => w.setTimeout(() => resolve({ ok: true, json: async () => body }), 40));
                 };
                 w.document.getElementById('navListen').hidden = false;   // as the core leaves it
                 w.document.getElementById('listenBtn').focus();
@@ -340,7 +349,7 @@ const slowFetch = (window, delay, body, asked) => {
         const wrap = doc.getElementById('navListen');
         assert(!wrap.hidden && doc.activeElement === doc.getElementById('listenBtn'),
             `No voice, ${what}: while the manifest is on its way the control stays, focus on it`);
-        await wait(80);
+        await clock.tick(80);
         assert(wrap.hidden === (body === EMPTY), `No voice, ${what}: once the manifest answers, the control is ${body === EMPTY ? 'hidden' : 'kept'}`);
         assert(asked.length > 0 && asked.every(c => c === 'no-cache'),
             `No voice, ${what}: the manifest is revalidated, never read blind from the cache (${asked.join(', ')})`);
@@ -350,7 +359,8 @@ const slowFetch = (window, delay, body, asked) => {
     // audio from its vendor", suggest 'voice about' (which could only fail),
     // and tell `co2` that narration "transfers nothing" whatever the voice.
     for (const [kind, voices] of [['no voice', null], ['an offline voice', true], ['a streamed voice', false]]) {
-        const { window } = run('dark', {
+        const { window, clock } = run('dark', {
+            clock: true,
             speech: voices === null ? 'none' : undefined,
             before: (w) => {
                 slowFetch(w, 0, EMPTY);
@@ -370,7 +380,7 @@ const slowFetch = (window, delay, body, asked) => {
             const before = doc.querySelector('.ft-screen').textContent.length;
             input.value = cmd;
             input.closest('form').dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
-            await wait(20);
+            await clock.tick(20);
             return doc.querySelector('.ft-screen').textContent.slice(before);
         };
         const voice = await say('voice');
