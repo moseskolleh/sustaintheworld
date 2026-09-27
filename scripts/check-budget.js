@@ -78,7 +78,7 @@ const BUDGETS = {
     allImages: {
         label: 'Every image in the repository',
         max: 3.5 * MB,
-        readme: 'the full gallery, only reached by opening every project'
+        readme: 'every photo the repository holds; a visit fetches only those it reaches'
     },
     // The only audio the site ships is Moses's own recorded introduction:
     // one 60–90 s take, and 90 s of mono MP3 at 64 kbps is about 720 KB.
@@ -224,9 +224,11 @@ function criticalAssets(page = 'index.html') {
     return assets;
 }
 
-// What script.js fetches later, feature by feature. The module list is read
-// from the directory, so a new module — or a module's stylesheet — is
-// counted the moment it exists.
+// What script.js fetches later, feature by feature — and what
+// case-studies.html's own loader fetches as a reader nears its two games
+// (modules/dossier.css and .js, out of every first view). The module list
+// is read from the directory, so a new module — or a module's stylesheet —
+// is counted the moment it exists.
 function onDemandAssets() {
     const files = [];
     const modulesDir = path.join(ROOT, 'modules');

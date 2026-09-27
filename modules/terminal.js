@@ -8,9 +8,6 @@
 // ON-DEMAND MODULES section there for when. This file is a classic script:
 // it shares the page's global scope, so it declares nothing at the top
 // level and talks to the core only through window.mks.
-//
-// tests/harness.js evaluates it after script.js so the jsdom suites see the
-// page fully initialised, the way a visitor who used every feature would.
 // ===================================================================
 
 // ===================================
@@ -38,7 +35,7 @@
             const voiced = fd ? fd.state().voiced : !!(synth && (synth.getVoices() || []).length);
             print('available commands:');
             [['journey', 'the route, Freetown to Amsterdam'],
-             ['projects', 'list the six project dossiers'],
+             ['projects', 'list the six projects'],
              ['drill', 'spud in a borehole right here'],
              ['co2', 'how much this visit weighed'],
              ['whoami', 'who runs this place'],
@@ -73,7 +70,7 @@
              'Soft Path Water Management — beyond cement, steel and pipes',
              'Groundwater Potential Mapping — geophysics with a 70% strike rate'
             ].forEach((p, i) => print(`  [${i + 1}] ${p}`));
-            print('dossiers open in section 04 — PROJECTS.');
+            print('cards in section 04 — PROJECTS. the whole of each: case-studies.html');
         },
         co2: () => {
             const badge = document.getElementById('carbonBadgeText');
@@ -99,7 +96,7 @@
                 '── 26 m  saprolite, weathered gabbro',
                 '── 38 m  fractured gabbro — conductivity rising',
                 'STRIKE 💧 water at 38 m. static level −6 m, yield looks good.',
-                '(odds are 7/10 when you read the resistivity curve first — see the Groundwater dossier.)'
+                '(odds are 7/10 when you read the resistivity curve first — try it on the groundwater case study.)'
             ];
             if (!mks.motionOK()) { steps.forEach(s => print(s)); return; }
             let i = 0;

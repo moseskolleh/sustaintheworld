@@ -255,9 +255,9 @@ const fieldText = plain(fieldReport);
     projects.forEach((cs) => {
         const at = index.indexOf(`data-project="${cs.id}"`);
         const meta = at < 0 ? null : index.slice(at).match(/class="project-meta">\s*<span class="mono-label">([^<]+)</);
-        if (!meta || years(meta[1]) !== years(cs.period)) wrongIndex.push(`${cs.id}: "${meta ? meta[1] : 'no dossier'}" vs "${cs.period}"`);
+        if (!meta || years(meta[1]) !== years(cs.period)) wrongIndex.push(`${cs.id}: "${meta ? meta[1] : 'no card'}" vs "${cs.period}"`);
     });
-    assert(wrongIndex.length === 0, `Figures: every homepage dossier shows its case study's years (wrong: ${wrongIndex.join('; ') || 'none'})`);
+    assert(wrongIndex.length === 0, `Figures: every homepage project card shows its case study's years (wrong: ${wrongIndex.join('; ') || 'none'})`);
 
     // The field report numbers its projects in the case-study order.
     const section = fieldReport.split(/<h2>Projects<\/h2>/)[1] || '';
@@ -372,29 +372,8 @@ const fieldText = plain(fieldReport);
     const doc = window.document;
     const text = (id) => (doc.getElementById(id) || { textContent: '' }).textContent;
 
-    const anchors = doc.querySelector('.strike-anchors');
-    assert(!!anchors && /30%, illustrative/.test(anchors.textContent), `Illustrative: the 30% anchor says so (${anchors && anchors.textContent})`);
-    const foot = doc.querySelector('.strike-foot');
-    assert(!!foot && /illustrative\s+—\s+not a measured figure/.test(foot.textContent), 'Illustrative: the Seven-in-ten footnote says the 30% is not measured');
-
-    const slider = doc.getElementById('strikeSlider');
-    const leaning = [30, 50, 70].filter((rate) => {
-        slider.value = String(rate);
-        slider.dispatchEvent(new window.Event('input', { bubbles: true }));
-        return !/illustrative/.test(text('strikeCounter'));
-    });
-    assert(leaning.length === 0, `Illustrative: every Seven-in-ten message that compares with blind drilling says illustrative (unlabelled at: ${leaning.join(', ') || 'none'})`);
-
-    // Three holes anywhere put the comparison on the score line.
-    doc.body.classList.add('eco-mode');   // drilling finishes at once
-    const stage = doc.getElementById('boreholeStage');
-    const key = (k) => stage.dispatchEvent(new window.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
-    const attempts = () => +((text('drillScore').match(/Strikes: \d+\/(\d+)/) || [])[1] || 0);
-    for (let i = 0; i < 60 && attempts() < 3; i++) {
-        doc.getElementById('drillBtn').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-        for (let k = 0; k < 4; k++) key('ArrowRight');
-    }
-    assert(attempts() >= 3 && /30%, illustrative/.test(text('drillScore')), `Illustrative: the borehole score line labels the 30% (${text('drillScore')})`);
+    // The 30% moved with the borehole game to the groundwater case study,
+    // where tests/widgets.test.js holds every place it is shown to the label.
 
     const legend = doc.querySelector('.ydi-leg-intuit');
     assert(!!legend && /illustrative/.test(legend.textContent), `Illustrative: the You Draw It legend labels the guess line (${legend && legend.textContent})`);

@@ -9,9 +9,6 @@
 // ON-DEMAND MODULES section there for when. This file is a classic script:
 // it shares the page's global scope, so it declares nothing at the top
 // level and talks to the core only through window.mks.
-//
-// tests/harness.js evaluates it after script.js so the jsdom suites see the
-// page fully initialised, the way a visitor who used every feature would.
 // ===================================================================
 
 // ===================================

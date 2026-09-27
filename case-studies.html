@@ -87,7 +87,7 @@
             <h2 id="lens-sustainable-ai-h">Sustainable AI &amp; AI governance <span class="cs-lens-tagline">Every prompt has a footprint</span></h2>
             <p class="cs-lens-summary">The newest thread, and the one that made the rest make sense: the tools we now use to analyse environmental problems have environmental costs of their own, and almost nobody is measuring them. At the Digital Society School I am building the framework and the decision-support tooling for a finance ministry adopting generative AI &mdash; mapping Scope 2 electricity, Scope 3 hardware and data-centre water, in a reporting language the organisation already speaks.</p>
             <p class="cs-lens-bestfor"><strong>Best fit for:</strong> Roles in sustainable AI, AI governance, green software, or ESG where digital footprint is in scope &mdash; and anywhere the job is to make an environmental claim survive scrutiny.</p>
-            <ul class="cs-lens-evidence"><li>Sustainable-AI framework and prototype for the Dutch Ministry of Finance</li><li>EcoPrompt Coach &mdash; a public tool with a full evidence ledger behind every factor</li><li>Framework framed against CSRD/ESRS disclosure logic</li><li>This site: a first view of ~281 KB with its fonts, budgeted and enforced in CI</li></ul>
+            <ul class="cs-lens-evidence"><li>Sustainable-AI framework and prototype for the Dutch Ministry of Finance</li><li>EcoPrompt Coach &mdash; a public tool with a full evidence ledger behind every factor</li><li>Framework framed against CSRD/ESRS disclosure logic</li><li>This site: a first view of ~274 KB with its fonts, budgeted and enforced in CI</li></ul>
         </section>
 
         <p class="cs-note">
@@ -269,8 +269,8 @@
                             <span class="cs-artifact-kind mono-label">tool</span>
                             <span class="cs-status cs-status-public" title="Open it now.">Public</span>
                         </div>
-                        <div class="cs-artifact-name"><a href="index.html#projects">Flood cross-section &mdash; interactive</a></div>
-                        <p class="cs-artifact-note">The Wupper cross-section in the project dossier: slide the river from a calm day to July 2021 and watch the clearance under the Schwebebahn's hanging cars shrink.</p>
+                        <div class="cs-artifact-name"><a href="#play-flood">Flood cross-section &mdash; interactive</a></div>
+                        <p class="cs-artifact-note">A schematic Wupper cross-section, below: slide the river from a calm day to July 2021 and watch the clearance under the Schwebebahn's hanging cars shrink.</p>
 
                     </li>
                     </ul>
@@ -290,6 +290,21 @@
                         <p class="cs-result-check">You cannot check this from outside — it rests on records held elsewhere.</p>
                     </li>
                     </ul>
+                </div>
+
+                <div class="cs-play" id="play-flood" data-widget="flood">
+                    <h4 class="cs-stage-h">Don&rsquo;t let it become a boat</h4>
+                    <div class="dw-live" hidden>
+                        <p class="dw-intro">The Schwebebahn hangs a few metres above the Wupper. Raise the river and watch the margin shrink &mdash; this is the problem the municipality handed us.</p>
+                        <div class="flood-stage" id="floodStage"></div>
+                        <div class="flood-controls">
+                            <label class="dw-label" for="floodSlider">River level: <span id="floodLevelLabel">normal</span></label>
+                            <input type="range" id="floodSlider" min="0" max="3" step="1" value="0" aria-describedby="floodNote">
+                            <div class="flood-ticks" aria-hidden="true"><span>Normal</span><span>+1 m</span><span>+2 m</span><span>July 2021</span></div>
+                        </div>
+                        <p class="flood-note" id="floodNote" aria-live="polite">A calm day &mdash; the Wupper runs its channel, well below the suspended track.</p>
+                    </div>
+                    <p class="cs-play-summary">A schematic, not to scale: the Schwebebahn hangs a few metres above the Wupper, and the July 2021 flood pushed the river towards its hanging cars &mdash; the &ldquo;boat&rdquo; this project set out to prevent.</p>
                 </div>
 
                 <p class="cs-caveat"><span class="mono-label">Caveat</span> Advice delivered is not the same as advice taken. Nothing here claims an implemented outcome.</p>
@@ -452,8 +467,8 @@
                             <span class="cs-artifact-kind mono-label">tool</span>
                             <span class="cs-status cs-status-public" title="Open it now.">Public</span>
                         </div>
-                        <div class="cs-artifact-name"><a href="index.html#projects">Site the borehole &mdash; interactive resistivity profile</a></div>
-                        <p class="cs-artifact-note">A playable version of the reading the method depends on: read the curve, place the rig, drill.</p>
+                        <div class="cs-artifact-name"><a href="#play-borehole">Site the borehole &mdash; interactive resistivity profile</a></div>
+                        <p class="cs-artifact-note">A playable version of the reading the method depends on, below: read the curve, place the rig, drill, and set your strike rate beside the field records.</p>
 
                     </li>
                     </ul>
@@ -473,6 +488,25 @@
                         <p class="cs-result-check">You cannot check this from outside — it rests on records held elsewhere.</p>
                     </li>
                     </ul>
+                </div>
+
+                <div class="cs-play" id="play-borehole" data-widget="borehole">
+                    <h4 class="cs-stage-h">Seven in ten: what reading the ground is worth</h4>
+                    <div class="dw-live" hidden>
+                        <p class="dw-intro">This is a resistivity profile like the ones we walked across the Freetown Complex. Low resistivity &mdash; the dips in the curve &mdash; can mean water-bearing fractures. Or clay. Move the rig, pick your spot, drill.</p>
+                        <div class="borehole-stage" id="boreholeStage" tabindex="0" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-label="Drilling rig position along the resistivity profile. Left and right arrow keys move the rig, Enter drills."></div>
+                        <div class="borehole-hud">
+                            <button class="dw-btn dw-btn-primary" id="drillBtn" type="button">Drill here</button>
+                            <button class="dw-btn" id="drillResetBtn" type="button">Survey a new site</button>
+                        </div>
+                        <p class="borehole-result" id="drillResult" aria-live="polite">Drag the rig (or focus the profile and use the arrow keys), then drill.</p>
+                        <div class="strike-board">
+                            <p class="strike-row"><span class="strike-row-label" id="drillScore">Your holes &middot; drill to fill this row</span><span class="strike-waffle" data-row="you" aria-hidden="true"></span></p>
+                            <p class="strike-row"><span class="strike-row-label">Reading the curve first &middot; 7 in 10, field records</span><span class="strike-waffle" data-row="7" aria-hidden="true"></span></p>
+                            <p class="strike-row"><span class="strike-row-label">Blind drilling &middot; about 3 in 10, illustrative</span><span class="strike-waffle" data-row="3" aria-hidden="true"></span></p>
+                        </div>
+                    </div>
+                    <p class="cs-play-summary">Reading the resistivity curve first, the boreholes in the field records struck water 70% of the time; the ~30% for blind drilling is illustrative &mdash; not a measured figure.</p>
                 </div>
 
                 <p class="cs-caveat"><span class="mono-label">Caveat</span> The strike rate comes from field records, not a controlled trial. Geology varies between sites, and a good surveyor is part of the result.</p>
@@ -548,6 +582,41 @@
         window.addEventListener('popstate', function () { apply(fromUrl()); });
 
         apply(fromUrl());
+    })();
+
+    // The two interactives load on demand: their stylesheet, then their
+    // script (modules/dossier.css and .js), once a host is within a screen
+    // of view. Most visits never scroll that far, so neither is in the
+    // first view. The module needs nothing else on this page; until it has
+    // wired a host, the host shows its summary and hides its controls.
+    (function () {
+        var hosts = document.querySelectorAll('[data-widget]');
+        if (!hosts.length) return;
+        var started = false;
+        function add(el, next) {
+            el.onload = next;
+            document.head.appendChild(el);
+        }
+        function load() {
+            if (started) return;
+            started = true;
+            var css = document.createElement('link');
+            css.rel = 'stylesheet';
+            css.href = 'modules/dossier.css';
+            add(css, function () {
+                var js = document.createElement('script');
+                js.src = 'modules/dossier.js';
+                // A fetched module is a feature someone reached; count.js counts it.
+                add(js, function () { if (window.mks && window.mks.track) window.mks.track('module-dossier'); });
+            });
+        }
+        if (!('IntersectionObserver' in window)) { load(); return; }
+        var io = new IntersectionObserver(function (entries) {
+            for (var i = 0; i < entries.length; i++) {
+                if (entries[i].isIntersecting) { io.disconnect(); load(); return; }
+            }
+        }, { rootMargin: '100% 0px' });
+        for (var i = 0; i < hosts.length; i++) io.observe(hosts[i]);
     })();
     </script>
 </body>

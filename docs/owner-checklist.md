@@ -396,8 +396,10 @@ README under "The visit counter and privacy".
   - *Where:* `content/projects.json` → the `groundwater` case study →
     `results[0].basis`, which today says no source is recorded.
   - *Unlocks:* the "illustrative — not a measured figure" labels on the Seven
-    in Ten widget and the borehole game can be replaced by the basis. Without
-    one, the labels stay (`tests/content.test.js` requires them).
+    in Ten widget (the borehole game and its scoreboard, on the groundwater
+    case study; its copy is `WIDGET_HOSTS.borehole` in
+    `scripts/build-content.js`) can be replaced by the basis. Without one, the
+    labels stay (`tests/widgets.test.js` requires them).
   - *Check:* the basis names the source; the labels are changed in the same
     commit, and `npm test` passes.
 
@@ -472,9 +474,10 @@ already on the site; confirm it or give the right value.
 - [ ] **K3. Wuppertal: did you formally lead the six-person team?** The case
   study's role says "Interdisciplinary team of six", and the CV claims
   neither way. Until you say, every page says "Worked in a six-person
-  interdisciplinary team": the homepage badge ("Team of six") and dossier
-  bullet, the field report, and `content/projects.json` → `wuppertal` →
-  `method[0]`. If you led it, all four can say so again.
+  interdisciplinary team": the field report, the case study's `role`, and
+  `content/projects.json` → `wuppertal` → `method[0]`. (The homepage badge
+  and dossier bullet went with the dossiers; the homepage card is drawn from
+  the case study.) If you led it, all three can say so again.
 - [ ] **K4. Thesis periods.** The site now uses, everywhere: coastal thesis
   2023–2024 (Wageningen) and soft-path thesis 2020–2021 (Hunan, defended May
   2021). `content/projects.json` → `coastal.period` and
@@ -487,13 +490,13 @@ already on the site; confirm it or give the right value.
   Ministry of Finance project is still described, in your words, as mapping
   "Scope 2 electricity, Scope 3 hardware, and data-centre water"
   (`content/projects.json` → `sustainable-ai` → `method[0]`, the homepage
-  dossier and experience entry, the field report). If the ministry's own
+  experience entry, the field report). If the ministry's own
   boundary was the hosted-service one, say so and those lines can name it.
 
 *Check for K1, K2 and K4:* change the value in `content/`, run
 `npm run build:content`, and `npm test` names every page that still disagrees.
-K3 has no test behind it: the homepage badge and dossier bullet, the field
-report, and the case study's `method[0]` are changed together, by hand.
+K3 has no test behind it: the field report and the case study's `role` and
+`method[0]` are changed together, by hand.
 
 ---
 

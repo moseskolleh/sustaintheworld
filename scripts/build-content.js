@@ -21,8 +21,9 @@
 //                       which scripts/fetch-stats.js writes once a week)
 //   sitemap.xml         every page, with a lastmod that is not in the future
 //   voice-scripts.js    the narration module, from content/narration.json
-//   index.html          the JSON-LD block and the hero's at-a-glance
-//                       strip, each between its markers
+//   index.html          the JSON-LD block, the hero's at-a-glance strip
+//                       and the six project cards, each between its
+//                       markers
 //   modules/interactives.js   the Assay's facts block only, between its
 //                       markers: what the fit-check may say about Moses
 //
@@ -181,6 +182,66 @@ ${bodyEnd}
 // ------------------------------------------------------------------
 // case-studies.html
 // ------------------------------------------------------------------
+
+// The two interactives, each hosted by the case study it illustrates
+// (content/projects.json `widget`). They used to sit inside the homepage's
+// dossiers, where most readers never opened them; here they sit under the
+// result they are about. The host is written whole: a heading, the controls
+// modules/dossier.js wires up, and a summary. The controls stay [hidden]
+// until the module has wired them, so without JavaScript, or before the
+// module arrives, or if it never does, the host is its heading and one
+// static line, never a dead widget. For everyone else the line stays as the
+// widget's footnote, which is where its honesty labels live.
+const WIDGET_HOSTS = {
+    // "Site the borehole" and "Seven in Ten" were two widgets making one
+    // point. They are one now: the game is the play, and the waffle is its
+    // scoreboard, the reader's holes beside the field records and the
+    // illustrative blind-drilling rate.
+    borehole: {
+        title: 'Seven in ten: what reading the ground is worth',
+        live: `
+                        <p class="dw-intro">This is a resistivity profile like the ones we walked across the Freetown Complex. Low resistivity &mdash; the dips in the curve &mdash; can mean water-bearing fractures. Or clay. Move the rig, pick your spot, drill.</p>
+                        <div class="borehole-stage" id="boreholeStage" tabindex="0" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-label="Drilling rig position along the resistivity profile. Left and right arrow keys move the rig, Enter drills."></div>
+                        <div class="borehole-hud">
+                            <button class="dw-btn dw-btn-primary" id="drillBtn" type="button">Drill here</button>
+                            <button class="dw-btn" id="drillResetBtn" type="button">Survey a new site</button>
+                        </div>
+                        <p class="borehole-result" id="drillResult" aria-live="polite">Drag the rig (or focus the profile and use the arrow keys), then drill.</p>
+                        <div class="strike-board">
+                            <p class="strike-row"><span class="strike-row-label" id="drillScore">Your holes &middot; drill to fill this row</span><span class="strike-waffle" data-row="you" aria-hidden="true"></span></p>
+                            <p class="strike-row"><span class="strike-row-label">Reading the curve first &middot; 7 in 10, field records</span><span class="strike-waffle" data-row="7" aria-hidden="true"></span></p>
+                            <p class="strike-row"><span class="strike-row-label">Blind drilling &middot; about 3 in 10, illustrative</span><span class="strike-waffle" data-row="3" aria-hidden="true"></span></p>
+                        </div>`,
+        summary: 'Reading the resistivity curve first, the boreholes in the field records struck water 70% of the time; the ~30% for blind drilling is illustrative &mdash; not a measured figure.'
+    },
+    flood: {
+        title: 'Don&rsquo;t let it become a boat',
+        live: `
+                        <p class="dw-intro">The Schwebebahn hangs a few metres above the Wupper. Raise the river and watch the margin shrink &mdash; this is the problem the municipality handed us.</p>
+                        <div class="flood-stage" id="floodStage"></div>
+                        <div class="flood-controls">
+                            <label class="dw-label" for="floodSlider">River level: <span id="floodLevelLabel">normal</span></label>
+                            <input type="range" id="floodSlider" min="0" max="3" step="1" value="0" aria-describedby="floodNote">
+                            <div class="flood-ticks" aria-hidden="true"><span>Normal</span><span>+1 m</span><span>+2 m</span><span>July 2021</span></div>
+                        </div>
+                        <p class="flood-note" id="floodNote" aria-live="polite">A calm day &mdash; the Wupper runs its channel, well below the suspended track.</p>`,
+        summary: 'A schematic, not to scale: the Schwebebahn hangs a few metres above the Wupper, and the July 2021 flood pushed the river towards its hanging cars &mdash; the &ldquo;boat&rdquo; this project set out to prevent.'
+    }
+};
+
+function widgetHost(name) {
+    const w = WIDGET_HOSTS[name];
+    if (!w) throw new Error(`no host markup for widget "${name}"`);
+    return `
+                <div class="cs-play" id="play-${name}" data-widget="${name}">
+                    <h4 class="cs-stage-h">${w.title}</h4>
+                    <div class="dw-live" hidden>${w.live}
+                    </div>
+                    <p class="cs-play-summary">${w.summary}</p>
+                </div>
+`;
+}
+
 function renderCaseStudies(data) {
     const { projects, lenses } = data;
     const all = [lenses.default].concat(lenses.lenses);
@@ -214,8 +275,12 @@ function renderCaseStudies(data) {
 
     const card = (cs) => {
         const artifacts = cs.artifacts.map((a) => {
+            // An artifact on this page (an interactive below) is linked by its
+            // fragment alone: the full address would reload the page and drop
+            // the lens the reader chose.
+            const href = a.url && a.url.startsWith('case-studies.html#') ? a.url.slice('case-studies.html'.length) : a.url;
             const name = a.status === 'public' && a.url
-                ? `<a href="${esc(a.url)}">${prose(a.name)}</a>`
+                ? `<a href="${esc(href)}">${prose(a.name)}</a>`
                 : prose(a.name);
             return `
                     <li class="cs-artifact">
@@ -268,7 +333,7 @@ function renderCaseStudies(data) {
                     <ul class="cs-results">${results}
                     </ul>
                 </div>
-${cs.caveat ? `
+${cs.widget ? widgetHost(cs.widget) : ''}${cs.caveat ? `
                 <p class="cs-caveat"><span class="mono-label">Caveat</span> ${prose(cs.caveat)}</p>` : ''}
             </article>`;
     };
@@ -355,6 +420,41 @@ ${cards}
         window.addEventListener('popstate', function () { apply(fromUrl()); });
 
         apply(fromUrl());
+    })();
+
+    // The two interactives load on demand: their stylesheet, then their
+    // script (modules/dossier.css and .js), once a host is within a screen
+    // of view. Most visits never scroll that far, so neither is in the
+    // first view. The module needs nothing else on this page; until it has
+    // wired a host, the host shows its summary and hides its controls.
+    (function () {
+        var hosts = document.querySelectorAll('[data-widget]');
+        if (!hosts.length) return;
+        var started = false;
+        function add(el, next) {
+            el.onload = next;
+            document.head.appendChild(el);
+        }
+        function load() {
+            if (started) return;
+            started = true;
+            var css = document.createElement('link');
+            css.rel = 'stylesheet';
+            css.href = 'modules/dossier.css';
+            add(css, function () {
+                var js = document.createElement('script');
+                js.src = 'modules/dossier.js';
+                // A fetched module is a feature someone reached; count.js counts it.
+                add(js, function () { if (window.mks && window.mks.track) window.mks.track('module-dossier'); });
+            });
+        }
+        if (!('IntersectionObserver' in window)) { load(); return; }
+        var io = new IntersectionObserver(function (entries) {
+            for (var i = 0; i < entries.length; i++) {
+                if (entries[i].isIntersecting) { io.disconnect(); load(); return; }
+            }
+        }, { rootMargin: '100% 0px' });
+        for (var i = 0; i < hosts.length; i++) io.observe(hosts[i]);
     })();
     </script>`;
 
@@ -937,8 +1037,6 @@ ${entries}
 // voice-scripts.js
 // ------------------------------------------------------------------
 function renderVoiceScripts(data) {
-    const comment = data.narration.$comment.map(l => (l ? `// ${l}` : '//')).join('\n');
-
     // JSON.stringify gives a correctly escaped JS string literal, which is
     // what keeps the text byte-identical through the round trip — and the
     // narration hashes with it.
@@ -962,8 +1060,8 @@ function renderVoiceScripts(data) {
 // GENERATED by ${GENERATED_BY} from content/narration.json.
 // Do not edit this file — your changes will be overwritten.
 // Edit content/narration.json, then run: npm run build:content
-//
-${comment}
+// How the scripts are written, and why, is the $comment at its top: it
+// stays there rather than in every visitor's download.
 // ===================================================================
 (function (root, factory) {
     const data = factory();
@@ -1072,7 +1170,7 @@ function injectAssayFacts(data) {
 }
 
 // ------------------------------------------------------------------
-// index.html — the JSON-LD block only
+// index.html — the JSON-LD block
 // ------------------------------------------------------------------
 const LD_START = '    <!-- JSON-LD:START — generated by scripts/build-content.js from content/profile.json. Do not edit by hand. -->';
 const LD_END = '    <!-- JSON-LD:END -->';
@@ -1186,6 +1284,60 @@ function injectAtAGlance(data, html) {
 }
 
 // ------------------------------------------------------------------
+// index.html — the six project cards
+// ------------------------------------------------------------------
+// The homepage used to tell each project a second time, by hand: a 45 KB
+// section of dossiers whose years, results and wording could drift from
+// the case studies, and had. Now it shows a teaser per case study, drawn
+// from the same entry: where and when, the headline result with the one
+// line of its basis and whether a reader can check it, the role lenses it
+// belongs to, its tools, and one link to the whole story.
+const CARDS_START = '            <!-- PROJECT-CARDS:START — generated by scripts/build-content.js from content/projects.json. Do not edit by hand. -->';
+const CARDS_END = '            <!-- PROJECT-CARDS:END -->';
+
+function renderProjectCards(data) {
+    const { projects, lenses } = data;
+    const lensName = {};
+    lenses.lenses.forEach((l) => { lensName[l.id] = l.shortLabel || l.label; });
+
+    const cards = projects.caseStudies.map((cs) => {
+        const head = cs.results[0];
+        const p = cs.photo;
+        // One photo, lazy, at the size it is drawn: a 96px thumbnail on a
+        // phone, a third of the container on a desktop. The 480px copy
+        // serves both at 1x; a 2x desktop screen takes the full one.
+        return `
+                <article class="project-card reveal" data-project="${esc(cs.id)}">
+                    <img class="project-photo" src="${esc(p.src)}" srcset="${esc(p.thumb)} 480w, ${esc(p.src)} ${p.width}w" sizes="(max-width: 599px) 96px, (max-width: 1023px) 46vw, 370px" alt="${esc(p.alt)}" width="${p.width}" height="${p.height}" loading="lazy" decoding="async">
+                    <div class="project-meta"><span class="mono-label">${esc(cs.period)} &middot; ${esc(cs.location)}</span></div>
+                    <h3>${prose(cs.title)}</h3>
+                    <p class="project-sub">${prose(cs.subtitle)}</p>
+                    <div class="project-result${head.verifiable ? ' project-result-checkable' : ''}">
+                        <p class="project-claim">${prose(head.claim)}</p>
+                        <p class="project-basis"><span class="mono-label">${head.verifiable ? 'Checkable from outside' : 'Not checkable from outside'}</span> ${prose(head.brief)}</p>
+                    </div>
+                    <ul class="project-lenses" aria-label="Role lenses">${cs.lenses.map(l => `<li>${esc(lensName[l])}</li>`).join('')}</ul>
+                    <div class="project-tech">${cs.tags.map(t => `<span>${esc(t)}</span>`).join('')}</div>
+                    <a class="project-link" href="case-studies.html#${esc(cs.id)}" data-analytics="projects-to-case-studies">Read the case study<span class="sr-only">: ${prose(cs.title)}</span> <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-arrow-right"></use></svg></a>
+                </article>`;
+    }).join('');
+
+    return `${CARDS_START}
+            <div class="projects-list">${cards}
+            </div>
+${CARDS_END}`;
+}
+
+function injectProjectCards(data, html) {
+    const start = html.indexOf(CARDS_START);
+    const end = html.indexOf(CARDS_END);
+    if (start === -1 || end === -1) {
+        throw new Error('index.html is missing the PROJECT-CARDS:START / PROJECT-CARDS:END markers');
+    }
+    return html.slice(0, start) + renderProjectCards(data) + html.slice(end + CARDS_END.length);
+}
+
+// ------------------------------------------------------------------
 // Write or check
 // ------------------------------------------------------------------
 function main() {
@@ -1203,7 +1355,7 @@ function main() {
         ['stats.html', renderStats(data)],
         ['sitemap.xml', renderSitemap(data)],
         ['voice-scripts.js', renderVoiceScripts(data)],
-        ['index.html', injectAtAGlance(data, injectJsonLd(data))],
+        ['index.html', injectProjectCards(data, injectAtAGlance(data, injectJsonLd(data)))],
         ['modules/interactives.js', injectAssayFacts(data)]
     ];
 

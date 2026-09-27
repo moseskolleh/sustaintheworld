@@ -318,6 +318,116 @@ function dom(file) {
 
     const index = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
     assert(index.includes('JSON-LD:START') && index.includes('JSON-LD:END'), 'index.html: keeps the JSON-LD markers the generator writes between');
+    assert(index.includes('PROJECT-CARDS:START') && index.includes('PROJECT-CARDS:END'), 'index.html: keeps the project-card markers the generator writes between');
+}
+
+// ===================================================================
+// The homepage's project cards: the case studies, shortened, never restated
+// ===================================================================
+// The six dossiers told each project a second time, by hand, in 45 KB, and
+// could drift from the case studies. The cards are drawn from the same
+// entries, so what a card says is what the case study says, cut short.
+{
+    const doc = new JSDOM(fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8')).window.document;
+    const cards = Array.from(doc.querySelectorAll('#projects .project-card'));
+    const lensName = Object.fromEntries(lenses.lenses.map(l => [l.id, l.shortLabel]));
+    assert(cards.map(c => c.dataset.project).join() === projects.caseStudies.map(cs => cs.id).join(),
+        `Cards: one per case study, in the case studies' order (${cards.map(c => c.dataset.project).join(', ')})`);
+
+    const wrong = [];
+    projects.caseStudies.forEach((cs) => {
+        const card = cards.find(c => c.dataset.project === cs.id);
+        if (!card) return;
+        const text = (sel) => (card.querySelector(sel) || { textContent: '' }).textContent.replace(/\s+/g, ' ').trim();
+        const head = cs.results[0];
+        if (text('h3') !== cs.title) wrong.push(`${cs.id}: title "${text('h3')}"`);
+        if (text('.project-claim') !== head.claim) wrong.push(`${cs.id}: headline "${text('.project-claim')}"`);
+        if (!text('.project-basis').endsWith(head.brief)) wrong.push(`${cs.id}: basis "${text('.project-basis')}"`);
+        // Checkable or not, as the case study says: the card cannot upgrade it.
+        if (!text('.project-basis').startsWith(head.verifiable ? 'Checkable from outside' : 'Not checkable from outside')) wrong.push(`${cs.id}: says "${text('.project-basis .mono-label')}"`);
+        const lensChips = Array.from(card.querySelectorAll('.project-lenses li')).map(li => li.textContent);
+        if (lensChips.join() !== cs.lenses.map(l => lensName[l]).join()) wrong.push(`${cs.id}: lenses ${lensChips.join('/')}`);
+        const links = card.querySelectorAll('a[href]');
+        if (links.length !== 1 || links[0].getAttribute('href') !== `case-studies.html#${cs.id}`) wrong.push(`${cs.id}: links ${links.length}`);
+    });
+    assert(wrong.length === 0, `Cards: each says what its case study says — title, headline, basis, checkability, lenses — and links to it (wrong: ${wrong.join('; ') || 'none'})`);
+
+    // Every card link lands on a case study that is there.
+    const cs = new JSDOM(fs.readFileSync(path.join(ROOT, 'case-studies.html'), 'utf8')).window.document;
+    const dead = Array.from(doc.querySelectorAll('a[href^="case-studies.html#"]'))
+        .map(a => a.getAttribute('href').split('#')[1])
+        .filter(id => !cs.getElementById(id));
+    assert(dead.length === 0, `Cards: every link into case-studies.html lands on an id it has (missing: ${dead.join(', ') || 'none'})`);
+
+    // What went with the dossiers stays gone: their games, their galleries,
+    // and the ids and links that pointed into them.
+    const gone = ['boreholeGame', 'strikeWidget', 'floodSim', 'boreholeStage', 'floodSlider', 'strikeSlider'].filter(id => doc.getElementById(id));
+    const pointing = Array.from(doc.querySelectorAll('a[href^="#"]')).map(a => a.getAttribute('href')).filter(h => h.length > 1 && !doc.getElementById(h.slice(1)));
+    assert(gone.length === 0 && !doc.querySelector('.project-gallery, .dossier-widget, .project-details'),
+        `Cards: no dossier, gallery or game is left on the homepage (${gone.join(', ') || 'none'})`);
+    assert(pointing.length === 0, `Cards: no in-page link on the homepage points at an id that is not there (${pointing.join(', ') || 'none'})`);
+}
+
+// --- one photo per card, lazy, at the size it is drawn --------------------
+{
+    // Width and height from the file itself (the WebP header), so a card
+    // cannot claim one shape and deliver another.
+    const webpSize = (buf) => {
+        if (buf.toString('ascii', 0, 4) !== 'RIFF' || buf.toString('ascii', 8, 12) !== 'WEBP') return null;
+        const chunk = buf.toString('ascii', 12, 16);
+        if (chunk === 'VP8X') return { width: 1 + buf.readUIntLE(24, 3), height: 1 + buf.readUIntLE(27, 3) };
+        if (chunk === 'VP8L') { const b = buf.readUInt32LE(21); return { width: 1 + (b & 0x3fff), height: 1 + ((b >> 14) & 0x3fff) }; }
+        if (chunk === 'VP8 ') return { width: buf.readUInt16LE(26) & 0x3fff, height: buf.readUInt16LE(28) & 0x3fff };
+        return null;
+    };
+    const size = (rel) => webpSize(fs.readFileSync(path.join(ROOT, rel)));
+    const doc = new JSDOM(fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8')).window.document;
+    const bad = [];
+    projects.caseStudies.forEach((cs) => {
+        const p = cs.photo;
+        const full = size(p.src), thumb = size(p.thumb);
+        if (!full || full.width !== p.width || full.height !== p.height) bad.push(`${cs.id}: ${p.src} is ${full && `${full.width}x${full.height}`}, declared ${p.width}x${p.height}`);
+        if (!thumb || thumb.width !== 480 || Math.abs(thumb.height - Math.round(480 * p.height / p.width)) > 1) bad.push(`${cs.id}: ${p.thumb} is ${thumb && `${thumb.width}x${thumb.height}`}, not the photo at 480px wide`);
+        const imgs = doc.querySelectorAll(`[data-project="${cs.id}"] img`);
+        const img = imgs[0];
+        if (imgs.length !== 1) bad.push(`${cs.id}: ${imgs.length} photos on the card`);
+        else if (img.getAttribute('loading') !== 'lazy' || img.getAttribute('src') !== p.src || !img.getAttribute('alt') ||
+            img.getAttribute('srcset') !== `${p.thumb} 480w, ${p.src} ${p.width}w` || !/96px/.test(img.getAttribute('sizes') || '')) {
+            bad.push(`${cs.id}: the card's photo is not lazy, alt-texted and offered at both sizes`);
+        }
+    });
+    assert(bad.length === 0, `Cards: one lazy photo each, its declared size the file's own, with a 480px copy for small sizes (${bad.join('; ') || 'all six'})`);
+}
+
+// --- the validator holds the card to its content -------------------------
+{
+    const base = projects.caseStudies.find(cs => cs.id === 'groundwater');
+    const variant = (change) => { const cs = JSON.parse(JSON.stringify(base)); change(cs); return content.checkCard('test', cs); };
+    const says = (problems, re) => problems.some(p => re.test(p));
+    assert(content.checkCard('test', base).length === 0, 'Validator: a complete case study passes the card check');
+    assert(says(variant(cs => { delete cs.results[0].brief; }), /one-line brief/), 'Validator: a headline without a brief is refused');
+    assert(says(variant(cs => { cs.results[0].brief = 'x'.repeat(121); }), /120 at most/), 'Validator: a brief longer than a line is refused');
+    assert(says(variant(cs => { cs.photo.src = 'assets/img/nope.webp'; }), /not in the repository/), 'Validator: a photo that is not in the repository is refused');
+    assert(says(variant(cs => { cs.photo.thumb = 'https://example.com/x.webp'; }), /not a file in this repository/), 'Validator: a photo from off the site is refused');
+    assert(says(variant(cs => { cs.photo.alt = ' '; }), /no alt text/), 'Validator: a photo with no alt text is refused');
+    assert(says(variant(cs => { delete cs.photo.height; }), /intrinsic width and height/), 'Validator: a photo without its size is refused');
+    assert(says(variant(cs => { cs.tags = []; }), /tags must be/), 'Validator: a card with no tags is refused');
+    assert(says(variant(cs => { cs.widget = 'slot-machine'; }), /not one of borehole, flood/), 'Validator: a widget no host exists for is refused');
+    assert(content.WIDGETS.join() === 'borehole,flood', 'Validator: the widgets a case study may host are the two dossier.js draws');
+}
+
+// --- the games live where their stories are -------------------------------
+{
+    const doc = new JSDOM(fs.readFileSync(path.join(ROOT, 'case-studies.html'), 'utf8')).window.document;
+    const hosted = projects.caseStudies.filter(cs => cs.widget).map(cs => `${cs.id}:${cs.widget}`);
+    assert(hosted.join() === 'wuppertal:flood,groundwater:borehole', `Games: the flood slider is Wuppertal's and the borehole game groundwater's (${hosted.join(', ')})`);
+    const placed = Array.from(doc.querySelectorAll('[data-widget]')).map(h => `${h.closest('.cs-card').id}:${h.dataset.widget}`);
+    assert(placed.join() === hosted.join(), `Games: each host sits inside its own case study, and only there (${placed.join(', ')})`);
+    // The artifact that names each game links to it on this page, by its
+    // fragment alone: the full address would reload and drop the lens.
+    const toHosts = Array.from(doc.querySelectorAll('.cs-artifact-name a')).map(a => a.getAttribute('href')).filter(h => /^#play-/.test(h));
+    assert(toHosts.length === 2 && toHosts.every(h => doc.querySelector(h)), `Games: each is linked from its artifact entry, and the link lands (${toHosts.join(', ')})`);
+    assert(!doc.querySelector('a[href*="index.html#projects"]'), 'Games: no artifact still sends a reader to the homepage to find them');
 }
 
 if (failures > 0) {

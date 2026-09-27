@@ -151,13 +151,14 @@ document.addEventListener('keydown', (e) => {
 // ON-DEMAND MODULES
 // ===================================
 // Roughly two thirds of this site's JavaScript serves features most visits
-// never reach: the narration player, the field terminal, the games inside
-// the project dossiers, the interactives in section 05 and the footer
-// receipt. They used to ship in this file, parsed and executed on every
-// visit — including the ones that read the hero and left. Now each lives in
-// modules/ and is fetched the moment it is first needed: a dossier opening,
-// a "listen" press, the backtick key, section 05 coming into range. What
-// every visit pays for is what every visit uses.
+// never reach: the narration player, the field terminal, the interactives
+// in section 05 and the footer receipt. They used to ship in this file,
+// parsed and executed on every visit — including the ones that read the
+// hero and left. Now each lives in modules/ and is fetched the moment it is
+// first needed: a "listen" press, the backtick key, section 05 coming into
+// range. What every visit pays for is what every visit uses. (The two
+// project games, modules/dossier.js, moved to the case studies they
+// illustrate, which load them the same way without this file.)
 //
 // Modules are classic scripts sharing the page's global scope. They declare
 // nothing at the top level (a second `const safeStorage` would be a
@@ -168,7 +169,6 @@ document.addEventListener('keydown', (e) => {
 // script builds anything it styles.
 const MODULES = {
     interactives: ['ai-carbon-data.js', 'modules/interactives.js'],
-    dossier: ['modules/dossier.js'],
     terminal: ['modules/terminal.js'],
     dispatch: ['modules/dispatch.css', 'voice-scripts.js', 'modules/dispatch.js']
 };
@@ -360,17 +360,11 @@ if (document.readyState === 'complete') {
 const navToggle = document.getElementById('navToggle');
 const navMenu = document.getElementById('navMenu');
 
-// Expand a collapsed dossier or the receipt panel that contains a deep-link
-// target, so shared links like /#strikeWidget or /#receiptPanel actually reveal
-// the feature instead of landing on a closed accordion.
+// Open the receipt panel when a deep-link target is in it, so a shared
+// /#receiptPanel reveals the receipt instead of landing on a closed panel.
 const revealTarget = (target) => {
     if (!target || !target.closest) return false;
     let expanded = false;
-    const card = target.closest('.project-card');
-    if (card && !card.classList.contains('expanded')) {
-        const toggle = card.querySelector('.project-toggle');
-        if (toggle) { toggle.click(); expanded = true; }
-    }
     const panel = target.id === 'receiptPanel' ? target : target.closest('#receiptPanel');
     if (panel && panel.hasAttribute('hidden')) {
         const rb = document.getElementById('receiptBtn');
@@ -420,7 +414,7 @@ const hold = (land) => {
     releaseHold = release;
 };
 
-// Fetch what the target needs, open the dossier or receipt around it (and
+// Fetch what the target needs, open the receipt around it (and
 // give that a moment to push things into place), then scroll and focus. A
 // target waiting to fade in is shown at once: it sits 26px low until then.
 const jumpTo = (target, behavior, focus, wait) => {
@@ -647,8 +641,8 @@ const navSpies = navLinks.map((link) => {
     // A module that has filled in its part of the page, or the Assay's
     // result, announces it: new controls for back to top to keep clear of.
     document.addEventListener('mks:layout', relayout);
-    // A section that changes height moves every offset below it: a dossier
-    // opening, or one drawn for the first time (content-visibility sizes it
+    // A section that changes height moves every offset below it: a module
+    // filling it in, or one drawn for the first time (content-visibility sizes it
     // by estimate until then). Each asks for a measurement.
     if ('ResizeObserver' in window) {
         const sized = new ResizeObserver(() => relayout());
@@ -909,98 +903,6 @@ if (statsSection && 'IntersectionObserver' in window) {
 
     elements.forEach(el => revealObserver.observe(el));
 })();
-
-// ===================================
-// EXPANDABLE PROJECT DOSSIERS
-// ===================================
-// Each dossier opens from a real <button> around its title: announced as
-// "Sustainable AI Framework, button, collapsed", toggled by Enter or Space,
-// and inside the <h3> so heading navigation still finds it. The summary used
-// to be one <a href="#"> around the whole card — a sixty-word link name, and
-// Space scrolled the page. The rest of the summary stays clickable for a
-// mouse; the click from the button bubbles to the same handler.
-document.querySelectorAll('.project-card').forEach((card, i) => {
-    const summary = card.querySelector('.project-summary');
-    const toggle = card.querySelector('.project-toggle');
-    const details = card.querySelector('.project-details');
-    if (!summary || !toggle || !details) return;
-
-    // Disclosure semantics + keep collapsed content non-interactive. `inert`
-    // (with the CSS visibility:hidden fallback) takes the hidden galleries and
-    // mini-games out of the tab order and the accessibility tree until opened.
-    // The markup says open (aria-expanded="true"), as it is without
-    // JavaScript. It is closed here on a normal start; after a late one the
-    // reader has seen it, maybe mid-dossier, so it stays open, games fetched.
-    if (!details.id) details.id = `project-details-${i + 1}`;
-    toggle.setAttribute('aria-controls', details.id);
-    if (lateStart) {
-        card.classList.add('expanded');
-        details.style.maxHeight = details.scrollHeight + 'px';
-        if (details.querySelector('.dossier-widget, #floodSlider')) mksLoad('dossier').catch(mksLoadWarn);
-    } else {
-        details.inert = true;
-        toggle.setAttribute('aria-expanded', 'false');
-    }
-
-    // What is inside can grow after the dossier opens — a mini-game logs
-    // every drill, late images arrive — and a max-height measured at opening
-    // clipped it, leaving the end of the dossier hidden but still tabbable.
-    // The inner wrapper is not clamped, so its size is the content's; this
-    // also follows a resized window, which had a listener of its own.
-    const inner = details.querySelector('.project-details-inner');
-    if (inner && 'ResizeObserver' in window) {
-        new ResizeObserver(() => {
-            if (card.classList.contains('expanded')) details.style.maxHeight = details.scrollHeight + 'px';
-        }).observe(inner);
-    }
-
-    const collapse = (c) => {
-        const d = c.querySelector('.project-details');
-        const t = c.querySelector('.project-toggle');
-        c.classList.remove('expanded');
-        if (d) { d.style.maxHeight = '0px'; d.inert = true; }
-        if (t) t.setAttribute('aria-expanded', 'false');
-    };
-
-    summary.addEventListener('click', (e) => {
-        // Let real links inside the summary work normally
-        if (e.target.closest('a')) return;
-        e.preventDefault();
-
-        const isExpanded = card.classList.contains('expanded');
-
-        // Opening one closes any other, so the reader keeps their bearings.
-        // Closing one closes just that (after a late start all six are open).
-        if (!isExpanded) {
-            document.querySelectorAll('.project-card.expanded').forEach(open => {
-                if (open !== card) collapse(open);
-            });
-        }
-
-        const remeasure = () => {
-            if (card.classList.contains('expanded')) {
-                details.style.maxHeight = details.scrollHeight + 'px';
-            }
-        };
-
-        if (isExpanded) {
-            collapse(card);
-        } else {
-            card.classList.add('expanded');
-            details.inert = false;
-            details.style.maxHeight = details.scrollHeight + 'px';
-            toggle.setAttribute('aria-expanded', 'true');
-            // The mini-games inside a dossier load on its first opening —
-            // nothing in a collapsed dossier can be seen, so nothing in one
-            // is fetched until now.
-            if (details.querySelector('.dossier-widget, #floodSlider')) {
-                mksLoad('dossier').then(remeasure).catch(mksLoadWarn);
-            }
-            // Once images inside load, the content can grow — re-measure
-            setTimeout(remeasure, 450);
-        }
-    });
-});
 
 // ===================================
 // GALLERY LIGHTBOX
@@ -1610,7 +1512,7 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
 // ===================================
 // Everything the stylesheet's html.js rules wait on has run, so the <head>
 // failsafe can stand down. On a late start every reveal is marked done
-// first, as the dossiers were kept open: putting the mark back must not hide
+// first: putting the mark back must not hide
 // what the reader has seen, nor move it, though it brings back widgets
 // above them (and estimated heights). The line a third of the way down is
 // put back where it was, and held there while they fill in: that was left

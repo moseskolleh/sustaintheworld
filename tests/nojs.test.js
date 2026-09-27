@@ -84,27 +84,46 @@ function rules(css) {
 }
 
 // ===================================================================
-// The dossiers are open without JavaScript, and their titles say so
+// The projects need nothing from JavaScript, and neither do their games
 // ===================================================================
 {
-    // Only script.js collapses a dossier, so the markup's state is the open
-    // one; "collapsed" above content on show misled a screen reader.
-    const toggles = html.match(/<button\b[^>]*class="project-toggle[^"]*"[^>]*>/g) || [];
-    assert(toggles.length === 6 && toggles.every(t => /aria-expanded="true"/.test(t)),
-        `Dossiers: the six title buttons ship aria-expanded="true", as shown without JavaScript (${toggles.filter(t => !/aria-expanded="true"/.test(t)).length} do not)`);
+    // The six dossiers were collapsed by script.js, and their markup had to
+    // say "expanded" for the reader without it. The cards that replaced
+    // them have nothing to open: every word and link is in the HTML.
+    const { JSDOM } = require('jsdom');
+    const doc = new JSDOM(html).window.document;
+    const cards = Array.from(doc.querySelectorAll('#projects .project-card'));
+    assert(cards.length === 6 && cards.every(c => c.querySelector('h3') && c.querySelector('.project-claim') && c.querySelector('a.project-link[href]')),
+        `Projects: six cards, each with its title, headline result and link in the served HTML (${cards.length})`);
+    assert(!doc.querySelector('#projects button, #projects [aria-expanded]'), 'Projects: no control on a card that only a script could work');
+
+    // The games moved to the case studies. Without JavaScript each host is
+    // its heading and a line; the controls ship [hidden], and only the
+    // module that wires them shows them.
+    const cs = new JSDOM(read('case-studies.html')).window.document;
+    const hosts = Array.from(cs.querySelectorAll('[data-widget]'));
+    assert(hosts.length === 2 && hosts.every(h => h.querySelector('.dw-live[hidden]') && h.querySelector('.cs-play-summary').textContent.trim().length > 40),
+        `Games: each host ships its controls hidden and a summary on show (${hosts.map(h => h.id).join(', ')})`);
+    assert(hosts.every(h => Array.from(h.querySelectorAll('button, input, [tabindex]')).every(c => c.closest('[hidden]'))),
+        'Games: no control of theirs is on show before the module has wired it');
 }
 
 // ===================================================================
 // Copy that promises what only JavaScript does hides with it
 // ===================================================================
 {
-    // Without JavaScript every dossier is open already and the section-05
-    // chart is a note, so "click any one to open" described nothing a
-    // reader could do. ("The live widget on this page", in the toolkit, went
-    // with the calculator to carbon-ai.html; the link says where it is now.)
+    // Without JavaScript the section-05 chart is a note, so copy that
+    // promises what only a script does must go with it. ("Click any one to
+    // open" went with the dossiers; "the live widget on this page" with the
+    // calculator to carbon-ai.html. Neither may come back outside .needs-js.)
     const { JSDOM } = require('jsdom');
     const doc = new JSDOM(html).window.document;
-    ['click any one to open', 'Watch the route unfold'].forEach((phrase) => {
+    ['click any one to open', 'the live widget on this page'].forEach((phrase) => {
+        const holders = Array.from(doc.querySelectorAll('body *'))
+            .filter(el => Array.from(el.childNodes).some(n => n.nodeType === 3 && n.textContent.includes(phrase)));
+        assert(holders.every(el => el.closest('.needs-js')), `Copy: "${phrase}" is not promised where JavaScript cannot run`);
+    });
+    ['Watch the route unfold'].forEach((phrase) => {
         const holders = Array.from(doc.querySelectorAll('body *'))
             .filter(el => Array.from(el.childNodes).some(n => n.nodeType === 3 && n.textContent.includes(phrase)));
         assert(holders.length > 0 && holders.every(el => el.closest('.needs-js')), `Copy: "${phrase}" is inside .needs-js, so it goes when JavaScript cannot run`);
@@ -133,7 +152,6 @@ function rules(css) {
     const checks = [
         ['.preloader', /position:\s*fixed/, 'the preloader only covers the page when script.js can lift it'],
         ['.reveal', /opacity:\s*0\s*;/, 'reveal blocks are only transparent when script.js can show them'],
-        ['.project-details', /max-height:\s*0\s*;/, 'dossiers are only collapsed when script.js can open them'],
         ['.impact-seg', /width:\s*0\s*;/, 'impact bars are only empty when script.js can grow them']
     ];
     checks.forEach(([cls, decl, what]) => {
@@ -280,27 +298,13 @@ async function takeoverCase(label, markJs) {
     assert(errors.length === 0, `${label}: no errors`);
     assert(window.mks.ready === true, `${label}: script.js reports ready`);
     assert(doc.documentElement.classList.contains('js'), `${label}: the page is marked html.js once script.js has run`);
-    const cards = Array.from(doc.querySelectorAll('.project-card')).map((card) => {
-        const details = card.querySelector('.project-details');
-        return { open: card.classList.contains('expanded'), inert: !!details.inert, said: card.querySelector('.project-toggle').getAttribute('aria-expanded') };
-    });
     if (markJs) {
         assert(reveals.some(el => !el.classList.contains('visible')), `${label}: reveals still wait to scroll into view`);
-        assert(cards.length === 6 && cards.every(c => !c.open && c.inert && c.said === 'false'),
-            `${label}: every dossier starts closed, inert, and says so (${cards.map(c => `${c.open ? 'open' : 'closed'}/${c.said}`).join(' ')})`);
     } else {
         // A late start: <head> already showed everything. Putting the mark
         // back must not hide any of it again, and the intro must not replay.
         assert(reveals.length > 0 && reveals.every(el => el.classList.contains('visible')), `${label}: every reveal is marked done before the mark goes back (${reveals.filter(el => !el.classList.contains('visible')).length} not)`);
         assert(!doc.getElementById('preloader'), `${label}: the intro does not replay over a page already on screen`);
-        // The six dossiers were open without the mark; html.js collapses any
-        // that is not .expanded. They used to fold shut under the reader.
-        assert(cards.length === 6 && cards.every(c => c.open && !c.inert && c.said === 'true'),
-            `${label}: every dossier the reader was shown stays open, and says so (${cards.map(c => `${c.open ? 'open' : 'closed'}/${c.said}`).join(' ')})`);
-        // Closing one closes that one, not the other five as well.
-        doc.querySelector('.project-toggle').click();
-        const open = Array.from(doc.querySelectorAll('.project-card.expanded')).length;
-        assert(open === 5, `${label}: closing one dossier leaves the other five open (${open} open)`);
     }
     await tick(0);   // let the counters' microtask run before the window goes
     window.close();
@@ -335,7 +339,7 @@ async function lateLineCase() {
     const report = () => observers.filter(o => o.on).forEach(o => o.cb([{ target: window.document.body }], o));
 
     assert(errors.length === 0, 'Late start, held line: no errors');
-    lineTop = 1000;   // a dossier above grows to fit its widget, pushing the line down
+    lineTop = 1000;   // a section above grows to fit its widget, pushing the line down
     bodyHeight = 30760;
     report();
     assert(lineTop === 240 && scrolls.length === 1, `Late start, held line: when the page grows above it, the line is put back (at ${lineTop}px after ${scrolls.length} scroll(s))`);

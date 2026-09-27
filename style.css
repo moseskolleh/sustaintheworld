@@ -864,92 +864,6 @@ body.light-mode .hero-availability {
     .ydi-real-line { transition: none; }
 }
 
-/* Seven in Ten — the 70% strike rate as a felt human delta */
-.strike-waffle {
-    display: grid;
-    grid-template-columns: repeat(10, 1fr);
-    gap: 5px;
-    max-width: 360px;
-    margin: 10px 0 16px;
-}
-
-.strike-cell {
-    aspect-ratio: 1;
-    border-radius: 3px;
-    background: var(--card-bg-alt);
-    border: 1px solid var(--line-soft);
-    transition: background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
-}
-
-.strike-cell.water {
-    background: var(--accent-blue);
-    border-color: var(--accent-blue);
-    box-shadow: 0 0 6px rgba(46, 163, 224, 0.45);
-}
-
-.strike-counter {
-    color: var(--text-primary);
-    font-size: 0.95rem;
-    line-height: 1.55;
-    max-width: 52ch;
-    margin-bottom: 10px;
-}
-.strike-counter strong { color: var(--primary-green); }
-
-.strike-control {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    max-width: 440px;
-    margin: 6px 0 12px;
-}
-.strike-control input[type="range"] { flex: 1; accent-color: var(--accent-blue); cursor: pointer; }
-.strike-control label { flex-shrink: 0; }
-.strike-out { color: var(--primary-green); font-family: var(--font-mono); min-width: 3.5ch; }
-
-.strike-anchors {
-    display: flex;
-    justify-content: space-between;
-    max-width: 440px;
-    margin: -4px 0 10px;
-    font-family: var(--font-mono);
-    font-size: 0.68rem;
-    color: var(--text-secondary);
-    letter-spacing: 0.03em;
-}
-.strike-anchor-win { color: var(--accent-blue); }
-
-.strike-foot {
-    font-size: 0.74rem;
-    line-height: 1.5;
-    color: var(--text-secondary);
-    opacity: 0.85;
-    max-width: 60ch;
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .strike-cell { transition: none; }
-}
-
-/* Contextual "next →" links that chain the features into one narrative */
-.feature-next {
-    display: inline-block;
-    margin-top: 14px;
-    font-family: var(--font-mono);
-    font-size: 0.78rem;
-    color: var(--primary-green);
-    text-decoration: none;
-    border-bottom: 1px dashed var(--line-color);
-    padding-bottom: 2px;
-    transition: var(--transition);
-}
-.feature-next:hover { border-bottom-color: var(--primary-green); }
-
-@media (max-width: 400px) {
-    .strike-control { flex-wrap: wrap; }
-    .strike-waffle { gap: 4px; }
-}
-
 /* The Assay — paste a JD, get a client-side fit grade + evidence map.
    It sits below the contact form and is drawn as the optional step it is:
    no fill, a dashed edge, a smaller title than the form's section. */
@@ -999,7 +913,7 @@ body.light-mode .hero-availability {
 .assay-cta-wrap { margin-top: 18px; }
 .assay-copy-wrap { margin-top: 14px; }
 
-/* Play index — signposts the interactive features, between two sections */
+/* Play index — signposts the interactive features, some on other pages */
 .play-index {
     background: var(--card-bg-alt);
     border-top: 1px solid var(--line-color);
@@ -1806,128 +1720,111 @@ body.light-mode .hero-photo-caption {
 }
 
 /* ===================================
-   PROJECTS — EXPANDABLE DOSSIERS
+   PROJECTS — SIX TEASER CARDS
    =================================== */
+/* One card per case study, generated from content/projects.json: where and
+   when, the headline result with its basis, the role lenses and the tools,
+   and one link to the whole story on case-studies.html. Three across on a
+   desktop and two on a tablet; on a phone the photo becomes a thumbnail
+   beside the title, so the six cost about three screens, not five. */
 .projects-list {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 22px;
 }
 
 .project-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 0 20px 20px;
     background: var(--card-bg);
     border: 1px solid var(--line-soft);
     border-radius: var(--border-radius);
     overflow: hidden;
-    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    transition: border-color 0.3s ease;
 }
 
-.project-card:hover {
+.project-card:hover,
+.project-card:focus-within {
     border-color: var(--line-color);
 }
 
-.project-card.expanded {
-    border-color: var(--primary-green);
-    box-shadow: var(--box-shadow);
+.project-photo {
+    display: block;
+    width: calc(100% + 40px);
+    max-width: none;
+    height: auto;
+    aspect-ratio: 2 / 1;
+    margin: 0 -20px 6px;
+    object-fit: cover;
+    filter: saturate(0.9);
 }
 
-.project-summary {
-    display: grid;
-    grid-template-columns: 200px 1fr 50px;
-    gap: 26px;
-    align-items: center;
-    padding: 22px 26px;
-    text-decoration: none;
-    color: inherit;
-    cursor: pointer;
+.project-card h3 {
+    font-size: 1.2rem;
+    line-height: 1.3;
 }
 
-.project-toggle {
-    font: inherit;
-    color: inherit;
-    letter-spacing: inherit;
-    text-align: left;
-    background: none;
-    border: 0;
-    padding: 0;
-    cursor: pointer;
+.project-sub {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    line-height: 1.5;
 }
 
-.project-toggle:focus-visible {
-    outline: 2px solid var(--primary-green);
-    outline-offset: 4px;
+/* The headline result, ruled green when a reader can check it (as on the
+   case studies), with the one line of its basis under it. */
+.project-result {
+    padding: 10px 12px;
+    background: var(--card-bg-alt);
+    border-left: 3px solid var(--line-color);
     border-radius: 4px;
 }
 
-.project-thumb {
-    width: 200px;
-    height: 140px;
-    border-radius: 8px;
-    overflow: hidden;
-    border: 1px solid var(--line-soft);
+.project-result-checkable {
+    border-left-color: var(--primary-green);
 }
 
-.project-thumb img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.5s ease, filter 0.5s ease;
-    filter: saturate(0.85);
+.project-claim {
+    font-weight: 600;
+    font-size: 0.95rem;
+    line-height: 1.45;
 }
 
-.project-card:hover .project-thumb img {
-    transform: scale(1.06);
-    filter: saturate(1.1);
+.project-basis {
+    margin-top: 4px;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    line-height: 1.5;
 }
 
-.project-meta {
+.project-basis .mono-label {
+    display: block;
+    margin-bottom: 2px;
+    font-size: 0.7rem;
+}
+
+.project-lenses {
+    list-style: none;
     display: flex;
-    align-items: center;
-    gap: 14px;
     flex-wrap: wrap;
-    margin-bottom: 8px;
+    gap: 6px;
 }
 
-.project-status {
+.project-lenses li {
     font-family: var(--font-mono);
-    font-size: 0.68rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--text-secondary);
-    border: 1px solid var(--line-soft);
-    border-radius: 999px;
-    padding: 3px 12px;
-}
-
-.project-status.live {
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
     color: var(--primary-green);
-    border-color: var(--line-color);
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-}
-
-.project-status.live .blink-dot {
-    width: 6px;
-    height: 6px;
-}
-
-.project-head h3 {
-    font-size: 1.45rem;
-    margin-bottom: 8px;
-}
-
-.project-head > p {
-    color: var(--text-secondary);
-    font-size: 0.96rem;
-    margin-bottom: 14px;
-    max-width: 640px;
+    border: 1px solid var(--line-color);
+    border-radius: 999px;
+    padding: 3px 10px;
 }
 
 .project-tech {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 2px 12px;
 }
 
 .project-tech span {
@@ -1935,114 +1832,28 @@ body.light-mode .hero-photo-caption {
     font-size: 0.7rem;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: var(--primary-green);
-    border: 1px solid var(--line-color);
-    border-radius: 4px;
-    padding: 4px 10px;
+    color: var(--text-dim);
 }
 
-.project-chevron {
-    width: 42px;
-    height: 42px;
-    border-radius: 50%;
-    border: 1px solid var(--line-color);
-    display: flex;
+/* Last in the card and pushed to its foot, so a row's links line up. */
+.project-link {
+    margin-top: auto;
+    align-self: flex-start;
+    display: inline-flex;
     align-items: center;
-    justify-content: center;
-    color: var(--primary-green);
-    transition: var(--transition);
-    justify-self: end;
-}
-
-.project-card.expanded .project-chevron {
-    transform: rotate(180deg);
-    background: var(--primary-green);
-    color: var(--darker-bg);
-}
-
-.project-details {
-    overflow: hidden;
-}
-
-/* Collapsed only when JavaScript can open it again; without it, open. */
-html.js .project-details {
-    max-height: 0;
-    /* Collapsed: kept out of the tab order and the screen-reader tree so
-       keyboard users don't land on the hidden galleries and mini-games inside.
-       visibility flips to hidden only after the height finishes animating. */
-    visibility: hidden;
-    transition: max-height 0.6s cubic-bezier(0.4, 0, 0.2, 1), visibility 0s linear 0.6s;
-}
-
-.project-card.expanded .project-details {
-    visibility: visible;
-    transition: max-height 0.6s cubic-bezier(0.4, 0, 0.2, 1), visibility 0s;
-}
-
-.project-details-inner {
-    padding: 10px 30px 36px;
-    border-top: 1px dashed var(--line-color);
-    display: grid;
-    grid-template-columns: 1.1fr 1fr;
-    gap: 40px;
-}
-
-.project-story {
-    padding-top: 24px;
-}
-
-.story-block {
-    margin-bottom: 24px;
-}
-
-.story-block h4 {
-    font-size: 0.85rem;
+    gap: 8px;
     font-family: var(--font-mono);
-    font-weight: 500;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.04em;
     color: var(--primary-green);
-    margin-bottom: 10px;
+    text-decoration: none;
+    border-bottom: 1px dashed var(--line-color);
+    padding-bottom: 2px;
 }
 
-.story-block h4 i {
-    margin-right: 8px;
-}
-
-.story-block p {
-    color: var(--text-secondary);
-    font-size: 0.95rem;
-}
-
-.story-block ul {
-    list-style: none;
-}
-
-.story-block ul li {
-    color: var(--text-secondary);
-    font-size: 0.94rem;
-    padding-left: 20px;
-    position: relative;
-    margin-bottom: 7px;
-}
-
-.story-block ul li::before {
-    content: '▸';
-    position: absolute;
-    left: 0;
-    color: var(--primary-green);
-}
-
-.project-actions {
-    margin-top: 8px;
-}
-
-.project-gallery {
-    padding-top: 24px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    align-content: start;
+.project-link:hover,
+.project-link:focus-visible {
+    border-bottom-color: var(--primary-green);
 }
 
 .gallery-item {
@@ -2790,8 +2601,6 @@ html:not(.js) .theme-toggle,
 html:not(.js) .listen-btn,
 html:not(.js) .play-index,
 html:not(.js) .journey-map,
-html:not(.js) .dossier-widget,
-html:not(.js) .project-chevron,
 html:not(.js) .ydi,
 html:not(.js) .assay,
 html:not(.js) .nav-toggle,
@@ -2801,12 +2610,6 @@ html:not(.js) .eco-mode-toggle,
 html:not(.js) .terminal-toggle,
 html:not(.js) .needs-js {
     display: none !important;
-}
-
-/* Every dossier is already open, so its title stops promising a click. */
-html:not(.js) .project-summary,
-html:not(.js) .project-toggle {
-    cursor: auto;
 }
 
 .nojs-note {
@@ -2951,11 +2754,6 @@ html.js .nojs-note { display: none; }
         grid-column: auto;
     }
 
-    .project-details-inner {
-        grid-template-columns: 1fr;
-        gap: 10px;
-    }
-
     .education-grid,
     .cert-grid {
         grid-template-columns: repeat(2, 1fr);
@@ -2966,26 +2764,6 @@ html.js .nojs-note { display: none; }
     .skills-grid,
     .contact-content {
         grid-template-columns: minmax(0, 1fr);
-    }
-
-    .project-summary {
-        grid-template-columns: 1fr;
-        gap: 18px;
-    }
-
-    .project-thumb {
-        width: 100%;
-        height: 200px;
-    }
-
-    .project-chevron {
-        position: absolute;
-        top: 22px;
-        right: 22px;
-    }
-
-    .project-card {
-        position: relative;
     }
 
     .hero-stats {
@@ -3011,10 +2789,6 @@ html.js .nojs-note { display: none; }
     }
 
     .about-facts {
-        grid-template-columns: 1fr;
-    }
-
-    .project-gallery {
         grid-template-columns: 1fr;
     }
 
@@ -3613,263 +3387,6 @@ body.eco-mode .hero-bg-slide:not(.active) {
 }
 
 /* ===================================
-   DOSSIER WIDGETS (interactive blocks inside project details)
-   =================================== */
-.dossier-widget {
-    grid-column: 1 / -1;
-    margin-top: 10px;
-    padding: 24px 24px 18px;
-    border: 1px dashed var(--line-color);
-    border-radius: var(--border-radius);
-    background: var(--card-bg-alt);
-}
-
-.dossier-widget h4 {
-    font-size: 0.85rem;
-    font-family: var(--font-mono);
-    font-weight: 500;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--primary-green);
-}
-
-.dossier-widget h4 i {
-    margin-right: 8px;
-}
-
-.dossier-widget-intro {
-    color: var(--text-secondary);
-    font-size: 0.92rem;
-    margin: 10px 0 16px;
-    max-width: 68ch;
-}
-
-/* --- Site the borehole --- */
-.borehole-stage {
-    border: 1px solid var(--line-soft);
-    border-radius: 8px;
-    overflow: hidden;
-    cursor: crosshair;
-    touch-action: none;
-}
-
-.borehole-stage:focus-visible {
-    outline: 2px solid var(--primary-green);
-    outline-offset: 2px;
-}
-
-.borehole-svg {
-    display: block;
-    width: 100%;
-    height: auto;
-}
-
-.bh-label {
-    font-family: var(--font-mono);
-    font-size: 12px;
-    fill: var(--text-secondary);
-}
-
-.bh-label-dim {
-    opacity: 0.55;
-    font-size: 11px;
-}
-
-.bh-curve {
-    fill: none;
-    stroke: var(--primary-green);
-    stroke-width: 1.8;
-}
-
-.bh-ground {
-    fill: rgba(124, 252, 0, 0.05);
-}
-
-body.light-mode .bh-ground {
-    fill: rgba(34, 139, 34, 0.08);
-}
-
-.bh-surface {
-    fill: none;
-    stroke: var(--text-secondary);
-    stroke-width: 1.4;
-}
-
-.bh-strata {
-    stroke: var(--line-soft);
-    stroke-dasharray: 6 8;
-}
-
-.bh-rig-base {
-    fill: var(--text-secondary);
-}
-
-.bh-rig-mast {
-    fill: none;
-    stroke: var(--text-primary);
-    stroke-width: 2.4;
-    stroke-linecap: round;
-}
-
-.bh-hole {
-    stroke: var(--text-secondary);
-    stroke-width: 2.6;
-    opacity: 0.7;
-}
-
-.bh-water-col {
-    stroke: #3f9be0;
-    stroke-width: 2.6;
-}
-
-.bh-reveal-water {
-    fill: rgba(63, 155, 224, 0.30);
-}
-
-.bh-reveal-clay {
-    fill: rgba(191, 142, 84, 0.30);
-}
-
-.bh-gush {
-    fill: none;
-    stroke: #3f9be0;
-    stroke-width: 2;
-    stroke-linecap: round;
-}
-
-.bh-gush-anim {
-    animation: bhGush 0.9s ease-out;
-}
-
-@keyframes bhGush {
-    0%   { opacity: 0; transform: scale(0.4); transform-origin: center; transform-box: fill-box; }
-    60%  { opacity: 1; }
-    100% { opacity: 1; }
-}
-
-.borehole-hud {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 14px;
-    margin-top: 14px;
-}
-
-.borehole-score {
-    color: var(--primary-green);
-}
-
-.borehole-result {
-    margin-top: 10px;
-    color: var(--text-secondary);
-    min-height: 1.4em;
-}
-
-/* --- Don't let it become a boat --- */
-.flood-stage {
-    border: 1px solid var(--line-soft);
-    border-radius: 8px;
-    overflow: hidden;
-}
-
-.flood-svg {
-    display: block;
-    width: 100%;
-    height: auto;
-}
-
-.fl-bank {
-    fill: rgba(124, 252, 0, 0.07);
-}
-
-body.light-mode .fl-bank {
-    fill: rgba(34, 139, 34, 0.10);
-}
-
-.fl-building {
-    fill: rgba(124, 252, 0, 0.10);
-    stroke: var(--line-soft);
-}
-
-body.light-mode .fl-building {
-    fill: rgba(34, 139, 34, 0.14);
-}
-
-.fl-window {
-    fill: var(--card-bg-alt);
-}
-
-.fl-pylon {
-    fill: none;
-    stroke: var(--text-secondary);
-    stroke-width: 5;
-    stroke-linecap: round;
-}
-
-.fl-beam {
-    fill: var(--text-secondary);
-}
-
-.fl-car {
-    fill: var(--primary-green);
-    opacity: 0.85;
-}
-
-.fl-car-window {
-    fill: var(--darker-bg);
-    opacity: 0.8;
-}
-
-.fl-water {
-    fill: rgba(63, 155, 224, 0.55);
-}
-
-.fl-refline {
-    stroke: #3f9be0;
-    stroke-width: 1;
-    stroke-dasharray: 5 6;
-    opacity: 0.7;
-}
-
-.fl-label {
-    font-family: var(--font-mono);
-    font-size: 12px;
-    fill: #3f9be0;
-}
-
-.flood-controls {
-    margin-top: 16px;
-}
-
-.flood-controls label {
-    display: block;
-    margin-bottom: 6px;
-}
-
-.flood-controls #floodLevelLabel {
-    color: var(--primary-green);
-}
-
-.flood-controls input[type="range"] {
-    width: 100%;
-    accent-color: var(--primary-green);
-}
-
-.flood-ticks {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.7rem;
-    color: var(--text-dim);
-    margin-top: 2px;
-}
-
-.flood-note {
-    margin-top: 12px;
-    color: var(--text-secondary);
-    min-height: 2.6em;
-}
-
-/* ===================================
    FIELD TERMINAL
    =================================== */
 .terminal-toggle {
@@ -3991,7 +3508,6 @@ body.light-mode .fl-building {
 @media (max-width: 640px) {
     .ft-prompt { display: none; }
     .ft-screen { font-size: 0.76rem; }
-    .dossier-widget { padding: 18px 14px 14px; }
 }
 
 /* --- You are here (journey map visitor mark) --- */
@@ -4236,8 +3752,43 @@ body.light-mode .journey-you-readout {
     }
 }
 
-/* Pointer from the story-shaped dossiers to the evidence-shaped case studies.
-   Two ways into the same six projects, for two different readers. */
+/* Two across on a tablet; on a phone, one, with the photo as a thumbnail
+   beside the date and title and everything else below both. */
+@media (max-width: 1023px) {
+    .projects-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 599px) {
+    .projects-list {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 14px;
+    }
+
+    .project-card {
+        display: grid;
+        grid-template-columns: 96px minmax(0, 1fr);
+        align-content: start;
+        gap: 8px 14px;
+        padding: 16px;
+    }
+
+    .project-photo {
+        grid-row: 1 / span 2;
+        width: 96px;
+        aspect-ratio: 1;
+        margin: 0;
+        border-radius: 8px;
+    }
+
+    .project-card > :not(.project-photo, .project-meta, h3) {
+        grid-column: 1 / -1;
+    }
+}
+
+/* Pointer from the teaser cards to the evidence-shaped case studies, and
+   to the same six projects read for one kind of role. */
 .section-cta {
     max-width: 68ch;
     margin: 14px auto 0;

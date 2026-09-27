@@ -68,14 +68,15 @@ const key = (window, k, target, init) => {
             (read(rel).match(/^(?:async\s+)?function\s*\*?\s*[\w$]+/gm) || []).forEach(m => declared.push(`${rel}: ${m}`));
         });
         assert(declared.length === 0, `Globals: no shipped script declares a function at the top level, where it would land on window (${declared.join(', ') || 'none'})`);
-        const marked = ['dossier', 'terminal', 'interactives', 'dispatch'].filter(m => mks.loaded[m] !== true);
+        const marked = ['terminal', 'interactives', 'dispatch'].filter(m => mks.loaded[m] !== true);
         assert(marked.length === 0, `Globals: every module marks itself in mks.loaded (unmarked: ${marked.join(', ') || 'none'})`);
 
         // No shipped script hangs a new name on window, the visit counter
         // included: its mks.track once had window.trackEvent beside it, the
         // name the old analytics dispatcher used, kept until nothing called it.
+        // Nor does the case studies' module, which makes window.mks itself.
         const assigned = [];
-        ['script.js', 'count.js', ...MODULE_FILES].forEach((rel) => {
+        ['script.js', 'count.js', 'modules/dossier.js', ...MODULE_FILES].forEach((rel) => {
             (read(rel).match(/\bwindow\.[A-Za-z_$][\w$]*\s*=(?!=)/g) || []).forEach((m) => {
                 const name = m.match(/window\.([\w$]+)/)[1];
                 if (name !== 'mks') assigned.push(`${rel}: window.${name}`);
@@ -87,11 +88,13 @@ const key = (window, k, target, init) => {
         // names on its page's window, and these are them, by name, so a new
         // one cannot slip in unnoticed: the data files export themselves for
         // both the browser and Node (the tests require them), and carbon-ai.js
-        // is carbon-ai.html's own classic script, never loaded on the homepage.
+        // is carbon-ai.html's own classic script, never loaded on the homepage
+        // (EcoPromptCoach is how modules/anatomy.js reads what its calculator
+        // is set to).
         const EXPECTED_ELSEWHERE = {
             'ai-carbon-data.js': ['AICarbonData'],
             'voice-scripts.js': ['VoiceScripts'],
-            'carbon-ai.js': ['calculate', 'clampNumber', 'sanitize', 'suggest']
+            'carbon-ai.js': ['EcoPromptCoach', 'calculate', 'clampNumber', 'sanitize', 'suggest']
         };
         const found = {};
         Object.keys(EXPECTED_ELSEWHERE).forEach((rel) => {
@@ -123,12 +126,18 @@ const key = (window, k, target, init) => {
                     if (type === 'keydown') onDocument++;
                     return add.call(this, type, ...rest);
                 };
+                // The dossier galleries are gone; the lightbox serves any
+                // gallery, so one photo is put back for it to open.
+                const fig = w.document.createElement('figure');
+                fig.className = 'gallery-item';
+                fig.innerHTML = '<img src="assets/img/profile.webp" alt="A test photo" width="640" height="960">';
+                w.document.getElementById('main').appendChild(fig);
             }
         });
         const doc = window.document;
         const mks = window.mks;
         assert(onDocument === 1, `Keys: one keydown listener on the document, with every module loaded (${onDocument})`);
-        const stray = ['script.js', ...MODULE_FILES].filter(rel => (read(rel).match(/document\.addEventListener\(\s*['"]keydown/g) || []).length > (rel === 'script.js' ? 1 : 0));
+        const stray = ['script.js', 'modules/dossier.js', ...MODULE_FILES].filter(rel => (read(rel).match(/document\.addEventListener\(\s*['"]keydown/g) || []).length > (rel === 'script.js' ? 1 : 0));
         assert(stray.length === 0, `Keys: no module adds a document keydown listener of its own (${stray.join(', ') || 'none'})`);
         const ranks = mks.keyRank;
         assert(ranks.terminal > ranks.lightbox && ranks.lightbox > ranks.player && ranks.player > ranks.menu && ranks.menu > ranks.page,
@@ -183,7 +192,7 @@ const key = (window, k, target, init) => {
         assert(!term.isOpen(), 'Backtick: nor in anything that says it takes text (role="textbox")');
         key(window, '`', doc.body, { ctrlKey: true });
         assert(!term.isOpen(), 'Backtick: Ctrl+` is left to the browser');
-        key(window, '`', doc.querySelector('.project-toggle'));
+        key(window, '`', doc.getElementById('themeToggle'));
         assert(term.isOpen(), 'Backtick: a focused button does not hold it back');
         key(window, '`');
         assert(!term.isOpen(), 'Backtick: pressed again, it closes the terminal');
@@ -447,7 +456,7 @@ const key = (window, k, target, init) => {
                 if (!(Math.abs(w / h - real[0] / real[1]) <= 0.01 * real[0] / real[1])) wrong.push(`${page}: ${src} says ${w}x${h}, is ${real.join('x')}`);
             });
         });
-        assert(checked > 20 && wrong.length === 0, `Images: all ${checked} say their real shape, so one arriving late moves nothing (${wrong.join('; ') || 'none wrong'})`);
+        assert(checked >= 6 && wrong.length === 0, `Images: all ${checked} say their real shape, so one arriving late moves nothing (${wrong.join('; ') || 'none wrong'})`);
     }
 
     // ===============================================================

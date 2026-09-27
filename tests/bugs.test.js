@@ -39,24 +39,23 @@ function assert(cond, msg) {
     assert(!threw, 'Bug1: smooth-scroll handler must not throw on href="#"');
 }
 
-// --- Dossiers open from a real button, by keyboard as well as mouse ---
+// --- Project cards: a heading and one named link each, nothing to open ---
+// The six dossiers opened from a button and hid their stories until then.
+// The cards that replaced them hide nothing: each is a heading, its text,
+// and one link to the whole story, named for the project it leads to.
 {
-    const { window } = run('dark');
+    const { window, errors } = run('dark');
     const doc = window.document;
-    const cards = Array.from(doc.querySelectorAll('.project-card'));
-    const toggles = cards.map(c => c.querySelector('h3 > button.project-toggle[type="button"]'));
-    assert(cards.length > 0 && toggles.every(Boolean), `A11y: every dossier title is a button inside its heading (${toggles.filter(Boolean).length}/${cards.length})`);
-    assert(!doc.querySelector('.project-summary[href], a.project-summary'), 'A11y: the summary is no longer one link around the whole card');
-
-    const first = toggles[0];
-    const details = doc.getElementById(first.getAttribute('aria-controls') || '');
-    assert(!!details && details.classList.contains('project-details'), 'A11y: the button controls its dossier');
-    first.click();   // what Enter or Space does to a button
-    assert(first.getAttribute('aria-expanded') === 'true' && cards[0].classList.contains('expanded'), 'A11y: the button opens the dossier and says so');
-
-    cards[1].querySelector('.project-head p').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-    assert(cards[1].classList.contains('expanded') && !cards[0].classList.contains('expanded'), 'Mouse: clicking anywhere on a summary still opens it, and closes the other');
-    assert(first.getAttribute('aria-expanded') === 'false', 'A11y: the closed dossier\'s button says collapsed');
+    const cards = Array.from(doc.querySelectorAll('#projects .project-card'));
+    assert(cards.length === 6 && errors.length === 0, `Cards: six project cards, and the page boots without errors (${cards.length}, ${errors.length} errors)`);
+    const links = cards.map(c => Array.from(c.querySelectorAll('a[href]')));
+    assert(links.every(l => l.length === 1 && /^case-studies\.html#[a-z-]+$/.test(l[0].getAttribute('href'))),
+        'Cards: each has exactly one link, to its case study by id');
+    const names = links.map(l => l[0].textContent.replace(/\s+/g, ' ').trim());
+    assert(names.every((n, i) => n === `Read the case study: ${cards[i].querySelector('h3').textContent.trim()}`),
+        `Cards: each link is named for its project, so six links do not all read the same (${names[0]})`);
+    assert(!doc.querySelector('#projects button, #projects [aria-expanded], #projects [inert]'),
+        'Cards: nothing on a card opens, closes or is held back');
 }
 
 // --- Bug 2: theme-toggle icon must match persisted theme on load ---
@@ -75,8 +74,17 @@ function assert(cond, msg) {
 }
 
 // --- Accessibility & contact-form guarantees ---
+// The photo galleries went with the dossiers; one is put back here so the
+// lightbox, which serves any gallery, is still held to its markup.
+const withGallery = (w) => {
+    const fig = w.document.createElement('figure');
+    fig.className = 'gallery-item';
+    fig.setAttribute('data-caption', 'A test photo');
+    fig.innerHTML = '<img src="assets/img/profile.webp" alt="A test photo" width="640" height="960"><figcaption>A test photo</figcaption>';
+    w.document.getElementById('main').appendChild(fig);
+};
 {
-    const { window } = run('dark');
+    const { window } = run('dark', { before: withGallery });
     const doc = window.document;
 
     const toggle = doc.getElementById('navToggle');
@@ -288,38 +296,8 @@ function assert(cond, msg) {
 }
 
 // --- Bug 11: re-drilling a struck zone does not farm the score ---
-// Each repeat of a known strike used to count as a new strike, so the score
-// that is meant to converge on "read the curve: 70%" could be pushed to 100%.
-{
-    const { window } = run('dark');
-    const doc = window.document;
-    doc.body.classList.add('eco-mode');   // drilling finishes at once
-    const stage = doc.getElementById('boreholeStage');
-    const drillBtn = doc.getElementById('drillBtn');
-    const result = doc.getElementById('drillResult');
-    const score = doc.getElementById('drillScore');
-    const key = (k) => stage.dispatchEvent(new window.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
-    const drill = () => drillBtn.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-
-    for (let i = 0; i < 80; i++) key('ArrowLeft');
-    let struck = false;
-    for (let i = 0; i < 80 && !struck; i++) {
-        drill();
-        struck = /STRIKE/.test(result.textContent);
-        if (!struck) key('ArrowRight');
-    }
-    assert(struck, 'Bug11 setup: walking the rig along the profile finds water');
-
-    const tally = score.textContent.match(/Strikes: (\d+)\/(\d+)/);
-    drill();
-    drill();
-    const again = score.textContent.match(/Strikes: (\d+)\/(\d+)/);
-    assert(
-        !!tally && !!again && tally[1] === again[1] && tally[2] === again[2],
-        `Bug11: re-drilling the same strike leaves the score alone (${tally && tally[0]} → ${again && again[0]})`
-    );
-    assert(/Already struck/.test(result.textContent), 'Bug11: and says why it did not count');
-}
+// The borehole game moved to the groundwater case study with its fix:
+// tests/widgets.test.js holds it there.
 
 // --- Bug 12: You Draw It hands focus on when the pressed button goes ---
 // Reveal hid itself while focused, and so did "Draw again": focus dropped to

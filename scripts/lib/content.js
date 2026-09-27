@@ -115,6 +115,53 @@ function checkAvailability(label, entry) {
     return problems;
 }
 
+// The interactives a case study can host on case-studies.html, each drawn
+// by modules/dossier.js into the host the generator writes for it.
+const WIDGETS = ['borehole', 'flood'];
+
+/**
+ * What the homepage's teaser card needs from a case study: the lines it
+ * prints, a headline result with a one-line basis, and one photo a reader
+ * can be shown at the size it is drawn. Returns problems, like the rest.
+ */
+function checkCard(at, cs) {
+    const problems = [];
+    ['subtitle', 'location'].forEach((field) => {
+        if (!cs[field]) problems.push(`${at}: missing ${field} (the homepage card prints it)`);
+    });
+    if (!Array.isArray(cs.tags) || !cs.tags.length || !cs.tags.every(t => typeof t === 'string' && t.trim())) {
+        problems.push(`${at}: tags must be a list of tools and topics (the homepage card shows them, the Assay reads them)`);
+    }
+
+    // The first result is the headline. Its brief stands in for the basis
+    // where there is no room for it, so it has to be there, and short.
+    const headline = (cs.results || [])[0];
+    if (headline && !(typeof headline.brief === 'string' && headline.brief.trim())) {
+        problems.push(`${at}: the first result is the homepage headline and needs a one-line brief of its basis`);
+    } else if (headline && headline.brief.length > 120) {
+        problems.push(`${at}: the headline's brief is ${headline.brief.length} characters; one line is 120 at most`);
+    }
+
+    const p = cs.photo;
+    if (!p || typeof p !== 'object') {
+        problems.push(`${at}: no photo for the homepage card`);
+    } else {
+        ['src', 'thumb'].forEach((k) => {
+            const bad = typeof p[k] === 'string' && localPath(p[k]) === p[k] ? urlProblem(p[k]) : 'is not a file in this repository';
+            if (bad) problems.push(`${at}: photo.${k} ${bad}`);
+        });
+        if (!(typeof p.alt === 'string' && p.alt.trim())) problems.push(`${at}: the photo has no alt text`);
+        if (!(Number.isInteger(p.width) && p.width > 0 && Number.isInteger(p.height) && p.height > 0)) {
+            problems.push(`${at}: the photo needs its intrinsic width and height, so nothing shifts as it arrives`);
+        }
+    }
+
+    if (cs.widget !== undefined && !WIDGETS.includes(cs.widget)) {
+        problems.push(`${at}: widget "${cs.widget}" is not one of ${WIDGETS.join(', ')}`);
+    }
+    return problems;
+}
+
 // A language level the Assay can compare with what a job ad asks for.
 // "Good" or "fluent" means different things to different readers; a CEFR
 // level (or "native") means the same thing to all of them.
@@ -572,6 +619,14 @@ function loadAll() {
         (cs.lenses || []).forEach((l) => {
             if (!lensIds.includes(l)) problems.push(`${at}: unknown lens "${l}"`);
         });
+
+        problems.push(...checkCard(at, cs));
+    });
+
+    // Each interactive has one home: its ids are page-wide.
+    const hosts = projects.caseStudies.filter(cs => cs.widget).map(cs => cs.widget);
+    hosts.filter((w, i) => hosts.indexOf(w) !== i).forEach((w) => {
+        problems.push(`widget "${w}" is hosted by more than one case study`);
     });
 
     // --- research outputs -----------------------------------------------
@@ -659,10 +714,12 @@ module.exports = {
     CONTENT_DIR,
     TRUSTED_HOSTS,
     STATUSES,
+    WIDGETS,
     load,
     loadAll,
     urlProblem,
     checkAvailability,
+    checkCard,
     checkLanguages,
     checkAtAGlance,
     checkStats,

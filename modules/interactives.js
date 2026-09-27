@@ -13,9 +13,6 @@
 // ON-DEMAND MODULES section there for when. This file is a classic script:
 // it shares the page's global scope, so it declares nothing at the top
 // level and talks to the core only through window.mks.
-//
-// tests/harness.js evaluates it after script.js so the jsdom suites see the
-// page fully initialised, the way a visitor who used every feature would.
 // ===================================================================
 
 // ===================================
@@ -354,7 +351,7 @@ window.mks.share = (() => {
     const SOURCES = [
         ['#skills .toolkit-name', '#skills', (el) => `Skills: ${up(el, '.toolkit-item', '.toolkit-proof') || clean(el)}`],
         ['#experience li', '#experience', (el) => clean(el) + (up(el, '.timeline-content', 'h3') ? ` (${up(el, '.timeline-content', 'h3')})` : '')],
-        ['#projects .project-tech span', '#projects', (el) => `Listed as a tool on the ${up(el, '.project-card', 'h3')} dossier`],
+        ['#projects .project-tech span', '#projects', (el) => `Listed as a tool on the ${up(el, '.project-card', 'h3')} project`],
         ['#education li, #education .cert-line', '#education', (el) => `Covered in ${up(el, '.education-card', 'h3, .cert-title')}: ${clean(el)}`],
         ['#skills .skills-checklist li, #skills .frameworks-list li', '#skills', () => 'Listed under Skills & Expertise']
     ];

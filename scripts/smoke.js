@@ -33,6 +33,9 @@
 //     a player that covers more than 20% of a phone screen or the send
 //     button, or a recording fetched unasked
 //   - an Assay that grades a mismatched ad well, or sends anything
+//   - a case-study game fetched before a reader nears it, that will not
+//     play, whose labels are under 11px on a phone, or that moves the
+//     page under a reader when it arrives above them
 //   - a clipped dropdown or an unreadable number on carbon-ai.html
 //   - stats.html, drawn full from fixture totals, splitting a word in a
 //     table to make room for the figures, or scrolling sideways, on a phone
@@ -251,6 +254,7 @@ async function visit(context, page, rel, origin) {
         if (rel === 'index.html') await exerciseHomepage(page, r, origin);
         if (rel === 'index.html') await exerciseAssay(page, r);
         if (rel === 'carbon-ai.html') await exerciseCarbonTool(page, r);
+        if (rel === 'case-studies.html') await exerciseCaseStudyGames(page, r);
 
         if (SCREENS) await page.screenshot({ path: path.join(ROOT, '.smoke', (CHROMIUM ? '' : `${BROWSER}-`) + rel.replace('.html', '.png')) });
         await page.close();
@@ -556,6 +560,140 @@ async function exerciseFirstView(browser, origin) {
 }
 
 // ------------------------------------------------------------------
+// case-studies.html: the two games, fetched as a reader nears them
+// ------------------------------------------------------------------
+// They used to open inside the homepage's dossiers. Now each is under the
+// result it is about, and the page fetches them (modules/dossier.css, then
+// .js) only when a host comes within a screen of view: nothing of them is
+// in the first view. Played here once each, as a reader would, and their
+// labels measured on a phone, where a 12px label in an 800-unit drawing
+// used to come out at about 5px.
+async function playGames(page) {
+    await page.evaluate(() => document.getElementById('play-flood').scrollIntoView({ block: 'center' }));
+    await page.waitForFunction(() => window.mks && window.mks.loaded && window.mks.loaded.dossier &&
+        document.querySelectorAll('.cs-play.is-live').length === 2, null, { timeout: 5000 });
+    // One round of the borehole game, played by reading the curve the way a
+    // screen reader hears it: walk the rig to the deepest dip, drill there.
+    await page.evaluate(() => document.getElementById('play-borehole').scrollIntoView({ block: 'center' }));
+    await page.focus('#boreholeStage');
+    for (let k = 0; k < 30; k++) await page.keyboard.press('ArrowLeft');
+    for (let hole = 0; hole < 3; hole++) {
+        for (let k = 0; k < 56; k++) {
+            if (/very low/.test(await page.getAttribute('#boreholeStage', 'aria-valuetext'))) break;
+            await page.keyboard.press('ArrowRight');
+        }
+        await page.keyboard.press('Enter');
+        await page.waitForFunction(() => !document.getElementById('drillBtn').disabled, null, { timeout: 3000 });
+        if (/STRIKE/.test(await page.textContent('#drillResult'))) break;
+        for (let k = 0; k < 6; k++) await page.keyboard.press('ArrowRight');   // past this dip
+    }
+    // The river raised to July 2021 by keyboard, as the slider allows.
+    await page.focus('#floodSlider');
+    await page.keyboard.press('End');
+    await page.waitForTimeout(800);   // the water rises over 650 ms
+}
+
+async function exerciseCaseStudyGames(page, r) {
+    const fetched = () => page.evaluate(() => performance.getEntriesByType('resource').filter(e => /modules\/dossier\./.test(e.name)).map(e => e.name.split('/').pop()));
+    const early = await fetched();
+    if (!early.length) ok('the games are not fetched on arrival');
+    else bad(`the games were fetched on arrival: ${early.join(', ')}`);
+
+    const before = r.bytesSince();
+    try {
+        await playGames(page);
+    } catch (e) {
+        bad(`the games did not load and play: ${String(e.message || e).split('\n')[0]}`);
+        return;
+    }
+    const got = await fetched();
+    if (got.join() === 'dossier.css,dossier.js') ok(`scrolling near them fetched their stylesheet, then their script${r.measured ? ` (+${fmt(r.bytesSince() - before)})` : ''}`);
+    else bad(`near the games, fetched: ${got.join(', ') || 'nothing'}`);
+
+    const played = await page.evaluate(() => ({
+        score: document.getElementById('drillScore').textContent,
+        yours: document.querySelectorAll('.strike-row:first-child .strike-cell.water, .strike-row:first-child .strike-cell.dry').length,
+        level: document.getElementById('floodLevelLabel').textContent,
+        water: +document.querySelector('#floodStage rect.fl-water[x="252"]').getAttribute('y')
+    }));
+    if (/[1-9]\d* of \d+ struck water/.test(played.score) && played.yours > 0) ok(`reading the curve to its deepest dip strikes water, and the game keeps score ("${played.score}")`);
+    else bad(`the borehole game: score "${played.score}", ${played.yours} holes on the board`);
+    if (played.level === 'July 2021' && played.water < 200) ok(`the flood slider raises the Wupper to July 2021 (water line at ${played.water})`);
+    else bad(`the flood slider: level "${played.level}", water line at ${played.water}`);
+
+    // Every label a reader needs, drawn at 11px or more, at a phone's width
+    // and a small one; and nothing pushes the page sideways.
+    for (const [width, height] of [[390, 844], [320, 700]]) {
+        await page.setViewportSize({ width, height });
+        await page.waitForTimeout(300);
+        const m = await page.evaluate(() => {
+            const small = [];
+            document.querySelectorAll('.cs-play svg').forEach((svg) => {
+                const scale = svg.getBoundingClientRect().width / svg.viewBox.baseVal.width;
+                svg.querySelectorAll('text').forEach((t) => {
+                    if (getComputedStyle(t).display === 'none') return;
+                    const px = parseFloat(getComputedStyle(t).fontSize) * scale;
+                    if (px < 10.95) small.push(`"${t.textContent}" ${px.toFixed(1)}px`);
+                });
+            });
+            document.querySelectorAll('.cs-play.is-live :is(p, span, label, button)').forEach((el) => {
+                if (!el.getClientRects().length || !el.textContent.trim() || el.closest('svg')) return;
+                const px = parseFloat(getComputedStyle(el).fontSize);
+                if (px < 10.95) small.push(`${el.className || el.tagName} ${px}px`);
+            });
+            return { small, wide: document.documentElement.scrollWidth > innerWidth };
+        });
+        if (!m.small.length) ok(`case-studies.html at ${width}px: every game label is 11px or more`);
+        else bad(`case-studies.html at ${width}px: game labels under 11px: ${m.small.join(', ')}`);
+        if (m.wide) bad(`case-studies.html at ${width}px: the page scrolls sideways`);
+    }
+    await page.setViewportSize({ width: 1280, height: 800 });
+    if (r.errors.length) r.errors.forEach(e => bad(e)); else ok('the games played without an error');
+    if (r.foreign.length) r.foreign.forEach(f => bad(`left the origin: ${f}`));
+
+    await holdReaderBelowGame(page.context().browser(), new URL(page.url()).origin);
+}
+
+// A reader who has scrolled on to the case study after Wuppertal's, with
+// the flood game's host just above the screen, when the games arrive (the
+// loader starts a screen early). The host grows by its whole widget, and
+// without scroll anchoring, as in Safari, that pushed what they were
+// reading 400-500px down the page. The script is held back until the
+// reader is in place, so the growth lands on them.
+async function holdReaderBelowGame(browser, origin) {
+    for (const [width, height] of [[1280, 800], [390, 844]]) {
+        const context = await browser.newContext({ viewport: { width, height } });
+        await context.addInitScript(() => document.addEventListener('DOMContentLoaded', () => {
+            const s = document.createElement('style');
+            s.textContent = '* { overflow-anchor: none !important; }';
+            document.head.appendChild(s);
+        }));
+        let release;
+        const gate = new Promise(res => { release = res; });
+        await context.route('**/modules/dossier.js', async (route) => { await gate; await route.continue(); });
+        const page = await context.newPage();
+        await page.goto(`${origin}/case-studies.html`, { waitUntil: 'domcontentloaded' });
+        await page.waitForTimeout(500);
+        await page.evaluate(() => scrollTo({ top: document.getElementById('un-disaster').getBoundingClientRect().top + scrollY - 90, behavior: 'instant' }));
+        await page.waitForTimeout(400);
+        const at = () => page.evaluate(() => ({
+            top: Math.round(document.getElementById('un-disaster').getBoundingClientRect().top),
+            host: Math.round(document.getElementById('play-flood').getBoundingClientRect().bottom)
+        }));
+        const seen = await at();
+        release();
+        const live = await page.waitForFunction(() => document.querySelectorAll('.cs-play.is-live').length === 2, null, { timeout: 5000 }).then(() => true, () => false);
+        await page.waitForTimeout(300);
+        const now = await at();
+        const tag = `case-studies.html at ${width}px, no scroll anchoring, reading on below the flood game`;
+        if (!live || seen.host > 0) bad(`${tag}: the games did not arrive above the reader (live: ${live}, host's foot at ${seen.host}px)`);
+        else if (Math.abs(now.top - seen.top) <= 2) ok(`${tag}: it arrives above and nothing moves (${seen.top}px, then ${now.top}px)`);
+        else bad(`${tag}: the page moved ${now.top - seen.top}px as the game arrived above`);
+        await context.close();
+    }
+}
+
+// ------------------------------------------------------------------
 // In-page links, the theme switch and back to top, as a visitor meets them
 // ------------------------------------------------------------------
 // What jsdom cannot show: where the next Tab goes after the skip link, what
@@ -721,9 +859,10 @@ async function exerciseNavigation(browser, origin) {
     await p.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
     await p.waitForTimeout(800);
     // The controls in between used to be sat on: the calculator's selects
-    // (on carbon-ai.html now), a sample chip, the dossier titles, the
-    // toolkit's proof links. The experience cards' More buttons are new.
-    const GUARDED = ['.hero-availability', '.hero-cta .btn', '.corelog-more', '#ydiReveal', '.assay-sample', '.project-toggle', '.toolkit-proof', '.feature-next',
+    // (on carbon-ai.html now), a sample chip, the dossier titles (now the
+    // project cards' links), the toolkit's proof links. The experience
+    // cards' More buttons are new.
+    const GUARDED = ['.hero-availability', '.hero-cta .btn', '.corelog-more', '#ydiReveal', '.assay-sample', '.project-link', '.toolkit-proof',
         '.btn-submit', '.carbon-badge', '.receipt-btn', '.footer-fieldreport a', '.eco-mode-toggle', '.terminal-toggle'];
     const covered = [];
     let passes = 0;
@@ -731,14 +870,6 @@ async function exerciseNavigation(browser, origin) {
         const n = await p.$$eval(sel, (els) => els.length);
         if (!n) { bad(`back to top: nothing matches ${sel} any more — update the guarded list`); continue; }
         for (let i = 0; i < n; i++) {
-            // A control inside a closed dossier is hidden: open it first.
-            const opened = await p.evaluate(({ sel, i }) => {
-                const card = document.querySelectorAll(sel)[i].closest('.project-details') && document.querySelectorAll(sel)[i].closest('.project-card');
-                if (!card || card.classList.contains('expanded')) return false;
-                card.querySelector('.project-toggle').click();
-                return true;
-            }, { sel, i });
-            if (opened) await p.waitForTimeout(800);
             for (const at of [1, 0.5, 0]) {
                 await p.evaluate(({ sel, i, at }) => {
                     const r = document.querySelectorAll(sel)[i].getBoundingClientRect();
@@ -780,15 +911,22 @@ async function exerciseNavigation(browser, origin) {
     // control, and hands focus back on Escape, with reduced motion as well.
     // The global reduced-motion rule once stretched its instant visibility
     // flip to 0.01ms, so Close was still hidden when focus was sent to it,
-    // and focus stayed on the photo behind the modal.
+    // and focus stayed on the photo behind the modal. The dossier galleries
+    // are gone; the lightbox serves any gallery, so one photo is put back for
+    // it to open, as the jsdom suites do.
+    await p.route('**/index.html', async (route) => {
+        const res = await route.fetch();
+        const body = (await res.text()).replace('</main>', '<figure class="gallery-item"><img src="assets/img/profile.webp" alt="A test photo" width="640" height="960"><figcaption>A test photo</figcaption></figure></main>');
+        await route.fulfill({ response: res, body });
+    });
     await p.setViewportSize({ width: 390, height: 844 });
+    await p.goto(`${origin}/index.html`, { waitUntil: 'load' });
     for (const reducedMotion of ['reduce', 'no-preference']) {
         await p.emulateMedia({ reducedMotion });
-        await p.evaluate(async () => {
-            const card = document.querySelector('.gallery-open').closest('.project-card');
-            if (card && !card.classList.contains('expanded')) card.querySelector('.project-toggle').click();
-            await new Promise(r => setTimeout(r, 800));
-            document.querySelector('.gallery-open').focus();
+        await p.evaluate(() => {
+            const open = document.querySelector('.gallery-open');
+            open.scrollIntoView({ block: 'center' });
+            open.focus();
         });
         const focused = () => p.evaluate(() => {
             const el = document.activeElement;
@@ -976,7 +1114,7 @@ async function exerciseHomepage(page, r, origin) {
     const loadedNow = () => page.evaluate(() => Object.assign({}, window.mks.loaded));
 
     const before = await loadedNow();
-    ['interactives', 'dossier', 'terminal', 'dispatch'].forEach((m) => {
+    ['interactives', 'terminal', 'dispatch'].forEach((m) => {
         if (before[m]) bad(`module "${m}" loaded on arrival — it should wait to be needed`);
     });
     if (!Object.values(before).some(Boolean)) ok('no on-demand module loaded on arrival');
@@ -1002,17 +1140,17 @@ async function exerciseHomepage(page, r, origin) {
             : 'no voice and no recording: the listen control stays hidden');
     } else bad(`listen control is ${listening.state} in a browser with ${listening.voices} speech voice(s) and no recording`);
 
-    // Opening the groundwater dossier fetches the games.
-    const summary = await page.$('.project-card[data-project="groundwater"] .project-toggle');
-    if (summary) {
-        await summary.scrollIntoViewIfNeeded();
-        await summary.click();
-        await page.waitForFunction(() => window.mks.loaded.dossier, null, { timeout: 5000 }).catch(() => null);
-        const l = await loadedNow();
-        if (l.dossier) ok('dossier games loaded when the dossier opened'); else bad('dossier games did not load on open');
-        const scene = await page.$('#boreholeGame svg');
-        if (scene) ok('the borehole scene was drawn'); else bad('no borehole scene inside the opened dossier');
-    } else bad('groundwater dossier not found');
+    // The projects are six cards now, and the games live on the case
+    // studies: reading past them fetches no game, and each card leads out.
+    await page.evaluate(() => document.getElementById('projects').scrollIntoView());
+    await page.waitForTimeout(600);
+    const cards = await page.evaluate(() => ({
+        n: document.querySelectorAll('#projects .project-card').length,
+        out: Array.from(document.querySelectorAll('#projects .project-link')).every(a => /^case-studies\.html#[a-z-]+$/.test(a.getAttribute('href'))),
+        games: performance.getEntriesByType('resource').filter(e => /modules\/dossier\./.test(e.name)).length + (window.mks.loaded.dossier ? 1 : 0)
+    }));
+    if (cards.n === 6 && cards.out) ok('six project cards, each linking to its case study'); else bad(`project cards: ${cards.n}, each linking out: ${cards.out}`);
+    if (!cards.games) ok('reading past the projects fetches no game: they live on the case studies'); else bad('the homepage fetched the case studies\' games');
 
     // Section 05 coming into range fetches the interactives.
     await page.evaluate(() => document.getElementById('ecoprompt').scrollIntoView());
@@ -1370,9 +1508,7 @@ async function checkWithoutJs(browser, origin) {
 
     // What a reader can see: nothing covering the page, every reveal opaque,
     // every [hidden] element gone, and no control on show that only a script
-    // could make do anything. A form's submit button works without one. The
-    // dossier titles are buttons only script.js can open and close, but they
-    // are the titles, and without it every dossier is already open.
+    // could make do anything. A form's submit button works without one.
     const inspect = (page) => page.evaluate(() => {
         const shown = (el) => {
             const box = el.getBoundingClientRect();
@@ -1386,7 +1522,7 @@ async function checkWithoutJs(browser, origin) {
             dim: reveals.filter(el => parseFloat(getComputedStyle(el).opacity) < 1).length,
             leaks: Array.from(document.querySelectorAll('[hidden]')).filter(el => getComputedStyle(el).display !== 'none').map(el => '#' + el.id),
             dead: Array.from(document.querySelectorAll('button, select, [role="button"]'))
-                .filter(el => shown(el) && !(el.type === 'submit' && el.form) && !el.classList.contains('project-toggle'))
+                .filter(el => shown(el) && !(el.type === 'submit' && el.form))
                 .map(el => el.id ? '#' + el.id : `${el.tagName.toLowerCase()}.${el.className}`),
             deadLinks: Array.from(document.querySelectorAll('a[href^="#"]'))
                 .filter(a => a.getAttribute('href').length > 1 && shown(a))
@@ -1512,27 +1648,25 @@ async function checkWithoutJs(browser, origin) {
         if (gaveUp) report('index.html, script.js late — after the 4 s failsafe', await inspect(page));
         else bad('index.html, script.js late: the failsafe did not take the html.js mark off');
 
-        // A reader who has scrolled into the third dossier by then: what they
-        // are reading, and how tall each dossier is. The six used to fold
-        // shut under them when the mark went back.
+        // A reader in the project cards by then: what they are reading. (The
+        // six dossiers there used to fold shut under them when the mark went
+        // back; the cards have nothing to fold.)
         const reading = () => page.evaluate(() => {
             const line = window.__line || (window.__line = document.elementFromPoint(innerWidth / 2, innerHeight / 3));
             return {
                 top: Math.round(line.getBoundingClientRect().top),
-                what: line.textContent.replace(/\s+/g, ' ').trim().slice(0, 40),
-                dossiers: Array.from(document.querySelectorAll('.project-details')).map(d => (getComputedStyle(d).visibility === 'visible' ? Math.round(d.getBoundingClientRect().height) : 0)),
-                said: Array.from(document.querySelectorAll('.project-toggle')).map(t => t.getAttribute('aria-expanded'))
+                what: line.textContent.replace(/\s+/g, ' ').trim().slice(0, 40)
             };
         });
         await page.evaluate(() => {
-            const d = document.querySelectorAll('.project-details')[2];
+            const d = document.querySelectorAll('#projects .project-card')[4];
             scrollTo({ top: d.getBoundingClientRect().top + scrollY + 150, behavior: 'instant' });
         });
         await page.waitForTimeout(200);
         const seen = await reading();
 
         const tookOver = await page.waitForFunction(() => (window.mks || {}).ready === true, null, { timeout: 10000 }).then(() => true, () => false);
-        await page.waitForTimeout(1200);   // the dossiers' games arrive and fill in
+        await page.waitForTimeout(1200);   // the modules arrive and fill in
         const after = await page.evaluate(() => ({
             marked: document.documentElement.classList.contains('js'),
             preloader: !!document.getElementById('preloader'),
@@ -1546,25 +1680,18 @@ async function checkWithoutJs(browser, origin) {
             bad(`index.html, script.js late — takeover: ready ${tookOver}, marked ${after.marked}, preloader ${after.preloader}, ${after.dim} reveals dimmed, counters ${after.counters.join(' ')}`);
         }
         const now = await reading();
-        const shrunk = now.dossiers.filter((h, i) => h < seen.dossiers[i] - 1);
-        if (seen.dossiers.every(h => h > 100) && !shrunk.length && now.said.every(v => v === 'true')) {
-            ok(`index.html, script.js late — all six dossiers stay open through the takeover, and say so (${now.dossiers.join(', ')}px)`);
-        } else {
-            bad(`index.html, script.js late — dossiers ${seen.dossiers.join(', ')}px before the takeover, ${now.dossiers.join(', ')}px after, aria-expanded ${now.said.join(' ')}`);
-        }
         if (Math.abs(now.top - seen.top) <= 4) ok(`index.html, script.js late — the line being read stays put ("${seen.what}" at ${seen.top}px, then ${now.top}px)`);
         else bad(`index.html, script.js late — the line being read ("${seen.what}") moved from ${seen.top}px to ${now.top}px`);
         await context.close();
     }
 
     // (c2) The same, with no scroll anchoring, as in Safari, and the reader
-    // further down: below a dossier whose widget comes back with the mark
-    // and grows it, and in Skills, below all of section 05. Chromium's
+    // further down: in the project cards, and in Skills, below all of
+    // section 05, whose widgets come back with the mark and grow it. Chromium's
     // anchoring had been doing the holding; without it the line slid
     // 760-2,800px in the 2.5 s after the takeover.
     await Promise.all([
-        ['the UN dossier', '[data-project="un-disaster"] .project-details'],
-        ['the water-management dossier', '[data-project="water-management"] .project-details'],
+        ['the project cards', '[data-project="water-management"]'],
         ['Skills', '#skills']
     ].map(async ([where, sel]) => {
         const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
@@ -1702,12 +1829,13 @@ async function checkWithoutJs(browser, origin) {
 // (so nothing leaves this origin), and any violation fails the run. The
 // homepage is also checked scrolled through — the only time section 05's
 // interactives, the journey map and every reveal are in the page — and in
-// the states a visitor opens: a dossier, the Assay's verdict on an ad it
+// the states a visitor opens: the Assay's verdict on an ad it
 // finds gaps in, the carbon receipt, the docked narration player, the menu
 // on a phone and the terminal, each checked on its own. The homepage and
 // carbon-ai.html are checked once more with their scripts blocked, which is
 // the layout a reader without JavaScript gets (every nav link on show,
-// every dossier open, the calculator's note in place of the calculator).
+// the calculator's note in place of the calculator). The case studies are
+// checked with both games loaded and played.
 //
 // Each size and theme gets its own browser context with reduced motion, so
 // axe judges what a reader settles on rather than an element halfway
@@ -1805,6 +1933,12 @@ async function axeView(browser, origin, view, note, trouble) {
                     note(rel, 'Anatomy drawn', view, await axeRun(page, '#anatomy'));
                 });
             }
+            if (rel === 'case-studies.html') {
+                await attempt(`${rel}: axe with the games played`, async () => {
+                    await playGames(page);
+                    for (const host of ['#play-borehole', '#play-flood']) note(rel, 'the games played', view, await axeRun(page, host));
+                });
+            }
             await page.close();
             if (!AXE_NO_SCRIPT.includes(rel)) continue;
             const bare = await context.newPage();
@@ -1836,13 +1970,6 @@ async function axeHomepageStates(page, view, note, attempt) {
         await page.evaluate(() => scrollTo(0, 0));
         await page.waitForTimeout(250);
         note(rel, 'scrolled through', view, await axeRun(page));
-    });
-
-    const dossier = '.project-card[data-project="groundwater"]';
-    await attempt(`${rel}: axe with a dossier open`, async () => {
-        await page.click(`${dossier} .project-toggle`, within);
-        await page.waitForSelector('#boreholeGame svg', within);
-        note(rel, 'a dossier open', view, await axeRun(page, dossier));
     });
 
     // The Assay's verdict, with rows for what matched and for the gaps.
