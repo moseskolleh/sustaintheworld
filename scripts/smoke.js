@@ -27,6 +27,10 @@
 //     button, or a recording fetched unasked
 //   - an Assay that grades a mismatched ad well, or sends anything
 //   - a clipped dropdown or an unreadable number on carbon-ai.html
+//   - a jump that misses once sections are drawn at their real height, a
+//     page that moves under a reader going back up, a section find-in-page
+//     or print cannot reach, a loop running off screen, or a page busy on
+//     the main thread while nobody touches it
 //
 // The first-view weight matters most. check-budget.js estimates it from
 // the HTML; this measures it. Before the two were compared, the estimate was
@@ -244,6 +248,7 @@ async function visit(context, page, rel, origin) {
     });
 
     await exerciseNavigation(browser, origin);
+    await exerciseCpu(browser, origin);
 
     // The top nav at every desktop width: one line per item, nothing past the
     // right edge. It used to wrap "Case studies" and "AI, Weighed" at every
@@ -313,7 +318,7 @@ async function exerciseAssay(page, r) {
     const sent = [];
     const onRequest = (q) => sent.push(q.url());
     await page.evaluate(() => document.getElementById('assay').scrollIntoView());
-    await page.waitForFunction(() => window.mksAssay, null, { timeout: 5000 }).catch(() => null);
+    await page.waitForFunction(() => (window.mks || {}).assay, null, { timeout: 5000 }).catch(() => null);
     // Only the grading is watched. Scrolling here pulls in lazy images, and
     // a browser with no speech voice asks the voice manifest once, 1.5 s
     // after load — CI's headless Chrome has none, and scrolling through the
@@ -486,7 +491,7 @@ async function exerciseNavigation(browser, origin) {
             const r = await pg.evaluate((i) => ({
                 top: Math.round(document.getElementById(i).getBoundingClientRect().top),
                 bar: Math.round(document.getElementById('navbar').getBoundingClientRect().bottom),
-                loaded: !!(window.mksLoaded && window.mksLoaded.interactives)
+                loaded: !!(window.mks && window.mks.loaded.interactives)
             }), id);
             const tag = `first jump by the ${what} at ${width}px${reducedMotion === 'reduce' ? ', reduced motion' : ''}`;
             if (Math.abs(r.top - r.bar) <= 4) ok(`${tag}: #${id} lands under the nav bar and stays (${r.top}px, bar ends at ${r.bar}px)`);
@@ -613,7 +618,7 @@ async function exerciseNavigation(browser, origin) {
 // The homepage's on-demand features, each used once
 // ------------------------------------------------------------------
 async function exerciseHomepage(page, r, origin) {
-    const loadedNow = () => page.evaluate(() => Object.assign({}, window.mksLoaded || {}));
+    const loadedNow = () => page.evaluate(() => Object.assign({}, window.mks.loaded));
 
     const before = await loadedNow();
     ['interactives', 'dossier', 'terminal', 'dispatch'].forEach((m) => {
@@ -647,7 +652,7 @@ async function exerciseHomepage(page, r, origin) {
     if (summary) {
         await summary.scrollIntoViewIfNeeded();
         await summary.click();
-        await page.waitForFunction(() => window.mksLoaded && window.mksLoaded.dossier, null, { timeout: 5000 }).catch(() => null);
+        await page.waitForFunction(() => window.mks.loaded.dossier, null, { timeout: 5000 }).catch(() => null);
         const l = await loadedNow();
         if (l.dossier) ok('dossier games loaded when the dossier opened'); else bad('dossier games did not load on open');
         const scene = await page.$('#boreholeGame svg');
@@ -656,7 +661,7 @@ async function exerciseHomepage(page, r, origin) {
 
     // Section 05 coming into range fetches the interactives.
     await page.evaluate(() => document.getElementById('ecoprompt').scrollIntoView());
-    await page.waitForFunction(() => window.mksLoaded && window.mksLoaded.interactives, null, { timeout: 5000 }).catch(() => null);
+    await page.waitForFunction(() => window.mks.loaded.interactives, null, { timeout: 5000 }).catch(() => null);
     const li = await loadedNow();
     if (li.interactives) ok('interactives loaded as section 05 came into range'); else bad('interactives did not load near section 05');
     const options = await page.$$eval('#ecoModel option', (o) => o.length);
@@ -664,7 +669,7 @@ async function exerciseHomepage(page, r, origin) {
 
     // The backtick opens the terminal.
     await page.keyboard.press('`');
-    await page.waitForFunction(() => window.mksLoaded && window.mksLoaded.terminal, null, { timeout: 5000 }).catch(() => null);
+    await page.waitForFunction(() => window.mks.loaded.terminal, null, { timeout: 5000 }).catch(() => null);
     const lt = await loadedNow();
     if (lt.terminal) ok('terminal loaded on the backtick'); else bad('terminal did not load on the backtick');
     const open = await page.$('.field-terminal.open');
@@ -816,12 +821,12 @@ async function exerciseNarration(browser, origin) {
         await page.setViewportSize({ width: 390, height: 844 });
         await page.evaluate(() => document.getElementById('about').scrollIntoView({ behavior: 'instant' }));
         await page.click('#listenBtn');
-        const opened = await page.waitForFunction(() => window.mksLoaded && window.mksLoaded.dispatch &&
+        const opened = await page.waitForFunction(() => window.mks.loaded.dispatch &&
             !document.getElementById('dispatchBar').hidden, null, { timeout: 5000 }).then(() => true, () => false);
         if (!opened) { bad('pressing Listen did not open the player'); await context.close(); return; }
 
         const st = await page.evaluate(() => ({
-            playing: window.FieldDispatch.state().playing,
+            playing: window.mks.narration.state().playing,
             spoke: window.__spoken.length,
             weight: document.querySelector('.dispatch-weight').textContent,
             styled: getComputedStyle(document.getElementById('dispatchBar')).position,
@@ -918,7 +923,7 @@ async function exerciseNarration(browser, origin) {
         if (hits.length === 0) ok('the recording is not fetched before it is asked for');
         else bad(`the recording was fetched before anyone asked (${hits.length} requests)`);
         await page.click('.dispatch-intro');
-        const fetched = await page.waitForFunction(() => window.FieldDispatch.state().playing === 'intro', null, { timeout: 5000 })
+        const fetched = await page.waitForFunction(() => window.mks.narration.state().playing === 'intro', null, { timeout: 5000 })
             .then(() => page.waitForTimeout(500)).then(() => hits.length > 0, () => false);
         if (fetched) ok('pressing it fetches assets/audio/intro.mp3 and plays Moses');
         else bad('pressing the offer did not fetch the recording');
@@ -946,7 +951,7 @@ async function exerciseNarration(browser, origin) {
             });
             await page.focus('#listenBtn');
             await page.keyboard.press('Enter');
-            const played = await page.waitForFunction(() => window.FieldDispatch && window.FieldDispatch.state().playing === 'intro', null, { timeout: 5000 })
+            const played = await page.waitForFunction(() => window.mks.narration && window.mks.narration.state().playing === 'intro', null, { timeout: 5000 })
                 .then(() => page.waitForTimeout(500)).then(() => true, () => false);
             const after = await page.evaluate(() => ({
                 focus: document.activeElement === document.getElementById('listenBtn') || document.getElementById('dispatchBar').contains(document.activeElement),
@@ -1160,7 +1165,7 @@ async function checkWithoutJs(browser, origin) {
         await page.waitForTimeout(200);
         const seen = await reading();
 
-        const tookOver = await page.waitForFunction(() => window.mksReady === true, null, { timeout: 10000 }).then(() => true, () => false);
+        const tookOver = await page.waitForFunction(() => (window.mks || {}).ready === true, null, { timeout: 10000 }).then(() => true, () => false);
         await page.waitForTimeout(1200);   // the dossiers' games arrive and fill in
         const after = await page.evaluate(() => ({
             marked: document.documentElement.classList.contains('js'),
@@ -1217,7 +1222,7 @@ async function checkWithoutJs(browser, origin) {
             return { top: Math.round(l.getBoundingClientRect().top), what: l.textContent.replace(/\s+/g, ' ').trim().slice(0, 40) };
         });
         const seen = await line();
-        const tookOver = await page.waitForFunction(() => window.mksReady === true, null, { timeout: 10000 }).then(() => true, () => false);
+        const tookOver = await page.waitForFunction(() => (window.mks || {}).ready === true, null, { timeout: 10000 }).then(() => true, () => false);
         await page.waitForTimeout(2500);
         const now = await line();
         const tag = `index.html, script.js late, no scroll anchoring, reading ${where}`;
@@ -1270,7 +1275,7 @@ async function checkWithoutJs(browser, origin) {
             atReady: window.__atReady,
             preloader: !!document.getElementById('preloader'),
             marked: document.documentElement.classList.contains('js'),
-            ready: window.mksReady === true,
+            ready: (window.mks || {}).ready === true,
             counters: Array.from(document.querySelectorAll('.hero-stat-number')).map(c => c.textContent),
             targets: Array.from(document.querySelectorAll('.hero-stat-number')).map(c => c.getAttribute('data-target')),
             said: Array.from(document.querySelectorAll('.hero-stat')).map(s => `${s.querySelector('.hero-stat-number').getAttribute('data-target')} ${s.querySelector('.hero-stat-label').textContent}`),
@@ -1302,7 +1307,7 @@ async function checkWithoutJs(browser, origin) {
         // class-level display beat the browser's own [hidden].
         if (label === 'normal') {
             await page.evaluate(() => document.getElementById('ecoprompt').scrollIntoView());
-            await page.waitForFunction(() => window.mksLoaded && window.mksLoaded.interactives, null, { timeout: 5000 }).catch(() => null);
+            await page.waitForFunction(() => window.mks.loaded.interactives, null, { timeout: 5000 }).catch(() => null);
             const h = await page.evaluate(() => ({
                 leaks: Array.from(document.querySelectorAll('[hidden]')).filter(el => getComputedStyle(el).display !== 'none').map(el => '#' + (el.id || el.className)),
                 count: document.querySelectorAll('[hidden]').length,
@@ -1450,7 +1455,7 @@ async function axeHomepageStates(page, view, note, attempt) {
                 await new Promise(r => setTimeout(r, 50));
             }
         });
-        await page.waitForFunction(() => window.mksLoaded && window.mksLoaded.interactives, null, within);
+        await page.waitForFunction(() => window.mks && window.mks.loaded && window.mks.loaded.interactives, null, within);
         await page.evaluate(() => scrollTo(0, 0));
         await page.waitForTimeout(250);
         note(rel, 'scrolled through', view, await axeRun(page));
@@ -1505,4 +1510,204 @@ async function axeHomepageStates(page, view, note, attempt) {
         note(rel, 'the terminal', view, await axeRun(page, '.field-terminal'));
         await page.keyboard.press('Escape');
     });
+}
+
+// ------------------------------------------------------------------
+// CPU: sections drawn near the screen, loops only where they are seen
+// ------------------------------------------------------------------
+// content-visibility lets the browser skip a section's layout and paint
+// until it nears the screen, sizing it by an estimate until then, and that
+// estimate moves whatever a jump aims at; script.js re-aims a jump as the
+// real heights arrive. What jsdom cannot show: where jumps actually land,
+// whether find-in-page and printing still reach every section, which loops
+// are really paused, and how busy the main thread is while nobody touches
+// the page (at 4x CPU slowdown it was about 0.7 s in every 2 s before).
+const IDLE_CEILING_MS = 100;   // main-thread work per 2 s idle, at 4x slowdown
+
+async function exerciseCpu(browser, origin) {
+    console.log('  index.html — sections drawn near the screen, loops paused out of sight');
+    const landed = (page, id) => page.evaluate((id) => new Promise((resolve) => {
+        // Where the section's top should sit: under the fixed nav bar.
+        const want = parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0;
+        const el = document.getElementById(id);
+        let still = 0;
+        const started = performance.now();
+        const poll = () => {
+            const top = Math.round(el.getBoundingClientRect().top);
+            still = Math.abs(top - want) <= 2 ? still + 1 : 0;
+            if (still >= 3 || performance.now() - started > 5000) resolve({ top, want });
+            else setTimeout(poll, 100);
+        };
+        poll();
+    }), id);
+    const lands = async (page, id, how) => {
+        const r = await landed(page, id);
+        if (Math.abs(r.top - r.want) <= 2) ok(`${how} to #${id} lands its top under the nav bar (${r.top}px)`);
+        else bad(`${how} to #${id} lands ${r.top}px from the top of the screen, not ${r.want}px`);
+    };
+
+    // Desktop, motion allowed: the jump glides past sections still sized by
+    // their estimates, which is the hard case.
+    {
+        const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+        const page = await context.newPage();
+        await page.goto(`${origin}/index.html`, { waitUntil: 'load' });
+        const cv = await page.evaluate(() => Array.from(document.querySelectorAll('main > section'))
+            .filter(s => getComputedStyle(s).contentVisibility === 'auto').length);
+        if (cv) ok(`${cv} sections are drawn only as they near the screen (content-visibility: auto)`);
+        else bad('no section has content-visibility: auto');
+        for (const id of ['contact', 'about', 'ecoprompt']) {
+            await page.click(`.nav-menu a[href="#${id}"]`);
+            await lands(page, id, 'a nav link');
+        }
+        const spy = await page.evaluate(() => (document.querySelector('.nav-link.active') || {}).hash || 'none');
+        if (spy === '#ecoprompt') ok('the nav highlights the section it landed on'); else bad(`the nav highlights ${spy}, not #ecoprompt`);
+
+        // Find-in-page, from the top, reaches a section not yet drawn.
+        await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
+        const found = await page.evaluate(() => {
+            const heading = document.querySelector('#notes h3');
+            const text = heading ? heading.textContent.trim() : '';
+            const hit = !!text && window.find(text);
+            const sel = getSelection();
+            return { text, hit, inside: !!(sel.anchorNode && document.getElementById('notes').contains(sel.anchorNode)) };
+        });
+        if (found.hit && found.inside) ok(`find-in-page reaches a section not yet drawn ("${found.text}")`);
+        else bad(`find-in-page could not find "${found.text}" in #notes from the top of the page`);
+
+        await page.emulateMedia({ media: 'print' });
+        const printed = await page.evaluate(() => Array.from(document.querySelectorAll('main > section'))
+            .filter(s => getComputedStyle(s).contentVisibility !== 'visible').map(s => '#' + s.id));
+        if (printed.length) bad(`printing would skip ${printed.join(', ')}`); else ok('printing draws every section');
+        await page.emulateMedia({ media: null });
+        await context.close();
+    }
+
+    // A deep link, and a phone.
+    {
+        const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+        const page = await context.newPage();
+        await page.goto(`${origin}/index.html#skills`, { waitUntil: 'load' });
+        await lands(page, 'skills', 'a shared link');
+        await context.close();
+    }
+    {
+        const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+        const page = await context.newPage();
+        await page.goto(`${origin}/index.html`, { waitUntil: 'load' });
+        // The journey map still flies with its stops (one column on a phone)
+        // as the section around them is drawn.
+        await page.mouse.wheel(0, 300);
+        await page.waitForFunction(() => document.querySelector('#journeyMapFrame svg'), null, { timeout: 5000 }).catch(() => null);
+        const readAt = async (i) => {
+            await page.evaluate((i) => document.querySelector(`.journey-stop[data-stop="${i}"]`).scrollIntoView({ block: 'center', behavior: 'instant' }), i);
+            await page.waitForTimeout(600);
+            return page.evaluate(() => document.getElementById('journeyMapReadout').textContent.split('—').pop().trim());
+        };
+        const early = await readAt(1);
+        const late = await readAt(4);
+        if (late === 'Amsterdam' && early !== late) ok(`the journey map flies with the stops (${early}, then ${late})`);
+        else bad(`the journey map did not follow the stops (${early}, then ${late})`);
+        await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
+        await page.click('#navToggle');
+        await page.click('.nav-menu a[href="#projects"]');
+        await lands(page, 'projects', 'on a phone, a menu link');
+        await context.close();
+    }
+    // Reading back up after the page skipped ahead: an instant jump (reduced
+    // motion) or a scroll bar dragged to the end. The sections passed were
+    // never drawn, so each took its real height as the reader got back to it,
+    // just above what they were reading, and Chrome's scroll anchoring missed
+    // it: at 390px the page moved up to 2,376px at a time. script.js draws
+    // them once the page rests. (A few pixels is a hover lift, not this.)
+    for (const [how, arrive] of [
+        ['after a shared link to #contact with reduced motion', async (page) => {
+            await page.goto(`${origin}/index.html#contact`, { waitUntil: 'load' });
+            await lands(page, 'contact', 'with reduced motion, a shared link');
+            // The reader takes over with the wheel, which lets go of the jump.
+            await page.mouse.move(195, 422);
+            await page.mouse.wheel(0, -150);
+            await page.mouse.move(2, 2);
+        }],
+        ['after dragging the scroll bar to the end', async (page) => {
+            await page.goto(`${origin}/index.html`, { waitUntil: 'load' });
+            await page.evaluate(() => scrollTo({ top: document.documentElement.scrollHeight, behavior: 'instant' }));
+        }]
+    ]) {
+        const context = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: /reduced/.test(how) ? 'reduce' : 'no-preference' });
+        const page = await context.newPage();
+        await arrive(page);
+        await page.waitForTimeout(1200);
+        const moved = await page.evaluate(async () => {
+            const frames = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+            const out = [];
+            while (scrollY > 0) {
+                const el = document.elementFromPoint(innerWidth / 2, innerHeight / 2);
+                const was = el.getBoundingClientRect().top, y = scrollY;
+                scrollBy({ top: -150, behavior: 'instant' });
+                const step = y - scrollY;
+                await frames();
+                const off = Math.round(el.getBoundingClientRect().top - was - step);
+                if (Math.abs(off) > 24) out.push(`${off}px at ${Math.round(scrollY)}`);
+            }
+            return out;
+        });
+        if (!moved.length) ok(`reading back up ${how}, nothing on screen moves as the sections passed are drawn`);
+        else bad(`reading back up ${how}, what was on screen moved ${moved.join(', ')}`);
+        await context.close();
+    }
+
+    // Loops: running where they can be seen, paused elsewhere and in a
+    // hidden tab. Then the main thread, left alone, at 4x slowdown.
+    {
+        const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+        const page = await context.newPage();
+        await page.goto(`${origin}/index.html`, { waitUntil: 'load' });
+        await page.waitForTimeout(1200);
+        const loops = () => page.evaluate(() => document.getAnimations()
+            .filter(a => a.effect && a.effect.getTiming().iterations === Infinity)
+            .map((a) => {
+                const el = a.effect.target;
+                return { name: a.animationName, state: a.playState, away: !(el && el.closest('.onscreen')) };
+            }));
+        const atTop = await loops();
+        const wrong = atTop.filter(l => (l.away ? l.state !== 'paused' : l.state !== 'running'));
+        const shown = atTop.filter(l => !l.away).length;
+        if (atTop.length && shown && !wrong.length) ok(`${atTop.length} loops: the ${shown} in view run, the ${atTop.length - shown} out of view are paused`);
+        else bad(`loops at the top of the page: ${wrong.map(l => `${l.name} ${l.state}${l.away ? ' off screen' : ' in view'}`).join(', ') || 'none found'}`);
+
+        const setHidden = (hidden) => page.evaluate((hidden) => {
+            Object.defineProperty(document, 'hidden', { configurable: true, get: () => hidden });
+            document.dispatchEvent(new Event('visibilitychange'));
+        }, hidden);
+        await setHidden(true);
+        const running = (await loops()).filter(l => l.state !== 'paused');
+        if (!running.length) ok('in a hidden tab every loop is paused'); else bad(`in a hidden tab ${running.map(l => l.name).join(', ')} still run`);
+        await setHidden(false);
+
+        // The main thread's own clock is a Chromium DevTools figure.
+        if (browser.browserType().name() !== 'chromium') {
+            ok('idle main-thread work: not measured in this browser (a Chromium DevTools figure)');
+            await context.close();
+            return;
+        }
+        const cdp = await context.newCDPSession(page);
+        await cdp.send('Performance.enable');
+        await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+        await page.waitForTimeout(1000);   // let the checks above settle first
+        const busy = async () => {
+            const at = async () => (await cdp.send('Performance.getMetrics')).metrics.find(m => m.name === 'TaskDuration').value;
+            const t0 = await at();
+            await page.waitForTimeout(2000);
+            return Math.round((await at() - t0) * 1000);
+        };
+        const top = await busy();
+        await page.evaluate(() => document.getElementById('projects').scrollIntoView({ behavior: 'instant' }));
+        await page.waitForTimeout(2000);
+        const mid = await busy();
+        await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+        if (top <= IDLE_CEILING_MS && mid <= IDLE_CEILING_MS) ok(`left alone, the main thread works ${top} ms at the top and ${mid} ms mid-page per 2 s at 4x slowdown (ceiling ${IDLE_CEILING_MS} ms)`);
+        else bad(`left alone, the main thread works ${top} ms at the top and ${mid} ms mid-page per 2 s at 4x slowdown — ceiling ${IDLE_CEILING_MS} ms`);
+        await context.close();
+    }
 }

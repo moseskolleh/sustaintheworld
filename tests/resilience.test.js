@@ -42,10 +42,10 @@ function assert(cond, msg) {
     assert(!!doc.getElementById('dispatchBar'), 'Storage blocked: the narration player still mounts (defined late in the file)');
     assert(doc.querySelectorAll('.listen-btn').length === 1, 'Storage blocked: the listen control is still there');
     assert(!!doc.getElementById('terminalToggle'), 'Storage blocked: the field terminal is still wired');
-    assert(typeof window.FieldDispatch === 'object' && window.FieldDispatch !== null, 'Storage blocked: FieldDispatch is still exported');
+    assert(typeof window.mks.narration === 'object' && window.mks.narration !== null, 'Storage blocked: the narration player is still exported (mks.narration)');
 
     // The adapter itself must be usable and honest about what it can promise.
-    const store = window.mksStorage;
+    const store = window.mks.storage;
     assert(!!store, 'Storage blocked: the safe adapter is exposed');
     assert(store.local.persistent === false, 'Storage blocked: the adapter reports that nothing will persist');
     assert(store.local.get('nothing-here', 'fallback') === 'fallback', 'Storage blocked: reads fall back to the supplied default');
@@ -75,7 +75,7 @@ function assert(cond, msg) {
 // is graceful degradation, not silently dropping everyone's settings.
 {
     const { window } = run('dark');
-    const store = window.mksStorage;
+    const store = window.mks.storage;
     assert(store.local.persistent === true, 'Storage available: the adapter reports that writes persist');
     assert(store.local.set('mks-test', 'value') === true, 'Storage available: a write reports success');
     assert(window.localStorage.getItem('mks-test') === 'value', 'Storage available: the value really reaches localStorage');
@@ -231,7 +231,7 @@ function finish() {
 {
     const { window, clock } = run('dark', { speech: 'none', clock: true });
     const doc = window.document;
-    const fd = window.FieldDispatch;
+    const fd = window.mks.narration;
 
     fd.play('hero');
 

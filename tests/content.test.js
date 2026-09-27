@@ -350,7 +350,7 @@ const fieldText = plain(fieldReport);
 {
     const { run } = require('./harness.js');
     const { window } = run('dark', { before: (w) => { w.console.log = () => {}; } });
-    const A = window.mksAssay;
+    const A = window.mks.assay;
     const toolkit = plain((read('field-report.html').match(/<h2>Toolkit<\/h2>\s*<p>([\s\S]*?)<\/p>/) || [])[1] || '');
     const tools = A.RULES.tools.map(t => (typeof t === 'string' ? t : t.name));
     const a = A.analyse(`Requirements: ${toolkit}`, { now: new Date(2026, 8, 26) });

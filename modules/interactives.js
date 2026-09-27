@@ -6,10 +6,10 @@
 // matters once someone scrolls to section 05 or opens the footer receipt.
 // Needs ai-carbon-data.js, which the loader fetches first.
 //
-// Loaded on demand by script.js (window.mksLoad('interactives')) — see the
+// Loaded on demand by script.js (mks.load('interactives')) — see the
 // ON-DEMAND MODULES section there for when. This file is a classic script:
 // it shares the page's global scope, so it declares nothing at the top
-// level and talks to the core only through the window.mks* helpers.
+// level and talks to the core only through window.mks.
 //
 // tests/harness.js evaluates it after script.js so the jsdom suites see the
 // page fully initialised, the way a visitor who used every feature would.
@@ -121,7 +121,7 @@
 // Web Share where available (mobile), graceful fallbacks: images fall back to a
 // download, text falls back to the clipboard. Every payload links home.
 // ===================================
-window.mksShare = (() => {
+window.mks.share = (() => {
     const SITE = (location.hostname + location.pathname).replace(/\/+$/, '') || 'moseskolleh.github.io/sustaintheworld';
     // Restores the button's markup, not just its text: putting back
     // textContent dropped the icon for good. A second flash before the first
@@ -671,7 +671,7 @@ window.mksShare = (() => {
     }
 
     // For the tests, and for The Brief (Phase 4) to build on.
-    window.mksAssay = { analyse, RULES, FACTS };
+    window.mks.assay = { analyse, RULES, FACTS };
 
     // --- The page -------------------------------------------------------------
     const input = document.getElementById('assayInput');
@@ -722,19 +722,21 @@ window.mksShare = (() => {
         if (a.gaps.length) plain += '\nGaps (not shown on the site):\n' + a.gaps.map(g => `• ${g.label}${g.hard ? '' : ' (nice to have)'}: ${g.text}\n`).join('');
         if (found.length) plain += '\nWhat backs the rest:\n' + found.map(t => `• ${t.label}\n` + t.ev.map(e => `   - ${e.t}\n`).join('')).join('');
         if (a.confirm.length) plain += '\nConfirm with Moses (not stated on the site):\n' + a.confirm.map(c => `• ${c}\n`).join('');
-        lastAssayText = plain + `\n— ${window.mksShare ? window.mksShare.site : 'moseskolleh.github.io/sustaintheworld'}`;
+        lastAssayText = plain + `\n— ${window.mks.share ? window.mks.share.site : 'moseskolleh.github.io/sustaintheworld'}`;
         html += `<div class="assay-copy-wrap"><button type="button" class="btn btn-secondary btn-small assay-copy" data-analytics="assay-copy"><svg class="icon" aria-hidden="true"><use href="#i-copy"></use></svg> Copy this result</button></div>`;
         html += '<p class="assay-note">Deterministic matching against a hand-written evidence set and the facts on this site: no AI, no data sent anywhere. Anything the site does not show is a gap, not a guess. A starting point for a conversation, not a verdict.</p>';
         result.innerHTML = html;
         document.dispatchEvent(new CustomEvent('mks:layout'));   // new links, for back to top to keep clear of
         if (clearBtn) clearBtn.hidden = false;
-        if (typeof window.trackEvent === 'function') window.trackEvent('assay-' + a.cls);
+        // count.js records it; trackEvent is the name it had before mks.track.
+        const track = window.mks.track || window.trackEvent;
+        if (typeof track === 'function') track('assay-' + a.cls);
     };
 
     runBtn.addEventListener('click', assay);
     result.addEventListener('click', (e) => {
         const b = e.target.closest('.assay-copy');
-        if (b && window.mksShare) window.mksShare.copy(lastAssayText, b);
+        if (b && window.mks.share) window.mks.share.copy(lastAssayText, b);
     });
     if (clearBtn) {
         clearBtn.addEventListener('click', () => {
@@ -756,7 +758,7 @@ window.mksShare = (() => {
         b.addEventListener('click', () => {
             input.value = SAMPLES[b.getAttribute('data-sample')] || '';
             assay();
-            result.scrollIntoView({ behavior: window.mksScrollMotion(), block: 'nearest' });
+            result.scrollIntoView({ behavior: window.mks.scrollMotion(), block: 'nearest' });
         });
     });
 })();
@@ -868,8 +870,8 @@ window.mksShare = (() => {
     if (gridSel) gridSel.addEventListener('change', update);
     const copyBtn = document.getElementById('anatomyCopy');
     if (copyBtn) copyBtn.addEventListener('click', () => {
-        const txt = (summary ? summary.textContent : '') + `\n— Moses Kolleh Sesay · ${window.mksShare ? window.mksShare.site : ''}`;
-        if (window.mksShare) window.mksShare.copy(txt, copyBtn);
+        const txt = (summary ? summary.textContent : '') + `\n— Moses Kolleh Sesay · ${window.mks.share ? window.mks.share.site : ''}`;
+        if (window.mks.share) window.mks.share.copy(txt, copyBtn);
     });
     document.querySelectorAll('.anatomy-scale-btn').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -1071,7 +1073,7 @@ window.mksShare = (() => {
         if (revealed) return;
         if (!interacted) { nudge(); return; }   // draw first — don't grade a guess never made
         revealed = true;
-        const reduce = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const reduce = !window.mks.motionOK();
         realLine.setAttribute('points', models.map((m, i) => `${xAt(i)},${yAt(m.wh)}`).join(' '));
         svg.classList.add('revealed');
         // Draw the published estimates in, left to right.
@@ -1181,13 +1183,13 @@ window.mksShare = (() => {
         ctx.fillStyle = '#7CFC00'; ctx.font = "600 15px 'Space Grotesk', system-ui, sans-serif";
         ctx.fillText('Moses Kolleh Sesay', padX, y);
         ctx.fillStyle = '#88a878'; ctx.font = "400 12px 'IBM Plex Mono', monospace";
-        ctx.fillText(window.mksShare ? window.mksShare.site : 'moseskolleh.github.io/sustaintheworld', padX, y + 18);
+        ctx.fillText(window.mks.share ? window.mks.share.site : 'moseskolleh.github.io/sustaintheworld', padX, y + 18);
     };
     if (shareBtn && cardCanvas) {
         shareBtn.addEventListener('click', () => {
             drawCard();
-            const text = `${cardData ? cardData.shape : ''} I tried to guess what one AI answer costs. ${window.mksShare ? window.mksShare.site : ''}`;
-            if (window.mksShare) window.mksShare.image(cardCanvas, 'ai-hidden-curve.png', text);
+            const text = `${cardData ? cardData.shape : ''} I tried to guess what one AI answer costs. ${window.mks.share ? window.mks.share.site : ''}`;
+            if (window.mks.share) window.mks.share.image(cardCanvas, 'ai-hidden-curve.png', text);
         });
     }
 
@@ -1241,7 +1243,7 @@ window.mksShare = (() => {
     // The footer badge (script.js) defines what a byte weighs and how a
     // resource is measured; the receipt uses the same definitions rather than
     // carrying a copy that could drift.
-    const carbon = window.mksCarbon;
+    const carbon = window.mks.carbon;
     if (!carbon) return;
     const G_CO2_PER_MB = carbon.gramsPerMB;
     const MEDIAN_MB = carbon.medianPageMB;
@@ -1396,19 +1398,19 @@ window.mksShare = (() => {
         if (open) build();
         panel.toggleAttribute('hidden', !open);
         btn.setAttribute('aria-expanded', String(open));
-        if (open) panel.scrollIntoView({ behavior: window.mksScrollMotion(), block: 'nearest' });
+        if (open) panel.scrollIntoView({ behavior: window.mks.scrollMotion(), block: 'nearest' });
     });
 
     if (dlBtn && canvas) {
         dlBtn.addEventListener('click', () => {
             if (!built) build();
             const fn = 'carbon-receipt-' + lastReceiptG.toFixed(3).replace('.', '_') + 'g.png';
-            if (!window.mksShare) return;
-            const msg = `This whole climate portfolio cost ${lastReceiptG.toFixed(2)} g CO₂e to view — ${window.mksShare.site}`;
-            window.mksShare.image(canvas, fn, msg);
+            if (!window.mks.share) return;
+            const msg = `This whole climate portfolio cost ${lastReceiptG.toFixed(2)} g CO₂e to view — ${window.mks.share.site}`;
+            window.mks.share.image(canvas, fn, msg);
         });
     }
 })();
 
 // Tells the loader in script.js that this module is in place.
-(window.mksLoaded = window.mksLoaded || {}).interactives = true;
+window.mks.loaded.interactives = true;

@@ -246,7 +246,7 @@ PAGES.forEach((page) => {
     const block = js.slice(start, js.indexOf('})();', start));
     assert(/lastFocus\s*=\s*document\.activeElement/.test(block), 'Lightbox: remembers what had focus before opening');
     assert(/lastFocus[\s\S]{0,80}\.focus\(\)/.test(block), 'Lightbox: returns focus when it closes');
-    assert(/e\.key === 'Escape'/.test(block), 'Lightbox: closes on Escape');
+    assert(/onKey\('Escape'/.test(block), 'Lightbox: closes on Escape (through the one key router)');
     assert(/e\.key === 'Tab'/.test(block), 'Lightbox: keeps Tab inside the dialog');
 }
 

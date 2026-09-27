@@ -81,19 +81,71 @@ const safeStorage = (() => {
     return { local: api('local'), session: api('session') };
 })();
 
+// ===================================
+// window.mks — the page's one global
+// ===================================
+// What the core shares with its modules hangs off one object, not a dozen
+// window.mksThis and window.FieldThat names. Whichever script runs first
+// creates it and nothing replaces it, so what count.js adds is kept.
+const mks = (window.mks = window.mks || {});
+
 // Exposed so the tests can assert the degradation, and so the field terminal
 // can report honestly whether a preference will outlive the tab.
-window.mksStorage = safeStorage;
+mks.storage = safeStorage;
+
+// ===================================
+// MOTION — one answer to "may this move?"
+// ===================================
+// Eight checks, each its own way: most read the reduced-motion preference
+// once at start-up, and some forgot low-energy mode. Now anything about to
+// move asks here, and both are read live, so a change mid-visit counts.
+const reducedMotion = typeof window.matchMedia === 'function'
+    ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+const motionOK = () => !(reducedMotion && reducedMotion.matches) &&
+    !(document.body && document.body.classList.contains('eco-mode'));
+mks.motionOK = motionOK;
+
+// Low-energy mode is restored before the intro, the slideshow and the
+// counters first ask; its switch is wired further down.
+{
+    const saved = safeStorage.local.get('eco-mode');
+    document.body.classList.toggle('eco-mode',
+        saved !== null ? saved === 'on' : !!(reducedMotion && reducedMotion.matches));
+}
 
 // A smooth scroll is motion. The stylesheet turns it off for reduced
 // motion, but scrollIntoView({ behavior: 'smooth' }) does not ask the
 // stylesheet, so every scripted scroll asks here instead. 'instant', since
 // 'auto' defers to the stylesheet, which still glides in low-energy mode.
-const scrollMotion = () => (
-    (document.body && document.body.classList.contains('eco-mode')) ||
-    (typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches)
-) ? 'instant' : 'smooth';
-window.mksScrollMotion = scrollMotion;
+const scrollMotion = () => (motionOK() ? 'smooth' : 'instant');
+mks.scrollMotion = scrollMotion;
+
+// ===================================
+// KEYBOARD — one listener
+// ===================================
+// Five document listeners, blind to each other, used to answer the keys:
+// one Escape closed the terminal and the menu behind it. A feature now
+// registers its keys with its layer's rank; the highest is asked first,
+// and true means the key is used, so one press closes one layer. A key a
+// control already used is left alone, and a widget's own keys (the games'
+// arrows, a dialog's Tab) stay on the widget.
+const KEY_RANK = Object.freeze({ terminal: 40, lightbox: 30, player: 20, menu: 10, page: 0 });
+const keyRoutes = {};
+mks.keyRank = KEY_RANK;
+mks.onKey = (keys, handler, rank = KEY_RANK.page) => {
+    [].concat(keys).forEach((key) => {
+        const route = keyRoutes[key] || (keyRoutes[key] = []);
+        route.push({ handler, rank });
+        route.sort((a, b) => b.rank - a.rank);   // stable: equal ranks keep their order
+    });
+};
+document.addEventListener('keydown', (e) => {
+    const route = keyRoutes[e.key];
+    if (!route || e.defaultPrevented) return;
+    for (let i = 0; i < route.length; i++) {
+        if (route[i].handler(e) === true) return;
+    }
+});
 
 // ===================================
 // ON-DEMAND MODULES
@@ -109,8 +161,8 @@ window.mksScrollMotion = scrollMotion;
 //
 // Modules are classic scripts sharing the page's global scope. They declare
 // nothing at the top level (a second `const safeStorage` would be a
-// SyntaxError) and reach the core only through window.mks*. Each marks
-// itself in window.mksLoaded when it has run, which is also how the jsdom
+// SyntaxError) and reach the core only through window.mks. Each marks
+// itself in mks.loaded when it has run, which is also how the jsdom
 // harness — which evaluates them directly — tells the loader they are here.
 // A module's own stylesheet is listed first, so it has arrived before the
 // script builds anything it styles.
@@ -122,7 +174,7 @@ const MODULES = {
 };
 
 const mksLoad = (() => {
-    const loaded = (window.mksLoaded = window.mksLoaded || {});
+    const loaded = (mks.loaded = mks.loaded || {});
     const inflight = {};
 
     const inject = (src) => new Promise((resolve, reject) => {
@@ -150,7 +202,7 @@ const mksLoad = (() => {
         return inflight[name];
     };
 })();
-window.mksLoad = mksLoad;
+mks.load = mksLoad;
 
 // A module that will not load is a feature that stays off, not a broken page.
 const mksLoadWarn = (err) => {
@@ -170,7 +222,7 @@ function mksLoadFor(target) {
 // WITHOUT JAVASCRIPT, AND LATE
 // ===================================
 // The stylesheet hides nothing unless <head> marked the page html.js, and
-// <head> takes the mark off if this file has not set mksReady within 4 s.
+// <head> takes the mark off if this file has not set mks.ready within 4 s.
 // Arriving after that is a slow network, not a failure: the reader has
 // already been shown the page, so nothing is hidden again or replayed.
 const lateStart = !document.documentElement.classList.contains('js');
@@ -183,14 +235,12 @@ const lateStart = !document.documentElement.classList.contains('js');
     if (!preloader) return;
 
     const wipe = () => preloader.remove();
-    const reduce = typeof window.matchMedia === 'function' &&
-        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    // Reduced-motion visitors, and anyone who has already seen the intro this
-    // session, skip it entirely — no fake loading bar in front of static HTML.
-    // So does a late start: the page is already on screen.
+    // Reduced-motion and low-energy visitors, and anyone who has already seen
+    // the intro this session, skip it entirely — no fake loading bar in front
+    // of static HTML. So does a late start: the page is already on screen.
     const seen = safeStorage.session.get('mks-intro-seen');
-    if (reduce || seen || lateStart) { wipe(); return; }
+    if (!motionOK() || seen || lateStart) { wipe(); return; }
     safeStorage.session.set('mks-intro-seen', '1');
 
     const coordsEl = document.getElementById('preloaderCoords');
@@ -258,16 +308,8 @@ const initBackgroundSlideshow = () => {
     };
     loadSlide(0);
 
-    const reduce = typeof window.matchMedia === 'function' &&
-        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    let heroInView = true;
-    if ('IntersectionObserver' in window && hero) {
-        new IntersectionObserver((entries) => {
-            entries.forEach(en => { heroInView = en.isIntersecting; });
-        }, { threshold: 0.05 }).observe(hero);
-    }
-    const rotating = () => heroInView && !document.hidden && !reduce &&
-        !document.body.classList.contains('eco-mode');
+    // .onscreen is kept by the LOOPS observer below.
+    const rotating = () => !!hero && hero.classList.contains('onscreen') && motionOK();
 
     const showSlide = (index) => {
         loadSlide(index);
@@ -345,13 +387,16 @@ function focusTarget(target) {
 }
 
 // Section 05's widgets grow when their module arrives, and a jump into or
-// past it is what fetches it: a first jump to Skills stopped 318px short. So
-// for a few seconds `land` runs again whenever the page changes height,
-// until the reader scrolls, taps or types: then where it sits is theirs.
-// The height is taken now: the observer's first report comes a frame late,
-// and growth in that frame was once taken for the start (250-440px short).
+// past it is what fetches it: a first jump to Skills stopped 318px short.
+// A section drawn for the first time swaps its estimated height for its
+// real one: a jump to #experience landed 927px out. So for a few seconds
+// `land` runs again whenever the page changes height, until the reader
+// scrolls, taps or types (any key, heard on window, not through the key
+// router): then where it sits is theirs. The height is taken now: the
+// observer's first report comes a frame late, and growth in that frame was
+// once taken for the start (250-440px short).
 let releaseHold = () => {};
-function hold(land) {
+const hold = (land) => {
     releaseHold();
     if (!('ResizeObserver' in window)) return;
     const height = () => document.body.getBoundingClientRect().height;
@@ -371,7 +416,7 @@ function hold(land) {
     HANDS.forEach(t => window.addEventListener(t, release, { capture: true, passive: true }));
     ro.observe(document.body);
     releaseHold = release;
-}
+};
 
 // Fetch what the target needs, open the dossier or receipt around it (and
 // give that a moment to push things into place), then scroll and focus. A
@@ -475,12 +520,13 @@ if (navToggle && navMenu) {
         }
     });
 
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && navMenu.classList.contains('active')) {
-            setMenuOpen(false);
-            navToggle.focus();
-        }
-    });
+    // The lowest layer Escape closes: a dialog or the player goes first.
+    mks.onKey('Escape', () => {
+        if (!navMenu.classList.contains('active')) return false;
+        setMenuOpen(false);
+        navToggle.focus();
+        return true;
+    }, KEY_RANK.menu);
 }
 
 // ===================================
@@ -506,9 +552,7 @@ const navLinks = Array.from(document.querySelectorAll('.nav-link'));
         sectionTops = sections.map(s => ({ id: s.id, top: s.offsetTop - 220 }));
     };
 
-    let ticking = false;
     const update = () => {
-        ticking = false;
         const y = window.pageYOffset || document.documentElement.scrollTop || 0;
         const docHeight = document.documentElement.scrollHeight - window.innerHeight;
         let current = '';
@@ -522,11 +566,23 @@ const navLinks = Array.from(document.querySelectorAll('.nav-link'));
             link.classList.toggle('active', link.getAttribute('href') === `#${current}`);
         });
     };
-    const onScroll = () => {
-        if (ticking) return;
-        ticking = true;
-        requestAnimationFrame(update);
+    let queued = false;   // a frame is on its way
+    let stale = true;     // …and should measure the sections first
+    const frame = () => {
+        queued = false;
+        if (stale) { stale = false; measure(); watch(); }
+        update();
     };
+    const onScroll = () => {
+        if (queued) return;
+        queued = true;
+        requestAnimationFrame(frame);
+    };
+    // Measuring forces a layout, and used to run the moment anything asked,
+    // mid-parse included. Asking now marks the offsets stale, and the next
+    // frame measures once, however many asked.
+    const relayout = () => { stale = true; onScroll(); };
+
     // Back to top floats bottom right. It waits for a full screen of scroll
     // (the hero's buttons are above it by then) and steps aside while any
     // control is in its corner or about to be: the observer's root is cut to
@@ -553,18 +609,43 @@ const navLinks = Array.from(document.querySelectorAll('.nav-link'));
             if (el !== scrollTopBtn && !(navbar && navbar.contains(el))) band.io.observe(el);
         });
     };
-    const relayout = () => { measure(); watch(); onScroll(); };
 
-    window.addEventListener('scroll', onScroll, { passive: true });
+    // A section skipped past undrawn (a jump, a dragged scroll bar) keeps its
+    // estimate, and drawn as the reader came back up it moved the page up to
+    // 2,370px: scroll anchoring missed it. So once the page rests, what is
+    // above the screen is drawn for good, and what is on screen held still.
+    let resting = 0;
+    const drawAbove = () => {
+        const above = sections.filter(s => s.matches('main > section:not(.drawn)') && s.getBoundingClientRect().bottom <= 0);
+        const seen = sections.find(s => s.getBoundingClientRect().bottom > 0) || document.querySelector('body > footer');
+        if (!above.length || !seen) return;
+        const was = seen.getBoundingClientRect().top;
+        above.forEach(s => s.classList.add('drawn'));
+        const moved = seen.getBoundingClientRect().top - was;
+        if (Math.abs(moved) >= 1) window.scrollBy({ top: moved, behavior: 'instant' });
+    };
+
+    window.addEventListener('scroll', () => {
+        onScroll();
+        clearTimeout(resting);
+        resting = setTimeout(drawAbove, 150);
+    }, { passive: true });
     let resizeTimer;
     window.addEventListener('resize', () => {
         clearTimeout(resizeTimer);
         resizeTimer = setTimeout(relayout, 150);
     }, { passive: true });
     window.addEventListener('load', relayout);
-    // Anything that opens or closes a block of the page — a dossier, the
-    // receipt — announces it here so the offsets stay true.
+    // A module that has filled in its part of the page, or the Assay's
+    // result, announces it: new controls for back to top to keep clear of.
     document.addEventListener('mks:layout', relayout);
+    // A section that changes height moves every offset below it: a dossier
+    // opening, or one drawn for the first time (content-visibility sizes it
+    // by estimate until then). Each asks for a measurement.
+    if ('ResizeObserver' in window) {
+        const sized = new ResizeObserver(() => relayout());
+        sections.forEach(s => sized.observe(s));
+    }
     relayout();
 })();
 
@@ -731,8 +812,10 @@ if (statsSection && 'IntersectionObserver' in window) {
             frame.innerHTML = markup;
             svg = frame.querySelector('svg');
             // let enhancements (e.g. the visitor mark) attach before the
-            // first fly-to so their markers get counter-scaled with the rest
-            document.dispatchEvent(new CustomEvent('journeymap:ready', { detail: { svg, mapBox } }));
+            // first fly-to so their markers get counter-scaled with the rest,
+            // or, if they land later, call rescale
+            const rescale = () => { if (activeIndex >= 0) flyTo(activeIndex); };
+            document.dispatchEvent(new CustomEvent('journeymap:ready', { detail: { svg, mapBox, rescale } }));
             setActive(0);
 
             const stops = document.querySelectorAll('.journey-stop');
@@ -756,7 +839,7 @@ if (statsSection && 'IntersectionObserver' in window) {
         })
         .catch(() => { mapBox.style.display = 'none'; });
 
-    // The map is 29 KB that sits a full screen below the fold. It is fetched
+    // The map is 13 KB that sits a full screen below the fold. It is fetched
     // on the first sign the visitor is going there — a scroll, a key, a touch,
     // a deep link, or a page that opened already scrolled down — and never by
     // a visit that reads the hero and leaves.
@@ -776,6 +859,25 @@ if (statsSection && 'IntersectionObserver' in window) {
             window.addEventListener(type, request, { passive: true });
         });
     }
+})();
+
+// ===================================
+// LOOPS — only where they can be seen
+// ===================================
+// The dots, the map's halo and the hero's zoom loop for ever, and ran every
+// frame out of sight. style.css holds a top-level block still until this
+// marks it .onscreen: in view, in a visible tab.
+(() => {
+    const blocks = document.querySelectorAll('body > header, main > section, body > footer');
+    const inView = new Set();
+    const mark = () => blocks.forEach(b => b.classList.toggle('onscreen', !document.hidden && inView.has(b)));
+    document.addEventListener('visibilitychange', mark);
+    if (!('IntersectionObserver' in window)) { blocks.forEach(b => inView.add(b)); mark(); return; }
+    const watch = new IntersectionObserver((entries) => {
+        entries.forEach(en => (en.isIntersecting ? inView.add(en.target) : inView.delete(en.target)));
+        mark();
+    }, { rootMargin: '100px 0px' });
+    blocks.forEach(b => watch.observe(b));
 })();
 
 // ===================================
@@ -837,7 +939,8 @@ document.querySelectorAll('.project-card').forEach((card, i) => {
     // What is inside can grow after the dossier opens — a mini-game logs
     // every drill, late images arrive — and a max-height measured at opening
     // clipped it, leaving the end of the dossier hidden but still tabbable.
-    // The inner wrapper is not clamped, so its size is the content's.
+    // The inner wrapper is not clamped, so its size is the content's; this
+    // also follows a resized window, which had a listener of its own.
     const inner = details.querySelector('.project-details-inner');
     if (inner && 'ResizeObserver' in window) {
         new ResizeObserver(() => {
@@ -890,23 +993,8 @@ document.querySelectorAll('.project-card').forEach((card, i) => {
             // Once images inside load, the content can grow — re-measure
             setTimeout(remeasure, 450);
         }
-        // Sections below have moved; the scroll bookkeeping needs new offsets.
-        setTimeout(() => document.dispatchEvent(new CustomEvent('mks:layout')), 500);
     });
 });
-
-// Keep expanded panels correctly sized if the viewport changes: all the
-// reads in one pass, then all the writes, so the browser lays out once.
-let dossierResize = null;
-window.addEventListener('resize', () => {
-    if (dossierResize) return;
-    dossierResize = requestAnimationFrame(() => {
-        dossierResize = null;
-        const open = Array.from(document.querySelectorAll('.project-card.expanded .project-details'));
-        const heights = open.map(d => d.scrollHeight);
-        open.forEach((d, i) => { d.style.maxHeight = heights[i] + 'px'; });
-    });
-}, { passive: true });
 
 // ===================================
 // GALLERY LIGHTBOX
@@ -980,9 +1068,11 @@ window.addEventListener('resize', () => {
             lightboxClose.focus();
         }
     });
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && lightbox.classList.contains('active')) close();
-    });
+    mks.onKey('Escape', () => {
+        if (!lightbox.classList.contains('active')) return false;
+        close();
+        return true;
+    }, KEY_RANK.lightbox);
 })();
 
 // ===================================
@@ -1163,18 +1253,14 @@ const isTypingContext = (target) => {
     return !!target.closest(TYPING_SELECTOR);
 };
 
-document.addEventListener('keydown', (e) => {
-    if (e.ctrlKey || e.metaKey || e.altKey) return;
-    if (e.isComposing || e.keyCode === 229) return;   // mid IME composition
-    if (isTypingContext(e.target)) return;
+mks.onKey(['h', 'H', 'c', 'C'], (e) => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return false;
+    if (e.isComposing || e.keyCode === 229) return false;   // mid IME composition
+    if (isTypingContext(e.target)) return false;
 
-    const jump = (selector) => {
-        const target = document.querySelector(selector);
-        if (target) target.scrollIntoView({ behavior: scrollMotion() });
-    };
-
-    if (e.key === 'h' || e.key === 'H') jump('#home');
-    if (e.key === 'c' || e.key === 'C') jump('#contact');
+    const target = document.querySelector(/h/i.test(e.key) ? '#home' : '#contact');
+    if (target) jumpTo(target, scrollMotion(), false, false);
+    return true;
 });
 
 // ===================================
@@ -1187,33 +1273,33 @@ document.querySelectorAll('.current-year').forEach(el => {
 // ===================================
 // FIELD TERMINAL — the trigger
 // ===================================
-// The terminal itself is modules/terminal.js. The core only listens for the
-// two ways in — the backtick and the footer button — and fetches it on the
-// first press. Once it is in place it owns both keys, and this stands down.
+// The terminal itself is modules/terminal.js, fetched on the first press of
+// the footer button or the backtick. The backtick stays routed here once it
+// is loaded, so one rule decides it; the module adds Escape and its prompt.
 (() => {
     const toggleBtn = document.getElementById('terminalToggle');
     const openTerminal = () => mksLoad('terminal')
-        .then(() => { if (window.FieldTerminal) window.FieldTerminal.open(); })
+        .then(() => { if (mks.terminal) mks.terminal.open(); })
         .catch(mksLoadWarn);
 
     if (toggleBtn) {
         toggleBtn.addEventListener('click', () => {
-            if (!window.FieldTerminal) openTerminal();
+            if (!mks.terminal) openTerminal();
         });
     }
     // The backtick is not a letter shortcut: a focused button or <select>
-    // does nothing with it, so only text entry holds it back. That is the
-    // rule modules/terminal.js applies once it is loaded; the two used to
-    // disagree, and a backtick after clicking a dossier title (a button)
-    // did nothing until focus moved on.
+    // does nothing with it, so only text entry holds it back.
     const TEXT_ENTRY = 'textarea, [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="searchbox"], ' +
         'input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"])';
-    document.addEventListener('keydown', (e) => {
-        if (window.FieldTerminal) return;
-        if (e.key !== '`' || e.ctrlKey || e.metaKey || e.altKey) return;
-        if (e.target && typeof e.target.closest === 'function' && e.target.closest(TEXT_ENTRY)) return;
+    mks.onKey('`', (e) => {
+        if (e.ctrlKey || e.metaKey || e.altKey) return false;
+        if (e.target && typeof e.target.closest === 'function' && e.target.closest(TEXT_ENTRY)) return false;
         e.preventDefault();
-        openTerminal();
+        const term = mks.terminal;
+        if (!term) openTerminal();
+        else if (term.isOpen()) term.close();
+        else term.open();
+        return true;
     });
 })();
 
@@ -1249,7 +1335,7 @@ document.querySelectorAll('.current-year').forEach(el => {
     // receipt and closed it again.
     const waiting = new Set();
     document.addEventListener('click', (e) => {
-        if (window.mksLoaded.interactives) return;
+        if (mks.loaded.interactives) return;
         const btn = e.target && e.target.closest ? e.target.closest('button') : null;
         if (!btn || !btn.closest(INTERACTIVE_HOSTS)) return;
         e.preventDefault();
@@ -1298,7 +1384,7 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
     // The receipt (modules/interactives.js) itemises the same entries with
     // the same rule and the same constants. One definition, shared, so the
     // badge and the receipt can never disagree about what a byte weighs.
-    window.mksCarbon = { bytesOf, gramsPerMB: G_CO2_PER_MB, medianPageMB: MEDIAN_PAGE_MB };
+    mks.carbon = { bytesOf, gramsPerMB: G_CO2_PER_MB, medianPageMB: MEDIAN_PAGE_MB };
 
     if (!badgeText) return;
 
@@ -1372,10 +1458,8 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
         toggle.setAttribute('aria-pressed', String(on));
     };
 
-    const saved = safeStorage.local.get('eco-mode');
-    const prefersCalm = typeof window.matchMedia === 'function' &&
-        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    apply(saved !== null ? saved === 'on' : prefersCalm);
+    // Restored at the top of the file (MOTION); this names it.
+    apply(document.body.classList.contains('eco-mode'));
 
     toggle.addEventListener('click', () => {
         const on = !document.body.classList.contains('eco-mode');
@@ -1388,52 +1472,9 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
 // YOU ARE HERE — visitor mark on the journey map
 // Guessed from the browser's timezone. Nothing leaves the browser.
 // ===================================
+// The zone table was 4 KB of this file on every visit; it is fetched now
+// (assets/timezones.json) once the map is here. The zone is never sent.
 (() => {
-    // city, lon, lat for common IANA timezones (coarse on purpose)
-    const TZ = {
-        'Europe/Amsterdam': ['Amsterdam', 4.9, 52.37], 'Europe/London': ['London', -0.13, 51.51],
-        'Europe/Dublin': ['Dublin', -6.26, 53.35], 'Europe/Paris': ['Paris', 2.35, 48.86],
-        'Europe/Brussels': ['Brussels', 4.35, 50.85], 'Europe/Berlin': ['Berlin', 13.41, 52.52],
-        'Europe/Madrid': ['Madrid', -3.7, 40.42], 'Europe/Lisbon': ['Lisbon', -9.14, 38.72],
-        'Europe/Rome': ['Rome', 12.5, 41.9], 'Europe/Zurich': ['Zurich', 8.54, 47.38],
-        'Europe/Vienna': ['Vienna', 16.37, 48.21], 'Europe/Prague': ['Prague', 14.44, 50.08],
-        'Europe/Warsaw': ['Warsaw', 21.01, 52.23], 'Europe/Stockholm': ['Stockholm', 18.07, 59.33],
-        'Europe/Oslo': ['Oslo', 10.75, 59.91], 'Europe/Copenhagen': ['Copenhagen', 12.57, 55.69],
-        'Europe/Helsinki': ['Helsinki', 24.94, 60.17], 'Europe/Athens': ['Athens', 23.73, 37.98],
-        'Europe/Istanbul': ['Istanbul', 28.98, 41.01], 'Europe/Kyiv': ['Kyiv', 30.52, 50.45],
-        'Europe/Bucharest': ['Bucharest', 26.1, 44.43], 'Europe/Budapest': ['Budapest', 19.04, 47.5],
-        'Europe/Moscow': ['Moscow', 37.62, 55.76],
-        'Africa/Freetown': ['Freetown', -13.23, 8.47], 'Africa/Abidjan': ['Abidjan', -4.02, 5.35],
-        'Africa/Accra': ['Accra', -0.19, 5.6], 'Africa/Lagos': ['Lagos', 3.38, 6.52],
-        'Africa/Dakar': ['Dakar', -17.45, 14.72], 'Africa/Casablanca': ['Casablanca', -7.59, 33.57],
-        'Africa/Algiers': ['Algiers', 3.06, 36.75], 'Africa/Tunis': ['Tunis', 10.17, 36.81],
-        'Africa/Cairo': ['Cairo', 31.24, 30.04], 'Africa/Nairobi': ['Nairobi', 36.82, -1.29],
-        'Africa/Addis_Ababa': ['Addis Ababa', 38.75, 9.02], 'Africa/Kampala': ['Kampala', 32.58, 0.35],
-        'Africa/Kinshasa': ['Kinshasa', 15.27, -4.44], 'Africa/Johannesburg': ['Johannesburg', 28.05, -26.2],
-        'Africa/Harare': ['Harare', 31.05, -17.83], 'Africa/Lusaka': ['Lusaka', 28.32, -15.39],
-        'Africa/Monrovia': ['Monrovia', -10.8, 6.3], 'Africa/Bamako': ['Bamako', -8.0, 12.65],
-        'Africa/Conakry': ['Conakry', -13.68, 9.54],
-        'Asia/Shanghai': ['Shanghai', 121.47, 31.23], 'Asia/Hong_Kong': ['Hong Kong', 114.17, 22.32],
-        'Asia/Singapore': ['Singapore', 103.85, 1.29], 'Asia/Tokyo': ['Tokyo', 139.69, 35.69],
-        'Asia/Seoul': ['Seoul', 126.98, 37.57], 'Asia/Taipei': ['Taipei', 121.57, 25.03],
-        'Asia/Bangkok': ['Bangkok', 100.5, 13.76], 'Asia/Jakarta': ['Jakarta', 106.85, -6.21],
-        'Asia/Manila': ['Manila', 120.98, 14.6], 'Asia/Kolkata': ['Mumbai/Delhi', 77.21, 28.61],
-        'Asia/Karachi': ['Karachi', 67.01, 24.86], 'Asia/Dhaka': ['Dhaka', 90.41, 23.81],
-        'Asia/Dubai': ['Dubai', 55.27, 25.2], 'Asia/Riyadh': ['Riyadh', 46.72, 24.69],
-        'Asia/Qatar': ['Doha', 51.53, 25.29], 'Asia/Tehran': ['Tehran', 51.39, 35.69],
-        'Asia/Jerusalem': ['Jerusalem', 35.21, 31.77], 'Asia/Beirut': ['Beirut', 35.5, 33.89],
-        'Asia/Almaty': ['Almaty', 76.89, 43.24], 'Asia/Tashkent': ['Tashkent', 69.24, 41.31],
-        'America/New_York': ['New York', -74.01, 40.71], 'America/Toronto': ['Toronto', -79.38, 43.65],
-        'America/Chicago': ['Chicago', -87.63, 41.88], 'America/Denver': ['Denver', -104.99, 39.74],
-        'America/Los_Angeles': ['Los Angeles', -118.24, 34.05], 'America/Vancouver': ['Vancouver', -123.12, 49.28],
-        'America/Mexico_City': ['Mexico City', -99.13, 19.43], 'America/Bogota': ['Bogotá', -74.07, 4.71],
-        'America/Lima': ['Lima', -77.04, -12.05], 'America/Santiago': ['Santiago', -70.67, -33.45],
-        'America/Sao_Paulo': ['São Paulo', -46.63, -23.55], 'America/Argentina/Buenos_Aires': ['Buenos Aires', -58.38, -34.6],
-        'America/Caracas': ['Caracas', -66.9, 10.49], 'America/Port_of_Spain': ['Port of Spain', -61.52, 10.65],
-        'Australia/Sydney': ['Sydney', 151.21, -33.87], 'Australia/Melbourne': ['Melbourne', 144.96, -37.81],
-        'Australia/Perth': ['Perth', 115.86, -31.95], 'Pacific/Auckland': ['Auckland', 174.76, -36.85]
-    };
-
     const FREETOWN = [-13.2317, 8.4657];
     const haversine = (lon1, lat1, lon2, lat2) => {
         const R = 6371, toR = Math.PI / 180;
@@ -1452,13 +1493,7 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
         ];
     };
 
-    document.addEventListener('journeymap:ready', (e) => {
-        const { svg, mapBox } = e.detail;
-        let zone = '';
-        try { zone = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (err) { return; }
-        const hit = TZ[zone];
-        if (!hit) return;
-        const [city, lon, lat] = hit;
+    const mark = ({ svg, mapBox, rescale }, [city, lon, lat]) => {
         const km = haversine(lon, lat, FREETOWN[0], FREETOWN[1]);
         const kmTxt = km.toLocaleString('en-US');
 
@@ -1506,6 +1541,21 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
         g.appendChild(label);
         const scene = svg.querySelector('#mapScene') || svg;
         scene.appendChild(g);
+        // The map drew before this arrived: size the mark with the rest.
+        if (typeof rescale === 'function') rescale();
+    };
+
+    document.addEventListener('journeymap:ready', (e) => {
+        let zone = '';
+        try { zone = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (err) { return; }
+        if (!zone || typeof fetch !== 'function') return;
+        fetch('assets/timezones.json')
+            .then(r => (r.ok ? r.json() : null))
+            .then((table) => {
+                const hit = table && table.zones && table.zones[zone];
+                if (hit) mark(e.detail, hit);
+            })
+            .catch(() => { /* no table, no mark: the map is whole without it */ });
     });
 })();
 
@@ -1516,9 +1566,10 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
 // failsafe can stand down. On a late start every reveal is marked done
 // first, as the dossiers were kept open: putting the mark back must not hide
 // what the reader has seen, nor move it, though it brings back widgets
-// above them. The line a third of the way down is put back where it was,
-// and held there while they fill in: that was left to scroll anchoring,
-// which Safari lacks (without it the line slid up to 2,800px).
+// above them (and estimated heights). The line a third of the way down is
+// put back where it was, and held there while they fill in: that was left
+// to scroll anchoring, which Safari lacks (without it the line slid up to
+// 2,800px).
 if (lateStart) {
     document.querySelectorAll('.reveal').forEach(el => el.classList.add('visible'));
     // The line and what holds it: a note standing in for a widget goes with
@@ -1534,7 +1585,7 @@ if (lateStart) {
     };
     if (trail.length) { keep(); hold(keep); }
 }
-window.mksReady = true;
+mks.ready = true;
 
 // ===================================
 // CONVERSION ANALYTICS (privacy-first, provider-agnostic)
@@ -1622,7 +1673,7 @@ window.mksReady = true;
         btn.setAttribute('aria-busy', 'true');
         mksLoad('dispatch').then(() => {
             btn.removeAttribute('aria-busy');
-            if (window.FieldDispatch) window.FieldDispatch.toggle();
+            if (mks.narration) mks.narration.toggle();
         }, (err) => {
             btn.removeAttribute('aria-busy');
             mksLoadWarn(err);

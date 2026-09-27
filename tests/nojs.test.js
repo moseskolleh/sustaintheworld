@@ -56,14 +56,14 @@ function rules(css) {
     assert(mark > -1 && (firstStylesheet === -1 || mark < firstStylesheet), 'Head: the mark is set before the stylesheet can paint anything');
 
     const inline = (head.match(/<script>([^<]*classList\.add\('js'\)[^<]*)<\/script>/) || [])[1] || '';
-    assert(/setTimeout\(/.test(inline) && /mksReady/.test(inline) && /classList\.remove\('js'\)/.test(inline),
+    assert(/setTimeout\(/.test(inline) && /\bmks\b[\s\S]*\.ready\b/.test(inline) && /classList\.remove\('js'\)/.test(inline),
         'Head: a failsafe takes the mark off again if script.js never reports ready');
 
     const tag = (html.match(/<script\b[^>]*\bsrc=["']script\.js["'][^>]*>/) || [''])[0];
     assert(/onerror=["'][^"']*classList\.remove\('js'\)/.test(tag), 'Head: a script.js that fails to load drops the mark at once (onerror)');
 
     const js = read('script.js');
-    assert(/window\.mksReady\s*=\s*true/.test(js), 'script.js: reports ready, so the failsafe can stand down');
+    assert(/\bmks\.ready\s*=\s*true/.test(js), 'script.js: reports ready (mks.ready), so the failsafe can stand down');
 }
 
 // ===================================================================
@@ -275,7 +275,7 @@ async function takeoverCase(label, markJs) {
     const reveals = Array.from(doc.querySelectorAll('.reveal'));
 
     assert(errors.length === 0, `${label}: no errors`);
-    assert(window.mksReady === true, `${label}: script.js reports ready`);
+    assert(window.mks.ready === true, `${label}: script.js reports ready`);
     assert(doc.documentElement.classList.contains('js'), `${label}: the page is marked html.js once script.js has run`);
     const cards = Array.from(doc.querySelectorAll('.project-card')).map((card) => {
         const details = card.querySelector('.project-details');

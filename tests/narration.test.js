@@ -115,12 +115,12 @@ const slowFetch = (window, delay, body, asked) => {
         });
         const scripts = window.VoiceScripts.byId;
 
-        window.FieldDispatch.play('about');
+        window.mks.narration.play('about');
         await clock.tick(30);
         assert(spoken.length > 0, 'Switching setup: the first section started speaking');
 
         const mark = spoken.length;
-        window.FieldDispatch.play('projects');
+        window.mks.narration.play('projects');
         await clock.tick(600);
         const after = spoken.slice(mark);
 
@@ -129,7 +129,7 @@ const slowFetch = (window, delay, body, asked) => {
 
         const lastLine = after[after.length - 1] || '';
         assert(scripts.projects.text.trim().endsWith(lastLine.trim()), 'Switching sections: the new section is read to its last sentence');
-        assert(window.FieldDispatch.state().playing === null, 'Switching sections: the player stops when the section ends');
+        assert(window.mks.narration.state().playing === null, 'Switching sections: the player stops when the section ends');
     }
 
     // --- One control, docked, reading the section in view -----------------
@@ -174,7 +174,7 @@ const slowFetch = (window, delay, body, asked) => {
         await clock.tick(30);
         assert(!bar.hidden && btn.getAttribute('aria-expanded') === 'true', 'Docked: a press opens the player');
         assert(doc.documentElement.style.scrollPaddingTop === '188px', `Docked: while open, jumps and Tab stops land below the player (scroll-padding-top ${doc.documentElement.style.scrollPaddingTop || 'unset'})`);
-        assert(window.FieldDispatch.state().playing === 'about', `Docked: it reads the section in view (${window.FieldDispatch.state().playing})`);
+        assert(window.mks.narration.state().playing === 'about', `Docked: it reads the section in view (${window.mks.narration.state().playing})`);
         assert(/03 \/ 10 · the about section/i.test(bar.querySelector('.dispatch-title').textContent), `Docked: the player says which section, and where it is (${bar.querySelector('.dispatch-title').textContent})`);
         assert(/0 KB transferred/.test(bar.querySelector('.dispatch-weight').textContent), 'Docked: the browser voice is labelled 0 KB transferred');
         assert(!asked.some(u => /\.mp3/.test(u)), 'Docked: nothing but the manifest was fetched — no audio');
@@ -184,19 +184,19 @@ const slowFetch = (window, delay, body, asked) => {
         assert(/Next section: the experience log/.test(next.getAttribute('aria-label')), `Steps: "next" names where it goes (${next.getAttribute('aria-label')})`);
         click(window, next);
         await clock.tick(30);
-        assert(window.FieldDispatch.state().playing === 'experience', 'Steps: next reads the following section');
+        assert(window.mks.narration.state().playing === 'experience', 'Steps: next reads the following section');
         assert(!bar.hidden, 'Steps: moving on does not close the player under the listener');
         click(window, prev);
         click(window, prev);
         await clock.tick(30);
-        assert(window.FieldDispatch.state().playing === 'journey', 'Steps: previous goes back a section at a time');
+        assert(window.mks.narration.state().playing === 'journey', 'Steps: previous goes back a section at a time');
 
-        window.FieldDispatch.play('hero');
+        window.mks.narration.play('hero');
         await clock.tick(10);
         assert(prev.getAttribute('aria-disabled') === 'true' && !prev.disabled, 'Steps: at the first section, "previous" says it is unavailable but keeps focus');
         click(window, prev);
         await clock.tick(10);
-        assert(window.FieldDispatch.state().playing === 'hero', 'Steps: …and does nothing when pressed');
+        assert(window.mks.narration.state().playing === 'hero', 'Steps: …and does nothing when pressed');
 
         // Closing hands the keyboard back.
         bar.querySelector('.dispatch-rate').focus();
@@ -209,7 +209,7 @@ const slowFetch = (window, delay, body, asked) => {
         await clock.tick(20);
         click(window, btn);
         await clock.tick(20);
-        assert(bar.hidden && window.FieldDispatch.state().playing === null, 'Close: a second press of Listen stops and closes');
+        assert(bar.hidden && window.mks.narration.state().playing === null, 'Close: a second press of Listen stops and closes');
 
         assert(/Playback speed 1×/.test(bar.querySelector('.dispatch-rate').getAttribute('aria-label')), 'Speed: the button\'s name includes what it shows');
         assert(bar.querySelector('.dispatch-offer').hidden, 'Intro: with no recording, there is no offer to hear one');
@@ -232,7 +232,7 @@ const slowFetch = (window, delay, body, asked) => {
         const offer = bar.querySelector('.dispatch-offer');
         const introBtn = bar.querySelector('.dispatch-intro');
 
-        window.FieldDispatch.play('about');
+        window.mks.narration.play('about');
         await clock.tick(60);   // the manifest has arrived
         assert(!offer.hidden, 'Intro: once the manifest lists it, the player offers it');
         assert(introBtn.textContent === 'Hear Moses introduce himself · 612 KB', `Intro: labelled with its transfer before the press (${introBtn.textContent})`);
@@ -241,7 +241,7 @@ const slowFetch = (window, delay, body, asked) => {
         click(window, introBtn);
         await clock.tick(20);
         assert(played.length === 1 && played[0] === 'assets/audio/intro.mp3', `Intro: the press plays his recording (${played.join(', ') || 'nothing'})`);
-        const state = window.FieldDispatch.state();
+        const state = window.mks.narration.state();
         assert(state.playing === 'intro', 'Intro: the player is on the introduction');
         assert(bar.querySelector('.dispatch-title').textContent === window.VoiceScripts.INTRO.label, 'Intro: titled as his introduction');
         assert(window.VoiceScripts.INTRO.text.startsWith(bar.querySelector('.dispatch-caption').textContent), 'Intro: captions come from the script he read');
@@ -269,11 +269,11 @@ const slowFetch = (window, delay, body, asked) => {
         await clock.tick(10);
         const bar = window.document.getElementById('dispatchBar');
 
-        window.FieldDispatch.play('hero');
+        window.mks.narration.play('hero');
         await clock.tick(40);
         assert(played.length === 0 && spoken.length > 0, 'Only Moses: a section track in the manifest is never played — sections use the browser voice');
         assert(bar.querySelector('.dispatch-offer').hidden, 'Only Moses: an "intro" that is not a recording is never offered');
-        assert(await window.FieldDispatch.playIntro() === false && played.length === 0, 'Only Moses: …and cannot be played another way');
+        assert(await window.mks.narration.playIntro() === false && played.length === 0, 'Only Moses: …and cannot be played another way');
     }
 
     // --- Stopping before the recording starts is not a failure ------------
@@ -292,18 +292,18 @@ const slowFetch = (window, delay, body, asked) => {
         const bar = doc.getElementById('dispatchBar');
         await clock.tick(10);   // the manifest is in
 
-        await window.FieldDispatch.playIntro();
+        await window.mks.narration.playIntro();
         await clock.tick(20);
         assert(played.length === 1, 'Close before start setup: the recording was asked to play');
         click(window, doc.querySelector('.dispatch-close'));
         await clock.tick(20);
         assert(bar.hidden && !bar.classList.contains('dispatch-failed'), 'Close before start: the player closes instead of reporting a blocked recording');
 
-        await window.FieldDispatch.playIntro();
+        await window.mks.narration.playIntro();
         await clock.tick(20);
-        window.FieldDispatch.play('projects');
+        window.mks.narration.play('projects');
         await clock.tick(20);
-        assert(!bar.classList.contains('dispatch-failed') && window.FieldDispatch.state().playing === 'projects', 'Switch before start: the section plays without the failure styling');
+        assert(!bar.classList.contains('dispatch-failed') && window.mks.narration.state().playing === 'projects', 'Switch before start: the section plays without the failure styling');
     }
 
     // --- No voice, but a recording: the control still has something to say
@@ -322,7 +322,7 @@ const slowFetch = (window, delay, body, asked) => {
         assert(!doc.getElementById('navListen').hidden, 'No voice, recording: the control is shown for Moses\'s introduction');
         click(window, doc.getElementById('listenBtn'));
         await clock.tick(30);
-        assert(played.length === 1 && window.FieldDispatch.state().playing === 'intro', 'No voice, recording: Listen plays him rather than failing');
+        assert(played.length === 1 && window.mks.narration.state().playing === 'intro', 'No voice, recording: Listen plays him rather than failing');
     }
 
     // --- No voice, and the player arriving before its manifest answers -----
@@ -374,7 +374,7 @@ const slowFetch = (window, delay, body, asked) => {
             }
         });
         const doc = window.document;
-        window.FieldTerminal.open();
+        window.mks.terminal.open();
         const say = async (cmd) => {
             const input = doc.getElementById('ftInput');
             const before = doc.querySelector('.ft-screen').textContent.length;

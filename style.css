@@ -134,7 +134,6 @@ img {
 }
 .icon-spin { animation: iconspin 0.8s linear infinite; }
 @keyframes iconspin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .icon-spin { animation: none; } }
 
 ::selection {
     background: var(--primary-green);
@@ -516,6 +515,7 @@ html {
 
 .blink-dot {
     display: inline-block;
+    position: relative;
     width: 8px;
     height: 8px;
     border-radius: 50%;
@@ -524,9 +524,26 @@ html {
     flex-shrink: 0;
 }
 
+/* Not a box-shadow, repainted every frame: the compositor runs this. */
+.blink-dot::after {
+    content: '';
+    position: absolute;
+    inset: -7px;
+    border-radius: 50%;
+    background: var(--primary-green);
+    opacity: 0;
+    pointer-events: none;
+    animation: pulse-ring 2s ease-in-out infinite;
+}
+
 @keyframes pulse {
-    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(124, 252, 0, 0.5); }
-    50% { opacity: 0.6; box-shadow: 0 0 0 7px rgba(124, 252, 0, 0); }
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+@keyframes pulse-ring {
+    0%, 100% { transform: scale(0.35); opacity: 0.5; }
+    50% { transform: scale(1); opacity: 0; }
 }
 
 .hero-title {
@@ -732,8 +749,8 @@ body.light-mode .hero-availability {
 .ydi-svg.ydi-kbd .ydi-cursor { opacity: 1; }
 .ydi-svg.revealed .ydi-cursor { opacity: 0; }
 
-.ydi-dot-pulse { animation: ydiDotPulse 1.5s ease-in-out infinite; }
-@keyframes ydiDotPulse { 0%, 100% { r: 5; } 50% { r: 8.5; } }
+.ydi-dot-pulse { animation: ydiDotPulse 1.5s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes ydiDotPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.7); } }
 .ydi-hint-nudge { animation: ydiNudge 0.4s ease-in-out 2; }
 @keyframes ydiNudge { 0%, 100% { transform: translate(-50%, -50%); } 50% { transform: translate(-50%, -50%) scale(1.12); } }
 .ydi-shape { display: block; font-weight: 700; color: var(--primary-green); margin-bottom: 4px; }
@@ -748,10 +765,6 @@ body.light-mode .hero-availability {
 .ydi-leg-guess { color: var(--accent-amber); }
 .ydi-leg-real { color: var(--primary-green); }
 .ydi-leg-intuit { color: var(--text-secondary); }
-
-@media (prefers-reduced-motion: reduce) {
-    .ydi-dot-pulse, .ydi-hint-nudge { animation: none; }
-}
 
 .ydi-grid { stroke: var(--line-soft); stroke-width: 1; }
 .ydi-divider { stroke: var(--line-color); stroke-width: 1; stroke-dasharray: 3 4; }
@@ -1349,10 +1362,6 @@ body.light-mode .hero-photo-caption {
     height: 6px;
     border-radius: 50%;
     background: var(--primary-green);
-}
-
-.journey-marker-current span {
-    animation: pulse 2s ease-in-out infinite;
 }
 
 .journey-card {
@@ -2662,6 +2671,35 @@ html.js .reveal.visible {
     html.js .reveal { opacity: 1; transform: none; }
     /* An anchor jump is not animated across 11,000px either. */
     html { scroll-behavior: auto; }
+}
+
+/* Drawn as it nears the screen, sized by estimate until then (script.js
+   keeps jumps on target, and marks .drawn what the reader has passed). Not
+   without scroll anchoring (Safari): drawn above a reader scrolling up, a
+   section moved the page up to 2,370px. */
+@supports (overflow-anchor: auto) {
+    html.js main > section {
+        content-visibility: auto;
+        contain-intrinsic-size: auto 2000px;
+    }
+    html.js main > section.drawn {
+        content-visibility: visible;
+    }
+}
+
+@media print {
+    html.js main > section {
+        content-visibility: visible;
+    }
+}
+
+/* Nothing moves in a block until script.js marks it in view. A loop or
+   transition left running in an undrawn section kept Chrome busy. */
+html.js :is(body > header, main > section, body > footer):not(.onscreen) *,
+html.js :is(body > header, main > section, body > footer):not(.onscreen) *::before,
+html.js :is(body > header, main > section, body > footer):not(.onscreen) *::after {
+    animation-play-state: paused !important;
+    transition: none !important;
 }
 
 /* ===================================
@@ -4277,8 +4315,4 @@ body.light-mode .journey-you-readout {
    the voice; only the pulse stops. */
 body.eco-mode .listen-btn.is-playing .icon {
     animation: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .listen-btn.is-playing .icon { animation: none; }
 }

@@ -32,7 +32,7 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 
 - **HTML5**: Semantic markup for better SEO and accessibility
 - **CSS3**: Modern styling with CSS Grid, Flexbox, animations, and transitions
-- **JavaScript (Vanilla)**: no framework, no bundler. A 72 KB core (`script.js`, 23 KB gzipped) and four on-demand modules in `modules/` (plus the player's stylesheet, `modules/dispatch.css`) that the core fetches the first time a feature is used
+- **JavaScript (Vanilla)**: no framework, no bundler. A 73 KB core (`script.js`, 23 KB gzipped) and four on-demand modules in `modules/` (plus the player's stylesheet, `modules/dispatch.css`) that the core fetches the first time a feature is used
 - **Icons**: an inline SVG symbol sprite, no icon font
 - **Fonts**: Inter, Space Grotesk and IBM Plex Mono, self-hosted as Latin subsets under the SIL Open Font License (see [Fonts](#fonts))
 - **GitHub Pages**: Free hosting for static websites
@@ -310,10 +310,10 @@ npm test          # everything below
 | `npm run build:check` | every generated page still matches `content/` |
 | `npm run fonts:check` | the committed fonts still hash to their manifest and every stylesheet's `@font-face` block is current |
 | `npm run lint:html` | every page is valid HTML ([html-validate](https://html-validate.org/)'s recommended rules; the two relaxations are explained in `.htmlvalidate.cjs`) |
-| `npm run test:unit` | every `tests/*.test.js`, side by side, one process per suite, so a new suite runs the day it exists: the thirteen listed below (862 passing assertions on 2026-09-26) |
+| `npm run test:unit` | every `tests/*.test.js`, side by side, one process per suite, so a new suite runs the day it exists: the fourteen listed below (985 passing assertions on 2026-09-27) |
 | `npm run map:check` | the committed `journey-map.svg` still matches its generator |
 | `npm run budget` | the weights this README quotes (see [Performance](#performance)) |
-| `npm run smoke` | every page in a real browser: no errors, no failed or off-origin requests, every on-demand module arrives when used, no axe-core violation at 1440×900 or 390×844 in either theme, and each budgeted page's measured first view no heavier than the budget claims; every page again with JavaScript off, and the homepage with `script.js` blocked and late; the skip link, Back, the theme switch, back to top and the nav bar at every width; the listen control and its player; the Assay; and the carbon-ai page's dropdowns and numbers (its own CI job; needs Chromium — `-- --browser firefox` runs it in Firefox, which CI also does) |
+| `npm run smoke` | every page in a real browser: no errors, no failed or off-origin requests, every on-demand module arrives when used, no axe-core violation at 1440×900 or 390×844 in either theme, and each budgeted page's measured first view no heavier than the budget claims; every page again with JavaScript off, and the homepage with `script.js` blocked and late; the skip link, Back, the theme switch, back to top and the nav bar at every width; the listen control and its player; the Assay; where jumps land while sections are drawn on demand, that reading back up after skipping ahead moves nothing, find-in-page and printing, which loops run, and how busy the idle page keeps the main thread at 4× CPU slowdown; and the carbon-ai page's dropdowns and numbers (its own CI job; needs Chromium — `-- --browser firefox` runs it in Firefox, which CI also does) |
 | `npm run mcp:verify` | the pinned MCP package still hashes to the reviewed tarball (needs network) |
 
 The suites, and the failure each one exists to prevent:
@@ -411,6 +411,16 @@ The suites, and the failure each one exists to prevent:
   it rather than a hand-kept list of suites, the fake clock fires timers in
   order and only when told, and every page with a first-view budget exists
   and is measured.
+- **`cpu.test.js`** — the page's keys go through one listener, so one Escape
+  closes one layer (terminal, then lightbox, then player, then menu) and the
+  backtick follows one rule for "typing"; one `mks.motionOK()` answers for
+  reduced motion and low-energy mode, live; the time-zone table is fetched
+  only when the journey map needs it; everything the core shares hangs off
+  `window.mks`; section offsets are measured once a frame and a jump
+  lands again as sections take their real height; sections skipped past are
+  drawn once the page rests, and every image states its real shape; and every
+  looping animation runs on transform and opacity and pauses out of view and
+  in a hidden tab.
 
 The jsdom harness (`tests/harness.js`) evaluates `script.js` and then every
 file in `modules/`, so the suites see the page the way a visitor who used
@@ -538,13 +548,13 @@ every run of `npm test`, and the build fails when they are exceeded.
 | Budget | Measured | Ceiling |
 |---|---|---|
 | First view of the homepage, over the wire (fonts included) | ~280 KB | 300 KB |
-| Everything a full visit adds on demand (modules, scripts, map) | ~71 KB | 72 KB |
+| Everything a full visit adds on demand (modules, scripts, map) | ~69 KB | 72 KB |
 | Case studies page, over the wire (fonts included) | ~93 KB | 120 KB |
 | Research outputs page, over the wire (fonts included) | ~88 KB | 110 KB |
 | AI, Weighed (`carbon-ai.html`), over the wire (fonts included) | ~104 KB | 111 KB |
 | Text-only field report, whole page | ~9 KB | 12 KB |
 | Largest single image | ~200 KB | 220 KB |
-| Every image in the repository | ~3.24 MB | 3.5 MB |
+| Every image in the repository | ~3.23 MB | 3.5 MB |
 | Recorded narration: Moses's introduction (0 KB until he records it) | 0 KB | 800 KB |
 
 **What the estimate used to miss.** An earlier version of this table said
@@ -579,9 +589,10 @@ each file the moment it is first needed:
 | `modules/dispatch.js` (+ `dispatch.css`, `voice-scripts.js`) | the first press of Listen, or `voice` in the terminal | ~16 KB |
 | `modules/dossier.js` | a project dossier with a mini-game is opened | ~6 KB |
 | `modules/terminal.js` | the backtick key or the footer button | ~5 KB |
+| `assets/timezones.json` | the journey map arrives, for its "you?" mark (the zone is looked up in the page, never sent) | ~2 KB |
 
 Modules are classic scripts sharing the page's global scope: they declare
-nothing at the top level and reach the core only through `window.mks*`. The
+nothing at the top level and reach the core only through `window.mks`. The
 Listen button is in the page's own HTML, shown by the core once something can
 speak; the first press fetches the player, its stylesheet and its scripts.
 
@@ -605,6 +616,7 @@ npx lighthouse https://moseskolleh.github.io/sustaintheworld/ --view
   - Lazy loading for images and hero backgrounds; on-demand modules for the features
   - One passive, frame-coalesced scroll listener for the navbar, progress bar, active link and scroll-to-top button; section offsets measured once, not per event
   - The hero rotation stops in hidden tabs and once the hero has scrolled away
+  - Sections are laid out and painted only as they near the screen (`content-visibility: auto`, where the browser anchors scrolling; a section the reader has passed stays drawn); every looping animation runs on transform and opacity, which the compositor handles alone, and pauses out of view and in hidden tabs. Measured at 4× CPU slowdown in Chromium (medians of 15 loads before, 10 after): layout on load 238 → 125 ms, the longest task 238 → 110 ms, and main-thread work while nobody touches the page 1,023 → 16 ms per 3 s at the top and 1,250 → 7 ms mid-page; `npm run smoke` holds the idle figure under a ceiling
   - Intrinsic `width`/`height` on every image, so nothing shifts as they arrive
 
 ### Fonts
@@ -643,6 +655,7 @@ aspirational:
   there, so the next Tab lands inside `<main>`; every in-page link moves focus
   and updates the address (`tests/navigation.test.js`, `npm run smoke`)
 - Single-letter shortcuts stand down while a form control has focus
+- Escape closes one layer at a time: the field terminal, then the lightbox, then the narration player, then the menu
 - No duplicate `id`s, no focusable element inside an `aria-hidden` container
 
 `npm run smoke` adds axe-core in a real browser: every page at 1440×900 and

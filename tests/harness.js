@@ -25,7 +25,7 @@ const dataJs = fs.readFileSync(path.join(ROOT, 'ai-carbon-data.js'), 'utf8');
 // The on-demand modules script.js fetches in the browser. Here they are
 // evaluated straight after the core, in the order a visitor who used every
 // feature would have loaded them, so the suites see the page fully built.
-// Each marks itself in window.mksLoaded, which is how the core's loader
+// Each marks itself in window.mks.loaded, which is how the core's loader
 // knows not to inject a <script> for it.
 const MODULE_FILES = [
     'modules/dossier.js',

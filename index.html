@@ -6,7 +6,7 @@
     <!-- JavaScript is on, so the stylesheet may hide what script.js brings in.
          If script.js fails to load (its onerror) or has not taken over in 4 s,
          the class comes off and the page shows as it would without it. -->
-    <script>document.documentElement.classList.add('js');setTimeout(function(){if(!window.mksReady)document.documentElement.classList.remove('js')},4000)</script>
+    <script>document.documentElement.classList.add('js');setTimeout(function(){if(!(window.mks||{}).ready)document.documentElement.classList.remove('js')},4000)</script>
     <meta name="description" content="Moses Kolleh Sesay — Sustainability &amp; Climate Analyst. From mapping groundwater in Freetown to building sustainable AI frameworks in Amsterdam.">
     <meta name="author" content="Moses Kolleh Sesay">
     <title>Moses Kolleh Sesay | Sustainability &amp; Climate Analyst</title>
@@ -299,7 +299,7 @@
                         </div>
                     </li>
                     <li class="journey-stop reveal" data-stop="4">
-                        <div class="journey-marker journey-marker-current"><span></span></div>
+                        <div class="journey-marker journey-marker-current"><span class="blink-dot"></span></div>
                         <div class="journey-card journey-card-current">
                             <span class="journey-coords">52.37° N, 4.90° E</span>
                             <h3>Amsterdam, Netherlands</h3>
@@ -323,7 +323,7 @@
             <div class="about-grid">
                 <div class="about-portrait reveal">
                     <div class="portrait-frame">
-                        <img src="assets/img/profile.webp" alt="Moses Kolleh Sesay — Sustainability &amp; Climate Analyst" loading="lazy" width="640" height="640" decoding="async">
+                        <img src="assets/img/profile.webp" alt="Moses Kolleh Sesay — Sustainability &amp; Climate Analyst" loading="lazy" width="640" height="960" decoding="async">
                         <div class="portrait-ring" aria-hidden="true"></div>
                     </div>
                     <div class="portrait-meta">

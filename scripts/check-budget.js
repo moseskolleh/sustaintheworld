@@ -46,10 +46,11 @@ const MB = 1024 * 1024;
 // ------------------------------------------------------------------
 // Budgets. The headroom is not uniform: the report prints each figure as a
 // share of its ceiling, and in September 2026 that ran from 76% (the field
-// report) to 99% (the on-demand total: the wave-1 review's fixes filled it
+// report) to 96% (the on-demand total: the wave-1 review's fixes filled it
 // to within 100 bytes, until the journey map shed 1.6 KB of path points
-// that drew nothing), with the audio budget at 0% until Moses records his
-// introduction. To make room, remove something of
+// that drew nothing, then 3.6 KB more written as steps, which paid for the
+// time-zone table moving here out of script.js), with the audio budget at
+// 0% until Moses records his introduction. To make room, remove something of
 // equal weight rather than raise a ceiling (docs/plan.md, "Stop doing").
 // When a ceiling does change, the README quotes these, so update it in the
 // same commit.
@@ -206,7 +207,7 @@ function onDemandAssets() {
         fs.readdirSync(modulesDir).filter(f => /\.(js|css)$/.test(f)).sort()
             .forEach(f => files.push(`modules/${f}`));
     }
-    ['voice-scripts.js', 'ai-carbon-data.js', 'assets/journey-map.svg', 'assets/audio/voice-manifest.json']
+    ['voice-scripts.js', 'ai-carbon-data.js', 'assets/journey-map.svg', 'assets/timezones.json', 'assets/audio/voice-manifest.json']
         .forEach((rel) => { if (sizeOf(rel) !== null) files.push(rel); });
     return files;
 }

@@ -5,10 +5,10 @@
 // inside collapsed project dossiers. Until one of those dossiers is opened
 // none of this can be seen, so none of it is loaded.
 //
-// Loaded on demand by script.js (window.mksLoad('dossier')) — see the
+// Loaded on demand by script.js (mks.load('dossier')) — see the
 // ON-DEMAND MODULES section there for when. This file is a classic script:
 // it shares the page's global scope, so it declares nothing at the top
-// level and talks to the core only through the window.mks* helpers.
+// level and talks to the core only through window.mks.
 //
 // tests/harness.js evaluates it after script.js so the jsdom suites see the
 // page fully initialised, the way a visitor who used every feature would.
@@ -42,8 +42,7 @@
         (parent || svg).appendChild(n);
         return n;
     };
-    const calm = () => document.body.classList.contains('eco-mode') ||
-        (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    const calm = () => !window.mks.motionOK();
 
     // Apparent resistivity along the profile: high background with
     // gaussian lows over the hidden zones (water reads lowest, clay close).
@@ -295,8 +294,7 @@
     el('rect', { x: 352, y: 140, width: 96, height: 38, rx: 10, class: 'fl-car' }, car);
     [362, 382, 402, 422].forEach(wx => el('rect', { x: wx, y: 148, width: 14, height: 12, rx: 2, class: 'fl-car-window' }, car));
 
-    const calm = () => document.body.classList.contains('eco-mode') ||
-        (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    const calm = () => !window.mks.motionOK();
 
     let anim = null;
     const setWater = (y, instant) => {
@@ -395,11 +393,10 @@
     // Auto-demo: on first scroll-into-view, sweep 30 -> 70 so every visitor sees
     // the dry holes turn to water and the slider rests on the win. The cell
     // transitions give the staggered fill. Reduced-motion / eco-mode stay at 70.
-    const reduce = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (!reduce && 'IntersectionObserver' in window) {
+    if ('IntersectionObserver' in window) {
         let played = false;
         const io = new IntersectionObserver((entries) => {
-            if (entries.some(e => e.isIntersecting) && !played && !userInteracted && !document.body.classList.contains('eco-mode')) {
+            if (entries.some(e => e.isIntersecting) && !played && !userInteracted && window.mks.motionOK()) {
                 played = true;
                 io.disconnect();
                 slider.value = BLIND; render(BLIND);
@@ -419,4 +416,4 @@
 })();
 
 // Tells the loader in script.js that this module is in place.
-(window.mksLoaded = window.mksLoaded || {}).dossier = true;
+window.mks.loaded.dossier = true;
