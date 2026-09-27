@@ -1,8 +1,9 @@
 // ===================================================================
 // AI CARBON DATA — single source of truth, with its evidence attached
 //
-// Shared by the homepage "AI, Weighed" widget (script.js) and the full
-// EcoPrompt Coach tool (carbon-ai.js) so the two can never drift apart.
+// Shared by the homepage's You Draw It chart (modules/interactives.js) and
+// the full EcoPrompt Coach tool (carbon-ai.js, with Anatomy of a Prompt in
+// modules/anatomy.js) so the two pages can never drift apart.
 //
 // EVERY NUMBER HERE CARRIES ITS EVIDENCE. A figure with no source, no
 // publication date and no uncertainty range is an opinion wearing two decimal
@@ -156,8 +157,9 @@
      * Wh of IT energy (before PUE) for one query.
      *
      * Calibrated so that 1000 tokens at the reference mix costs exactly the
-     * model's published energyPer1kTokens_Wh — the homepage widget quotes that
-     * figure directly, and it must keep meaning the same thing.
+     * model's published energyPer1kTokens_Wh — the homepage's You Draw It
+     * chart quotes that figure directly, and it must keep meaning the same
+     * thing.
      */
     function energyForQuery(model, inputTokens, outputTokens) {
         if (!model) return 0;
@@ -369,10 +371,6 @@
         return rows;
     }
 
-    // Which models / regions the compact homepage widget shows, and in what order.
-    const HOMEPAGE_MODELS = ['gpt-4o', 'gpt-4o-mini', 'claude-37-sonnet', 'gemini-20-flash', 'llama-33-70b', 'llama-32-1b', 'deepseek-r1'];
-    const HOMEPAGE_REGIONS = ['no', 'fr', 'nl', 'us-avg', 'cn', 'in'];
-
     // ---------------------------------------------------------------
     // Number formatting — the one formatter both pages print through.
     //
@@ -445,8 +443,6 @@
         effectiveTokens,
         energyForQuery,
         ledger,
-        HOMEPAGE_MODELS,
-        HOMEPAGE_REGIONS,
         formatNumber,
         formatQuantity,
         UNIT_LADDERS

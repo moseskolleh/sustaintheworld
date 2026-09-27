@@ -1,10 +1,13 @@
 // ===================================================================
 // INTERACTIVES — the homepage widgets that respond to the visitor
 // ===================================================================
-// The "AI, Weighed" widget, the share helpers, The Assay, Anatomy of a
-// Prompt, You Draw It and The Receipt: about 81 KB of JavaScript that only
-// matters once someone scrolls to section 05 or opens the footer receipt.
-// Needs ai-carbon-data.js, which the loader fetches first.
+// The share helpers, The Assay, You Draw It and The Receipt: JavaScript
+// that only matters once someone scrolls to section 05, reaches the Assay
+// under the contact form, or opens the footer receipt. You Draw It needs
+// ai-carbon-data.js, which the loader fetches first. The calculator and
+// Anatomy of a Prompt that used to be here are on carbon-ai.html now: the
+// calculator was the same job its own page already did, and Anatomy is
+// modules/anatomy.js, drawn from that page's numbers.
 //
 // Loaded on demand by script.js (mks.load('interactives')) — see the
 // ON-DEMAND MODULES section there for when. This file is a classic script:
@@ -14,107 +17,6 @@
 // tests/harness.js evaluates it after script.js so the jsdom suites see the
 // page fully initialised, the way a visitor who used every feature would.
 // ===================================================================
-
-// ===================================
-// ECOPROMPT WIDGET — AI, weighed
-// All numbers come from the shared source of truth (ai-carbon-data.js), the
-// same one the full EcoPrompt Coach tool uses — so they can never disagree.
-// ===================================
-(() => {
-    const modelSel = document.getElementById('ecoModel');
-    const presetSel = document.getElementById('ecoPreset');
-    const gridSel = document.getElementById('ecoGrid');
-    const DATA = (typeof window !== 'undefined') ? window.AICarbonData : null;
-    if (!modelSel || !presetSel || !gridSel || !DATA) return;
-
-    // Compact homepage view, derived from the shared data.
-    const MODELS = DATA.HOMEPAGE_MODELS.map(k => ({
-        key: k, label: DATA.MODELS[k].label, model: DATA.MODELS[k]
-    }));
-    const GRIDS = DATA.HOMEPAGE_REGIONS.map(k => ({
-        key: k,
-        label: `${DATA.REGIONS[k].label} — ${DATA.REGIONS[k].intensity} gCO₂e/kWh`,
-        intensity: DATA.REGIONS[k].intensity
-    }));
-    const PUE = DATA.PUE;                              // data-centre overhead
-    const WUE = DATA.WUE_PROFILES.avg.wue_L_per_kWh;   // L per kWh, typical cooling
-
-    MODELS.forEach((m, i) => modelSel.add(new Option(m.label, i)));
-    GRIDS.forEach((g, i) => gridSel.add(new Option(g.label, i)));
-    modelSel.value = '0';
-    gridSel.value = '2'; // Netherlands — where this research happens
-
-    // The shared formatter the full tool uses (ai-carbon-data.js), so the two
-    // print a number the same way. A small model on a clean grid is tiny,
-    // not free: below a thousandth it says "< 0.001", never "0.000".
-    const fmt = (n) => DATA.formatNumber(n, n >= 100 ? 0 : 1, 3);
-
-    // Each workload is the split its label promises ("1,000 in / 8,000
-    // out"), read from the option itself so the two cannot drift. Generated
-    // tokens cost more than read ones, so spending every preset at a 50/50
-    // mix under-counted a reasoning run by a third and over-counted a
-    // document read by more than half.
-    const workload = () => {
-        const opt = presetSel.options[presetSel.selectedIndex];
-        return { input: Number(opt.dataset.in) || 0, output: Number(opt.dataset.out) || 0 };
-    };
-
-    const footprint = (model, work, grid) => {
-        const wh = DATA.energyForQuery(model.model, work.input, work.output);
-        const kWh = (wh / 1000) * PUE;
-        return {
-            wh: kWh * 1000,
-            carbon: kWh * grid.intensity,
-            water: kWh * WUE * 1000
-        };
-    };
-
-    const render = () => {
-        const model = MODELS[modelSel.value];
-        const grid = GRIDS[gridSel.value];
-        const work = workload();
-        const f = footprint(model, work, grid);
-
-        document.getElementById('ecoEnergy').textContent = fmt(f.wh);
-        document.getElementById('ecoCarbon').textContent = fmt(f.carbon);
-        document.getElementById('ecoWater').textContent = fmt(f.water);
-
-        // The comparisons carry their unit with them, so a tiny answer reads
-        // "1.8 s" and "95 cm" rather than "0.03 min" and "0.95 m".
-        const EQ = DATA.EQUIVALENTS;
-        const ledMin = f.wh * 60 / EQ.LED_BULB_W.value;
-        const carKm = f.carbon / EQ.GASOLINE_KM_GCO2.value;
-        const teaspoons = f.water / 4.93;
-        document.getElementById('ecoEquiv').innerHTML =
-            `One answer &asymp; an LED bulb burning for <strong>${DATA.formatQuantity(ledMin, 'min')}</strong>, ` +
-            `driving a petrol car <strong>${DATA.formatQuantity(carKm, 'km')}</strong>, ` +
-            `and <strong>${DATA.formatNumber(teaspoons, 1, 2)} teaspoons</strong> of cooling water.`;
-
-        const bars = document.getElementById('ecoBars');
-        const results = MODELS.map(m => ({ m, f: footprint(m, work, grid) }))
-            .sort((a, b) => a.f.carbon - b.f.carbon);
-        const max = results[results.length - 1].f.carbon || 1;
-        bars.innerHTML = results.map(({ m, f: mf }) => `
-            <div class="eco-bar-row${m.key === model.key ? ' current' : ''}">
-                <span class="eco-bar-name">${m.label}</span>
-                <span class="eco-bar-track"><span class="eco-bar-fill" data-w="${(mf.carbon / max * 100).toFixed(1)}"></span></span>
-                <span class="eco-bar-val">${fmt(mf.carbon)} g</span>
-            </div>`).join('');
-        requestAnimationFrame(() => {
-            bars.querySelectorAll('.eco-bar-fill').forEach(el => {
-                el.style.width = el.getAttribute('data-w') + '%';
-            });
-        });
-    };
-
-    [modelSel, presetSel, gridSel].forEach(el => el.addEventListener('change', render));
-    render();
-    // Announce changes from here on, not the first fill: that happens as the
-    // section comes within a screen of the viewport, and was read out in the
-    // middle of whatever the visitor was doing further up the page.
-    document.getElementById('ecoEquiv').setAttribute('aria-live', 'polite');
-})();
-
 
 // ===================================
 // SHARE HELPERS — let every interactive result leave with the visitor.
@@ -445,7 +347,7 @@ window.mks.share = (() => {
 
     // Where this page shows a tool, best proof first: the skills toolkit
     // (it carries a proof line), then the experience bullets, the project
-    // tags, the courses and the skill chips. Read from the page itself, so a
+    // tags, the courses and the skill lists. Read from the page itself, so a
     // tool the page stops showing stops being matched.
     const clean = (el) => (el ? el.textContent.replace(/\s+/g, ' ').trim() : '');
     const up = (el, sel, inner) => clean(el.closest(sel) && el.closest(sel).querySelector(inner));
@@ -453,8 +355,8 @@ window.mks.share = (() => {
         ['#skills .toolkit-name', '#skills', (el) => `Skills: ${up(el, '.toolkit-item', '.toolkit-proof') || clean(el)}`],
         ['#experience li', '#experience', (el) => clean(el) + (up(el, '.timeline-content', 'h3') ? ` (${up(el, '.timeline-content', 'h3')})` : '')],
         ['#projects .project-tech span', '#projects', (el) => `Listed as a tool on the ${up(el, '.project-card', 'h3')} dossier`],
-        ['#education li', '#education', (el) => `Covered in ${up(el, '.education-card', 'h3')}: ${clean(el)}`],
-        ['#skills .chip, #skills .framework-card', '#skills', () => 'Listed under Skills & Expertise']
+        ['#education li, #education .cert-line', '#education', (el) => `Covered in ${up(el, '.education-card', 'h3, .cert-title')}: ${clean(el)}`],
+        ['#skills .skills-checklist li, #skills .frameworks-list li', '#skills', () => 'Listed under Skills & Expertise']
     ];
     function toolEvidence(tool, doc) {
         for (const [sel, href, say] of (doc ? SOURCES : [])) {
@@ -759,129 +661,6 @@ window.mks.share = (() => {
             input.value = SAMPLES[b.getAttribute('data-sample')] || '';
             assay();
             result.scrollIntoView({ behavior: window.mks.scrollMotion(), block: 'nearest' });
-        });
-    });
-})();
-
-
-// ===================================
-// ANATOMY OF A PROMPT — one answer, split into Scope 2 / Scope 3 / water,
-// each mapped to its ESRS disclosure line. Hand-drawn SVG flow, no library.
-// ===================================
-(() => {
-    const svg = document.getElementById('anatomySvg');
-    const sel = document.getElementById('anatomyModel');
-    const summary = document.getElementById('anatomySummary');
-    const DATA = (typeof window !== 'undefined') ? window.AICarbonData : null;
-    if (!svg || !sel || !DATA) return;
-
-    const NS = 'http://www.w3.org/2000/svg';
-    const mk = (name, attrs) => {
-        const e = document.createElementNS(NS, name);
-        for (const k in attrs) e.setAttribute(k, attrs[k]);
-        return e;
-    };
-
-    const gridSel = document.getElementById('anatomyGrid');
-    const TOKENS = 1000;                              // everyday-chat workload
-    const PUE = DATA.PUE;
-    const WUE = DATA.WUE_PROFILES.avg.wue_L_per_kWh;
-    // The lines are those of whoever runs the model; a buyer of a hosted one
-    // reports the carbon as its Scope 3, category 1, as the foot and summary
-    // say. For the operator, embodied hardware is Scope 3 (capital goods), so
-    // the line stays on the diagram, but without a number: the 0.05 gCO2e/Wh
-    // once typed here had no source, and the full coach excludes embodied
-    // carbon. A sourced factor in ai-carbon-data.js would bring it back on
-    // both pages at once.
-    const EMBODIED_NOTE = 'not quantified';
-    const ANSWERS_PER_YEAR = 20 * 220;               // 20 prompts/day × 220 working days
-    let scale = 'answer';
-
-    DATA.HOMEPAGE_MODELS.forEach(k => sel.add(new Option(DATA.MODELS[k].label, k)));
-    sel.value = DATA.MODELS['gpt-4o'] ? 'gpt-4o' : DATA.HOMEPAGE_MODELS[0];
-    if (gridSel) {
-        DATA.HOMEPAGE_REGIONS.forEach(k => gridSel.add(new Option(`${DATA.REGIONS[k].label} — ${DATA.REGIONS[k].intensity} gCO₂e/kWh`, k)));
-        gridSel.value = 'nl';
-    }
-    const gridNow = () => (gridSel && DATA.REGIONS[gridSel.value]) || DATA.REGIONS['nl'];
-
-    const compute = (key, grid) => {
-        // Split the workload at the reference mix the per-1k benchmarks are
-        // calibrated against, so this widget and the full tool agree on what
-        // "1000 tokens" costs even though the tool lets you change the split.
-        const mix = DATA.TOKEN_ENERGY.referenceMix;
-        const infWh = DATA.energyForQuery(DATA.MODELS[key], TOKENS * mix.input, TOKENS * mix.output);
-        const wh = infWh * PUE;                                                // facility energy (grid + cooling overhead)
-        const kwh = wh / 1000;
-        return { scope2: kwh * grid.intensity, water: kwh * WUE * 1000 };
-    };
-    // With Scope 2 the only carbon term, its ribbon is scaled against the
-    // dirtiest grid on offer, so switching grids still visibly moves it.
-    const worstIntensity = Math.max(...DATA.HOMEPAGE_REGIONS.map(k => DATA.REGIONS[k].intensity));
-    const fmt = (n) => (n === 0 ? '0' : n >= 1 ? n.toFixed(2) : n >= 0.001 ? n.toFixed(3) : '<0.001');
-
-    const cy = 160, sx = 180, tx = 430, rows = [70, 160, 250];
-    const ribbon = (x1, y1, x2, y2, w) => {
-        const mx = (x1 + x2) / 2, t = w / 2;
-        return `M ${x1} ${y1 - t} C ${mx} ${y1 - t}, ${mx} ${y2 - t}, ${x2} ${y2 - t} L ${x2} ${y2 + t} C ${mx} ${y2 + t}, ${mx} ${y1 + t}, ${x1} ${y1 + t} Z`;
-    };
-
-    const cards = [
-        { t: 'Grid electricity · Scope 2', esrs: 'ESRS E1-6 · Scope 2 emissions', cls: 'r0' },
-        { t: 'Embodied hardware · Scope 3', esrs: 'ESRS E1-6 · Scope 3 (capital goods)', cls: 'r1' },
-        { t: 'Cooling water', esrs: 'ESRS E3-4 · Water consumption', cls: 'r2' }
-    ];
-
-    // static build
-    svg.appendChild(mk('rect', { x: 20, y: cy - 38, width: 160, height: 76, rx: 10, class: 'anatomy-source' }));
-    const st = mk('text', { x: 100, y: cy - 4, 'text-anchor': 'middle', class: 'anatomy-source-t' }); st.textContent = 'One AI answer'; svg.appendChild(st);
-    const ss = mk('text', { x: 100, y: cy + 15, 'text-anchor': 'middle', class: 'anatomy-source-sub' }); ss.textContent = '~1,000 tokens'; svg.appendChild(ss);
-    const ribbons = rows.map((ry, i) => { const p = mk('path', { class: 'anatomy-ribbon ' + cards[i].cls }); svg.appendChild(p); return p; });
-    const vals = rows.map((ry, i) => {
-        const title = mk('text', { x: tx + 10, y: ry - 14, class: 'anatomy-t-title ' + cards[i].cls }); title.textContent = cards[i].t; svg.appendChild(title);
-        const val = mk('text', { x: tx + 10, y: ry + 8, class: 'anatomy-t-val' }); svg.appendChild(val);
-        const esrs = mk('text', { x: tx + 10, y: ry + 28, class: 'anatomy-t-esrs' }); esrs.textContent = cards[i].esrs; svg.appendChild(esrs);
-        return val;
-    });
-
-    const update = () => {
-        const grid = gridNow();
-        const d = compute(sel.value, grid);
-        // Scope 3 keeps a hairline: the flow exists, its size is not claimed.
-        const widths = [8 + (grid.intensity / worstIntensity) * 40, 2, 26];
-        rows.forEach((ry, i) => ribbons[i].setAttribute('d', ribbon(sx, cy, tx, ry, widths[i])));
-        const yr = scale === 'year';
-        const m = yr ? ANSWERS_PER_YEAR : 1;
-        const cDiv = yr ? 1000 : 1;                   // g -> kg, mL -> L
-        const cu = yr ? 'kg' : 'g', wu = yr ? 'L' : 'mL';
-        vals[0].textContent = `${fmt(d.scope2 * m / cDiv)} ${cu} CO₂e`;
-        vals[1].textContent = EMBODIED_NOTE;
-        vals[2].textContent = `${fmt(d.water * m / cDiv)} ${wu} water`;
-        if (summary) {
-            const basis = yr ? `at ~${ANSWERS_PER_YEAR.toLocaleString()} answers/analyst-year (20/day × 220 days)` : 'one everyday answer';
-            summary.innerHTML = `<strong>${DATA.MODELS[sel.value].label}</strong>, ${basis} on the <strong>${grid.label}</strong> grid, for whoever runs the model: <strong>${fmt(d.scope2 * m / cDiv)} ${cu}</strong> Scope 2 and <strong>${fmt(d.water * m / cDiv)} ${wu}</strong> cooling water — two ESRS lines quantified. Scope 3 embodied hardware is a third line, named but ${EMBODIED_NOTE}. A buyer of the hosted model reports the carbon as Scope 3, category 1.`;
-        }
-    };
-
-    update();
-    // A status from here on; the first fill happens before anyone is looking.
-    if (summary) { summary.setAttribute('role', 'status'); summary.setAttribute('aria-live', 'polite'); }
-    sel.addEventListener('change', update);
-    if (gridSel) gridSel.addEventListener('change', update);
-    const copyBtn = document.getElementById('anatomyCopy');
-    if (copyBtn) copyBtn.addEventListener('click', () => {
-        const txt = (summary ? summary.textContent : '') + `\n— Moses Kolleh Sesay · ${window.mks.share ? window.mks.share.site : ''}`;
-        if (window.mks.share) window.mks.share.copy(txt, copyBtn);
-    });
-    document.querySelectorAll('.anatomy-scale-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            scale = btn.getAttribute('data-scale');
-            document.querySelectorAll('.anatomy-scale-btn').forEach(b => {
-                const on = b === btn;
-                b.classList.toggle('is-active', on);
-                b.setAttribute('aria-pressed', String(on));
-            });
-            update();
         });
     });
 })();

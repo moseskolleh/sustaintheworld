@@ -1,0 +1,75 @@
+/* Anatomy of a Prompt on carbon-ai.html (modules/anatomy.js). Fetched with
+   its script as the section nears the screen, so the page's first view,
+   and the pages that share carbon-ai.css, carry none of it. The drawing is
+   laid out at the width it is shown, one unit to a pixel: no label is
+   under 11px, and none needs a sideways scroll to be read. */
+.ca-anatomy {
+    --accent-amber: #f2b705;
+    --accent-blue: #2ea3e0;
+}
+/* The homepage's light-theme values for the same two. */
+body.light-mode .ca-anatomy {
+    --accent-amber: #8a6100;
+    --accent-blue: #1c6fa6;
+}
+.ca-anatomy-try { margin: 0 0 12px; }
+.anatomy-scale {
+    display: inline-flex;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    overflow: hidden;
+}
+.anatomy-scale-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    padding: 7px 14px;
+    cursor: pointer;
+}
+.anatomy-scale-btn.is-active {
+    background: var(--primary-green);
+    color: var(--darker-bg);
+}
+.anatomy-svg {
+    display: block;
+    width: 100%;
+    max-width: 760px;
+    height: auto;
+    margin: 16px 0 10px;
+}
+.anatomy-source { fill: var(--darker-bg); stroke: var(--border); }
+.anatomy-source-t { fill: var(--text-primary); font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 15px; }
+.anatomy-source-sub { fill: var(--text-secondary); font-family: 'IBM Plex Mono', monospace; font-size: 12px; }
+.anatomy-svg .r0 { color: var(--primary-green); }
+.anatomy-svg .r1 { color: var(--accent-amber); }
+.anatomy-svg .r2 { color: var(--accent-blue); }
+.anatomy-ribbon { fill: currentColor; opacity: 0.5; }
+.anatomy-ribbon-line { fill: none; stroke: currentColor; }
+.anatomy-t-title { fill: currentColor; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 13px; }
+.anatomy-t-val { fill: var(--text-primary); font-family: 'IBM Plex Mono', monospace; font-size: 14px; }
+.anatomy-t-esrs { fill: var(--text-secondary); font-family: 'IBM Plex Mono', monospace; font-size: 11px; }
+.ca-method .anatomy-summary {
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    max-width: 66ch;
+}
+.anatomy-summary strong { color: var(--primary-green); }
+.anatomy-copy {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: none;
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 7px 16px;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+.anatomy-copy:hover { border-color: var(--primary-green); color: var(--primary-green); }
+/* As the calculator's cards: room for the drawing on a 320px phone. */
+@media (max-width: 420px) {
+    .ca-anatomy { padding: 16px; }
+}

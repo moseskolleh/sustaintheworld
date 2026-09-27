@@ -279,6 +279,7 @@ async function visit(context, page, rel, origin) {
 
     await exerciseFirstView(browser, origin);
     await exerciseNavigation(browser, origin);
+    await exerciseSections(browser, origin);
     await exerciseCpu(browser, origin);
     await exerciseStatsPage(browser, origin);
 
@@ -426,6 +427,50 @@ async function exerciseCarbonTool(page, r) {
     }
     if (problems.length) problems.forEach(p => bad(`carbon-ai.html prints ${p}`));
     else ok(`carbon-ai.html: ${presets.length} presets, no exponent notation and no rounded-away zero`);
+
+    // Anatomy of a Prompt, moved here from the homepage: not part of the
+    // first view, fetched as its section nears, drawn from the calculator's
+    // numbers, and every label 11px or more and inside the drawing. On the
+    // homepage its labels came out at about 5px on a phone, and a frame
+    // that scrolled sideways cut them off.
+    if (r.arrival.some(s => /modules\/anatomy\./.test(s.url))) bad('carbon-ai.html: Anatomy\'s script or stylesheet arrived with the page, not on demand');
+    else ok('carbon-ai.html: Anatomy\'s script and stylesheet are not part of the first view');
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.evaluate(() => document.getElementById('anatomy').scrollIntoView());
+    const drawn = await page.waitForSelector('#anatomyDraw:not([hidden])', { timeout: 5000 }).then(() => true, () => false);
+    if (!drawn) bad('carbon-ai.html: Anatomy of a Prompt was not fetched and drawn as it came into view');
+    else {
+        const same = await page.evaluate(() => {
+            const v = document.querySelector('#anatomySvg .anatomy-t-val');
+            return { anatomy: v && v.textContent, calculator: document.getElementById('outCarbon').textContent };
+        });
+        if (same.anatomy === `${same.calculator} g CO₂e`) ok(`carbon-ai.html: Anatomy draws the calculator's own figure (${same.anatomy})`);
+        else bad(`carbon-ai.html: Anatomy shows ${same.anatomy}, the calculator ${same.calculator} g`);
+        for (const width of [320, 390, 1440]) {
+            await page.setViewportSize({ width, height: 900 });
+            await page.waitForTimeout(300);   // its ResizeObserver redraws for the new width
+            await page.evaluate(() => document.getElementById('anatomy').scrollIntoView());
+            const a = await page.evaluate(() => {
+                const svg = document.getElementById('anatomySvg');
+                const box = svg.getBoundingClientRect();
+                const scale = box.width / svg.viewBox.baseVal.width;
+                const texts = Array.from(svg.querySelectorAll('text'));
+                return {
+                    n: texts.length,
+                    small: texts.filter(t => parseFloat(getComputedStyle(t).fontSize) * scale < 10.95).map(t => `"${t.textContent}" ${(parseFloat(getComputedStyle(t).fontSize) * scale).toFixed(1)}px`),
+                    cut: texts.filter((t) => {
+                        const b = t.getBoundingClientRect();
+                        return b.left < box.left - 0.5 || b.right > box.right + 0.5 || b.top < box.top - 0.5 || b.bottom > box.bottom + 0.5;
+                    }).map(t => `"${t.textContent}"`),
+                    sideways: document.documentElement.scrollWidth > innerWidth
+                };
+            });
+            const trouble = a.small.map(s => `${s} is under 11px`).concat(a.cut.map(c => `${c} is cut off`));
+            if (a.sideways) trouble.push(`the page scrolls sideways`);
+            if (trouble.length) trouble.forEach(t => bad(`carbon-ai.html at ${width}px, Anatomy: ${t}`));
+            else ok(`carbon-ai.html at ${width}px: Anatomy's ${a.n} labels are all 11px or more and inside the drawing`);
+        }
+    }
     await page.setViewportSize({ width: 1280, height: 800 });
     if (r.errors.length) r.errors.forEach(e => bad(e));
 }
@@ -594,8 +639,8 @@ async function exerciseNavigation(browser, origin) {
     // leave the target 250-320px down the screen. Where it sits 2.5 s later:
     const landings = [
         [1280, 800, '.nav-menu a[href="#contact"]', 'contact', 'nav link to Contact'],
-        [1280, 800, '.play-index a[href="#anatomy"]', 'anatomy', 'play-index link "weigh one prompt"'],
-        [390, 844, '.play-index a[href="#anatomy"]', 'anatomy', 'play-index link "weigh one prompt"']
+        [1280, 800, '.play-index a[href="#ydi"]', 'ydi', 'play-index link "draw the AI energy curve"'],
+        [390, 844, '.play-index a[href="#ydi"]', 'ydi', 'play-index link "draw the AI energy curve"']
     ];
     for (const [width, height, sel, id, what] of landings) {
         for (const reducedMotion of ['reduce', 'no-preference']) {
@@ -622,8 +667,9 @@ async function exerciseNavigation(browser, origin) {
     // skipped the observer's first report as "only the current size", so
     // growth inside that frame was never landed for: /#assay and /#anatomy
     // stopped 250-440px short on about one visit in three, the cache warm
-    // from an earlier page. Each is opened a few times.
-    for (const id of ['anatomy', 'assay']) {
+    // from an earlier page. Each is opened a few times. (Anatomy is on
+    // carbon-ai.html now; You Draw It is the homepage's section-05 widget.)
+    for (const id of ['ydi', 'assay']) {
         const misses = [];
         for (let run = 0; run < 3; run++) {
             const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
@@ -674,9 +720,10 @@ async function exerciseNavigation(browser, origin) {
     // Everything below loads on the way down first, so nothing moves mid-check.
     await p.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
     await p.waitForTimeout(800);
-    // The controls in between used to be sat on: the calculator's selects, a
-    // sample chip, the dossier titles, the toolkit's proof links.
-    const GUARDED = ['.hero-availability', '.hero-cta .btn', '#ecoModel', '#ecoPreset', '.assay-sample', '.project-toggle', '.toolkit-proof', '.feature-next',
+    // The controls in between used to be sat on: the calculator's selects
+    // (on carbon-ai.html now), a sample chip, the dossier titles, the
+    // toolkit's proof links. The experience cards' More buttons are new.
+    const GUARDED = ['.hero-availability', '.hero-cta .btn', '.corelog-more', '#ydiReveal', '.assay-sample', '.project-toggle', '.toolkit-proof', '.feature-next',
         '.btn-submit', '.carbon-badge', '.receipt-btn', '.footer-fieldreport a', '.eco-mode-toggle', '.terminal-toggle'];
     const covered = [];
     let passes = 0;
@@ -848,6 +895,81 @@ async function exerciseStatsPage(browser, origin) {
 }
 
 // ------------------------------------------------------------------
+// The shorter sections: experience as cards on a phone, the Assay under
+// the form
+// ------------------------------------------------------------------
+// The experience log was 5.3 screens on a 390px phone. Below 600px each
+// role is now its title, organisation, dates and first line, the rest a
+// press away; the desktop keeps the whole core log. And the contact form
+// comes first in #contact, the Assay under it. body's overflow-x:hidden
+// hides a card that runs off the side, so the cards themselves are measured.
+async function exerciseSections(browser, origin) {
+    console.log('  index.html — experience on a phone, the Assay under the form');
+    for (const [width, height] of [[320, 700], [390, 844], [1280, 800]]) {
+        const phone = width < 600;
+        const ctx = await browser.newContext({ viewport: { width, height }, reducedMotion: 'reduce' });
+        const page = await ctx.newPage();
+        await page.goto(`${origin}/index.html`, { waitUntil: 'load' });
+        await page.evaluate(() => document.getElementById('experience').scrollIntoView());
+        await page.waitForTimeout(400);
+        const look = () => page.evaluate(() => {
+            const shown = (el) => !!el && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';
+            const cards = Array.from(document.querySelectorAll('#experience .timeline-content'));
+            const small = [];
+            cards.forEach(c => c.querySelectorAll('h3, h4, .timeline-date, li, .corelog-more').forEach((el) => {
+                if (shown(el) && parseFloat(getComputedStyle(el).fontSize) < 12) small.push(`"${el.textContent.trim().slice(0, 24)}"`);
+            }));
+            return {
+                n: cards.length,
+                heads: cards.every(c => ['h3', 'h4', '.timeline-date', 'li'].every(s => shown(c.querySelector(s)))),
+                folded: cards.reduce((n, c) => n + Array.from(c.querySelectorAll('li')).filter(li => !shown(li)).length, 0),
+                tags: cards.filter(c => shown(c.querySelector('.tags'))).length,
+                buttons: cards.filter(c => shown(c.querySelector('.corelog-more'))).length,
+                off: cards.filter(c => c.getBoundingClientRect().right > innerWidth + 0.5 || c.getBoundingClientRect().left < -0.5).length,
+                screens: +(document.getElementById('experience').getBoundingClientRect().height / innerHeight).toFixed(2),
+                small
+            };
+        });
+        const x = await look();
+        const tag = `experience at ${width}px`;
+        if (x.off || x.small.length) bad(`${tag}: ${x.off} card(s) run off the screen; text under 12px: ${x.small.join(', ') || 'none'}`);
+        else ok(`${tag}: every card on screen, no text under 12px`);
+        if (phone) {
+            if (x.heads && x.folded > 0 && x.tags === 0 && x.buttons === x.n) ok(`${tag}: ${x.n} short cards — role, organisation, dates and one line each, ${x.folded} lines and the tags a press away (${x.screens} screens)`);
+            else bad(`${tag}: not short cards (every head and first line shown ${x.heads}, lines folded ${x.folded}, tags shown ${x.tags}, More buttons ${x.buttons} of ${x.n})`);
+            if (width === 390 && x.screens > 2.5) bad(`${tag}: ${x.screens} screens tall; the short cards should keep it under 2.5 (5.3 as the full log)`);
+            // One card opened and closed again, by its button.
+            await page.click('#experience .corelog-more');
+            const open = await page.evaluate(() => {
+                const card = document.querySelector('#experience .timeline-content');
+                const btn = card.querySelector('.corelog-more');
+                return { all: Array.from(card.querySelectorAll('li, .tags')).every(el => el.getClientRects().length > 0), expanded: btn.getAttribute('aria-expanded'), name: btn.textContent };
+            });
+            await page.click('#experience .corelog-more');
+            const shut = await page.evaluate(() => document.querySelector('#experience .corelog-more').getAttribute('aria-expanded'));
+            if (open.all && open.expanded === 'true' && shut === 'false' && /Researcher/.test(open.name)) ok(`${tag}: "More" opens the whole card and "Less" folds it (named "${open.name.trim()}")`);
+            else bad(`${tag}: More showed the whole card ${open.all}, aria-expanded ${open.expanded} then ${shut}, name "${open.name}"`);
+        } else if (x.heads && x.folded === 0 && x.tags === x.n && x.buttons === 0) ok(`${tag}: the whole core log, nothing folded`);
+        else bad(`${tag}: the desktop log is folded (lines hidden ${x.folded}, tags shown ${x.tags} of ${x.n}, buttons ${x.buttons})`);
+
+        // The contact form first, the Assay under it.
+        const c = await page.evaluate(() => {
+            const form = document.getElementById('contactForm');
+            const assay = document.getElementById('assay');
+            const first = document.querySelector('#contact input, #contact textarea');
+            return {
+                after: !!(form.compareDocumentPosition(assay) & Node.DOCUMENT_POSITION_FOLLOWING) && !!assay.closest('#contact'),
+                below: assay.getBoundingClientRect().top >= form.getBoundingClientRect().bottom,
+                first: !!first && first.closest('form') === form
+            };
+        });
+        if (c.after && c.below && c.first) ok(`contact at ${width}px: the form comes first, the Assay below it`);
+        else bad(`contact at ${width}px: the Assay after the form ${c.after}, below it ${c.below}, the form's fields first ${c.first}`);
+        await ctx.close();
+    }
+}
+
+// ------------------------------------------------------------------
 // The homepage's on-demand features, each used once
 // ------------------------------------------------------------------
 async function exerciseHomepage(page, r, origin) {
@@ -897,8 +1019,8 @@ async function exerciseHomepage(page, r, origin) {
     await page.waitForFunction(() => window.mks.loaded.interactives, null, { timeout: 5000 }).catch(() => null);
     const li = await loadedNow();
     if (li.interactives) ok('interactives loaded as section 05 came into range'); else bad('interactives did not load near section 05');
-    const options = await page.$$eval('#ecoModel option', (o) => o.length);
-    if (options > 0) ok(`"AI, Weighed" populated (${options} models)`); else bad('"AI, Weighed" model picker is empty');
+    const dots = await page.$$eval('#ydiSvg .ydi-guess-dot', (d) => d.length);
+    if (dots > 0) ok(`"AI, Weighed": You Draw It drawn (${dots} points to guess)`); else bad('"AI, Weighed": You Draw It is empty');
 
     // The backtick opens the terminal.
     await page.keyboard.press('`');
@@ -1297,13 +1419,9 @@ async function checkWithoutJs(browser, origin) {
         else ok(`${label}: no control on show that needs JavaScript`);
         if (r.deadLinks.length) bad(`${label}: in-page links to nothing on show: ${r.deadLinks.join(', ')}`);
         // Nor copy on show that points at what JavaScript would have drawn:
-        // the journey map, carbon-ai's ledger, the homepage's Anatomy, a
-        // click to open dossiers that are open already, a live widget.
-        const pointing = await page.evaluate(() => {
-            const out = (document.body.innerText.match(/Watch the route unfold|the ledger below|click any one to open|the live widget on this page/gi) || []);
-            document.querySelectorAll('a[href$="index.html#anatomy"]').forEach((a) => { if (a.getClientRects().length) out.push('a link to index.html#anatomy'); });
-            return out;
-        });
+        // the journey map, carbon-ai's ledger or Anatomy's diagram, a click
+        // to open dossiers that are open already, a live widget.
+        const pointing = await page.evaluate(() => (document.body.innerText.match(/Watch the route unfold|the ledger below|click any one to open|the live widget on this page|watch Scope 2 fall/gi) || []));
         if (pointing.length) bad(`${label}: copy on show points at what needs JavaScript: ${pointing.join(', ')}`);
 
         if (rel === 'index.html') {
@@ -1679,6 +1797,14 @@ async function axeView(browser, origin, view, note, trouble) {
                 note(rel, 'on arrival', view, await axeRun(page));
             });
             if (rel === 'index.html') await axeHomepageStates(page, view, note, attempt);
+            // Anatomy of a Prompt is drawn only as its section comes near.
+            if (rel === 'carbon-ai.html') {
+                await attempt(`${rel}: axe on Anatomy of a Prompt`, async () => {
+                    await page.evaluate(() => document.getElementById('anatomy').scrollIntoView());
+                    await page.waitForSelector('#anatomyDraw:not([hidden])', { timeout: 5000 });
+                    note(rel, 'Anatomy drawn', view, await axeRun(page, '#anatomy'));
+                });
+            }
             await page.close();
             if (!AXE_NO_SCRIPT.includes(rel)) continue;
             const bare = await context.newPage();

@@ -489,32 +489,219 @@ const ROUNDED_TO_NOTHING = /^0(\.0+)?$|\b0\.0+ /;
     });
 }
 
-// --- The homepage widget prints through the same formatter ---------------
+// --- Anatomy of a Prompt, on the calculator's page --------------------------
+// It moved here from the homepage, where it had a model and grid picker of
+// its own and its own copy of the sums. Here it follows the calculator: the
+// same query, the same calculate(), the same formatter, so the two cannot
+// disagree. It is fetched as its section nears the screen, not with the page.
 {
-    const { run } = require('./harness.js');
-    const { window, errors } = run('dark');
-    const doc = window.document;
-    const data = window.AICarbonData;
-    const text = () => ['ecoEnergy', 'ecoCarbon', 'ecoWater', 'ecoEquiv'].map(id => doc.getElementById(id).textContent).join(' | ') +
-        ' | ' + Array.from(doc.querySelectorAll('.eco-bar-val')).map(e => e.textContent).join(' ');
-    assert(errors.length === 0, `Homepage: "AI, Weighed" renders without errors (${errors.map(String).join('; ') || 'none'})`);
-    assert(!EXPONENT.test(text()), `Homepage: the default reading has no exponent notation (${text().slice(0, 120)})`);
+    const fs = require('fs');
+    const path = require('path');
+    const { JSDOM } = require('jsdom');
+    const ROOT = path.join(__dirname, '..');
+    const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
 
-    // The smallest model on the cleanest grid: tiny, never zero, never 1e-5.
-    const model = doc.getElementById('ecoModel');
-    const grid = doc.getElementById('ecoGrid');
-    model.value = String(data.HOMEPAGE_MODELS.indexOf('llama-32-1b'));
-    grid.value = String(data.HOMEPAGE_REGIONS.indexOf('no'));
-    model.dispatchEvent(new window.Event('change'));
-    const small = text();
-    assert(!EXPONENT.test(small) && !/(^|\s)0(\.0+)?(\s|$)/.test(small), `Homepage: a tiny reading is neither exponent nor zero (${small.slice(0, 160)})`);
-    assert(/\d (s|min|h)\b/.test(doc.getElementById('ecoEquiv').textContent) && /\d (cm|m|km)\b|< 1 cm/.test(doc.getElementById('ecoEquiv').textContent),
-        `Homepage: the comparisons carry their own units (${doc.getElementById('ecoEquiv').textContent})`);
+    // The page as it arrives, with an IntersectionObserver that reports only
+    // when told to: Anatomy's script is asked for once the section is near.
+    const boot = (options) => {
+        const opts = options || {};
+        const w = new JSDOM(read('carbon-ai.html'), { runScripts: 'outside-only', url: 'https://example.com/carbon-ai.html' }).window;
+        const errors = [];
+        w.console.error = (...a) => errors.push(a.join(' '));
+        w.addEventListener('error', (e) => errors.push(String(e.error || e.message)));
+        const observers = [];
+        w.IntersectionObserver = class {
+            constructor(cb, o) { this.cb = cb; this.opts = o; this.els = []; this.off = false; observers.push(this); }
+            observe(el) { this.els.push(el); }
+            unobserve() {}
+            disconnect() { this.off = true; }
+        };
+        const timers = [];
+        if (opts.timers) w.setTimeout = (fn) => { timers.push(fn); return timers.length; };
+        if (opts.before) opts.before(w);
+        w.eval(read('ai-carbon-data.js'));
+        w.eval(read('carbon-ai.js'));
+        w.document.dispatchEvent(new w.Event('DOMContentLoaded'));
+        return { w, doc: w.document, errors, observers, timers };
+    };
+    const withAnatomy = (options) => {
+        const page = boot(options);
+        page.w.eval(read('modules/anatomy.js'));
+        return page;
+    };
+    const set = (page, id, v) => {
+        const el = page.doc.getElementById(id);
+        el.value = String(v);
+        el.dispatchEvent(new page.w.Event('input', { bubbles: true }));
+    };
+    const vals = (doc) => Array.from(doc.querySelectorAll('#anatomySvg .anatomy-t-val')).map(t => t.textContent);
+
+    // On demand: not in the first view, asked for once, as the section nears,
+    // its stylesheet first so nothing is drawn unstyled.
+    {
+        const { doc, observers } = boot();
+        const asked = (sel) => doc.head.querySelectorAll(sel).length;
+        const io = observers.find(o => o.els.includes(doc.getElementById('anatomy')));
+        const draw = doc.getElementById('anatomyDraw');
+        assert(!!io && !asked('link[href="modules/anatomy.css"], script[src="modules/anatomy.js"]'), 'Anatomy: not fetched with the page, only watched for');
+        assert(draw.hidden && !draw.children.length, 'Anatomy: until it is drawn (and without JavaScript) the section is its text, no dead controls');
+        io.cb([{ target: doc.getElementById('anatomy'), isIntersecting: false }]);
+        assert(!asked('link[href="modules/anatomy.css"]'), 'Anatomy: a section still far off asks for nothing');
+        io.cb([{ target: doc.getElementById('anatomy'), isIntersecting: true }]);
+        io.cb([{ target: doc.getElementById('anatomy'), isIntersecting: true }]);
+        const css = doc.head.querySelectorAll('link[href="modules/anatomy.css"]');
+        assert(css.length === 1 && !asked('script[src="modules/anatomy.js"]') && io.off, `Anatomy: its stylesheet is asked for once, as the section nears (${css.length}), and watching stops`);
+        css[0].onload();
+        assert(asked('script[src="modules/anatomy.js"]') === 1, 'Anatomy: its script follows once the stylesheet is in');
+        assert(/^\d+px 0px$/.test(io.opts.rootMargin || ''), `Anatomy: fetched a little before it is on screen (rootMargin ${io.opts.rootMargin})`);
+
+        const { criticalAssets, onDemandAssets } = require('../scripts/check-budget.js');
+        const files = ['modules/anatomy.js', 'modules/anatomy.css'];
+        assert(files.every(f => !criticalAssets('carbon-ai.html').includes(f) && onDemandAssets().includes(f)),
+            'Anatomy: its script and stylesheet are counted on demand, not in carbon-ai.html\'s first view');
+    }
+
+    // Drawn from the calculator's own numbers.
+    {
+        const page = withAnatomy();
+        const { doc, errors } = page;
+        assert(errors.length === 0, `Anatomy: draws without errors (${errors.join('; ') || 'none'})`);
+        assert(!doc.getElementById('anatomyDraw').hidden, 'Anatomy: shown once it has drawn');
+        const v = vals(doc);
+        assert(v.length === 3 && v[1] === 'not quantified', `Anatomy: three lines, Scope 3 named without a number (${v.join(' | ')})`);
+        const carbon = () => doc.getElementById('outCarbon').textContent;
+        assert(v[0] === `${carbon()} g CO₂e` && v[2] === `${doc.getElementById('outWater').textContent} mL water`,
+            `Anatomy: its Scope 2 and water are the calculator's own, to the digit (${v[0]} / ${carbon()} g; ${v[2]})`);
+
+        set(page, 'regionSelect', 'no');
+        const norway = vals(doc)[0];
+        assert(norway === `${carbon()} g CO₂e` && parseFloat(norway) < parseFloat(v[0]),
+            `Anatomy: choosing Norway in the calculator moves it, and Scope 2 falls (${v[0]} → ${norway})`);
+        assert(/Norway/.test(doc.getElementById('anatomySummary').textContent), 'Anatomy: the summary names the grid the calculator is set to');
+
+        doc.querySelector('[data-preset="reasoning"]').click();
+        assert(vals(doc)[0] === `${carbon()} g CO₂e` && /DeepSeek-R1/.test(doc.getElementById('anatomySummary').textContent),
+            'Anatomy: a preset button moves it too');
+
+        const year = doc.querySelector('.anatomy-scale-btn[data-scale="year"]');
+        year.click();
+        assert(year.getAttribute('aria-pressed') === 'true' && doc.querySelector('.anatomy-scale-btn[data-scale="query"]').getAttribute('aria-pressed') === 'false',
+            'Anatomy: the scale buttons say which is pressed');
+        assert(vals(doc)[0] === `${doc.getElementById('outAnnualCarbon').textContent} kg CO₂e` && vals(doc)[2] === `${doc.getElementById('outAnnualWater').textContent} L water`,
+            `Anatomy: per year is the calculator's annual figure at its queries a day (${vals(doc)[0]})`);
+        assert(/500 queries a day/.test(doc.getElementById('anatomySummary').textContent), 'Anatomy: per year says at how many queries a day');
+
+        // The boundary: whose report the lines are on, and none for Scope 3.
+        const summary = doc.getElementById('anatomySummary');
+        const foot = doc.querySelector('.anatomy-foot').textContent.replace(/\s+/g, ' ');
+        assert(!/\d\s*(g|kg)\s*<\/strong>\s*Scope 3/.test(summary.innerHTML), 'Boundary: the Anatomy summary gives no Scope 3 figure');
+        assert(/whoever runs the model/.test(summary.textContent) && /whoever runs the model/.test(foot),
+            'Boundary: Anatomy names whose report its Scope 2 and Scope 3 lines are on');
+        assert(/hosted model[^.]*Scope 3, category 1 \(purchased services\)/.test(foot) && /category 1/.test(summary.textContent),
+            'Boundary: and says where the carbon goes for a buyer of a hosted model, in the foot and in the copied figure');
+        const disclaimer = doc.querySelector('.ca-disclaimer').textContent.replace(/\s+/g, ' ');
+        assert(/Embodied carbon of the hardware is excluded, here and in Anatomy of a Prompt/.test(disclaimer) && /which this page does not quantify/.test(foot),
+            'Boundary: the calculator and Anatomy both state that embodied carbon is excluded');
+        assert(doc.querySelector('.ca-disclaimer a[href="#anatomy"]') && doc.getElementById('anatomy'), 'Boundary: the calculator\'s caveat links to Anatomy on the same page');
+    }
+
+    // Every label readable on a phone: drawn at one unit to a pixel, 11px or
+    // more, and inside the drawing. The homepage version was a fixed 720
+    // units wide, so on a phone its ESRS lines came out at about 5px and the
+    // sideways-scrolling frame cut every label off.
+    {
+        const css = read('modules/anatomy.css');
+        const sizes = ['anatomy-source-t', 'anatomy-source-sub', 'anatomy-t-title', 'anatomy-t-val', 'anatomy-t-esrs'].map((cls) => {
+            const m = css.match(new RegExp(`\\.${cls}\\s*{[^}]*font-size:\\s*([\\d.]+)px`));
+            return [cls, m ? +m[1] : 0];
+        });
+        assert(sizes.every(([, px]) => px >= 11), `Anatomy: every label is set at 11px or more (${sizes.map(s => s.join(' ')).join(', ')})`);
+        assert(!/anatomy-svg[^{]*{[^}]*min-width/.test(css) && !/overflow-x:\s*auto[^}]*}[^{]*anatomy/.test(css), 'Anatomy: no minimum width and no sideways scroll for the drawing');
+
+        [[256, 'a 320px phone'], [326, 'a 390px phone'], [720, 'a desktop']].forEach(([width, what]) => {
+            const { doc, w } = withAnatomy({ before: (win) => {
+                Object.defineProperty(win.document.getElementById('anatomyDraw'), 'clientWidth', { configurable: true, get: () => width });
+            } });
+            const svg = doc.getElementById('anatomySvg');
+            const box = (svg.getAttribute('viewBox') || '').split(' ').map(Number);
+            assert(box[2] === width, `Anatomy on ${what}: drawn one unit to a pixel (viewBox ${svg.getAttribute('viewBox')})`);
+            // A generous width per character for each face: IBM Plex Mono is
+            // 0.6em, and Space Grotesk under that on average.
+            const size = { 'anatomy-source-t': 15, 'anatomy-source-sub': 12, 'anatomy-t-title': 13, 'anatomy-t-val': 14, 'anatomy-t-esrs': 11 };
+            const over = Array.from(svg.querySelectorAll('text')).filter((t) => {
+                const cls = Object.keys(size).find(c => t.classList.contains(c));
+                const half = t.getAttribute('text-anchor') === 'middle';
+                const x = +t.getAttribute('x');
+                const len = t.textContent.length * size[cls] * 0.62;
+                return half ? x - len / 2 < 0 || x + len / 2 > width : x + len > width;
+            }).map(t => t.textContent);
+            assert(over.length === 0, `Anatomy on ${what}: every label fits inside the drawing (${over.join(' | ') || 'all fit'})`);
+            // The widest numbers the inputs allow still fit.
+            set({ doc, w }, 'queriesPerDay', 1e9);
+            set({ doc, w }, 'inputTokens', 1e7);
+            doc.querySelector('.anatomy-scale-btn[data-scale="year"]').click();
+            const longest = Array.from(svg.querySelectorAll('.anatomy-t-val')).reduce((a, t) => Math.max(a, +t.getAttribute('x') + t.textContent.length * 14 * 0.6), 0);
+            assert(longest <= width, `Anatomy on ${what}: the largest reading the inputs allow fits too (${Math.round(longest)} of ${width}px: ${vals(doc)[0]})`);
+        });
+    }
+
+    // Copy: the figure leaves as text, attributed, and the button gets its
+    // icon back. This page has no homepage share helpers to lean on.
+    {
+        let copied = null;
+        const page = withAnatomy({ timers: true, before: (w) => {
+            Object.defineProperty(w.navigator, 'clipboard', { configurable: true, value: { writeText: async (t) => { copied = t; } } });
+        } });
+        const btn = page.doc.getElementById('anatomyCopy');
+        const before = btn.innerHTML;
+        btn.click();
+        const settle = () => new Promise((r) => setImmediate(r));
+        settle().then(() => {
+            assert(copied && copied.startsWith(page.doc.getElementById('anatomySummary').textContent) && /Moses Kolleh Sesay/.test(copied),
+                'Anatomy: Copy figure puts the summary on the clipboard, attributed');
+            assert(/Copied/.test(btn.textContent), 'Anatomy: the button says it copied');
+            page.timers.forEach(fn => fn());
+            assert(btn.innerHTML === before, 'Anatomy: the button goes back to its name');
+            finishAsync();
+        });
+    }
+
+    // "Drag the grid" was never true: the grid is a dropdown (plan 2.7).
+    {
+        const pages = ['carbon-ai.html', 'index.html', 'modules/anatomy.js', 'modules/interactives.js', 'content/narration.json'].map(read).join('\n');
+        assert(!/drag(ging)? the grid|slide the grid|grid slider/i.test(pages), 'Wording: nothing tells a reader to drag the grid');
+        const doc = withAnatomy().doc;
+        const tryIt = doc.querySelector('.ca-anatomy-try').textContent;
+        const label = doc.querySelector('label[for="regionSelect"]').textContent.trim();
+        assert(tryIt.includes(`Choose Norway under ${label}`) && doc.querySelector('#regionSelect').tagName === 'SELECT',
+            `Wording: Anatomy says to choose the grid in the "${label}" dropdown, which is what it is ("${tryIt}")`);
+    }
+
+    // The homepage keeps You Draw It as the teaser and points here.
+    {
+        const { run } = require('./harness.js');
+        const { window, errors } = run('dark');
+        const home = window.document;
+        const section = home.getElementById('ecoprompt');
+        assert(errors.length === 0, `Homepage: "AI, Weighed" renders without errors (${errors.map(String).join('; ') || 'none'})`);
+        assert(!!section.querySelector('#ydi #ydiSvg .ydi-hit') && !section.querySelector('select, #anatomy, .eco-widget'),
+            'Homepage: "AI, Weighed" is You Draw It alone, with no calculator and no Anatomy');
+        assert(!!section.querySelector('a[href="carbon-ai.html"]') && !home.getElementById('anatomy'),
+            'Homepage: it links to the EcoPrompt Coach, where the calculator and Anatomy are');
+        const toAnatomy = Array.from(home.querySelectorAll('a[href*="#anatomy"]')).map(a => a.getAttribute('href'));
+        assert(toAnatomy.every(h => h === 'carbon-ai.html#anatomy'), `Homepage: a link to Anatomy goes to its new page (${toAnatomy.join(', ') || 'none'})`);
+    }
 }
 
-if (failures > 0) {
-    console.log(`\n${failures} assertion(s) failed`);
-    process.exit(1);
+// The copy check above settles after a promise; report once it has.
+let pendingChecks = 2;
+function finishAsync() {
+    if (--pendingChecks > 0) return;
+    if (failures > 0) {
+        console.log(`\n${failures} assertion(s) failed`);
+        process.exit(1);
+    }
+    console.log('\nAll assertions passed');
+    process.exit(0);   // the homepage harness leaves timers running
 }
-console.log('\nAll assertions passed');
-process.exit(0);   // the homepage harness leaves timers running
+finishAsync();

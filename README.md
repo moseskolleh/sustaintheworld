@@ -21,10 +21,10 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 - **Role-specific lenses**: `case-studies.html?lens=water`, `?lens=climate-risk`, `?lens=sustainable-ai` — shareable views that reframe the portfolio for one kind of role. They **reorder and frame, they never filter**: every case study stays on the page in every view, because a view that hides inconvenient work is a CV that lies by omission. Without JavaScript the switcher steps aside and every case study shows in the default view
 - **[Research outputs](research.html)**: theses, reports, datasets, code and tools, each labelled public / on request / held by the client. No DOI, journal or conference is named anywhere, because none of this work has one — and a test fails the build if one ever appears without proof
 - **[Open counts](stats.html)**: what the site's own cookieless counter has counted, rebuilt weekly — the five numbers that say whether the site works, page views by page, lens and window width, referrers, features used and bytes per page view, in whole weeks. Every count under 5 reads `<5`, a figure that would let one be worked out by subtraction reads `held`, and the page prints the exact payload a page view sends. See [Open counts](#open-counts)
-- **Borehole core-log experience timeline**: career history logged the way a geologist logs a core — depth is time, every layer is a chapter
-- **"AI, Weighed" live widget**: a homepage slice of the EcoPrompt Coach research — model × workload × grid → energy, carbon, water, in units people can feel
-- **Evidence-first skills**: no invented percentages — every tool links to the project where it earned its place, plus real field numbers (164 water points itemized, 70% strike rate)
-- **The Assay**: paste a job ad beside the contact form and get an honest fit, graded in the browser; the ad itself is never sent (the page view's count carries the grade, see [The visit counter and privacy](#the-visit-counter-and-privacy)). It lists matched evidence with links, and gaps (languages, years of experience, named tools, consulting-firm or director-level experience, financial modelling, a PhD or a law degree), first when they cap the grade; right to work, visa, clearance, driving licence, relocation and the level of English are named as things to confirm with Moses, never guessed. General skills (stakeholders, data, delivery, international work, research) count towards a grade but never make one: an ad with nothing from his own field is "Different field" Its facts about him come from `content/profile.json`
+- **Borehole core-log experience timeline**: career history logged the way a geologist logs a core — depth is time, every layer is a chapter. On a phone each role is a short card (role, organisation, dates, one line), the rest a press away
+- **"AI, Weighed"**: one chart from the EcoPrompt Coach research on the homepage — guess how the energy of one AI answer grows with model size, then see the published estimates. The calculator (model × grid × tokens → energy, carbon, water) and Anatomy of a Prompt are on [`carbon-ai.html`](carbon-ai.html)
+- **Evidence-first skills**: no invented percentages — every tool links to the project where it earned its place, and the 164 water points are itemized
+- **The Assay**: paste a job ad under the contact form and get an honest fit, graded in the browser; the ad itself is never sent (the page view's count carries the grade, see [The visit counter and privacy](#the-visit-counter-and-privacy)). It lists matched evidence with links, and gaps (languages, years of experience, named tools, consulting-firm or director-level experience, financial modelling, a PhD or a law degree), first when they cap the grade; right to work, visa, clearance, driving licence, relocation and the level of English are named as things to confirm with Moses, never guessed. General skills (stakeholders, data, delivery, international work, research) count towards a grade but never make one: an ad with nothing from his own field is "Different field" Its facts about him come from `content/profile.json`
 - **Field Notes**: short essays connecting boreholes, scenario storytelling and sustainable AI
 - **Modern design**: dark theme with vibrant green accents, light mode, responsive layout, full SEO/social metadata (Open Graph, JSON-LD, sitemap)
 - **Comprehensive sections**: journey, about (with CV download), experience, projects with photo dossiers, AI cost widget, skills, education, field notes, contact form
@@ -56,13 +56,15 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 
 ### 💼 Experience
 - The borehole core-log timeline: depth is time, every layer a chapter, technology tags for each
+- Below 600px, short cards: role, organisation, dates and the first line, with the rest and the tags behind a More button
 
 ### 🔬 Projects
 - Six expandable dossiers with photo galleries, each with challenge → approach → results
 - Two of them carry a mini-game: "Site the borehole" and "Don't let it become a boat"
 
 ### ⚡ AI, Weighed
-- The homepage slice of the EcoPrompt Coach research: You Draw It, the live cost widget and Anatomy of a Prompt
+- You Draw It, the homepage's one chart from the EcoPrompt Coach research, with a link to the coach
+- The calculator and Anatomy of a Prompt (where one query lands on a CSRD report) are on `carbon-ai.html`; Anatomy is drawn from the calculator's own numbers and fetched only as its section comes near
 
 ### 🛠️ Skills
 - Evidence-first: every tool links to the project where it earned its place, with real field numbers instead of percentages
@@ -77,7 +79,7 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 - Short essays connecting boreholes, scenario storytelling and sustainable AI
 
 ### 📧 Contact
-- Contact form (Google Apps Script backend, honeypot, rate limits; works without JavaScript by posting to the same endpoint), The Assay, direct contact details and social links
+- Direct contact details, social links and the contact form (Google Apps Script backend, honeypot, rate limits; works without JavaScript by posting to the same endpoint), with The Assay below the form as the optional step
 
 ## Setup Instructions
 
@@ -317,7 +319,7 @@ CI uses Node 22.
 | `npm run build:check` | every generated page still matches `content/` |
 | `npm run fonts:check` | the committed fonts still hash to their manifest and every stylesheet's `@font-face` block is current |
 | `npm run lint:html` | every page is valid HTML ([html-validate](https://html-validate.org/)'s recommended rules; the two relaxations are explained in `.htmlvalidate.cjs`) |
-| `npm run test:unit` | every `tests/*.test.js`, side by side, one process per suite, so a new suite runs the day it exists: the sixteen listed below (1307 passing assertions on 2026-09-27) |
+| `npm run test:unit` | every `tests/*.test.js`, side by side, one process per suite, so a new suite runs the day it exists: the seventeen listed below (1369 passing assertions on 2026-09-27) |
 | `npm run map:check` | the committed `journey-map.svg` still matches its generator |
 | `npm run budget` | the weights this README quotes (see [Performance](#performance)) |
 | `npm run smoke` | every page in a real browser: no errors, no failed or off-origin requests, every on-demand module arrives when used, no axe-core violation at 1440×900 or 390×844 in either theme, and each budgeted page's measured first view no heavier than the budget claims; every page again with JavaScript off, and the homepage with `script.js` blocked and late; the skip link, Back, the theme switch, back to top and the nav bar at every width; the listen control and its player; the Assay; where jumps land while sections are drawn on demand, that reading back up after skipping ahead moves nothing, find-in-page and printing, which loops run, and how busy the idle page keeps the main thread at 4× CPU slowdown; the carbon-ai page's dropdowns and numbers; and the visit counter's one request, taken apart: exactly the documented fields, no cookie, no Referer, once per page view, and nothing under Do Not Track or Global Privacy Control or with JavaScript off (its own CI job; needs Chromium — `-- --browser firefox` runs it in Firefox, which CI also does) |
@@ -352,7 +354,17 @@ The suites, and the failure each one exists to prevent:
   and through the real page; the input/output token split; the evidence
   ledger, which fails if any factor loses its source, range or review date;
   and the one number formatter both AI pages share: no exponent notation and
-  no "0.0" for something that is not zero, from 1e-14 to 1e24.
+  no "0.0" for something that is not zero, from 1e-14 to 1e24. Anatomy of a
+  Prompt is fetched only as its section nears, draws the calculator's own
+  figures, says whose report its Scope lines are on, and keeps every label at
+  11px or more inside the drawing, from a 320px phone to a desktop; nothing
+  tells a reader to drag the grid, which is a dropdown.
+- **`sections.test.js`** — the shorter homepage: experience as short cards on
+  a phone, each More button named for its role, and nothing taken out of the
+  page; the contact form before the Assay; Skills and Education shortened by
+  their repetition, never a fact (every area, framework, degree and
+  certificate stays, and each figure taken out of Skills is still on the page
+  with the role it belongs to).
 - **`assay.test.js`** — the paste-a-job-ad fit check: an ad asking for fluent
   Dutch, 5+ years at a Big Four firm and SAP gets every one of those as a gap
   and not the top grade; ads that do fit still grade well, with evidence
@@ -385,9 +397,9 @@ The suites, and the failure each one exists to prevent:
   "certified across", "if a skill is listed, there's a project behind it")
   stay gone, the field report names no tool the homepage does not show, the
   two illustrative numbers (the 30% blind-drilling baseline and the You Draw
-  It guess line) say so wherever they are shown, You Draw It judges a guess
-  against the published range rather than calling an estimate the actual
-  value, and Anatomy says whose report its Scope lines are on.
+  It guess line) say so wherever they are shown, and You Draw It judges a
+  guess against the published range rather than calling an estimate the
+  actual value.
 - **`portfolio.test.js`** — every case study has all four stages and every
   result a basis; no artifact claims to be public without a working link; the
   lenses reorder without ever dropping a case study; and the validator is fed
@@ -752,11 +764,11 @@ every run of `npm test`, and the build fails when they are exceeded.
 
 | Budget | Measured | Ceiling |
 |---|---|---|
-| First view of the homepage, over the wire (fonts included) | ~282 KB | 300 KB |
-| Everything a full visit adds on demand (modules, scripts, map) | ~69 KB | 72 KB |
+| First view of the homepage, over the wire (fonts included) | ~281 KB | 300 KB |
+| Everything a full visit adds on demand (modules, scripts, map) | ~70 KB | 72 KB |
 | Case studies page, over the wire (fonts included) | ~94 KB | 120 KB |
 | Research outputs page, over the wire (fonts included) | ~90 KB | 110 KB |
-| AI, Weighed (`carbon-ai.html`), over the wire (fonts included) | ~106 KB | 111 KB |
+| AI, Weighed (`carbon-ai.html`), over the wire (fonts included) | ~107 KB | 111 KB |
 | Text-only field report, the HTML file (the size the footer quotes) | ~9 KB | 12 KB |
 | Text-only field report, over the wire (with its visit counter) | ~6 KB | 8 KB |
 | Largest single image | ~200 KB | 220 KB |
@@ -792,11 +804,12 @@ each file the moment it is first needed:
 
 | Module | Loads when | Gzipped |
 |---|---|---|
-| `modules/interactives.js` (+ `ai-carbon-data.js`) | section 05 or the footer receipt comes within a screen of the viewport, or a deep link lands there | ~35 KB |
+| `modules/interactives.js` (+ `ai-carbon-data.js`) | section 05, the Assay or the footer receipt comes within a screen of the viewport, or a deep link lands there | ~31 KB |
 | `modules/dispatch.js` (+ `dispatch.css`, `voice-scripts.js`) | the first press of Listen, or `voice` in the terminal | ~16 KB |
 | `modules/dossier.js` | a project dossier with a mini-game is opened | ~6 KB |
 | `modules/terminal.js` | the backtick key or the footer button | ~5 KB |
 | `assets/timezones.json` | the journey map arrives, for its "you?" mark (the zone is looked up in the page, never sent) | ~2 KB |
+| `modules/anatomy.css` + `anatomy.js`, on `carbon-ai.html` | Anatomy of a Prompt comes within 400px of the screen (`carbon-ai.js` fetches them) | ~5 KB |
 
 Modules are classic scripts sharing the page's global scope: they declare
 nothing at the top level and reach the core only through `window.mks`. The

@@ -176,6 +176,28 @@
             </div>
         </section>
 
+        <!-- Drawn by modules/anatomy.js as the section nears (carbon-ai.js);
+             until then, and without JavaScript, it is this text. -->
+        <section class="ca-method ca-anatomy" id="anatomy" aria-labelledby="anatomyTitle">
+            <h2 id="anatomyTitle">Anatomy of a prompt</h2>
+            <p>
+                A sustainability report doesn't want one number: it wants the right number on the right
+                disclosure line. This is where the query set up in the calculator lands on a CSRD report,
+                for whoever runs the model.
+            </p>
+            <div id="anatomyDraw" hidden></div>
+            <p class="anatomy-foot">
+                Boundary: inference only, as in the calculator, on the report of whoever runs the model (its
+                provider, or you if you host it). There, grid electricity (data-centre overhead included) is
+                Scope 2, cooling water is ESRS E3, and embodied hardware is Scope 3 (capital goods), which
+                this page does not quantify: no per-query factor for it is sourced well enough for the
+                evidence ledger. Buying answers from a hosted model, as most teams do, the carbon is your
+                Scope 3, category 1 (purchased services), and the water is in your value chain, not your own
+                E3-4 consumption. The numbers are the calculator's own: its model, grid, water profile,
+                tokens and PUE.
+            </p>
+        </section>
+
         <section class="ca-method">
             <h2>Methodology</h2>
             <p>
@@ -197,7 +219,7 @@
             <div class="ca-disclaimer">
                 <strong>Caveat:</strong> covers <em>inference only</em>. Training is amortised across millions of
                 queries and is not modelled here. Embodied carbon of the hardware is
-                excluded, here<span class="ca-needs-js"> and in <a href="index.html#anatomy">Anatomy of a Prompt</a> on the homepage</span>: no
+                excluded, here and in <a href="#anatomy">Anatomy of a Prompt</a> above: no
                 per-query factor for it has a source good enough to use. Water counts on-site
                 cooling only, not the water used to generate the electricity. Use as a relative
                 comparator, not an absolute audit. The full prototype lives at

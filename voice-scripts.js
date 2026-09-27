@@ -60,13 +60,13 @@
         },
         {
             id: "ecoprompt",
-            label: "the A.I. carbon widget",
-            text: "This is a live slice of my current research. Pick a model and a workload, and see what a single A.I. answer costs the planet — in energy, in carbon, and in water, in units you can actually feel. But before the numbers: have a guess. The three smallest models are already plotted for you. Drag across the chart to predict the rest, from mid-size models up to a frontier reasoning model — then reveal what the research estimates. A straight line is the natural guess. It isn't one. The gap between that guess and what the research estimates is, more or less, my entire job."
+            label: "the A.I. energy chart",
+            text: "This is one question from my current research: how much energy does a single A.I. answer take as the models get bigger? Have a guess. The three smallest models are already plotted for you. Drag across the chart to predict the rest, from mid-size models up to a frontier reasoning model — then reveal what the research estimates. A straight line is the natural guess. It isn't one. The gap between that guess and what the research estimates is, more or less, my entire job. The full calculator — any model, any electricity grid, and where one answer lands on a sustainability report — is on its own page, the EcoPrompt Coach."
         },
         {
             id: "skills",
             label: "the skills section",
-            text: "No made-up percentages here. Every tool comes with the receipt of where it earned its place. Python — for the global river-export pollution analysis behind my master's thesis. Q.G.I.S. and Arc.G.I.S. — for groundwater maps that struck water seven times out of ten. S.Q.L. — from real business cases in my data analytics training. Tableau — on those same business cases. Machine learning, from the Google Advanced Data Analytics certificate. And JavaScript — which built the live widget sitting further up this very page. Alongside those: E.S.G. analysis, greenhouse gas accounting across scopes one to three, climate risk assessment, and water resource management. Each tool I named links to where it earned its place. Click through and check."
+            text: "No made-up percentages here. Every tool comes with the receipt of where it earned its place. Python — for the global river-export pollution analysis behind my master's thesis. Q.G.I.S. and Arc.G.I.S. — for groundwater maps that struck water seven times out of ten. S.Q.L. — from real business cases in my data analytics training. Tableau — on those same business cases. Machine learning, from the Google Advanced Data Analytics certificate. And JavaScript — which built the EcoPrompt Coach, the carbon calculator one link away. Alongside those: E.S.G. analysis, greenhouse gas accounting across scopes one to three, climate risk assessment, and water resource management. Each tool I named links to where it earned its place. Click through and check."
         },
         {
             id: "education",
@@ -81,7 +81,7 @@
         {
             id: "contact",
             label: "the contact section",
-            text: "I'm open to roles and consulting in sustainability, climate risk and E.S.G. — in Amsterdam and the E.U., and remote-friendly. If you're working on something at the intersection of climate, water or A.I., let's talk. I usually reply within a couple of days. And before you decide — there's a tool just below this. Paste in a job description, and it grades how well my record fits the role, mapping each requirement to the evidence that backs it, and listing the ones this site can't show. It runs entirely in your browser. The text never leaves this page, and no A.I. model is downloaded to do it. Doing that in a few kilobytes instead of a gigabyte-sized model is, more or less, the whole point of my work."
+            text: "I'm open to roles and consulting in sustainability, climate risk and E.S.G. — in Amsterdam and the E.U., and remote-friendly. If you're working on something at the intersection of climate, water or A.I., let's talk. I usually reply within a couple of days. And if you're still deciding, there's a tool below the form. Paste in a job description, and it grades how well my record fits the role, mapping each requirement to the evidence that backs it, and listing the ones this site can't show. It runs entirely in your browser. The text never leaves this page, and no A.I. model is downloaded to do it. Doing that in a few kilobytes instead of a gigabyte-sized model is, more or less, the whole point of my work."
         }
     ];
 

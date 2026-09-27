@@ -228,42 +228,48 @@ function assert(cond, msg) {
     assert(open.length === 0, 'Bug6: the listen control reports aria-expanded="false" on load');
 }
 
-// --- Bug 8: "AI, Weighed" spends the split each workload's label promises ---
-// Every preset used to be spent at a 50/50 mix whatever its label said, so a
-// "1,000 in / 8,000 out" reasoning run came out a third too light.
+// --- Bug 8: the calculator spends the split it is given ---
+// The homepage's "AI, Weighed" presets were spent at a 50/50 mix whatever
+// their labels said, so a "1,000 in / 8,000 out" reasoning run came out a
+// third too light. That calculator did the same job as the one on
+// carbon-ai.html and has been merged into it, where the split is typed in;
+// this holds that page to it, and the homepage to having no second one.
 {
-    const { window } = run('dark');
-    const doc = window.document;
-    const data = window.AICarbonData;
-    const preset = doc.getElementById('ecoPreset');
-    const model = data.MODELS[data.HOMEPAGE_MODELS[0]];
+    const fs = require('fs');
+    const path = require('path');
+    const { JSDOM } = require('jsdom');
+    const read = (rel) => fs.readFileSync(path.join(__dirname, '..', rel), 'utf8');
 
-    Array.from(preset.options).forEach((opt) => {
-        const nums = (opt.textContent.match(/([\d,]+) in \/ ([\d,]+) out/) || []).slice(1).map(n => Number(n.replace(/,/g, '')));
-        assert(
-            nums.length === 2 && nums[0] === Number(opt.dataset.in) && nums[1] === Number(opt.dataset.out),
-            `Bug8: the "${opt.value}" workload's data matches its label (${nums.join('/')} vs ${opt.dataset.in}/${opt.dataset.out})`
-        );
+    const home = run('dark').window.document;
+    assert(!home.querySelector('#ecoModel, #ecoPreset, .eco-widget'), 'Bug8: the homepage carries no second calculator (it is on carbon-ai.html)');
+
+    const w = new JSDOM(read('carbon-ai.html'), { runScripts: 'outside-only', url: 'https://example.com/carbon-ai.html' }).window;
+    w.eval(read('ai-carbon-data.js'));
+    w.eval(read('carbon-ai.js'));
+    w.document.dispatchEvent(new w.Event('DOMContentLoaded'));
+    const doc = w.document;
+    const data = w.AICarbonData;
+    const set = (id, v) => { const el = doc.getElementById(id); el.value = String(v); el.dispatchEvent(new w.Event('input', { bubbles: true })); };
+
+    set('modelSelect', 'gpt-4o');
+    set('pue', data.PUE);
+    set('inputTokens', 1000);
+    set('outputTokens', 8000);
+    const shown = Number(doc.getElementById('outEnergy').textContent);
+    const expected = data.energyForQuery(data.MODELS['gpt-4o'], 1000, 8000) * data.PUE;
+    assert(Math.abs(shown - expected) / expected < 0.01, `Bug8: a reasoning run is costed at 1,000 in / 8,000 out (${shown} Wh vs ${expected.toFixed(3)})`);
+
+    // Small is not zero: the smallest model's quick question, on every grid.
+    set('modelSelect', 'llama-32-1b');
+    set('inputTokens', 100);
+    set('outputTokens', 300);
+    const cells = [];
+    Array.from(doc.getElementById('regionSelect').options).forEach((g) => {
+        set('regionSelect', g.value);
+        cells.push(...Array.from(doc.querySelectorAll('#outCarbon, #outWater, #outEnergy')).map(e => e.textContent.trim()));
     });
-
-    doc.getElementById('ecoModel').value = '0';
-    preset.value = 'reasoning';
-    preset.dispatchEvent(new window.Event('change'));
-    const shown = Number(doc.getElementById('ecoEnergy').textContent);
-    const expected = data.energyForQuery(model, 1000, 8000) * data.PUE;
-    assert(Math.abs(shown - expected) / expected < 0.05, `Bug8: a reasoning run is costed at 1,000 in / 8,000 out (${shown} Wh vs ${expected.toFixed(2)})`);
-
-    // Small is not zero.
-    const cells = Array.from(doc.querySelectorAll('#ecoCarbon, #ecoWater, #ecoEnergy, .eco-bar-val')).map(e => e.textContent.trim());
-    const grids = doc.getElementById('ecoGrid');
-    Array.from(grids.options).forEach((g) => {
-        grids.value = g.value;
-        preset.value = 'short';
-        grids.dispatchEvent(new window.Event('change'));
-        cells.push(...Array.from(doc.querySelectorAll('#ecoCarbon, .eco-bar-val')).map(e => e.textContent.trim()));
-    });
-    const zeros = cells.filter(t => /^0\.0+( g)?$/.test(t));
-    assert(zeros.length === 0, `Bug8: no non-zero footprint is printed as 0.000 (${[...new Set(zeros)].join(', ') || 'none'})`);
+    const zeros = cells.filter(t => /^0(\.0+)?$/.test(t));
+    assert(cells.length > 30 && zeros.length === 0, `Bug8: no non-zero footprint is printed as 0 (${[...new Set(zeros)].join(', ') || 'none'} in ${cells.length})`);
 }
 
 // --- Bug 10: opening the terminal twice still returns focus on close ---
@@ -376,7 +382,10 @@ const formChecks = (async () => {
     // --- Bug 9: a copy button gets its icon back after "Copied ✓" ---
     {
         const { window, clock } = run('dark', { clock: true });
-        const btn = window.document.getElementById('anatomyCopy');
+        // The Assay's copy button: Anatomy's, the first one reported, is on
+        // carbon-ai.html now, with its own copy (tests/carbon.test.js).
+        window.document.querySelector('.assay-sample').click();
+        const btn = window.document.querySelector('.assay-copy');
         const before = btn.innerHTML;
         window.navigator.clipboard = { writeText: async () => {} };
         await window.mks.share.copy('x', btn);

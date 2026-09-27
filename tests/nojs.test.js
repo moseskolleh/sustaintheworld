@@ -99,11 +99,12 @@ function rules(css) {
 // ===================================================================
 {
     // Without JavaScript every dossier is open already and the section-05
-    // widgets are a note, so "click any one to open" and "the live widget"
-    // described nothing a reader could do.
+    // chart is a note, so "click any one to open" described nothing a
+    // reader could do. ("The live widget on this page", in the toolkit, went
+    // with the calculator to carbon-ai.html; the link says where it is now.)
     const { JSDOM } = require('jsdom');
     const doc = new JSDOM(html).window.document;
-    ['click any one to open', 'the live widget on this page', 'Watch the route unfold'].forEach((phrase) => {
+    ['click any one to open', 'Watch the route unfold'].forEach((phrase) => {
         const holders = Array.from(doc.querySelectorAll('body *'))
             .filter(el => Array.from(el.childNodes).some(n => n.nodeType === 3 && n.textContent.includes(phrase)));
         assert(holders.length > 0 && holders.every(el => el.closest('.needs-js')), `Copy: "${phrase}" is inside .needs-js, so it goes when JavaScript cannot run`);

@@ -11,7 +11,7 @@
 // ===================================================================
 
 // Model, grid, and water-cooling data come from the shared single source of
-// truth (ai-carbon-data.js) so this tool and the homepage "AI, Weighed" widget
+// truth (ai-carbon-data.js) so this tool and the homepage's You Draw It chart
 // can never quote different numbers.
 const _AICD = (typeof window !== 'undefined' && window.AICarbonData)
     ? window.AICarbonData
@@ -272,6 +272,19 @@ if (typeof document !== 'undefined') {
             return;
         }
 
+        // What the calculator is set to, for Anatomy of a Prompt
+        // (modules/anatomy.js), which draws the same query with this
+        // file's calculate() rather than inputs and sums of its own.
+        let current = null;
+        const followers = [];
+        window.EcoPromptCoach = {
+            calculate,
+            onChange(fn) {
+                followers.push(fn);
+                if (current) fn(current);
+            }
+        };
+
         // Option text is kept to about 30 characters: a closed select cannot
         // wrap, and "Hyperscaler fleet average (~1.1 L/kWh — Google 2024)"
         // was cut off at every width from a 320px phone to a 1440px desktop.
@@ -302,7 +315,7 @@ if (typeof document !== 'undefined') {
         wueSelect.value = 'avg';
 
         // Every number on the page goes through the shared formatter in
-        // ai-carbon-data.js, the same one the homepage widget uses. The
+        // ai-carbon-data.js, the same one Anatomy of a Prompt uses. The
         // local one printed "9.46e-4 km" and "0.0 smartphone charges".
         // Measured outputs keep two significant figures down to a millionth,
         // so a small model on a clean grid still differs from a smaller one;
@@ -374,6 +387,8 @@ if (typeof document !== 'undefined') {
 
             renderChart(params);
             renderTips(params);
+            current = params;
+            followers.forEach((fn) => fn(params));
         }
 
         function renderChart(params) {
@@ -543,5 +558,24 @@ if (typeof document !== 'undefined') {
         });
 
         update();
+
+        // Anatomy of a Prompt (modules/anatomy.css, then .js) is fetched as
+        // its section comes near: a visit that stays with the calculator
+        // never pays for it. Without the observer it stays as text.
+        const anatomy = document.getElementById('anatomy');
+        if (anatomy && typeof IntersectionObserver === 'function') {
+            let asked = false;
+            const io = new IntersectionObserver((entries) => {
+                if (asked || !entries.some(e => e.isIntersecting)) return;
+                asked = true;
+                io.disconnect();
+                const css = Object.assign(document.createElement('link'), { rel: 'stylesheet', href: 'modules/anatomy.css' });
+                css.onload = () => document.head.appendChild(Object.assign(document.createElement('script'), { src: 'modules/anatomy.js' }));
+                document.head.appendChild(css);
+                // Named as the homepage names its modules, for count.js.
+                if (window.mks && typeof window.mks.track === 'function') window.mks.track('module-anatomy');
+            }, { rootMargin: '400px 0px' });
+            io.observe(anatomy);
+        }
     });
 }

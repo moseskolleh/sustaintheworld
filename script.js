@@ -214,7 +214,7 @@ const mksLoadWarn = (err) => {
 // The parts of the page owned by modules/interactives.js. A deep link or an
 // in-page anchor into one of these loads the module before the page scrolls
 // there, so a shared /#ydi lands on a working widget rather than an empty box.
-const INTERACTIVE_HOSTS = '#ecoprompt, #ydi, #anatomy, #assay, #receiptPanel, #receiptBtn';
+const INTERACTIVE_HOSTS = '#ecoprompt, #ydi, #assay, #receiptPanel, #receiptBtn';
 const mksLoadFor = (target) => {
     if (!target || typeof target.closest !== 'function') return;
     if (target.closest(INTERACTIVE_HOSTS)) mksLoad('interactives').catch(mksLoadWarn);
@@ -1314,7 +1314,7 @@ document.querySelectorAll('.current-year').forEach(el => {
 // ===================================
 // INTERACTIVES — the trigger
 // ===================================
-// "AI, Weighed", You Draw It, Anatomy of a Prompt, The Assay and The Receipt
+// You Draw It in "AI, Weighed", The Assay and The Receipt
 // (modules/interactives.js, with ai-carbon-data.js behind them) load when
 // any of their homes comes within about a screen of the viewport, so they
 // are drawn by the time the visitor arrives — and on the first press of one
@@ -1353,6 +1353,44 @@ document.querySelectorAll('.current-year').forEach(el => {
         mksLoad('interactives')
             .then(() => btn.click(), mksLoadWarn)
             .then(() => waiting.delete(btn));
+    });
+})();
+
+// ===================================
+// EXPERIENCE — short cards on a phone
+// ===================================
+// Below 600px style.css shows each role as its title, organisation, dates
+// and first line, and keeps the rest of the card until it is asked for:
+// the whole log was 5.3 screens on a 390px phone. The button that asks is
+// made here, because nothing could press it without this script; above
+// 600px it is not shown and every card is whole.
+(() => {
+    document.querySelectorAll('.corelog-item .timeline-content').forEach((card, i) => {
+        const list = card.querySelector('ul');
+        if (!list || (list.children.length < 2 && !card.querySelector('.tags'))) return;
+        if (!list.id) list.id = `corelog-more-${i + 1}`;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'corelog-more';
+        btn.setAttribute('aria-controls', list.id);
+        // Five buttons that all say "More" are one name five times in a
+        // screen reader's list of controls; each is told apart by its role.
+        const word = document.createTextNode('');
+        const role = document.createElement('span');
+        role.className = 'sr-only';
+        role.textContent = ` about ${(card.querySelector('h3') || {}).textContent || 'this role'}`;
+        btn.append(word, role);
+        const show = (open) => {
+            card.classList.toggle('is-open', open);
+            btn.setAttribute('aria-expanded', String(open));
+            word.textContent = open ? 'Less' : 'More';
+        };
+        show(false);
+        btn.addEventListener('click', () => {
+            show(!card.classList.contains('is-open'));
+            document.dispatchEvent(new CustomEvent('mks:layout'));
+        });
+        card.appendChild(btn);
     });
 })();
 
