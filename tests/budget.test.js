@@ -79,10 +79,13 @@ try {
 
         // With the lengths smoke measured.
         const file = path.join(tmp, 'length.json');
-        fs.writeFileSync(file, JSON.stringify(lengthsFile((page, vp) => LENGTH[page][vp] / 2, 7)));
+        // The homepage at 5 screens on a desktop, whatever its ceiling is now
+        // (the ratchet moves it); every other length at half its ceiling.
+        fs.writeFileSync(file, JSON.stringify(lengthsFile((page, vp) => (page === 'index.html' && vp === '1440x900' ? 5 : LENGTH[page][vp] / 2), 7)));
         const withLengths = JSON.parse(run('--json', '--lengths', file).stdout);
         const home = withLengths.length['index.html']['1440x900'];
-        assert(home.measured === 5 && home.headroom === 5 && home.couldLowerTo === 5.25,
+        const room = Math.round((LENGTH['index.html']['1440x900'] - 5) * 100) / 100;
+        assert(home.measured === 5 && home.headroom === room && home.couldLowerTo === 5.25,
             `--json --lengths: a measured length, its headroom and what it could come down to (${JSON.stringify(home)})`);
         const stats = withLengths.length['stats.html']['1440x900'];
         assert(stats.measured === 7, `--json --lengths: stats.html reads as its longer, drawn-full length (${stats.measured})`);
@@ -178,7 +181,10 @@ try {
         assert(JSON.stringify(Object.keys(LENGTH).sort()) === JSON.stringify(pages), `Length: every page at the root has a length budget, and every budget is a page (${Object.keys(LENGTH).length} of ${pages.length})`);
         assert(JSON.stringify(Object.keys(VIEWPORTS)) === '["1440x900","390x844"]' && VIEWPORTS['390x844'].width === 390 && VIEWPORTS['1440x900'].height === 900,
             'Length: measured at 1440×900 and 390×844, the sizes the accessibility pass uses');
-        assert(LENGTH['index.html']['1440x900'] === 10 && LENGTH['index.html']['390x844'] === 18, 'Length: the homepage is held to the plan\'s targets, 10 and 18 screens');
+        // The plan's targets were its first ceilings; the ratchet has only
+        // lowered them since (step 2.9: measured plus 5%), never above.
+        assert(LENGTH['index.html']['1440x900'] <= 10 && LENGTH['index.html']['390x844'] <= 18,
+            `Length: the homepage is held to the plan's targets, 10 and 18 screens, or below (${LENGTH['index.html']['1440x900']} and ${LENGTH['index.html']['390x844']})`);
         const odd = Object.entries(LENGTH).filter(([, vps]) => Object.keys(vps).join() !== Object.keys(VIEWPORTS).join() || Object.values(vps).some(c => !(c >= 1)));
         assert(odd.length === 0, `Length: every ceiling is at both sizes and at least one screen (${odd.map(e => e[0]).join(', ') || 'all'})`);
         assert(budget.heldLength({ screens: 4.38, full: { screens: 10.06 } }) === 10.06 && budget.heldLength({ screens: 5 }) === 5, 'Length: a page drawn full is held at its longer length');

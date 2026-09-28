@@ -193,6 +193,37 @@ PAGES.forEach((page) => {
     assert(hiddenWithTabindex.length === 0, `${page}: nothing is both aria-hidden and focusable`);
 });
 
+// --- Every icon a page draws is in that page's sprite ---------------------
+// A <use> whose symbol is not there draws nothing, silently. index.html's
+// sprite is one long line several changes touch at once (eleven unused
+// symbols came out of it in one), so this holds every icon to it: those in
+// the markup, and those the page's scripts write, the modules it fetches
+// included (named outright, or by the few templates that pick one).
+PAGES.forEach((page) => {
+    const html = read(page);
+    const symbols = new Set((html.match(/<symbol\b[^>]*\bid=["']([^"']+)["']/gi) || []).map(t => attr(t, 'id')));
+    const scripts = new Set((html.match(/<script\b[^>]*\bsrc=["'][^"']+["']/gi) || []).map(t => attr(t, 'src')).filter(src => !/^(https?:)?\/\//.test(src)));
+    const inline = (html.match(/<script(?![^>]*\bsrc=)[^>]*>[\s\S]*?<\/script>/gi) || []).join('\n');
+    // Code only: a module a comment mentions is not one the page fetches.
+    const source = (src) => (fs.existsSync(path.join(ROOT, src)) ? fs.readFileSync(path.join(ROOT, src), 'utf8') : '')
+        .replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    // The modules a page's own scripts fetch (script.js's MODULES, the case
+    // studies' loader, carbon-ai.html's Anatomy) are named in them as paths.
+    [inline, ...Array.from(scripts).map(source)]
+        .forEach(text => (text.match(/modules\/[\w-]+\.js/g) || []).forEach(m => scripts.add(m)));
+    const code = inline + Array.from(scripts).map(source).join('\n');
+    const drawn = new Set([
+        ...(html.match(/<use\b[^>]*\bhref=["']#([^"']+)["']/gi) || []).map(t => attr(t, 'href').slice(1)),
+        ...(code.match(/#i-[a-z0-9-]+/g) || []).map(m => m.slice(1)),
+        // `#i-${light ? 'sun' : 'moon'}`, setIcon('pause'), icon: 'fa-leaf'
+        ...(code.match(/#i-\$\{[^}]*\?[^}]*\}/g) || []).flatMap(t => (t.match(/'([a-z0-9-]+)'/g) || []).map(q => `i-${q.slice(1, -1)}`)),
+        ...(/#i-\$\{name\}/.test(code) ? (code.match(/setIcon\('([a-z0-9-]+)'\)/g) || []).map(m => `i-${m.slice(9, -2)}`) : []),
+        ...(/#i-\$\{t\.icon\.replace\('fa-', ''\)\}/.test(code) ? (code.match(/icon: 'fa-([a-z0-9-]+)'/g) || []).map(m => `i-${m.slice(10, -1)}`) : [])
+    ].filter(id => id.startsWith('i-') && !/^i-(\$|$)/.test(id)));
+    const missing = Array.from(drawn).filter(id => !symbols.has(id));
+    assert(missing.length === 0, `${page}: every icon it draws (${drawn.size}) is a <symbol> in its sprite (missing: ${missing.join(', ') || 'none'})`);
+});
+
 // --- Structured data ------------------------------------------------------
 // A <script type="application/ld+json"> block is raw text: HTML entities are
 // NOT decoded inside it. Escaping an ampersand there — which is the right

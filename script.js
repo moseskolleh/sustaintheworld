@@ -1071,14 +1071,20 @@ if (contactForm) {
 // says what pressing it does, which also tells the current theme.
 const initThemeToggle = () => {
     const toggle = document.getElementById('themeToggle');
-    if (!toggle) return;
     const sync = () => {
+        syncThemeColor();
+        if (!toggle) return;
         const isLightMode = document.body.classList.contains('light-mode');
         const use = toggle.querySelector('use');
         if (use) use.setAttribute('href', `#i-${isLightMode ? 'sun' : 'moon'}`);
         toggle.setAttribute('aria-label', isLightMode ? 'Switch to dark theme' : 'Switch to light theme');
     };
     sync();
+    // Back to a page kept whole: the choice may have changed elsewhere since.
+    window.addEventListener('pageshow', (e) => {
+        if (e.persisted && mks.theme) { mks.theme(); sync(); }
+    });
+    if (!toggle) return;
     toggle.hidden = false;
 
     toggle.addEventListener('click', () => {
@@ -1086,7 +1092,6 @@ const initThemeToggle = () => {
         const isLightMode = document.body.classList.contains('light-mode');
         safeStorage.local.set('theme', isLightMode ? 'light' : 'dark');
         sync();
-        syncThemeColor();
     });
 };
 
@@ -1102,13 +1107,9 @@ const syncThemeColor = () => {
 const THEME_COLOR_DARK = '#0a0a0a';
 const THEME_COLOR_LIGHT = '#f4f6f0';
 
-// Restore saved preference, then mount the toggle
-const currentTheme = safeStorage.local.get('theme', 'dark');
-if (currentTheme === 'light') {
-    document.body.classList.add('light-mode');
-}
+// The theme is on the page already (mks.theme, atop index.html's <body>);
+// the switch and the browser bar follow it.
 initThemeToggle();
-syncThemeColor();
 
 // ===================================
 // KEYBOARD NAVIGATION

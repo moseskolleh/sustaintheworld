@@ -325,6 +325,30 @@ const text = (el) => (el ? el.textContent.replace(/\s+/g, ' ').trim() : '');
     assert(+still.doc.querySelector('#floodStage rect.fl-water[x="252"]').getAttribute('y') === 222, 'Flood: under reduced motion the river is set at once');
 }
 
+// A frame stamped before the input that started it. Chromium hands
+// requestAnimationFrame the time its frame began, which can be earlier than
+// the performance.now() read in the handler that asked for it; the easing
+// went below zero, the overbank sheet was drawn -0.4 units tall (a console
+// error in Chromium; jsdom does not check, so the heights are read here) and
+// a smoke run failed about one time in three.
+{
+    const flood = boot();
+    const slider = flood.doc.getElementById('floodSlider');
+    slider.value = '3';
+    slider.dispatchEvent(new flood.window.Event('input', { bubbles: true }));
+    flood.flush(flood.window.performance.now() - 40);
+    const rects = Array.from(flood.doc.querySelectorAll('#floodStage rect.fl-water')).map(r => +r.getAttribute('height'));
+    assert(rects.length === 2 && rects.every(h => h >= 0), `Early frame: the water is never drawn with a negative height (${rects.join(', ')})`);
+
+    const drill = boot();
+    click(drill.window, drill.doc.getElementById('drillBtn'));
+    drill.flush(drill.window.performance.now() - 40);
+    // y2 is written to one place, y1 is the surface as computed.
+    const hole = drill.doc.querySelector('#boreholeStage .bh-hole');
+    const [top, end] = hole ? [+(+hole.getAttribute('y1')).toFixed(1), +hole.getAttribute('y2')] : [];
+    assert(!!hole && end >= top, `Early frame: the drill never runs up out of the ground (from ${top} to ${end})`);
+}
+
 // ===================================================================
 // A game arriving above the reader does not move what they are reading
 // ===================================================================

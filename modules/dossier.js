@@ -280,7 +280,7 @@
             const t0 = performance.now();
             const step = (t) => {
                 if (run !== drillRun) return; // site was reset mid-drill
-                const p = Math.min(1, (t - t0) / 900);
+                const p = Math.min(1, Math.max(0, (t - t0) / 900));
                 hole.setAttribute('y2', (sy + (HOLE_BOTTOM - sy) * p).toFixed(1));
                 if (p < 1) requestAnimationFrame(step);
                 else finishHole(x);
@@ -413,7 +413,9 @@
             if (instant || calm()) { apply(1); return; }
             const t0 = performance.now();
             const step = (t) => {
-                const p = Math.min(1, (t - t0) / 650);
+                // Held at 0 (the drill's too): a frame's time is when it began,
+                // often before t0, and below 0 the ease-out drew a negative height.
+                const p = Math.min(1, Math.max(0, (t - t0) / 650));
                 apply(p * (2 - p)); // ease-out
                 anim = p < 1 ? requestAnimationFrame(step) : null;
             };

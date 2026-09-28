@@ -2441,6 +2441,10 @@ html.js .reveal.visible {
     html.js .reveal { opacity: 1; transform: none; }
     /* An anchor jump is not animated across 11,000px either. */
     html { scroll-behavior: auto; }
+    /* The theme is set as <body> opens, and a style pass can fall just
+       before it: body's colour then eased from dark's white, and all drawn
+       in that frame kept the white, on light, until next restyled. */
+    body { transition: none !important; }
 }
 
 /* Drawn as it nears the screen, sized by estimate until then (script.js

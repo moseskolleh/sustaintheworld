@@ -16,7 +16,8 @@
 // where a script can drive it, the hand-authored pages' regions exactly as
 // build-content.js writes them, theme.js from a stored choice or the
 // system's, pressed, with storage blocked and back from the page cache,
-// one choice shared with the homepage's script.js, and the light palette,
+// one choice shared with the homepage's script.js, the homepage with none
+// opening in the theme theme.js would (mks.theme), and the light palette,
 // twice and the same, the homepage's. What needs a real browser (both
 // themes through axe, the choice followed from page to page, every page at
 // 320px) is in scripts/smoke.js.
@@ -325,8 +326,80 @@ const state = (doc) => {
         here.doc.getElementById('themeToggle').click();
         const back = run(here.window.localStorage.getItem('theme'), quiet);
         assert(back.window.document.body.classList.contains('light-mode'), 'Shared: light chosen here is the homepage\'s theme too');
-        home.window.close();
-        back.window.close();
+        // Left open: a homepage closed while the suite still awaits has its
+        // timers fire into a window with no document.
+    }
+
+    // --- the homepage with nothing stored: the system's, as here -------------
+    // It opened dark whatever the system said, so a reader on a light system
+    // who had never pressed a switch met light on every page but the first.
+    // mks.theme, the first thing in index.html's <body>, decides now, by the
+    // rule theme.js uses: a stored choice, else the system's, else dark.
+    {
+        const system = (scheme) => (w) => {
+            w.console.log = () => {};
+            if (scheme === 'none') return;
+            w.matchMedia = (q) => ({ matches: q === '(prefers-color-scheme: light)' && scheme === 'light', media: q,
+                addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} });
+        };
+        const home = (stored, scheme, storage) => {
+            const r = run(stored, { before: system(scheme), storage });
+            const doc = r.window.document;
+            const b = doc.getElementById('themeToggle');
+            const s = {
+                light: doc.body.classList.contains('light-mode'),
+                name: b.getAttribute('aria-label'),
+                icon: b.querySelector('use').getAttribute('href'),
+                bar: doc.querySelector('meta[name="theme-color"]').getAttribute('content'),
+                stored: storage === 'blocked' ? null : r.window.localStorage.getItem('theme')
+            };
+            return Object.assign(r, { doc, s });
+        };
+
+        const html = read('index.html');
+        assert(/<body>\s*(?:<!--[\s\S]*?-->\s*)?<script>[^<]*\bmks\.theme\(\)<\/script>/.test(html),
+            'Homepage: mks.theme is the first thing in <body>, inline, so the theme is on the page before anything is drawn');
+        // A style pass can fall between <body> opening and mks.theme. Under
+        // reduced motion every element transitions for 0.01ms, so body's
+        // colour then eased from dark's white, and what was styled in that
+        // frame kept white text on the light page until next restyled (axe
+        // caught it, one smoke run in four). Body never transitions.
+        const calm = (read('style.css').match(/@media \(prefers-reduced-motion: reduce\) \{\s*\*, \*::before, \*::after \{[\s\S]*?\n\}/) || [''])[0];
+        assert(/transition-duration: 0\.01ms !important/.test(calm) && /\n\s*body \{ transition: none !important; \}/.test(calm),
+            'Homepage: under reduced motion, where everything else transitions for 0.01ms, body does not, so a theme set as it opens is not eased in');
+
+        const lit = home(undefined, 'light');
+        assert(lit.s.light && lit.s.name === 'Switch to dark theme' && lit.s.icon === '#i-sun' && lit.s.bar === '#f4f6f0' && lit.s.stored === null && lit.errors.length === 0,
+            `Homepage: a light system and nothing stored opens light, the switch and the browser bar with it, and nothing is stored for it (${JSON.stringify(lit.s)})`);
+        lit.doc.getElementById('themeToggle').click();
+        assert(!lit.doc.body.classList.contains('light-mode') && lit.window.localStorage.getItem('theme') === 'dark',
+            'Homepage: a press from the system\'s light is dark, and that choice is stored');
+        const dark = home(undefined, 'dark');
+        assert(!dark.s.light && dark.s.name === 'Switch to light theme' && dark.s.bar === '#0a0a0a', `Homepage: a dark system and nothing stored opens dark (${JSON.stringify(dark.s)})`);
+        const blocked = home(undefined, 'light', 'blocked');
+        assert(blocked.s.light && blocked.errors.length === 0, 'Homepage: with storage blocked it still follows a light system, without an error');
+
+        // The same answer as theme.js, for every choice and every system.
+        const differ = [];
+        for (const stored of [undefined, 'light', 'dark', 'purple']) {
+            for (const scheme of ['light', 'dark', 'none']) {
+                const h = home(stored, scheme);
+                const other = await open({ stored, system: scheme });
+                if (h.s.light !== (other.early.theme === 'light')) differ.push(`${stored}/${scheme}: home ${h.s.light ? 'light' : 'dark'}, theme.js ${other.early.theme}`);
+                other.window.close();   // the homepages stay open: closed, their timers throw
+            }
+        }
+        assert(differ.length === 0, `Homepage: it opens in the theme theme.js would, stored light, dark, junk or nothing, on a light, dark or older browser (${differ.join('; ') || 'all 12 agree'})`);
+
+        // Back to a homepage the browser kept whole, after light was chosen
+        // on another page: it takes up the choice, switch and bar with it.
+        const kept = home('dark', 'dark');
+        kept.window.localStorage.setItem('theme', 'light');
+        const shown = new kept.window.Event('pageshow');
+        shown.persisted = true;
+        kept.window.dispatchEvent(shown);
+        const now = { light: kept.doc.body.classList.contains('light-mode'), name: kept.doc.getElementById('themeToggle').getAttribute('aria-label'), bar: kept.doc.querySelector('meta[name="theme-color"]').getAttribute('content') };
+        assert(now.light && now.name === 'Switch to dark theme' && now.bar === '#f4f6f0', `Homepage: Back to a kept page takes up the choice made elsewhere since (${JSON.stringify(now)})`);
     }
 
     // ===================================================================

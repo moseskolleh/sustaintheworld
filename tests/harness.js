@@ -18,6 +18,10 @@ const { JSDOM } = require('jsdom');
 const ROOT = path.join(__dirname, '..');
 
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+// The first thing index.html's <body> runs: mks.theme, which puts the stored
+// or the system's theme on the page before its first paint. jsdom is told
+// to run no inline script, so the harness runs this one where the page does.
+const themeJs = (html.match(/<body>\s*(?:<!--[\s\S]*?-->\s*)?<script>([\s\S]*?)<\/script>/) || [])[1] || '';
 const js = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8');
 const voiceJs = fs.readFileSync(path.join(ROOT, 'voice-scripts.js'), 'utf8');
 const dataJs = fs.readFileSync(path.join(ROOT, 'ai-carbon-data.js'), 'utf8');
@@ -37,6 +41,7 @@ const moduleJs = MODULE_FILES.map((rel) => fs.readFileSync(path.join(ROOT, rel),
 
 /**
  * @param {string} theme  value seeded into localStorage before the script runs
+ *                        (null or undefined: nothing stored)
  * @param {object} options
  *   storage: 'ok' | 'blocked'   how window.localStorage/sessionStorage behave
  *   speech:  'none' | undefined  remove the speech synthesis API entirely
@@ -52,7 +57,7 @@ function run(theme, options) {
     const dom = new JSDOM(html, { runScripts: 'outside-only', pretendToBeVisual: true, url: 'https://example.com/' });
     const { window } = dom;
 
-    if (opts.storage !== 'blocked') {
+    if (opts.storage !== 'blocked' && theme != null) {
         // Seed localStorage before the script runs
         window.localStorage.setItem('theme', theme);
     }
@@ -110,8 +115,10 @@ function run(theme, options) {
     if (typeof opts.before === 'function') opts.before(window);
 
     // Execute the site scripts in the window context, in the order the
-    // browser would: the two data files a module depends on, the core, then
-    // the modules the core would have fetched on demand.
+    // browser would: the theme at the top of <body>, the two data files a
+    // module depends on, the core, then the modules the core would have
+    // fetched on demand.
+    window.eval(themeJs);
     window.eval(voiceJs);
     window.eval(dataJs);
     window.eval(js);
@@ -183,4 +190,4 @@ function fakeClock(window, errors) {
     return { tick, now: () => now, pending: () => timers.size };
 }
 
-module.exports = { run, ROOT, html, js, voiceJs, MODULE_FILES };
+module.exports = { run, ROOT, html, js, voiceJs, themeJs, MODULE_FILES };

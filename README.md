@@ -16,7 +16,7 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 - **"Don't let it become a boat" flood scene**: a schematic Wupper cross-section on the [Wuppertal case study](case-studies.html#play-flood) — slide the river from a calm day to July 2021 and watch the margin under the Schwebebahn's hanging cars shrink. Both games load only when a reader scrolls near them, and without JavaScript each is one line of summary
 - **Field terminal**: press <code>`</code> anywhere (or the footer button) for a hidden green-on-black terminal — try `journey`, `drill`, `co2`, `voice`, `kushe`, `help`
 - **The spoken page**: one `Listen` control in the nav reads the section in view with the browser's own speech engine, which transfers **zero bytes**. The one recording on the site is Moses introducing himself in his own voice, offered once he has recorded it, fetched only on click and labelled with exactly what it transfers (see [Narration](#narration-the-spoken-page)). Nothing ever autoplays
-- **Carbon-aware by construction**: images ship as optimized WebP, the three typefaces are self-hosted subsets, and a first view costs about **274 KB over the wire, fonts included**, against a 300 KB ceiling `npm test` enforces — a budget, not a number in a README, and one that `npm run smoke` checks against a real browser (see [Performance](#performance)). Everything a visit does not reach — the narration player, the field terminal, the section-05 interactives, the case studies' two games — is fetched only when it is used. Nothing is loaded from any other origin, and only two things are ever sent to one, both to the site's own Apps Script endpoint: a contact message, and one cookieless visit count per page view (never under Do Not Track or Global Privacy Control; see [The visit counter and privacy](#the-visit-counter-and-privacy)). A live footer badge weighs each visit in the browser (Resource Timing API × Sustainable Web Design model), counting network transfer only. A low-energy mode pauses all animation and honours `prefers-reduced-motion`
+- **Carbon-aware by construction**: images ship as optimized WebP, the three typefaces are self-hosted subsets, and a first view costs about **274 KB over the wire, fonts included**, against a 288 KB ceiling `npm test` enforces — a budget, not a number in a README, and one that `npm run smoke` checks against a real browser (see [Performance](#performance)). Everything a visit does not reach — the narration player, the field terminal, the section-05 interactives, the case studies' two games — is fetched only when it is used. Nothing is loaded from any other origin, and only two things are ever sent to one, both to the site's own Apps Script endpoint: a contact message, and one cookieless visit count per page view (never under Do Not Track or Global Privacy Control; see [The visit counter and privacy](#the-visit-counter-and-privacy)). A live footer badge weighs each visit in the browser (Resource Timing API × Sustainable Web Design model), counting network transfer only. A low-energy mode pauses all animation and honours `prefers-reduced-motion`
 - **[Case studies](case-studies.html), evidence-first**: the same six projects as **problem → method → artifact → result**. Every result carries the basis it rests on and says plainly whether you can check it from outside; every artifact says whether it is public, available on request, or held by the client. See [Content pipeline](#content-pipeline)
 - **Role-specific lenses**: `case-studies.html?lens=water`, `?lens=climate-risk`, `?lens=sustainable-ai` — shareable views that reframe the portfolio for one kind of role. They **reorder and frame, they never filter**: every case study stays on the page in every view, because a view that hides inconvenient work is a CV that lies by omission. Without JavaScript the switcher steps aside and every case study shows in the default view
 - **No dead ends**: every page but the homepage shares one small nav (Home, Case studies, Research, CV, Contact, with the page you are on marked) and ends with a way to reach Moses: his address, the contact form and the CV. The pages built on `carbon-ai.css` have the homepage's light theme and its switch, and keep the reader's choice from page to page (`theme.js`, before the first paint); with nothing chosen they follow the system's setting, with or without JavaScript. The text-only field report and the 404 page take the nav and the call to action as plain lines, and no script
@@ -27,7 +27,7 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 - **Evidence-first skills**: no invented percentages — every tool links to the project where it earned its place; the 164 water points are itemized in About
 - **The Assay**: under the contact form, behind one button, paste a job ad and get an honest fit, graded in the browser; the ad itself is never sent (the page view's count carries the grade, see [The visit counter and privacy](#the-visit-counter-and-privacy)). It lists matched evidence with links, and gaps (languages, years of experience, named tools, consulting-firm or director-level experience, financial modelling, a PhD or a law degree), first when they cap the grade; right to work, visa, clearance, driving licence, relocation and the level of English are named as things to confirm with Moses, never guessed. General skills (stakeholders, data, delivery, international work, research) count towards a grade but never make one: an ad with nothing from his own field is "Different field" Its facts about him come from `content/profile.json`
 - **Field Notes**: short essays connecting boreholes, scenario storytelling and sustainable AI, under About
-- **Modern design**: dark theme with vibrant green accents, light mode, responsive layout, full SEO/social metadata (Open Graph, JSON-LD, sitemap)
+- **Modern design**: dark theme with vibrant green accents, light mode (the reader's choice, shared by every page, or with none the system's, from the first paint), responsive layout, full SEO/social metadata (Open Graph, JSON-LD, sitemap)
 - **Seven sections**: journey, about (with the CV download and the field notes), experience, six project cards leading to the case studies, AI, Weighed, skills and education, contact form
 
 ## Technologies Used
@@ -491,10 +491,11 @@ The suites, and the failure each one exists to prevent:
   shipped hidden; the hand-authored pages' shell exactly as generated; the
   stored choice (or the system's) on `<html>` before the first paint, a
   press, blocked storage, Back from the page cache, and one choice shared
-  with the homepage; and the light palette twice and the same, the
-  homepage's. `npm run smoke` follows the choice through the nav in a real
-  browser, checks the system's setting with JavaScript off, and every page at
-  320px.
+  with the homepage, which with none opens in the theme `theme.js` would
+  (the system's, before its first paint); and the light palette twice and
+  the same, the homepage's. `npm run smoke` follows the choice through the
+  nav in a real browser, checks the system's setting with JavaScript off
+  and on the homepage from its first frame, and every page at 320px.
 - **`tooling.test.js`** — the machinery under the rest: the runner fails when
   any suite fails and keeps each suite's output in one block, `npm test` runs
   it rather than a hand-kept list of suites, the fake clock fires timers in
@@ -505,9 +506,9 @@ The suites, and the failure each one exists to prevent:
   made-up measurements from far under to far over, lowers ceilings to what
   they hold plus 5% and never raises one (or touches a held one, or any line
   but a ceiling's); every page has a length budget at both sizes, the
-  homepage's the plan's 10 and 18 screens; the README's tables say exactly
-  what `--readme` would write; and the receipt workflow asks for no more
-  than it needs and cannot comment from a fork.
+  homepage's at or under the plan's 10 and 18 screens; the README's tables
+  say exactly what `--readme` would write; and the receipt workflow asks for
+  no more than it needs and cannot comment from a fork.
 - **`receipt.test.js`** — the pull-request receipt, from fixture budgets and
   lengths: a rise with a plus, a fall with a minus, no change as 0, the
   CO₂e at 0.36 g per MB of 1024² bytes, a budget over its ceiling or new on
@@ -816,17 +817,17 @@ did.
 <!-- BUDGET-TABLE:START — generated by scripts/check-budget.js (npm run budget -- --readme). Do not edit by hand. -->
 | Budget | Measured | Ceiling |
 |---|---|---|
-| First view of the homepage, over the wire (fonts included) | ~274 KB | 300 KB |
+| First view of the homepage, over the wire (fonts included) | ~274 KB | 288 KB |
 | Everything a full visit adds on demand (modules, scripts, map) | ~72 KB | 72 KB |
-| Largest single image | ~200 KB | 220 KB |
+| Largest single image | ~200 KB | 210 KB |
 | Every image in the repository | ~3.36 MB | 3.5 MB |
 | Recorded narration: Moses's introduction (sized for his 60–90 s take) | 0 KB | 800 KB |
-| Text-only field report, the HTML file (the size the footer quotes) | ~9 KB | 12 KB |
+| Text-only field report, the HTML file (the size the footer quotes) | ~9 KB | 11 KB |
 | Text-only field report, over the wire (with its visit counter) | ~6 KB | 8 KB |
-| Case studies page, over the wire (fonts included) | ~96 KB | 120 KB |
-| Open counts page, over the wire (fonts included; sized for a full page) | ~91 KB | 105 KB |
-| Research outputs page, over the wire (fonts included) | ~90 KB | 110 KB |
-| AI, Weighed (`carbon-ai.html`), over the wire (fonts included) | ~107 KB | 111 KB |
+| Case studies page, over the wire (fonts included) | ~104 KB | 109 KB |
+| Open counts page, over the wire (fonts included; sized for a full page) | ~95 KB | 105 KB |
+| Research outputs page, over the wire (fonts included) | ~94 KB | 99 KB |
+| AI, Weighed (`carbon-ai.html`), over the wire (fonts included) | ~110 KB | 111 KB |
 <!-- BUDGET-TABLE:END -->
 
 **What the estimate used to miss.** An earlier version of this table said
@@ -881,20 +882,22 @@ costs the network, so every page is also held to a length: its scroll height
 over the window's height, in screens, at 1440×900 and 390×844. `npm run
 smoke` measures it in Chromium once the page has settled (fonts loaded, every
 section drawn at its real height, on-demand features arrived, nothing opened)
-and fails a page above its ceiling. The homepage's ceilings are the plan's
-targets; every other page's is what it measured when the budget was set,
-plus 5% (the open counts page drawn full, as the smoke's fixture draws a busy
-quarter, since that is the page the weekly Action will commit).
+and fails a page above its ceiling. The homepage's ceilings began as the
+plan's targets, 10 and 18 screens (it was 19.4 and 32.7), and came down to
+what it measured plus 5% once it met them; every other page's is what it
+measured when the budget was set, plus 5% (the open counts page drawn full,
+as the smoke's fixture draws a busy quarter, since that is the page the
+weekly Action will commit).
 
 <!-- LENGTH-TABLE:START — generated by scripts/check-budget.js (npm run budget -- --readme). Do not edit by hand. -->
 | Page | Desktop, 1440×900 | Phone, 390×844 |
 |---|---|---|
-| `index.html` | 10 screens | 18 screens |
-| `case-studies.html` | 11.21 screens | 18.95 screens |
-| `carbon-ai.html` | 6.84 screens | 12.98 screens |
-| `research.html` | 5.63 screens | 8.59 screens |
-| `stats.html` | 10.57 screens | 15.66 screens |
-| `field-report.html` | 4.38 screens | 7.4 screens |
+| `index.html` | 9.79 screens | 17.09 screens |
+| `case-studies.html` | 11.85 screens | 19.78 screens |
+| `carbon-ai.html` | 7.07 screens | 13.38 screens |
+| `research.html` | 5.86 screens | 8.99 screens |
+| `stats.html` | 10.97 screens | 16.25 screens |
+| `field-report.html` | 4.4 screens | 7.44 screens |
 | `404.html` | 1.05 screens | 1.05 screens |
 <!-- LENGTH-TABLE:END -->
 

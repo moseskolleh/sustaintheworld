@@ -79,7 +79,7 @@ const MB = 1024 * 1024;
 const BUDGETS = {
     criticalWire: {
         label: 'First view of the homepage, over the wire (HTML + CSS + JS gzipped, the fonts, and eagerly-loaded images)',
-        max: 300 * KB,
+        max: 288 * KB,
         readme: 'First view of the homepage, over the wire (fonts included)'
     },
     // What a visit fetches after arriving, if it uses everything: the
@@ -93,7 +93,7 @@ const BUDGETS = {
     },
     largestImage: {
         label: 'Largest single image',
-        max: 220 * KB,
+        max: 210 * KB,
         readme: 'Largest single image'
     },
     allImages: {
@@ -116,7 +116,7 @@ const BUDGETS = {
     // that true.
     fieldReport: {
         label: 'Text-only field report, the HTML file as saved (uncompressed)',
-        max: 12 * KB,
+        max: 11 * KB,
         readme: 'Text-only field report, the HTML file (the size the footer quotes)'
     },
     // The same page as a visit costs it: its HTML gzipped, the visit counter
@@ -132,7 +132,7 @@ const BUDGETS = {
     // the evidence pages into the thing they were built to argue against.
     caseStudiesWire: {
         label: 'Case studies page, over the wire (with fonts)',
-        max: 120 * KB,
+        max: 109 * KB,
         readme: 'Case studies page, over the wire (fonts included)'
     },
     // Sized for the page once it is full, not for today's empty state (about
@@ -147,7 +147,7 @@ const BUDGETS = {
     },
     researchWire: {
         label: 'Research outputs page, over the wire (with fonts)',
-        max: 110 * KB,
+        max: 99 * KB,
         readme: 'Research outputs page, over the wire (fonts included)'
     },
     // "AI, Weighed" carries its calculator and the emission-factor data on
@@ -190,23 +190,26 @@ const PAGE_BUDGETS = {
 // opened), fails a page above its ceiling, and writes what it measured to
 // .smoke/length.json for --json, --ratchet and the pull-request receipt.
 //
-// The homepage's ceilings are the plan's targets, not a measurement. Every
-// other page's is what it measured when the budget was set (27 September
-// 2026, in Chromium 141, the build CI pins) plus 5%. stats.html is held
-// drawn full, as the smoke's fixture draws a busy quarter: that is the page
-// the weekly Action will commit, and the page as committed today is shorter.
+// The homepage's ceilings began as the plan's targets, not a measurement;
+// once it met them, the ratchet (step 2.9) brought them down to what it
+// measured plus 5%, like the rest. Every other page's is what it measured
+// when the budget was set (28 September 2026, with the shared nav and
+// closing call to action every page but the homepage now has, in Chromium
+// 141, the build CI pins) plus 5%. stats.html is held drawn full, as the
+// smoke's fixture draws a busy quarter: that is the page the weekly Action
+// will commit, and the page as committed today is shorter.
 // ------------------------------------------------------------------
 const VIEWPORTS = {
     '1440x900': { width: 1440, height: 900, label: 'desktop' },
     '390x844': { width: 390, height: 844, label: 'phone' }
 };
 const LENGTH = {
-    'index.html': { '1440x900': 10, '390x844': 18 },
-    'case-studies.html': { '1440x900': 11.21, '390x844': 18.95 },
-    'carbon-ai.html': { '1440x900': 6.84, '390x844': 12.98 },
-    'research.html': { '1440x900': 5.63, '390x844': 8.59 },
-    'stats.html': { '1440x900': 10.57, '390x844': 15.66 },
-    'field-report.html': { '1440x900': 4.38, '390x844': 7.4 },
+    'index.html': { '1440x900': 9.79, '390x844': 17.09 },
+    'case-studies.html': { '1440x900': 11.85, '390x844': 19.78 },
+    'carbon-ai.html': { '1440x900': 7.07, '390x844': 13.38 },
+    'research.html': { '1440x900': 5.86, '390x844': 8.99 },
+    'stats.html': { '1440x900': 10.97, '390x844': 16.25 },
+    'field-report.html': { '1440x900': 4.4, '390x844': 7.44 },
     '404.html': { '1440x900': 1.05, '390x844': 1.05 }
 };
 
@@ -307,8 +310,8 @@ function criticalAssets(page = 'index.html') {
     });
 
     // An <img> without loading="lazy" is fetched during the first view.
-    // The lightbox's <img> has no src until an image is opened, so it adds
-    // nothing.
+    // The case studies' lightbox is not in the markup: its script makes its
+    // <img> when a photo is opened, so it adds nothing.
     (html.match(/<img[^>]*>/gi) || []).forEach((tag) => {
         if (/loading=["']lazy["']/i.test(tag)) return;
         const m = tag.match(/src=["']([^"']+)["']/i);

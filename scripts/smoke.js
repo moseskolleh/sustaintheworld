@@ -31,9 +31,10 @@
 //     control only a script could drive, or hides the contact form
 //   - a skip link, nav link or Back that does not land where it says; a
 //     theme switch or nav item off the bar; back to top over a control
-//   - a page other than the homepage whose theme does not follow the
-//     reader's choice (or the system's), or that has no room on a 320px
-//     phone for its nav and its call to action
+//   - a page whose theme does not follow the reader's choice (or, with none,
+//     the system's; the homepage from its first frame), or a page other
+//     than the homepage with no room on a 320px phone for its nav and its
+//     call to action
 //   - on a phone, a journey map out of view while its stops are read, over
 //     the text of the stop it shows, or showing another; a name on the map
 //     under 11px, or on a desktop over another name, the frame's edge or
@@ -47,13 +48,13 @@
 //     button, or a recording fetched unasked
 //   - an Assay that grades a mismatched ad well, or sends anything; one
 //     whose box is not folded behind a named button, by pointer and keys
-//   - a homepage longer than 10 screens at 1440x900 or 18 at 390x844, or
-//     an experience card that is not short, or whose More sits on its text
+//   - an experience card that is not short, or whose More sits on its text
 //   - a case-study game fetched before a reader nears it, that will not
 //     play, whose labels are under 11px on a phone, or that moves the
 //     page under a reader when it arrives above them
 //   - a page longer than its length budget in scripts/check-budget.js, at
-//     1440x900 or 390x844, once it has settled
+//     1440x900 or 390x844, once it has settled (the homepage's is under
+//     the plan's 10 and 18 screens)
 //   - a clipped dropdown or an unreadable number on carbon-ai.html
 //   - stats.html, drawn full from fixture totals, splitting a word in a
 //     table to make room for the figures, or scrolling sideways, on a phone
@@ -322,7 +323,6 @@ async function visit(context, page, rel, origin) {
     await exerciseFirstView(browser, origin);
     await exerciseNavigation(browser, origin);
     await exerciseSections(browser, origin);
-    await exerciseLength(browser, origin);
     await exerciseCpu(browser, origin);
     await exerciseJourneyAndChart(browser, origin);
     await exerciseStatsPage(browser, origin);
@@ -392,6 +392,12 @@ async function quietNetwork(page, quietMs = 800, maxMs = 8000) {
 // ------------------------------------------------------------------
 // Length: how far a reader has to scroll, held like the bytes
 // ------------------------------------------------------------------
+// Length is a cost to a busy reader too. The homepage was held to the
+// plan's targets (Phase 2, step 3: 10 screens on a desktop and 18 on a
+// phone; it was 19.4 and 32.7) until it met them, every other page to what
+// it measured when its ceiling was set, plus 5%; the ratchet only lowers
+// them (check-budget.js, LENGTH).
+//
 // Every page at the two sizes in check-budget.js's VIEWPORTS, measured once
 // it has settled: fonts loaded; walked top to bottom, so every section is
 // drawn at its real height (content-visibility sizes one by a 2000px
@@ -440,8 +446,15 @@ async function measureLength(browser, origin, rel, size, html) {
             px = again;
             await quietNetwork(page, 400);
         }
-        const height = await page.evaluate(() => innerHeight);
-        return { px, screens: Math.round((px / height) * 100) / 100 };
+        // Where the length is: each part of the page in the flow (main's
+        // sections one by one), so a page over its ceiling says where.
+        const { height, parts } = await page.evaluate(() => {
+            const flow = el => el.getBoundingClientRect().height >= 1 && !/^(fixed|absolute)$/.test(getComputedStyle(el).position);
+            const list = Array.from(document.body.children).flatMap(el => (el.localName === 'main' ? Array.from(el.children) : [el])).filter(flow);
+            const name = el => el.id || (el.getAttribute('class') || el.localName).split(' ')[0];
+            return { height: innerHeight, parts: list.map(el => `${name(el)} ${(el.getBoundingClientRect().height / innerHeight).toFixed(2)}`).join(', ') };
+        });
+        return { px, screens: Math.round((px / height) * 100) / 100, parts };
     } finally {
         await context.close();
     }
@@ -459,13 +472,16 @@ async function checkLengths(browser, origin) {
     }));
     let fullStats = null;
     const got = new Map();
+    const partsOf = new Map();   // printed, not written: length.json holds lengths
     let next = 0;
     const worker = async () => {
         while (next < jobs.length) {
             const job = jobs[next++];
             try {
                 const html = job.full ? (fullStats = fullStats || drawStats(500, 12)) : null;
-                got.set(`${job.rel} ${job.vp}${job.full ? ' full' : ''}`, await measureLength(browser, origin, job.rel, job.size, html));
+                const { parts, ...m } = await measureLength(browser, origin, job.rel, job.size, html);
+                got.set(`${job.rel} ${job.vp}${job.full ? ' full' : ''}`, m);
+                if (!job.full) partsOf.set(`${job.rel} ${job.vp}`, parts);
             } catch (e) {
                 bad(`${job.rel} at ${job.vp}${job.full ? ', drawn full' : ''}: length not measured (${e.message.split('\n')[0]})`);
             }
@@ -497,8 +513,12 @@ async function checkLengths(browser, origin) {
             const held = budget.heldLength(m);
             const two = n => n.toFixed(2);
             const shown = `${two(m.screens)} screens${m.full ? ` (${two(m.full.screens)} drawn full)` : ''}`;
-            if (held <= ceilings[vp]) ok(`${rel} at ${vp}: ${shown}, within ${two(ceilings[vp])}`);
-            else bad(`${rel} at ${vp}: ${shown}, over its ceiling of ${two(ceilings[vp])} — shorten the page; a ceiling only moves down`);
+            // The homepage's parts are always printed: its length is the
+            // plan's own target, and whatever grows it next will ask where
+            // to cut.
+            const where = held > ceilings[vp] || rel === 'index.html' ? ` — ${partsOf.get(`${rel} ${vp}`)}` : '';
+            if (held <= ceilings[vp]) ok(`${rel} at ${vp}: ${shown}, within ${two(ceilings[vp])}${where}`);
+            else bad(`${rel} at ${vp}: ${shown}, over its ceiling of ${two(ceilings[vp])} — shorten the page; a ceiling only moves down${where}`);
         });
     });
     Object.keys(budget.LENGTH).filter(rel => !PAGES.includes(rel))
@@ -1143,7 +1163,9 @@ async function exerciseJourneyAndChart(browser, origin) {
 // phone's real layout. Reduced motion, so every jump lands at once.
 async function exerciseNavigation(browser, origin) {
     console.log('  index.html — links, theme switch, back to top');
-    const desk = await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' });
+    // A dark system: with nothing stored the homepage follows it, and the
+    // switch below is pressed from dark to light.
+    const desk = await browser.newContext({ viewport: { width: 1280, height: 800 }, colorScheme: 'dark', reducedMotion: 'reduce' });
     const page = await desk.newPage();
     await page.goto(`${origin}/index.html`, { waitUntil: 'load' });
 
@@ -1561,45 +1583,6 @@ async function exerciseSections(browser, origin) {
         else bad(`${at}: on arrival the button is "${shutAt.name}" (aria-expanded ${shutAt.expanded}), the box shown ${shutAt.box}, the promise shown ${shutAt.promise}`);
         if (opened.box && opened.expanded === 'true' && !byEnter.box && byEnter.expanded === 'false' && bySpace.box && bySpace.expanded === 'true') ok(`${at}: a press opens it at once, and Enter and Space fold and open it again`);
         else bad(`${at}: pressed ${opened.box}/${opened.expanded}, Enter ${byEnter.box}/${byEnter.expanded}, Space ${bySpace.box}/${bySpace.expanded}`);
-        await ctx.close();
-    }
-}
-
-// ------------------------------------------------------------------
-// The homepage's length
-// ------------------------------------------------------------------
-// Length is a cost to a busy reader too (plan Phase 2, step 3: at most 10
-// screens on a desktop and 18 on a phone; it was 19.4 and 32.7). Measured
-// the way a reader meets it: reduced motion, the fonts in, the page walked
-// top to bottom so every section drawn by estimate (content-visibility)
-// takes its real height, then back to the top. Each part is printed, so a
-// failure says where the length went.
-const LENGTH_CEILINGS = [[1440, 900, 10], [390, 844, 18]];
-
-async function exerciseLength(browser, origin) {
-    console.log('  index.html — its length');
-    for (const [width, height, ceiling] of LENGTH_CEILINGS) {
-        const ctx = await browser.newContext({ viewport: { width, height }, reducedMotion: 'reduce' });
-        const page = await ctx.newPage();
-        await page.goto(`${origin}/index.html`, { waitUntil: 'load' });
-        await page.evaluate(() => document.fonts.ready);
-        await page.evaluate(async () => {
-            const rest = (ms) => new Promise(r => setTimeout(r, ms));
-            for (let y = 0; y < document.documentElement.scrollHeight; y += innerHeight / 2) { scrollTo(0, y); await rest(40); }
-            scrollTo(0, document.documentElement.scrollHeight);
-            await rest(300);
-            scrollTo(0, 0);
-            await rest(600);
-        });
-        const m = await page.evaluate(() => {
-            const parts = [document.getElementById('home')].concat(Array.from(document.querySelectorAll('main > *')), [document.querySelector('body > footer')])
-                .filter(el => el && el.getBoundingClientRect().height >= 1)
-                .map(el => `${el.id || (el.getAttribute('class') || el.localName).split(' ')[0]} ${(el.getBoundingClientRect().height / innerHeight).toFixed(2)}`);
-            return { screens: document.documentElement.scrollHeight / innerHeight, parts };
-        });
-        const tag = `index.html at ${width}x${height}: ${m.screens.toFixed(2)} screens (ceiling ${ceiling})`;
-        if (m.screens <= ceiling) ok(`${tag} — ${m.parts.join(', ')}`);
-        else bad(`${tag} — ${m.parts.join(', ')}`);
         await ctx.close();
     }
 }
@@ -2347,8 +2330,8 @@ const AXE_VIEWS = [];
 
 // The pages whose script swaps in a different layout, so the one a reader
 // without JavaScript gets is checked as well. (With its scripts blocked the
-// homepage cannot apply its theme and is checked in dark only;
-// carbon-ai.css follows the system's setting by itself.)
+// homepage still takes its theme from mks.theme, inline at the top of
+// <body>; carbon-ai.css follows the system's setting by itself.)
 const AXE_NO_SCRIPT = ['index.html', 'carbon-ai.html'];
 
 // What the player offers once Moses has recorded his introduction (see
@@ -2598,6 +2581,29 @@ async function exerciseShell(browser, origin) {
         const stored = await page.evaluate(() => localStorage.getItem('theme'));
         if (r.theme === 'light' && r.bg === LIGHT_BG && stored === null) ok('theme: a system set to light gets light on stats.html, and nothing is stored for it');
         else bad(`theme: with a light system and nothing stored, stats.html is ${JSON.stringify(r)} (stored: ${stored})`);
+
+        // The homepage too, from its first frame: what the body is in when
+        // the first frame that has a body is drawn, recorded before any of
+        // the page's scripts run.
+        await context.addInitScript(() => {
+            const seen = () => {
+                if (!document.body) return requestAnimationFrame(seen);
+                window.__firstFrame = document.body.classList.contains('light-mode') ? 'light' : 'dark';
+            };
+            requestAnimationFrame(seen);
+        });
+        await page.goto(`${origin}/index.html`, { waitUntil: 'load' });
+        await page.waitForFunction(() => window.__firstFrame && !document.getElementById('themeToggle').hidden, null, { timeout: 8000 }).catch(() => null);
+        const home = await page.evaluate(() => ({
+            first: window.__firstFrame,
+            now: document.body.classList.contains('light-mode') ? 'light' : 'dark',
+            name: document.getElementById('themeToggle').getAttribute('aria-label'),
+            bar: document.querySelector('meta[name="theme-color"]').content,
+            stored: localStorage.getItem('theme')
+        }));
+        if (home.first === 'light' && home.now === 'light' && home.name === 'Switch to dark theme' && home.bar === '#f4f6f0' && home.stored === null) {
+            ok('theme: ...and on the homepage, light from its first frame, the switch and the browser bar with it, nothing stored');
+        } else bad(`theme: with a light system and nothing stored, the homepage is ${JSON.stringify(home)}`);
         await context.close();
         for (const scheme of ['light', 'dark']) {
             const bare = await browser.newContext({ viewport: { width: 1280, height: 800 }, colorScheme: scheme, javaScriptEnabled: false });
