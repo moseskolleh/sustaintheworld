@@ -26,11 +26,16 @@
 //                       markers
 //   modules/interactives.js   the Assay's facts block only, between its
 //                       markers: what the fit-check may say about Moses
+//   carbon-ai.html, field-report.html, 404.html
+//                       the shared shell only (the nav, the closing call to
+//                       action), between its markers
 //
-// STILL HAND-AUTHORED: index.html and field-report.html. They are long-form
-// editorial pages, and templating over 130 KB of hand-tuned markup to remove
-// duplication that a test already catches would trade a small problem for a
-// large one. tests/content.test.js holds them to content/ instead.
+// STILL HAND-AUTHORED: index.html, field-report.html, carbon-ai.html and
+// 404.html, bar the regions above. They are long-form editorial pages, a
+// calculator and a page served at any address, and templating over their
+// hand-tuned markup to remove duplication that a test already catches would
+// trade a small problem for a large one. tests/content.test.js holds them to
+// content/ instead.
 //
 // The output is deterministic — no dates, no ordering by filesystem, no
 // randomness — because --check compares bytes.
@@ -106,7 +111,126 @@ function statusChip(entry) {
     return `<span class="cs-status cs-status-${entry.status}" title="${esc(explain + held)}">${esc(label)}</span>`;
 }
 
-function pageShell({ title, description, canonical, heroTag, heroTitle, heroLead, main, bodyEnd = '', icons = ['i-arrow-right'], current = '', styles = [] }) {
+// ------------------------------------------------------------------
+// The shared shell: the nav, the closing call to action, back to top
+//
+// The lens links sent recruiters to case-studies.html, which had one way
+// out, "Back to portfolio", and no way to reach Moses. Every page but the
+// homepage now carries the same small nav (Home, Case studies, Research,
+// CV, Contact), ends with a call to action (the address, a message, the
+// CV) and, where the page is long, a link back to the top. The generated
+// pages get it from pageShell; carbon-ai.html, field-report.html and
+// 404.html are hand-authored and take the same markup between SHELL-*
+// markers (injectShell, below), so --check holds all six to one shell.
+// The address, the CV and the roles come from content/profile.json.
+// ------------------------------------------------------------------
+
+/** What the shell says about Moses: profile.json's own words, never new ones. */
+const shellFacts = (profile) => ({
+    email: profile.person.email,
+    cv: profile.links.cv,
+    roles: profile.atAGlance.targetRoles
+});
+
+// Each link a counter hook of its own, so stats.html can tell the shell's
+// CV link from the homepage's (every CV and email link needs one: see
+// tests/count.test.js). The field report's address and CV keep the names
+// they have always had, so their figures carry on from where they were.
+const SHELL_HOOKS = {
+    nav: { cv: 'cv-download-page-nav', contact: 'contact-page-nav' },
+    cta: { email: 'email-page-cta', contact: 'contact-page-cta', cv: 'cv-download-page-cta' },
+    fieldReport: { email: 'email-fieldreport', contact: 'contact-fieldreport', cv: 'cv-download-fieldreport' }
+};
+
+// A page's own address, or a root-absolute one under `base` for 404.html,
+// which answers at whatever address was missing.
+const shellHref = (href, base) => (base ? base + href.replace(/^index\.html/, '') : href);
+
+// The five places, in this order on every page.
+function shellLinks(facts, base = '') {
+    return [
+        { label: 'Home', href: shellHref('index.html', base), page: 'index.html' },
+        { label: 'Case studies', href: shellHref('case-studies.html', base), page: 'case-studies.html' },
+        { label: 'Research', href: shellHref('research.html', base), page: 'research.html' },
+        { label: 'CV', href: shellHref(facts.cv, base), download: true, hook: SHELL_HOOKS.nav.cv },
+        { label: 'Contact', href: shellHref('index.html#contact', base), hook: SHELL_HOOKS.nav.contact, contact: true }
+    ];
+}
+
+const linkAttrs = (l, current, plain) => [
+    `href="${esc(l.href)}"`,
+    l.contact && !plain ? 'class="ca-nav-contact"' : '',
+    l.page && l.page === current ? 'aria-current="page"' : '',
+    l.download ? 'download' : '',
+    l.hook ? `data-analytics="${l.hook}"` : ''
+].filter(Boolean).join(' ');
+
+/**
+ * The nav, marking the page it sits on. The full flavour is carbon-ai.css's:
+ * the logo, the theme switch (theme.js shows and drives it; it ships hidden)
+ * and the five links, after the page's icon sprite (the switch's two, and
+ * any `icons` the page asks for). The plain flavour is a line of links, for
+ * the two pages that style themselves and run no script but the counter.
+ */
+function shellNav(facts, { current = '', plain = false, base = '', icons = [] } = {}) {
+    const links = shellLinks(facts, base);
+    if (plain) {
+        return `<nav aria-label="Main">${links.map(l => `<a ${linkAttrs(l, current, true)}>${l.label}</a>`).join(' · ')}</nav>`;
+    }
+    return `${sprite(['i-moon', 'i-sun'].concat(icons))}
+<nav class="ca-nav" aria-label="Main">
+    <a href="index.html" class="ca-nav-logo" aria-label="Back to portfolio home">
+        <svg viewBox="0 0 40 40" aria-hidden="true">
+            <circle cx="20" cy="20" r="17" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.35"/>
+            <circle cx="20" cy="20" r="12" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.55"/>
+            <circle cx="20" cy="20" r="7" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.8"/>
+            <circle cx="20" cy="20" r="2.5" fill="currentColor"/>
+        </svg>
+        <span class="ca-nav-name">MK<span class="ca-accent">S</span></span>
+    </a>
+    <button type="button" class="theme-toggle" id="themeToggle" aria-label="Switch to light theme" hidden>
+        <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-moon"></use></svg>
+    </button>
+    <ul class="ca-nav-links">
+${links.map(l => `        <li><a ${linkAttrs(l, current)}>${l.label}</a></li>`).join('\n')}
+    </ul>
+</nav>`;
+}
+
+/**
+ * The closing call to action, the last thing in <main>: the three ways to
+ * reach Moses. The full flavour opens with who he is open to hearing from,
+ * in the words the homepage's hero uses, and ends with a link back to the
+ * top (to <body>, so the next Tab starts again from the skip link). The
+ * plain one is the three ways in a line: on the field report every byte
+ * counts towards the size the homepage quotes.
+ */
+function shellCta(facts, { plain = false, base = '', hooks = SHELL_HOOKS.cta } = {}) {
+    const mail = `<a href="mailto:${esc(facts.email)}" data-analytics="${hooks.email}">${esc(facts.email)}</a>`;
+    if (plain) {
+        return `<p>Email ${mail}, <a href="${esc(shellHref('index.html#contact', base))}" data-analytics="${hooks.contact}">send a message</a> or download <a href="${esc(shellHref(facts.cv, base))}" download data-analytics="${hooks.cv}">my CV</a>.</p>`;
+    }
+    return `<section class="ca-cta" aria-labelledby="ctaTitle">
+    <h2 id="ctaTitle">Get in touch</h2>
+    <p>Open to ${esc(facts.roles)}: write to me at ${mail}.</p>
+    <p class="ca-cta-go">
+        <a class="ca-btn ca-btn-primary" href="index.html#contact" data-analytics="${hooks.contact}">Send a message</a>
+        <a class="ca-btn" href="${esc(facts.cv)}" download data-analytics="${hooks.cv}">Download CV</a>
+    </p>
+</section>
+<p class="ca-top"><a href="#top">Back to top</a></p>`;
+}
+
+// Not deferred, and ahead of the stylesheets: theme.js sets the theme
+// before anything is painted, and a script after a stylesheet would wait
+// for the stylesheet to arrive first.
+const THEME_SCRIPT = '<script src="theme.js"></script>';
+
+/** Every line of a block indented; blank lines stay empty. */
+const indentBlock = (block, indent) => block.split('\n').map(l => (l ? indent + l : l)).join('\n');
+
+function pageShell({ title, description, canonical, heroTag, heroTitle, heroLead, main, bodyEnd = '', icons = [], current = '', styles = [], profile }) {
+    const facts = shellFacts(profile || content.load('profile'));
     // A page that runs a script says so before first paint (html.js), so its
     // stylesheet can offer the controls that script drives and hide them
     // when it cannot run. A page with no script has nothing to announce.
@@ -142,26 +266,15 @@ function pageShell({ title, description, canonical, heroTag, heroTitle, heroLead
     <link rel="preload" as="font" type="font/woff2" href="assets/fonts/space-grotesk-latin.woff2" crossorigin>
     <link rel="preload" as="font" type="font/woff2" href="assets/fonts/inter-latin.woff2" crossorigin>
     <link rel="preload" as="font" type="font/woff2" href="assets/fonts/ibm-plex-mono-latin-400.woff2" crossorigin>
+    ${THEME_SCRIPT}
     <link rel="stylesheet" href="carbon-ai.css">${styles.map(href => `
     <link rel="stylesheet" href="${esc(href)}">`).join('')}
     <link rel="stylesheet" href="content.css">
     <script defer src="count.js"></script>
 </head>
-<body>
+<body id="top">
     <a class="skip-link" href="#main">Skip to content</a>
-    ${sprite(icons)}
-    <nav class="ca-nav" aria-label="Main">
-        <a href="index.html" class="ca-nav-logo" aria-label="Back to portfolio home">
-            <svg viewBox="0 0 40 40" aria-hidden="true">
-                <circle cx="20" cy="20" r="17" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.35"/>
-                <circle cx="20" cy="20" r="12" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.55"/>
-                <circle cx="20" cy="20" r="7" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.8"/>
-                <circle cx="20" cy="20" r="2.5" fill="currentColor"/>
-            </svg>
-            <span class="ca-nav-name">MK<span class="ca-accent">S</span></span>
-        </a>
-        <a href="index.html" class="ca-back"><svg class="icon icon-flip" aria-hidden="true" focusable="false"><use href="#i-arrow-right"></use></svg> Back to portfolio</a>
-    </nav>
+${indentBlock(shellNav(facts, { current, icons }), '    ')}
     <main class="ca-shell" id="main">
         <header class="ca-hero">
             <div class="ca-hero-tag">${heroTag}</div>
@@ -169,6 +282,8 @@ function pageShell({ title, description, canonical, heroTag, heroTitle, heroLead
             <p>${heroLead}</p>
         </header>
 ${main}
+
+${indentBlock(shellCta(facts), '        ')}
     </main>
     <footer class="ca-foot">
         <p><a href="stats.html"${current === 'stats.html' ? ' aria-current="page"' : ''}>Open counts</a>: what this site counts about its visits, and what it never collects.</p>
@@ -466,7 +581,9 @@ ${cards}
         heroTitle: 'Case <span class="ca-accent">studies</span>',
         heroLead: 'Six projects across four countries, each one traced from the question that started it to what it actually produced &mdash; and to how far you can check the result from where you are sitting.',
         main,
-        bodyEnd: script
+        bodyEnd: script,
+        current: 'case-studies.html',
+        profile: data.profile
     });
 }
 
@@ -550,7 +667,9 @@ ${reproSection}`;
         heroTag: 'WHAT EXISTS &middot; WHERE IT IS &middot; WHO HOLDS IT',
         heroTitle: 'Research <span class="ca-accent">outputs</span>',
         heroLead: 'Three degrees of research, a consultancy, an internship and a working tool. Some of it is public, some belongs to the organisations it was done for, and the rest is a PDF I will happily send you.',
-        main
+        main,
+        current: 'research.html',
+        profile: data.profile
     });
 }
 
@@ -1007,7 +1126,8 @@ ${privacy}`;
         heroLead: 'This site counts its own page views, with no cookies, no ids and no analytics service, so each change to it can be judged against what readers actually do. Everything it counts is published here, and so is exactly what it sends.',
         main,
         current: 'stats.html',
-        styles: ['stats.css']
+        styles: ['stats.css'],
+        profile: data.profile
     });
 }
 
@@ -1338,6 +1458,49 @@ function injectProjectCards(data, html) {
 }
 
 // ------------------------------------------------------------------
+// carbon-ai.html, field-report.html, 404.html — the shared shell only
+//
+// Hand-authored, each for a reason of its own: a calculator, a page held to
+// a few kilobytes, a page served at whatever address was missing. None of
+// those is a reason to be a dead end, so each takes the shell between
+// markers, in the flavour it can carry. carbon-ai.html has the full one and
+// theme.js in its <head>. The field report and the 404 page style
+// themselves and run no script but the counter: they take the plain nav
+// and a one-line call to action, with no theme switch (nothing there could
+// drive it); the 404 page's links are root-absolute.
+// ------------------------------------------------------------------
+
+// Short markers, because every byte of the field report counts towards the
+// size the homepage quotes; the header of this file says what writes them.
+const shellMarkers = (name) => [`<!-- ${name} -->`, `<!-- /${name} -->`];
+
+function shellRegions(page, facts) {
+    if (page === 'carbon-ai.html') {
+        return { 'SHELL-HEAD': THEME_SCRIPT, 'SHELL-NAV': shellNav(facts), 'SHELL-CTA': shellCta(facts) };
+    }
+    if (page === 'field-report.html') {
+        return { 'SHELL-NAV': shellNav(facts, { plain: true }), 'SHELL-CTA': shellCta(facts, { plain: true, hooks: SHELL_HOOKS.fieldReport }) };
+    }
+    const base = new URL(SITE).pathname;
+    return { 'SHELL-NAV': shellNav(facts, { plain: true, base }), 'SHELL-CTA': shellCta(facts, { plain: true, base }) };
+}
+
+function injectShell(data, page) {
+    let html = fs.readFileSync(path.join(ROOT, page), 'utf8');
+    Object.entries(shellRegions(page, shellFacts(data.profile))).forEach(([name, block]) => {
+        const [START, END] = shellMarkers(name);
+        const start = html.indexOf(START);
+        const end = html.indexOf(END);
+        if (start === -1 || end < start) throw new Error(`${page} is missing the ${START} / ${END} markers`);
+        // The block takes the END marker's indent, which has to open its line.
+        const indent = html.slice(html.lastIndexOf('\n', end) + 1, end);
+        if (!/^[ \t]*$/.test(indent)) throw new Error(`${page}: ${END} must start a line of its own`);
+        html = html.slice(0, start + START.length) + '\n' + indentBlock(block, indent) + '\n' + indent + html.slice(end);
+    });
+    return html;
+}
+
+// ------------------------------------------------------------------
 // Write or check
 // ------------------------------------------------------------------
 function main() {
@@ -1356,7 +1519,10 @@ function main() {
         ['sitemap.xml', renderSitemap(data)],
         ['voice-scripts.js', renderVoiceScripts(data)],
         ['index.html', injectProjectCards(data, injectAtAGlance(data, injectJsonLd(data)))],
-        ['modules/interactives.js', injectAssayFacts(data)]
+        ['modules/interactives.js', injectAssayFacts(data)],
+        ['carbon-ai.html', injectShell(data, 'carbon-ai.html')],
+        ['field-report.html', injectShell(data, 'field-report.html')],
+        ['404.html', injectShell(data, '404.html')]
     ];
 
     const stale = [];
@@ -1386,9 +1552,10 @@ function main() {
     console.log(`\n  ${data.projects.caseStudies.length} case studies · ${data.research.outputs.length} research outputs · ${data.lenses.lenses.length} lenses · counts ${data.stats.status}\n`);
 }
 
-// Run as a script it builds; required (by tests/stats.test.js and
-// tests/firstview.test.js) it only lends its renderers, so a test can draw
-// stats.html or the at-a-glance strip from fixtures without writing anything.
+// Run as a script it builds; required (by tests/stats.test.js,
+// tests/firstview.test.js and tests/shell.test.js) it only lends its
+// renderers, so a test can draw stats.html, the at-a-glance strip or the
+// shell from fixtures without writing anything.
 if (require.main === module) main();
 
-module.exports = { renderStats, EXAMPLE_PAYLOAD, renderAtAGlance };
+module.exports = { renderStats, EXAMPLE_PAYLOAD, renderAtAGlance, shellFacts, shellRegions, shellMarkers };

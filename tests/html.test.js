@@ -243,7 +243,7 @@ PAGES.forEach((page) => {
     assert(attr(form, 'action') === GAS, 'Endpoint: the contact form without JavaScript posts to the same deployment');
 
     const shipped = [
-        'script.js', 'count.js', 'carbon-ai.js', 'ai-carbon-data.js', 'voice-scripts.js',
+        'script.js', 'count.js', 'theme.js', 'carbon-ai.js', 'ai-carbon-data.js', 'voice-scripts.js',
         ...fs.readdirSync(path.join(ROOT, 'modules')).filter(f => f.endsWith('.js')).map(f => `modules/${f}`)
     ].map(rel => [rel, js(rel)]);
     PAGES.forEach((page) => {

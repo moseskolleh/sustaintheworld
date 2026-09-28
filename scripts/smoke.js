@@ -29,6 +29,9 @@
 //   - a skip link, nav link or Back that does not land where it says; a
 //     theme switch or nav item off the bar; back to top over a control; a
 //     lightbox that opens without taking focus, reduced motion included
+//   - a page other than the homepage whose theme does not follow the
+//     reader's choice (or the system's), or that has no room on a 320px
+//     phone for its nav and its call to action
 //   - more than one listen control, a nav bar that moves when it appears,
 //     a player that covers more than 20% of a phone screen or the send
 //     button, or a recording fetched unasked
@@ -261,6 +264,7 @@ async function visit(context, page, rel, origin) {
     }
 
     await checkWithoutJs(browser, origin);
+    await exerciseShell(browser, origin);
 
     // Each budgeted page's measured first view against the budget's
     // estimate. The estimate counts bodies; every response also carries a
@@ -1848,8 +1852,9 @@ const AXE_VIEWS = [];
 });
 
 // The pages whose script swaps in a different layout, so the one a reader
-// without JavaScript gets is checked as well. (With the scripts blocked the
-// theme cannot be applied either: those two are checked in dark only.)
+// without JavaScript gets is checked as well. (With its scripts blocked the
+// homepage cannot apply its theme and is checked in dark only;
+// carbon-ai.css follows the system's setting by itself.)
 const AXE_NO_SCRIPT = ['index.html', 'carbon-ai.html'];
 
 // What the player offers once Moses has recorded his introduction (see
@@ -1899,9 +1904,9 @@ async function axeView(browser, origin, view, note, trouble) {
     // axe goes in as an inline script, which a Content-Security-Policy would
     // otherwise be entitled to refuse.
     const context = await browser.newContext({ viewport: view.viewport, colorScheme: view.theme, reducedMotion: 'reduce', bypassCSP: true });
-    // The homepage keeps its theme in localStorage; field-report.html follows
-    // the system setting, which colorScheme sets. Pages with one theme simply
-    // get checked in it twice.
+    // The homepage and the pages on carbon-ai.css keep their theme in
+    // localStorage; field-report.html follows the system setting, which
+    // colorScheme sets. The 404 page has one theme, simply checked twice.
     await context.addInitScript((theme) => {
         try { localStorage.setItem('theme', theme); } catch (e) { /* storage blocked */ }
     }, view.theme);
@@ -2014,6 +2019,143 @@ async function axeHomepageStates(page, view, note, attempt) {
         note(rel, 'the terminal', view, await axeRun(page, '.field-terminal'));
         await page.keyboard.press('Escape');
     });
+}
+
+// ------------------------------------------------------------------
+// The shared shell: one theme from page to page, and room on a phone
+// ------------------------------------------------------------------
+// Every page but the homepage carries the same nav and a closing call to
+// action, and those built on carbon-ai.css the theme switch (written by
+// build-content.js; tests/shell.test.js holds the markup). What jsdom
+// cannot show: the switch pressed for real, the choice followed through
+// the nav to the next page, to the homepage and back, the system's setting
+// honoured with nothing stored and with JavaScript off, and every page on
+// a 320px phone. Both themes go through axe with every page (see
+// accessibilityPass).
+async function exerciseShell(browser, origin) {
+    console.log('  the other pages — shared nav, theme, 320px');
+    const LIGHT_BG = 'rgb(244, 246, 240)';
+    const look = (page) => page.evaluate(() => {
+        const b = document.getElementById('themeToggle');
+        return {
+            theme: document.documentElement.getAttribute('data-theme'),
+            bg: getComputedStyle(document.body).backgroundColor,
+            name: b && !b.hidden ? b.getAttribute('aria-label') : null
+        };
+    });
+    const follow = (page, sel) => Promise.all([page.waitForNavigation({ waitUntil: 'load' }), page.click(sel)]);
+
+    // (a) A dark system and nothing stored: the switch picks light, and light
+    // is what the next page and the homepage open in; dark picked on the
+    // homepage is dark back on the page before it and on carbon-ai.html.
+    {
+        const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, colorScheme: 'dark', reducedMotion: 'reduce' });
+        const page = await context.newPage();
+        await page.goto(`${origin}/case-studies.html`, { waitUntil: 'load' });
+        const before = await look(page);
+        await page.click('#themeToggle');
+        const after = await look(page);
+        if (before.theme === 'dark' && after.theme === 'light' && after.bg === LIGHT_BG && after.name === 'Switch to dark theme') {
+            ok(`theme switch on case-studies.html: dark to light, the page with it (${before.bg} to ${after.bg})`);
+        } else bad(`theme switch on case-studies.html: ${JSON.stringify(before)}, then ${JSON.stringify(after)}`);
+
+        await follow(page, '.ca-nav-links a[href="research.html"]');
+        const next = await look(page);
+        if (next.theme === 'light' && next.bg === LIGHT_BG) ok('theme: the choice follows the nav to research.html');
+        else bad(`theme: research.html opened ${next.theme} (${next.bg}) after light was chosen`);
+
+        await follow(page, '.ca-nav-links a[href="index.html"]');
+        await page.waitForFunction(() => !document.getElementById('themeToggle').hidden, null, { timeout: 8000 });
+        const home = await page.evaluate(() => document.body.classList.contains('light-mode'));
+        if (home) ok('theme: ...and to the homepage, which reads the same stored choice');
+        else bad('theme: the homepage opened dark after light was chosen on another page');
+
+        await page.evaluate(() => document.getElementById('themeToggle').click());
+        await page.goBack({ waitUntil: 'load' });
+        const back = await look(page);
+        if (back.theme === 'dark' && back.name === 'Switch to light theme') ok('theme: dark chosen on the homepage is dark on Back to research.html, and its switch says so');
+        else bad(`theme: Back to research.html after the homepage switched to dark: ${JSON.stringify(back)}`);
+        await page.goto(`${origin}/carbon-ai.html`, { waitUntil: 'load' });
+        const ca = await look(page);
+        if (ca.theme === 'dark' && ca.name === 'Switch to light theme') ok('theme: ...and on carbon-ai.html');
+        else bad(`theme: carbon-ai.html opened ${JSON.stringify(ca)} after the homepage switched to dark`);
+        await context.close();
+    }
+
+    // (b) A light system and nothing stored: light without a press, and
+    // nothing stored on the reader's behalf. Without JavaScript the
+    // stylesheet follows the system by itself.
+    {
+        const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, colorScheme: 'light' });
+        const page = await context.newPage();
+        await page.goto(`${origin}/stats.html`, { waitUntil: 'load' });
+        const r = await look(page);
+        const stored = await page.evaluate(() => localStorage.getItem('theme'));
+        if (r.theme === 'light' && r.bg === LIGHT_BG && stored === null) ok('theme: a system set to light gets light on stats.html, and nothing is stored for it');
+        else bad(`theme: with a light system and nothing stored, stats.html is ${JSON.stringify(r)} (stored: ${stored})`);
+        await context.close();
+        for (const scheme of ['light', 'dark']) {
+            const bare = await browser.newContext({ viewport: { width: 1280, height: 800 }, colorScheme: scheme, javaScriptEnabled: false });
+            const p = await bare.newPage();
+            await p.goto(`${origin}/carbon-ai.html`, { waitUntil: 'load' });
+            const bg = await p.evaluate(() => getComputedStyle(document.body).backgroundColor);
+            const want = scheme === 'light' ? LIGHT_BG : 'rgb(0, 0, 0)';
+            if (bg === want) ok(`theme: with JavaScript off, carbon-ai.html follows a ${scheme} system (${bg})`);
+            else bad(`theme: with JavaScript off and a ${scheme} system, carbon-ai.html's background is ${bg}, not ${want}`);
+            await bare.close();
+        }
+    }
+
+    // (c) Every page on a 320px phone: nothing wider than the screen, the
+    // five nav links on it without touching (on one row where the nav is
+    // carbon-ai.css's), the switch clear of the logo, the call to action
+    // whole, and back to top all the way up.
+    {
+        const context = await browser.newContext({ viewport: { width: 320, height: 640 }, reducedMotion: 'reduce' });
+        for (const rel of PAGES.filter(p => p !== 'index.html')) {
+            const page = await context.newPage();
+            await page.goto(`${origin}/${rel}`, { waitUntil: 'load' });
+            await page.evaluate(async () => { if (document.fonts) await document.fonts.ready; });
+            const r = await page.evaluate(() => {
+                const box = el => el.getBoundingClientRect();
+                const inside = (el) => { const b = box(el); return b.width > 0 && b.left >= 0 && b.right <= innerWidth; };
+                const nav = document.querySelector('nav[aria-label="Main"]');
+                const links = nav ? Array.from(nav.querySelectorAll('a')).filter(a => /^(Home|Case studies|Research|CV|Contact)$/.test(a.textContent.trim())) : [];
+                const touching = links.slice(1).filter((a, i) => box(a).top === box(links[i]).top && box(a).left < box(links[i]).right).length;
+                const mail = document.querySelector('main a[href^="mailto:"]');
+                const cta = mail && mail.closest('section, p');
+                const sw = document.getElementById('themeToggle');
+                const logo = document.querySelector('.ca-nav-logo');
+                return {
+                    wide: document.documentElement.scrollWidth - innerWidth,
+                    links: links.filter(inside).length,
+                    touching,
+                    rows: nav && nav.classList.contains('ca-nav') ? new Set(links.map(a => Math.round(box(a).top))).size : 1,
+                    cta: !!cta && inside(cta) && Array.from(cta.querySelectorAll('a')).every(a => Array.from(a.getClientRects()).every(b => b.left >= 0 && b.right <= innerWidth)),
+                    toggle: !sw || (!sw.hidden && inside(sw) && box(sw).left >= box(logo).right)
+                };
+            });
+            const problems = [];
+            if (r.wide > 0) problems.push(`${r.wide}px wider than the screen`);
+            if (r.links !== 5) problems.push(`${r.links} of the 5 nav links on screen`);
+            if (r.touching) problems.push(`${r.touching} nav links run into the one before`);
+            if (r.rows !== 1) problems.push(`the nav's links on ${r.rows} rows`);
+            if (!r.cta) problems.push('the call to action runs off the screen');
+            if (!r.toggle) problems.push('the theme switch is off screen or over the logo');
+            const top = await page.$('main a[href="#top"]');
+            if (top) {
+                await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
+                await top.click();
+                await page.waitForTimeout(150);
+                const y = await page.evaluate(() => scrollY);
+                if (y !== 0) problems.push(`back to top stops at ${Math.round(y)}px`);
+            }
+            if (problems.length) bad(`${rel} at 320px: ${problems.join('; ')}`);
+            else ok(`${rel} at 320px: fits the screen, the five nav links and the call to action on it${top ? ', back to top goes to the top' : ''}`);
+            await page.close();
+        }
+        await context.close();
+    }
 }
 
 // ------------------------------------------------------------------

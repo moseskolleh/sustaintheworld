@@ -19,19 +19,32 @@
         body {
             min-height: 100vh;
             display: flex;
+            flex-direction: column;
             align-items: center;
-            justify-content: center;
             background: #0a0a0a;
             color: #ffffff;
             font-family: system-ui, 'Segoe UI', sans-serif;
             padding: 24px;
+        }
+        a { color: #7CFC00; }
+        /* The site's nav, a line at the top; the dry hole stays centred in
+           the room left under it. */
+        body > nav {
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-size: 0.85rem;
+            line-height: 2;
+            text-align: center;
+            color: #b0b0b0;
         }
         .wrap {
             display: flex;
             gap: 48px;
             align-items: center;
             max-width: 720px;
+            margin: auto 0;
+            padding-top: 16px;
         }
+        .links + p { margin: 16px 0 0; font-size: 0.9rem; }
         .mono {
             font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
             font-size: 0.8rem;
@@ -67,12 +80,16 @@
         }
         .log { flex-shrink: 0; }
         @media (max-width: 560px) {
-            .wrap { flex-direction: column; gap: 28px; text-align: center; }
+            body { padding: 16px; }
+            .wrap { flex-direction: column; gap: 20px; text-align: center; }
             .links { justify-content: center; }
         }
     </style>
 </head>
 <body>
+    <!-- SHELL-NAV -->
+    <nav aria-label="Main"><a href="/sustaintheworld/">Home</a> · <a href="/sustaintheworld/case-studies.html">Case studies</a> · <a href="/sustaintheworld/research.html">Research</a> · <a href="/sustaintheworld/assets/Moses_Kolleh_Sesay_CV.pdf" download data-analytics="cv-download-page-nav">CV</a> · <a href="/sustaintheworld/#contact" data-analytics="contact-page-nav">Contact</a></nav>
+    <!-- /SHELL-NAV -->
     <main class="wrap">
         <!-- A core log of the page you didn't find -->
         <svg class="log" width="125" height="260" viewBox="0 0 125 260" role="img"
@@ -99,10 +116,12 @@
                isn't at this URL — the resistivity curve points somewhere else.</p>
             <nav class="links" aria-label="Places to drill instead">
                 <a href="/sustaintheworld/">&larr; back to the surface</a>
-                <a href="/sustaintheworld/#projects">the projects</a>
                 <a href="/sustaintheworld/field-report.html">9&nbsp;KB field report</a>
                 <a href="/sustaintheworld/stats.html">open counts</a>
             </nav>
+            <!-- SHELL-CTA -->
+            <p>Email <a href="mailto:moseskollehsesay@gmail.com" data-analytics="email-page-cta">moseskollehsesay@gmail.com</a>, <a href="/sustaintheworld/#contact" data-analytics="contact-page-cta">send a message</a> or download <a href="/sustaintheworld/assets/Moses_Kolleh_Sesay_CV.pdf" download data-analytics="cv-download-page-cta">my CV</a>.</p>
+            <!-- /SHELL-CTA -->
         </div>
     </main>
 </body>

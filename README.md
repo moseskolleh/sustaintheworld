@@ -19,6 +19,7 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 - **Carbon-aware by construction**: images ship as optimized WebP, the three typefaces are self-hosted subsets, and a first view costs about **274 KB over the wire, fonts included**, against a 300 KB ceiling `npm test` enforces — a budget, not a number in a README, and one that `npm run smoke` checks against a real browser (see [Performance](#performance)). Everything a visit does not reach — the narration player, the field terminal, the section-05 interactives, the case studies' two games — is fetched only when it is used. Nothing is loaded from any other origin, and only two things are ever sent to one, both to the site's own Apps Script endpoint: a contact message, and one cookieless visit count per page view (never under Do Not Track or Global Privacy Control; see [The visit counter and privacy](#the-visit-counter-and-privacy)). A live footer badge weighs each visit in the browser (Resource Timing API × Sustainable Web Design model), counting network transfer only. A low-energy mode pauses all animation and honours `prefers-reduced-motion`
 - **[Case studies](case-studies.html), evidence-first**: the same six projects as **problem → method → artifact → result**. Every result carries the basis it rests on and says plainly whether you can check it from outside; every artifact says whether it is public, available on request, or held by the client. See [Content pipeline](#content-pipeline)
 - **Role-specific lenses**: `case-studies.html?lens=water`, `?lens=climate-risk`, `?lens=sustainable-ai` — shareable views that reframe the portfolio for one kind of role. They **reorder and frame, they never filter**: every case study stays on the page in every view, because a view that hides inconvenient work is a CV that lies by omission. Without JavaScript the switcher steps aside and every case study shows in the default view
+- **No dead ends**: every page but the homepage shares one small nav (Home, Case studies, Research, CV, Contact, with the page you are on marked) and ends with a way to reach Moses: his address, the contact form and the CV. The pages built on `carbon-ai.css` have the homepage's light theme and its switch, and keep the reader's choice from page to page (`theme.js`, before the first paint); with nothing chosen they follow the system's setting, with or without JavaScript. The text-only field report and the 404 page take the nav and the call to action as plain lines, and no script
 - **[Research outputs](research.html)**: theses, reports, datasets, code and tools, each labelled public / on request / held by the client. No DOI, journal or conference is named anywhere, because none of this work has one — and a test fails the build if one ever appears without proof
 - **[Open counts](stats.html)**: what the site's own cookieless counter has counted, rebuilt weekly — the five numbers that say whether the site works, page views by page, lens and window width, referrers, features used and bytes per page view, in whole weeks. Every count under 5 reads `<5`, a figure that would let one be worked out by subtraction reads `held`, and the page prints the exact payload a page view sends. See [Open counts](#open-counts)
 - **Borehole core-log experience timeline**: career history logged the way a geologist logs a core — depth is time, every layer is a chapter. On a phone each role is a short card (role, organisation, dates, one line), the rest a press away
@@ -477,6 +478,16 @@ The suites, and the failure each one exists to prevent:
   out of the first view, and the nav lights Work on the homepage's projects.
   `npm run smoke` checks that the figures, the caption, the strip and the
   primary action are on the first screen at 1440×900 and 390×844.
+- **`shell.test.js`** — every page but the homepage has the same five nav
+  links, the current page marked, and one call to action with the address,
+  the contact form and the CV; the theme switch only where `theme.js` runs,
+  shipped hidden; the hand-authored pages' shell exactly as generated; the
+  stored choice (or the system's) on `<html>` before the first paint, a
+  press, blocked storage, Back from the page cache, and one choice shared
+  with the homepage; and the light palette twice and the same, the
+  homepage's. `npm run smoke` follows the choice through the nav in a real
+  browser, checks the system's setting with JavaScript off, and every page at
+  320px.
 - **`tooling.test.js`** — the machinery under the rest: the runner fails when
   any suite fails and keeps each suite's output in one block, `npm test` runs
   it rather than a hand-kept list of suites, the fake clock fires timers in
@@ -510,7 +521,7 @@ Everything derived now comes from `content/`:
 
 | Source | Feeds |
 |---|---|
-| `content/profile.json` | JSON-LD, `sitemap.xml`, the Assay's facts block in `modules/interactives.js`, the facts `content.test.js` holds every page to |
+| `content/profile.json` | JSON-LD, `sitemap.xml`, the Assay's facts block in `modules/interactives.js`, the shared shell's call to action on every page but the homepage, the facts `content.test.js` holds every page to |
 | `content/projects.json` | `case-studies.html` |
 | `content/lenses.json` | the role-specific views |
 | `content/research.json` | `research.html` |
@@ -525,7 +536,11 @@ npm run build:check       # fail if a generated file is out of date (runs in CI)
 `index.html` and `field-report.html` stay hand-authored — they are long-form
 editorial pages, and templating over 130 KB of hand-tuned markup to remove
 duplication a test already catches would trade a small problem for a large one.
-`content.test.js` holds them to `content/` instead.
+`content.test.js` holds them to `content/` instead. `carbon-ai.html` and
+`404.html` are hand-authored too, bar the shared shell: the generator writes
+the nav and the call to action into them and the field report, between
+`<!-- SHELL-NAV -->` and `<!-- SHELL-CTA -->` markers (and `theme.js` into
+`carbon-ai.html`'s head), and `build:check` fails if a page's copy drifts.
 
 ### The rules the content model enforces
 

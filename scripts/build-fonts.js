@@ -114,10 +114,11 @@ const FONTS = [
     }
 ];
 
-// Every stylesheet that sets one of the families carries the generated block
-// between these markers, so a page that loads any one of them gets the faces
-// without a second request.
-const STYLESHEETS = ['style.css', 'content.css', 'carbon-ai.css'];
+// The two stylesheets a page starts from carry the generated block between
+// these markers, so every page gets the faces without a second request.
+// content.css and stats.css are only ever loaded after carbon-ai.css, and a
+// copy of the block in them was sent twice on every page that has them.
+const STYLESHEETS = ['style.css', 'carbon-ai.css'];
 const START = '/* FONTS:START';
 const END = '/* FONTS:END */';
 

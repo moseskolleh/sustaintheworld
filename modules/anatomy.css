@@ -8,7 +8,7 @@
     --accent-blue: #2ea3e0;
 }
 /* The homepage's light-theme values for the same two. */
-body.light-mode .ca-anatomy {
+[data-theme=light] .ca-anatomy {
     --accent-amber: #8a6100;
     --accent-blue: #1c6fa6;
 }

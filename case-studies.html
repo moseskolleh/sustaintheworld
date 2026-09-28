@@ -28,13 +28,14 @@
     <link rel="preload" as="font" type="font/woff2" href="assets/fonts/space-grotesk-latin.woff2" crossorigin>
     <link rel="preload" as="font" type="font/woff2" href="assets/fonts/inter-latin.woff2" crossorigin>
     <link rel="preload" as="font" type="font/woff2" href="assets/fonts/ibm-plex-mono-latin-400.woff2" crossorigin>
+    <script src="theme.js"></script>
     <link rel="stylesheet" href="carbon-ai.css">
     <link rel="stylesheet" href="content.css">
     <script defer src="count.js"></script>
 </head>
-<body>
+<body id="top">
     <a class="skip-link" href="#main">Skip to content</a>
-    <svg xmlns="http://www.w3.org/2000/svg" class="icon-sprite" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden"><symbol id="i-arrow-right" viewBox="0 0 448 512"><path d="M438.6 278.6c12.5-12.5 12.5-32.8 0-45.3l-160-160c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L338.8 224 32 224c-17.7 0-32 14.3-32 32s14.3 32 32 32l306.7 0L233.4 393.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0l160-160z"/></symbol></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" class="icon-sprite" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden"><symbol id="i-moon" viewBox="0 0 384 512"><path d="M223.5 32C100 32 0 132.3 0 256S100 480 223.5 480c60.6 0 115.5-24.2 155.8-63.4c5-4.9 6.3-12.5 3.1-18.7s-10.1-9.7-17-8.5c-9.8 1.7-19.8 2.6-30.1 2.6c-96.9 0-175.5-78.8-175.5-176c0-65.8 36-123.1 89.3-153.3c6.1-3.5 9.2-10.5 7.7-17.3s-7.3-11.9-14.3-12.5c-6.3-.5-12.6-.8-19-.8z"/></symbol><symbol id="i-sun" viewBox="0 0 512 512"><path d="M361.5 1.2c5 2.1 8.6 6.6 9.6 11.9L391 121l107.9 19.8c5.3 1 9.8 4.6 11.9 9.6s1.5 10.7-1.6 15.2L446.9 256l62.3 90.3c3.1 4.5 3.7 10.2 1.6 15.2s-6.6 8.6-11.9 9.6L391 391 371.1 498.9c-1 5.3-4.6 9.8-9.6 11.9s-10.7 1.5-15.2-1.6L256 446.9l-90.3 62.3c-4.5 3.1-10.2 3.7-15.2 1.6s-8.6-6.6-9.6-11.9L121 391 13.1 371.1c-5.3-1-9.8-4.6-11.9-9.6s-1.5-10.7 1.6-15.2L65.1 256 2.8 165.7c-3.1-4.5-3.7-10.2-1.6-15.2s6.6-8.6 11.9-9.6L121 121 140.9 13.1c1-5.3 4.6-9.8 9.6-11.9s10.7-1.5 15.2 1.6L256 65.1 346.3 2.8c4.5-3.1 10.2-3.7 15.2-1.6zM160 256a96 96 0 1 1 192 0 96 96 0 1 1 -192 0zm224 0a128 128 0 1 0 -256 0 128 128 0 1 0 256 0z"/></symbol></svg>
     <nav class="ca-nav" aria-label="Main">
         <a href="index.html" class="ca-nav-logo" aria-label="Back to portfolio home">
             <svg viewBox="0 0 40 40" aria-hidden="true">
@@ -45,7 +46,16 @@
             </svg>
             <span class="ca-nav-name">MK<span class="ca-accent">S</span></span>
         </a>
-        <a href="index.html" class="ca-back"><svg class="icon icon-flip" aria-hidden="true" focusable="false"><use href="#i-arrow-right"></use></svg> Back to portfolio</a>
+        <button type="button" class="theme-toggle" id="themeToggle" aria-label="Switch to light theme" hidden>
+            <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-moon"></use></svg>
+        </button>
+        <ul class="ca-nav-links">
+            <li><a href="index.html">Home</a></li>
+            <li><a href="case-studies.html" aria-current="page">Case studies</a></li>
+            <li><a href="research.html">Research</a></li>
+            <li><a href="assets/Moses_Kolleh_Sesay_CV.pdf" download data-analytics="cv-download-page-nav">CV</a></li>
+            <li><a href="index.html#contact" class="ca-nav-contact" data-analytics="contact-page-nav">Contact</a></li>
+        </ul>
     </nav>
     <main class="ca-shell" id="main">
         <header class="ca-hero">
@@ -528,6 +538,16 @@
                 a link points somewhere this repository has not already vouched for.
             </p>
         </section>
+
+        <section class="ca-cta" aria-labelledby="ctaTitle">
+            <h2 id="ctaTitle">Get in touch</h2>
+            <p>Open to sustainability, climate-risk, ESG and sustainable-AI roles and consulting: write to me at <a href="mailto:moseskollehsesay@gmail.com" data-analytics="email-page-cta">moseskollehsesay@gmail.com</a>.</p>
+            <p class="ca-cta-go">
+                <a class="ca-btn ca-btn-primary" href="index.html#contact" data-analytics="contact-page-cta">Send a message</a>
+                <a class="ca-btn" href="assets/Moses_Kolleh_Sesay_CV.pdf" download data-analytics="cv-download-page-cta">Download CV</a>
+            </p>
+        </section>
+        <p class="ca-top"><a href="#top">Back to top</a></p>
     </main>
     <footer class="ca-foot">
         <p><a href="stats.html">Open counts</a>: what this site counts about its visits, and what it never collects.</p>
