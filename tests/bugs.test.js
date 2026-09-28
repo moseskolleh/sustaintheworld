@@ -74,17 +74,10 @@ function assert(cond, msg) {
 }
 
 // --- Accessibility & contact-form guarantees ---
-// The photo galleries went with the dossiers; one is put back here so the
-// lightbox, which serves any gallery, is still held to its markup.
-const withGallery = (w) => {
-    const fig = w.document.createElement('figure');
-    fig.className = 'gallery-item';
-    fig.setAttribute('data-caption', 'A test photo');
-    fig.innerHTML = '<img src="assets/img/profile.webp" alt="A test photo" width="640" height="960"><figcaption>A test photo</figcaption>';
-    w.document.getElementById('main').appendChild(fig);
-};
+// (The photos and their lightbox moved to case-studies.html with the
+// stories they belong to: tests/phone.test.js holds them to theirs.)
 {
-    const { window } = run('dark', { before: withGallery });
+    const { window } = run('dark');
     const doc = window.document;
 
     const toggle = doc.getElementById('navToggle');
@@ -94,16 +87,6 @@ const withGallery = (w) => {
         toggle.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }));
         assert(toggle.getAttribute('aria-expanded') === 'true', 'A11y: nav toggle aria-expanded follows open state');
     }
-
-    // A real button inside each figure; role=button on the <figure> itself
-    // is not allowed and hides the caption from assistive technology.
-    const item = doc.querySelector('.gallery-item');
-    const open = item && item.querySelector('button.gallery-open');
-    assert(
-        !!open && open.getAttribute('type') === 'button' && /^View larger: ./.test(open.getAttribute('aria-label') || '') && !!open.querySelector('img'),
-        'A11y: every gallery photo is inside a named button'
-    );
-    assert(!doc.querySelector('.gallery-item[role], .gallery-item[tabindex]'), 'A11y: the <figure> keeps its own semantics');
 
     assert(!!doc.getElementById('website'), 'Form: honeypot field is present');
     assert(!!doc.getElementById('formStatus'), 'Form: inline status element is present');

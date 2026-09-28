@@ -129,7 +129,7 @@ mks.scrollMotion = scrollMotion;
 // and true means the key is used, so one press closes one layer. A key a
 // control already used is left alone, and a widget's own keys (the games'
 // arrows, a dialog's Tab) stay on the widget.
-const KEY_RANK = Object.freeze({ terminal: 40, lightbox: 30, player: 20, menu: 10, page: 0 });
+const KEY_RANK = Object.freeze({ terminal: 40, player: 20, menu: 10, page: 0 });
 const keyRoutes = {};
 mks.keyRank = KEY_RANK;
 mks.onKey = (keys, handler, rank = KEY_RANK.page) => {
@@ -740,10 +740,19 @@ if (statsSection && 'IntersectionObserver' in window) {
         { x: 120.1, y: 399.4, zoom: 2.4, readout: '8.4657° N, 13.2317° W — Freetown' },
         { x: 901.6, y: 254.1, zoom: 2.4, readout: '28.2282° N, 112.9388° E — Changsha' },
         { x: 279.7, y: 90.1,  zoom: 5.0, readout: '50.7374° N, 7.0982° E — Bonn' },
-        { x: 273.5, y: 81.4,  zoom: 7.5, readout: '51.9692° N, 5.6654° E — Wageningen' },
-        { x: 269.9, y: 78.6,  zoom: 7.5, readout: '52.3676° N, 4.9041° E — Amsterdam' }
+        { x: 273.5, y: 81.4,  zoom: 7.5, close: true, readout: '51.9692° N, 5.6654° E — Wageningen' },
+        { x: 269.9, y: 78.6,  zoom: 7.5, close: true, readout: '52.3676° N, 4.9041° E — Amsterdam' }
     ];
     const VB_W = 1000, VB_H = 726;
+    // Tuned in a desktop's 660px column: screen px per map unit at zoom 1.
+    // A narrower frame keeps every mark its size on screen, and zooms
+    // further in where the stops are close, or a phone had the Rhine
+    // delta's four names in a patch 40px across.
+    const TUNED = 660 / VB_W;
+    // At a close stop the view centres on the middle of the delta's four
+    // names, not on the stop, so that a phone's band holds all of them
+    // (Amsterdam's to Bonn's, in map units: move it if the stops move).
+    const DELTA = [269, 84.4];
     let svg = null;
     let activeIndex = -1;
 
@@ -751,23 +760,31 @@ if (statsSection && 'IntersectionObserver' in window) {
         if (!svg) return;
         const stop = STOPS[index];
         const w = frame.clientWidth;
+        if (!w) return;
         const h = w * (VB_H / VB_W);
-        const s = stop.zoom;
-        const px = stop.x * (w / VB_W);
-        const py = stop.y * (h / VB_H);
+        const fh = frame.clientHeight || h;   // a phone's band shows less than the whole map
+        const z = stop.zoom;
+        const s = stop.close ? z * Math.max(1, TUNED * VB_W / w) : z;
+        const [fx, fy] = stop.close ? DELTA : [stop.x, stop.y];
+        const px = fx * (w / VB_W);
+        const py = fy * (h / VB_H);
         // centre the stop, but never drag the map edge inside the frame
         const tx = Math.min(0, Math.max(w - s * w, w / 2 - s * px));
-        const ty = Math.min(0, Math.max(h - s * h, h / 2 - s * py));
+        const ty = Math.min(0, Math.max(fh - s * h, fh / 2 - s * py));
+        // Low-energy mode and reduced motion: it jumps (style.css).
+        mapBox.classList.toggle('map-still', !motionOK());
         svg.style.transform = `translate(${tx.toFixed(1)}px, ${ty.toFixed(1)}px) scale(${s})`;
 
-        // Markers, labels and strokes live in map units — counter-scale them
-        // so zooming doesn't turn them into blobs. Strokes/fonts shrink as
-        // 1/sqrt(s) (a hint of growth); dots shrink harder (s^-0.7) so the
-        // Rhine-delta cluster stays separable at high zoom; label offsets
-        // shrink as 1/s so labels keep a constant on-screen distance.
-        const comp = 1 / Math.sqrt(s);
-        const dotComp = Math.pow(s, -0.7);
-        const offComp = 2 / s;
+        // Markers, labels and strokes live in map units, so each is sized
+        // here for the screen, as tuned in the desktop column: strokes grow
+        // as sqrt(zoom), dots barely (zoom^0.3, so the delta's stops stay
+        // apart), offsets not at all. Names are 11px on screen or more, and
+        // at most 3px past their base size: at 20px the delta's ran into
+        // each other.
+        const unit = s * w / VB_W;   // screen px per map unit, now
+        const comp = TUNED * Math.sqrt(z) / unit;
+        const dotComp = TUNED * Math.pow(z, 0.3) / unit;
+        const offComp = 2 * TUNED / unit;
         svg.style.setProperty('--zoom-comp', comp.toFixed(3));
         svg.querySelectorAll('.map-stop-dot, .map-you-dot').forEach(el => el.setAttribute('r', (3.2 * dotComp).toFixed(2)));
         svg.querySelectorAll('.map-stop-halo').forEach(el => el.setAttribute('r', (10 * dotComp).toFixed(2)));
@@ -778,12 +795,32 @@ if (statsSection && 'IntersectionObserver' in window) {
         svg.querySelectorAll('.map-stop-label, .map-site-label, .map-you-label').forEach(el => {
             const base = el.classList.contains('map-site-label') ? 9.5 :
                 el.classList.contains('map-you-label') ? 9 : 11;
-            el.style.fontSize = (base * comp).toFixed(2) + 'px';
+            const onScreen = Math.min(base + 3, Math.max(11, base * TUNED * Math.sqrt(z)));
+            el.style.fontSize = (onScreen / unit).toFixed(2) + 'px';
             if (el.dataset.cx) {
                 el.setAttribute('x', (+el.dataset.cx + el.dataset.dx * offComp).toFixed(1));
                 el.setAttribute('y', (+el.dataset.cy + el.dataset.dy * offComp).toFixed(1));
             }
         });
+
+        // The visitor's mark is a guess, so it gives way: over a stop's name
+        // or a site's (a visitor in Brussels, at the delta), it tries the
+        // dot's other corners.
+        const you = svg.querySelector('.map-you-label');
+        if (!you) return;
+        const corners = [[14, -6], [-14, -6], [14, 14], [-14, 14]];
+        let taken = [];
+        const tryCorner = ([dx, dy]) => {
+            you.setAttribute('x', (+you.dataset.cx + dx * offComp).toFixed(1));
+            you.setAttribute('y', (+you.dataset.cy + dy * offComp).toFixed(1));
+            you.setAttribute('text-anchor', dx > 0 ? 'start' : 'end');
+            const b = you.getBBox();
+            return !taken.some(o => b.x < o.x + o.width && o.x < b.x + b.width && b.y < o.y + o.height && o.y < b.y + b.height);
+        };
+        try {
+            taken = Array.from(svg.querySelectorAll('.map-stop-dot, .active text, .visited text'), el => el.getBBox());
+            if (!corners.some(tryCorner)) tryCorner(corners[0]);
+        } catch (e) { /* not laid out (Firefox throws): the first corner */ }
     };
 
     const setActive = (index) => {
@@ -823,23 +860,38 @@ if (statsSection && 'IntersectionObserver' in window) {
             document.dispatchEvent(new CustomEvent('journeymap:ready', { detail: { svg, mapBox, rescale } }));
             setActive(0);
 
-            const stops = document.querySelectorAll('.journey-stop');
-            if ('IntersectionObserver' in window && stops.length) {
-                const mapObserver = new IntersectionObserver((entries) => {
-                    entries.forEach(entry => {
-                        if (entry.isIntersecting) {
-                            const i = parseInt(entry.target.getAttribute('data-stop'), 10);
-                            if (!isNaN(i)) setActive(i);
-                        }
-                    });
-                }, { threshold: 0.6 });
+            // The stop shown is the one nearest a reading line: 45% of the
+            // way down the screen beside the map, 30% down what a phone's
+            // pinned band leaves. It was any stop 60% in view, often the next
+            // one arriving, so the map ran a stop ahead. The strip watched is
+            // wider than the gap between two stops.
+            const stops = Array.from(document.querySelectorAll('.journey-stop'));
+            const track = document.querySelector('.journey-track');
+            let mapObserver = null;
+            const watch = () => {
+                if (!('IntersectionObserver' in window) || !stops.length || !track) return;
+                if (mapObserver) mapObserver.disconnect();
+                const m = mapBox.getBoundingClientRect();
+                const t = track.getBoundingClientRect();
+                const css = getComputedStyle(mapBox);
+                const band = css.position === 'sticky' && m.left < t.right && t.left < m.right
+                    ? (parseFloat(css.top) || 0) + m.height : 0;
+                const line = band + (window.innerHeight - band) * (band ? 0.3 : 0.45);
+                const off = (el) => {
+                    const r = el.getBoundingClientRect();
+                    return Math.max(0, r.top - line, line - r.bottom);
+                };
+                mapObserver = new IntersectionObserver(() => {
+                    setActive(+stops.reduce((a, b) => (off(b) < off(a) ? b : a)).getAttribute('data-stop'));
+                }, { rootMargin: `${Math.round(24 - line)}px 0px ${Math.round(line + 24 - window.innerHeight)}px 0px` });
                 stops.forEach(stop => mapObserver.observe(stop));
-            }
+            };
+            watch();
 
             let resizeTimer;
             window.addEventListener('resize', () => {
                 clearTimeout(resizeTimer);
-                resizeTimer = setTimeout(() => { if (activeIndex >= 0) flyTo(activeIndex); }, 200);
+                resizeTimer = setTimeout(() => { watch(); if (activeIndex >= 0) flyTo(activeIndex); }, 200);
             });
         })
         .catch(() => { mapBox.style.display = 'none'; });
@@ -907,85 +959,6 @@ if (statsSection && 'IntersectionObserver' in window) {
     }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
 
     elements.forEach(el => revealObserver.observe(el));
-})();
-
-// ===================================
-// GALLERY LIGHTBOX
-// ===================================
-(() => {
-    const lightbox = document.getElementById('lightbox');
-    const lightboxImage = document.getElementById('lightboxImage');
-    const lightboxCaption = document.getElementById('lightboxCaption');
-    const lightboxClose = document.getElementById('lightboxClose');
-    if (!lightbox || !lightboxImage) return;
-
-    let lastFocus = null;
-
-    const open = (src, alt, caption) => {
-        lastFocus = document.activeElement;
-        lightboxImage.src = src;
-        lightboxImage.alt = alt || '';
-        if (lightboxCaption) lightboxCaption.textContent = caption || '';
-
-        // The dialog is named by its caption. Not every gallery item has one,
-        // and a dialog with no accessible name is announced as just "dialog",
-        // so the image's alt text stands in when the caption is empty.
-        if (caption) {
-            lightbox.setAttribute('aria-labelledby', 'lightboxCaption');
-            lightbox.removeAttribute('aria-label');
-        } else {
-            lightbox.removeAttribute('aria-labelledby');
-            lightbox.setAttribute('aria-label', alt || 'Enlarged image');
-        }
-
-        lightbox.classList.add('active');
-        lightbox.setAttribute('aria-hidden', 'false');
-        document.body.style.overflow = 'hidden';
-        if (lightboxClose) lightboxClose.focus();
-    };
-
-    const close = () => {
-        lightbox.classList.remove('active');
-        lightbox.setAttribute('aria-hidden', 'true');
-        // Restore rather than assert: 'auto' overrides whatever the stylesheet
-        // had to say about body overflow.
-        document.body.style.overflow = '';
-        if (lastFocus && typeof lastFocus.focus === 'function') lastFocus.focus();
-        lastFocus = null;
-    };
-
-    // The photo sits in a real button. A <figure> cannot take role=button —
-    // the role hides the figure and its caption from assistive technology —
-    // and a button brings Enter, Space and focus with it. A click anywhere on
-    // the figure, caption included, still opens it.
-    document.querySelectorAll('.gallery-item').forEach(item => {
-        const img = item.querySelector('img');
-        if (!img) return;
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'gallery-open';
-        btn.setAttribute('aria-label', 'View larger: ' + (img.alt || 'photo'));
-        img.replaceWith(btn);
-        btn.appendChild(img);
-        item.addEventListener('click', () => open(img.src, img.alt, item.getAttribute('data-caption')));
-    });
-
-    if (lightboxClose) lightboxClose.addEventListener('click', close);
-    lightbox.addEventListener('click', (e) => {
-        if (e.target === lightbox) close();
-    });
-    // The close button is the dialog's only focusable control — keep Tab on it
-    lightbox.addEventListener('keydown', (e) => {
-        if (e.key === 'Tab' && lightboxClose) {
-            e.preventDefault();
-            lightboxClose.focus();
-        }
-    });
-    mks.onKey('Escape', () => {
-        if (!lightbox.classList.contains('active')) return false;
-        close();
-        return true;
-    }, KEY_RANK.lightbox);
 })();
 
 // ===================================

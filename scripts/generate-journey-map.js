@@ -102,7 +102,9 @@ function steps(d) {
 // Variable-resolution land: keep 50m detail where the map zooms deepest
 // (the Rhine delta), simplify progressively harder with distance, and drop
 // islets too small to ever cover a pixel. Weight boosting turns the single
-// global simplification threshold into a distance-graded one.
+// global simplification threshold into a distance-graded one. (7% of the
+// points far from the delta, not 8%: no change a reader could see, and 180
+// bytes gzipped that paid for You Draw It's labels drawn for a phone.)
 const pre = simplify.presimplify(land);
 const boosted = { ...pre, arcs: pre.arcs.map(arc => arc.map(([x, y, z]) => {
     const dx = (x - 5.5) * 0.62, dy = y - 52; // degrees from the Rhine delta
@@ -110,7 +112,7 @@ const boosted = { ...pre, arcs: pre.arcs.map(arc => arc.map(([x, y, z]) => {
     const f = d < 7 ? 1e4 : d < 18 ? 12 : 1;
     return [x, y, z * f];
 })) };
-const simplified = simplify.simplify(boosted, simplify.quantile(pre, 0.08));
+const simplified = simplify.simplify(boosted, simplify.quantile(pre, 0.07));
 const landGeom = topojson.feature(simplified, simplified.objects.land).features[0].geometry;
 const landPolys = (landGeom.type === 'MultiPolygon' ? landGeom.coordinates : [landGeom.coordinates])
     .filter(c => geo.area({ type: 'Polygon', coordinates: c }) >= 2.5);
@@ -142,15 +144,21 @@ for (const s of sites) {
     s.y = +y.toFixed(1);
 }
 
+// script.js keeps each offset the same distance on screen at any zoom.
+// Changsha's name sits under it, as Freetown's does: to the right it ran
+// off the map's east edge in a 320px phone's band.
 const stopLabels = {
     freetown:   { dx: 0,   dy: 26,  anchor: 'middle' },
-    changsha:   { dx: 16,  dy: 5,   anchor: 'start' },
+    changsha:   { dx: 0,   dy: 26,  anchor: 'middle' },
     bonn:       { dx: 14,  dy: 14,  anchor: 'start' },
     wageningen: { dx: 16,  dy: 0,   anchor: 'start' },
     amsterdam:  { dx: -13, dy: -8,  anchor: 'end' }
 };
+// Wuppertal sits between the Bonn-Wageningen leg and the arc in from
+// Changsha: its long name has room only to the west, clear of the leg (at
+// -12 it ended on it).
 const siteLabels = {
-    wuppertal:  { dx: -12, dy: 4,   anchor: 'end' }
+    wuppertal:  { dx: -22, dy: 4,   anchor: 'end' }
 };
 
 // Projection constants for runtime use (script.js places the visitor's
@@ -159,7 +167,7 @@ const k = projection.scale().toFixed(2);
 const [ptx, pty] = projection.translate().map(v => +v.toFixed(2));
 const rot = -(WEST + EAST) / 2;
 
-let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" class="journey-map-svg" role="img" aria-label="Map tracing the journey from Freetown to Changsha, Bonn, Wageningen and Amsterdam, with fieldwork in Wuppertal" data-proj-k="${k}" data-proj-tx="${ptx}" data-proj-ty="${pty}" data-proj-rot="${rot}" data-crop="${WEST} ${SOUTH} ${EAST} ${NORTH}">
+let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Map tracing the journey from Freetown to Changsha, Bonn, Wageningen and Amsterdam, with fieldwork in Wuppertal" data-proj-k="${k}" data-proj-tx="${ptx}" data-proj-ty="${pty}" data-proj-rot="${rot}" data-crop="${WEST} ${SOUTH} ${EAST} ${NORTH}">
 <g id="mapScene">
 <path class="map-graticule" d="${graticulePath}"/>
 <path class="map-land" d="${landPath}"/>
@@ -174,14 +182,16 @@ for (let i = 0; i < stops.length - 1; i++) {
 
 // Labels carry their dot position + authored offset so script.js can
 // counter-scale the offset as the map zooms (keeps labels hugging their
-// markers instead of drifting away at high zoom).
+// markers instead of drifting away at high zoom). It places every label,
+// and sizes every mark, before the map is first shown, so the file carries
+// no positions of its own for them: they were bytes nothing drew.
 const labelAttrs = (s, l) =>
-    `x="${(s.x + l.dx).toFixed(1)}" y="${(s.y + l.dy).toFixed(1)}" data-cx="${s.x}" data-cy="${s.y}" data-dx="${l.dx}" data-dy="${l.dy}" text-anchor="${l.anchor}"`;
+    `data-cx="${s.x}" data-cy="${s.y}" data-dx="${l.dx}" data-dy="${l.dy}" text-anchor="${l.anchor}"`;
 
 sites.forEach((s, i) => {
     const l = siteLabels[s.id];
     svg += `<g class="map-site" id="mapSite${i}" data-activate="${s.activate}">
-<path class="map-site-mark" data-x="${s.x}" data-y="${s.y}" d="M 0 -3.4 L 3.4 0 L 0 3.4 L -3.4 0 Z" transform="translate(${s.x} ${s.y})"/>
+<path class="map-site-mark" data-x="${s.x}" data-y="${s.y}" d="m0-3.4 3.4 3.4-3.4 3.4-3.4-3.4z"/>
 <text class="map-site-label" ${labelAttrs(s, l)}>${s.name} · fieldwork</text>
 </g>\n`;
 });
@@ -189,9 +199,9 @@ sites.forEach((s, i) => {
 stops.forEach((s, i) => {
     const l = stopLabels[s.id];
     const current = i === stops.length - 1;
-    svg += `<g class="map-stop${current ? ' map-stop-current' : ''}" id="mapStop${i}" data-stop="${s.id}">
-<circle class="map-stop-halo" cx="${s.x}" cy="${s.y}" r="10"/>
-${current ? `<circle class="map-stop-ring" cx="${s.x}" cy="${s.y}" r="6.5"/>\n` : ''}<circle class="map-stop-dot" cx="${s.x}" cy="${s.y}" r="3.2"/>
+    svg += `<g class="map-stop" id="mapStop${i}">
+<circle class="map-stop-halo" cx="${s.x}" cy="${s.y}"/>
+${current ? `<circle class="map-stop-ring" cx="${s.x}" cy="${s.y}"/>\n` : ''}<circle class="map-stop-dot" cx="${s.x}" cy="${s.y}"/>
 <text class="map-stop-label" ${labelAttrs(s, l)}>${s.name}</text>
 </g>\n`;
 });

@@ -27,11 +27,18 @@
 //     covered, leaves content invisible, shows a [hidden] element or a
 //     control only a script could drive, or hides the contact form
 //   - a skip link, nav link or Back that does not land where it says; a
-//     theme switch or nav item off the bar; back to top over a control; a
-//     lightbox that opens without taking focus, reduced motion included
+//     theme switch or nav item off the bar; back to top over a control
 //   - a page other than the homepage whose theme does not follow the
 //     reader's choice (or the system's), or that has no room on a 320px
 //     phone for its nav and its call to action
+//   - on a phone, a journey map out of view while its stops are read, over
+//     the text of the stop it shows, or showing another; a name on the map
+//     under 11px, or on a desktop over another name, the frame's edge or
+//     the route; a You Draw It label under 11px or cut off
+//   - a case study's photos fetched before their row is opened, or a
+//     lightbox that will not step through them (buttons, arrow keys, "2 of
+//     5"), lets Tab out, or does not hand focus back on Escape, in either
+//     theme, with motion or without
 //   - more than one listen control, a nav bar that moves when it appears,
 //     a player that covers more than 20% of a phone screen or the send
 //     button, or a recording fetched unasked
@@ -293,6 +300,7 @@ async function visit(context, page, rel, origin) {
     await exerciseSections(browser, origin);
     await exerciseLength(browser, origin);
     await exerciseCpu(browser, origin);
+    await exerciseJourneyAndChart(browser, origin);
     await exerciseStatsPage(browser, origin);
 
     // The top nav at every desktop width: one line per item, nothing past the
@@ -661,6 +669,7 @@ async function exerciseCaseStudyGames(page, r) {
     if (r.foreign.length) r.foreign.forEach(f => bad(`left the origin: ${f}`));
 
     await holdReaderBelowGame(page.context().browser(), new URL(page.url()).origin);
+    await exercisePhotos(page.context().browser(), new URL(page.url()).origin);
 }
 
 // A reader who has scrolled on to the case study after Wuppertal's, with
@@ -698,6 +707,287 @@ async function holdReaderBelowGame(browser, origin) {
         if (!live || seen.host > 0) bad(`${tag}: the games did not arrive above the reader (live: ${live}, host's foot at ${seen.host}px)`);
         else if (Math.abs(now.top - seen.top) <= 2) ok(`${tag}: it arrives above and nothing moves (${seen.top}px, then ${now.top}px)`);
         else bad(`${tag}: the page moved ${now.top - seen.top}px as the game arrived above`);
+        await context.close();
+    }
+}
+
+// ------------------------------------------------------------------
+// case-studies.html: the photos, and the lightbox they open in
+// ------------------------------------------------------------------
+// The 25 field photos went with the homepage's dossiers and were shown
+// nowhere; the homepage kept a lightbox that opened one photo at a time.
+// They are back with their case studies, folded under a line each, and
+// the page's own lightbox steps through a case study's photos. Checked on
+// a phone and a small one, in both themes, with and without motion: the
+// photos wait until their row is opened, then previous, next, the arrow
+// keys and "2 of 5", Tab kept inside, and Escape handing focus back to the
+// photo pressed. axe checks the open lightbox in accessibilityPass().
+async function exercisePhotos(browser, origin) {
+    const runs = [[390, 844, 'dark', 'reduce'], [390, 844, 'light', 'no-preference'], [320, 700, 'dark', 'no-preference'], [320, 700, 'light', 'reduce']];
+    for (const [width, height, theme, motion] of runs) {
+        const where = `case-studies.html photos at ${width}x${height}, ${theme}, ${motion === 'reduce' ? 'reduced motion' : 'with motion'}`;
+        const context = await browser.newContext({ viewport: { width, height }, colorScheme: theme, reducedMotion: motion });
+        await context.addInitScript((t) => { try { localStorage.setItem('theme', t); } catch (e) { /* blocked */ } }, theme);
+        const page = await context.newPage();
+        const photos = [];
+        page.on('request', (q) => { if (/assets\/img\/wuppertal-resilience/.test(q.url())) photos.push(q.url().split('/').pop()); });
+        await page.goto(`${origin}/case-studies.html`, { waitUntil: 'load' });
+        await page.evaluate(() => document.querySelector('#wuppertal details.cs-photos').scrollIntoView({ block: 'center', behavior: 'instant' }));
+        await page.waitForTimeout(400);
+        const folded = photos.length;
+        await page.click('#wuppertal details.cs-photos > summary');
+        await page.waitForFunction(() => Array.from(document.querySelectorAll('#wuppertal .cs-photo img')).slice(0, 2).every(i => i.complete && i.naturalWidth), null, { timeout: 5000 }).catch(() => null);
+        const steps = [];
+        const expect = (what, got, want) => { if (got !== want) steps.push(`${what}: ${got}, not ${want}`); };
+        if (folded) steps.push(`${folded} of its photos were fetched before the row was opened`);
+        if (!photos.length) steps.push('opening the row fetched none of its photos');
+        const wide = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
+        if (wide) steps.push('with the row open, the page scrolls sideways');
+
+        const state = () => page.evaluate(() => {
+            const box = document.getElementById('lightbox');
+            const el = document.activeElement;
+            return {
+                open: !!box && !box.hidden,
+                count: box ? box.querySelector('.lightbox-count').textContent : '',
+                src: box ? (box.querySelector('img').getAttribute('src') || '').split('/').pop() : '',
+                focus: el.getAttribute('aria-label') || el.getAttribute('href') || el.tagName,
+                moving: box ? getComputedStyle(box).animationName !== 'none' : false   // what it would do, not whether it is done
+            };
+        });
+        await page.focus('#wuppertal .cs-photo a >> nth=1');
+        await page.keyboard.press('Enter');
+        await page.waitForFunction(() => { const b = document.getElementById('lightbox'); return b && !b.hidden; }, null, { timeout: 3000 }).catch(() => null);
+        let s = await state();
+        expect('opened', `${s.open} ${s.count} ${s.src} ${s.focus}`, 'true 2 of 5 wuppertal-resilience-2.webp Close photo');
+        if (motion === 'reduce' ? s.moving : !s.moving) steps.push(`it ${s.moving ? 'fades in with reduced motion asked for' : 'does not fade in with motion allowed'}`);
+        const controls = await page.evaluate(() => Array.from(document.querySelectorAll('#lightbox button')).map((b) => {
+            const r = b.getBoundingClientRect();
+            const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+            return r.width >= 44 && r.height >= 44 && r.top >= 0 && r.bottom <= innerHeight && hit === b;
+        }));
+        if (controls.length !== 3 || !controls.every(Boolean)) steps.push('Close, Previous and Next are not all on screen, 44px or more, and uncovered');
+        await page.waitForFunction(() => { const i = document.querySelector('#lightbox img'); return i.complete && i.naturalWidth; }, null, { timeout: 5000 }).catch(() => null);
+        const art = await page.evaluate(() => {
+            const img = document.querySelector('#lightbox img').getBoundingClientRect();
+            const cap = document.getElementById('lightboxCaption').getBoundingClientRect();
+            return { ok: img.top >= 0 && img.width > 0 && cap.bottom <= innerHeight && img.right <= innerWidth,
+                at: `photo ${Math.round(img.left)},${Math.round(img.top)} ${Math.round(img.width)}x${Math.round(img.height)}, caption to ${Math.round(cap.bottom)} of ${innerHeight}` };
+        });
+        if (!art.ok) steps.push(`the photo or its caption is off the screen (${art.at})`);
+        await page.click('#lightbox [data-step="1"]');
+        s = await state();
+        expect('Next', `${s.count} ${s.src}`, '3 of 5 wuppertal-resilience-3.webp');
+        await page.keyboard.press('ArrowRight');
+        expect('the right arrow', (await state()).count, '4 of 5');
+        await page.keyboard.press('ArrowRight');
+        await page.keyboard.press('ArrowRight');
+        expect('the right arrow past the end', (await state()).count, '1 of 5');
+        await page.keyboard.press('ArrowLeft');
+        expect('the left arrow past the start', (await state()).count, '5 of 5');
+        await page.click('#lightbox [data-step="-1"]');
+        expect('Previous', (await state()).count, '4 of 5');
+        await page.focus('#lightbox .lightbox-close');
+        const ring = [];
+        for (let i = 0; i < 4; i++) { await page.keyboard.press('Tab'); ring.push((await state()).focus); }
+        expect('Tab from Close', ring.join(', '), 'Previous photo, Next photo, Close photo, Previous photo');
+        await page.keyboard.press('Escape');
+        s = await state();
+        expect('Escape', `${s.open} ${s.focus}`, 'false assets/img/wuppertal-resilience-2.webp');
+        if (steps.length) steps.forEach(t => bad(`${where}: ${t}`));
+        else ok(`${where}: fetched when opened; previous, next, the arrow keys and "2 of 5" step through; Tab stays inside; Escape returns focus`);
+        await context.close();
+    }
+}
+
+// ------------------------------------------------------------------
+// A phone: the journey band, the Rhine's names, You Draw It's labels
+// ------------------------------------------------------------------
+// On a phone the journey map sat above the stops and flew out of sight as
+// they came; on any screen the Rhine delta's names ran into each other;
+// You Draw It printed its labels about 5px tall on a phone. What jsdom
+// cannot show (tests/phone.test.js has the rest): where the pinned band
+// sits against the stop it illustrates, and what size a label is once its
+// drawing is scaled to fit.
+const LABEL_MIN_PX = 11;
+
+async function exerciseJourneyAndChart(browser, origin) {
+    console.log('  index.html — the journey map on a phone, its names, You Draw It\'s labels');
+    const mapReady = (page) => page.mouse.wheel(0, 300)
+        .then(() => page.waitForFunction(() => document.querySelector('#journeyMapFrame svg'), null, { timeout: 5000 }))
+        .catch(() => null);
+
+    for (const [width, height] of [[390, 844], [320, 700]]) {
+        const context = await browser.newContext({ viewport: { width, height }, reducedMotion: 'reduce', timezoneId: 'Europe/Amsterdam' });
+        const page = await context.newPage();
+        await page.goto(`${origin}/index.html`, { waitUntil: 'load' });
+        await mapReady(page);
+        const where = `journey band at ${width}x${height}`;
+        const trouble = [];
+        const small = new Set();
+        for (let i = 0; i < 5; i++) {
+            // Met as a reader meets each stop: its top just under the band.
+            await page.evaluate((i) => {
+                const map = document.getElementById('journeyMap');
+                const band = parseFloat(getComputedStyle(map).top) + map.getBoundingClientRect().height;
+                const card = document.querySelector(`.journey-stop[data-stop="${i}"]`);
+                scrollBy({ top: card.getBoundingClientRect().top - band - 16, behavior: 'instant' });
+            }, i);
+            await page.waitForTimeout(400);
+            const r = await page.evaluate((i) => {
+                const map = document.getElementById('journeyMap');
+                const m = map.getBoundingClientRect();
+                const bar = document.getElementById('navbar').getBoundingClientRect().bottom;
+                const hit = document.elementFromPoint(m.left + m.width / 2, m.top + m.height / 2);
+                const card = document.querySelector(`.journey-stop[data-stop="${i}"]`);
+                const covered = [];
+                card.querySelectorAll('.journey-coords, h3, .journey-years, p').forEach((el) => {
+                    const b = el.getBoundingClientRect();
+                    [[b.left + 4, b.top + 4], [b.right - 4, b.top + 4], [b.left + b.width / 2, b.top + b.height / 2], [b.left + 4, b.bottom - 4], [b.right - 4, b.bottom - 4]]
+                        .filter(([, y]) => y > 0 && y < innerHeight)
+                        .forEach(([x, y]) => {
+                            const at = document.elementFromPoint(x, y);
+                            if (!at || !card.contains(at)) covered.push(`${el.tagName.toLowerCase()} under ${at ? (at.closest('[id]') || at).id || at.tagName : 'nothing'}`);
+                        });
+                });
+                return {
+                    seen: m.top >= bar - 1 && m.bottom <= innerHeight && !!hit && map.contains(hit),
+                    where: `${Math.round(m.top)}-${Math.round(m.bottom)}px`,
+                    share: m.height / innerHeight,
+                    flew: (map.querySelector('.map-stop.active') || {}).id,
+                    active: (document.querySelector('.journey-stop.map-active') || { dataset: {} }).dataset.stop,
+                    covered,
+                    // A name's size on screen: its font size in map units,
+                    // times its box on screen over its box in map units.
+                    labels: Array.from(map.querySelectorAll('.map-stop.active text, .map-stop.visited text, .map-site.active text')).map((t) => {
+                        const bb = t.getBBox();
+                        return [t.textContent, bb.height ? parseFloat(getComputedStyle(t).fontSize) * t.getBoundingClientRect().height / bb.height : 0];
+                    })
+                };
+            }, i);
+            if (!r.seen) trouble.push(`stop ${i}: the band is not on screen and uncovered (${r.where})`);
+            if (r.share > 0.25) trouble.push(`stop ${i}: the band takes ${(r.share * 100).toFixed(0)}% of the screen`);
+            if (r.flew !== `mapStop${i}` || r.active !== String(i)) trouble.push(`stop ${i}: the map shows ${r.flew}, the page marks stop ${r.active}`);
+            r.covered.forEach(c => trouble.push(`stop ${i}: its ${c}`));
+            r.labels.filter(([, px]) => px < LABEL_MIN_PX - 0.05).forEach(([name, px]) => small.add(`${name} ${px.toFixed(1)}px`));
+        }
+        if (trouble.length) trouble.forEach(t => bad(`${where}, ${t}`));
+        else ok(`${where}: pinned on screen at each of the five stops, showing that stop, over none of its text`);
+        if (small.size) bad(`${where}: names under ${LABEL_MIN_PX}px (${Array.from(small).join(', ')})`);
+        else ok(`${where}: every name on it ${LABEL_MIN_PX}px or more`);
+
+        // Scrolled through: whenever a stop can be read below it, it is in view.
+        const sweep = await page.evaluate(async () => {
+            const map = document.getElementById('journeyMap');
+            const section = document.getElementById('journey');
+            const stops = Array.from(document.querySelectorAll('.journey-stop'));
+            const frames = () => new Promise(res => requestAnimationFrame(() => requestAnimationFrame(res)));
+            const out = [];
+            let checked = 0;
+            const start = section.getBoundingClientRect().top + scrollY;
+            for (let y = start - innerHeight; y < start + section.offsetHeight; y += 120) {
+                scrollTo({ top: y, behavior: 'instant' });
+                await frames();
+                const m = map.getBoundingClientRect();
+                const reading = stops.some((s) => { const b = s.getBoundingClientRect(); return b.top < innerHeight - 40 && b.bottom > m.bottom + 40; });
+                if (!reading) continue;
+                checked++;
+                if (m.top < document.getElementById('navbar').getBoundingClientRect().bottom - 1 || m.bottom > innerHeight) out.push(`${Math.round(y)}px (band at ${Math.round(m.top)}-${Math.round(m.bottom)})`);
+            }
+            return { out, checked, still: map.classList.contains('map-still') };
+        });
+        if (sweep.out.length || sweep.checked < 5) bad(`${where}: out of view with a stop to read at ${sweep.out.join(', ') || `only ${sweep.checked} positions checked`}`);
+        else ok(`${where}: in view at all ${sweep.checked} scroll positions with a stop to read below it`);
+        if (sweep.still) ok(`${where}: with reduced motion it jumps from stop to stop`); else bad(`${where}: it flies with reduced motion asked for`);
+        await context.close();
+    }
+
+    // The Rhine delta on a desktop, every name showing, for a visitor in
+    // Amsterdam (their mark on the Amsterdam stop) and in Brussels (theirs
+    // beside Wuppertal's name): no name on another or cut by the frame, and
+    // no stop's or site's name across the route.
+    for (const zone of ['Europe/Amsterdam', 'Europe/Brussels']) {
+        const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce', timezoneId: zone });
+        const page = await context.newPage();
+        await page.goto(`${origin}/index.html`, { waitUntil: 'load' });
+        await mapReady(page);
+        const clash = [];
+        let count = 0;
+        for (const i of [3, 4]) {
+            await page.evaluate((i) => document.querySelector(`.journey-stop[data-stop="${i}"]`).scrollIntoView({ block: 'center', behavior: 'instant' }), i);
+            await page.waitForFunction((i) => document.querySelector(`#mapStop${i}.active`) && document.querySelector('.map-you'), i, { timeout: 5000 }).catch(() => null);
+            await page.waitForTimeout(300);
+            const r = await page.evaluate(() => {
+                const shown = (t) => { for (let e = t; e && e.tagName !== 'svg'; e = e.parentElement) if (parseFloat(getComputedStyle(e).opacity) < 0.1) return false; return true; };
+                const frame = document.getElementById('journeyMapFrame').getBoundingClientRect();
+                // The glyphs' band, not the line box around them.
+                const box = (t) => { const b = t.getBoundingClientRect(); return { l: b.left, r: b.right, t: b.top + b.height * 0.2, b: b.bottom - b.height * 0.15, name: t.textContent, you: t.classList.contains('map-you-label') }; };
+                // The names in the frame (Freetown's is still drawn, a map away).
+                const names = Array.from(document.querySelectorAll('#journeyMapFrame text')).filter(shown).map(box)
+                    .filter(n => n.r > frame.left && n.l < frame.right && n.b > frame.top && n.t < frame.bottom);
+                const out = [];
+                names.forEach((a, k) => names.slice(k + 1).forEach((b) => {
+                    if (a.l < b.r && b.l < a.r && a.t < b.b && b.t < a.b) out.push(`"${a.name}" on "${b.name}"`);
+                }));
+                names.filter(n => n.l < frame.left || n.r > frame.right || n.t < frame.top || n.b > frame.bottom).forEach(n => out.push(`"${n.name}" cut by the frame`));
+                // The legs flown so far, as points on screen: the map's box on
+                // screen over its viewBox (the flight is a CSS transform).
+                const svg = document.querySelector('#journeyMapFrame svg');
+                const R = svg.getBoundingClientRect(), vb = svg.viewBox.baseVal;
+                document.querySelectorAll('#journeyMapFrame .map-arc.drawn').forEach((arc) => {
+                    const len = arc.getTotalLength();
+                    for (let k = 0; k <= 400; k++) {
+                        const q = arc.getPointAtLength(len * k / 400);
+                        const p = { x: R.left + (q.x - vb.x) * R.width / vb.width, y: R.top + (q.y - vb.y) * R.height / vb.height };
+                        const on = names.find(n => !n.you && p.x > n.l && p.x < n.r && p.y > n.t && p.y < n.b);
+                        if (on) { out.push(`"${on.name}" across the route (${arc.id})`); break; }
+                    }
+                });
+                return { count: names.length, out };
+            });
+            count = Math.max(count, r.count);
+            r.out.forEach(c => clash.push(`at stop ${i}, ${c}`));
+        }
+        const where = `journey map at 1440x900, a visitor in ${zone.split('/')[1]}`;
+        if (clash.length) bad(`${where}: ${Array.from(new Set(clash)).join('; ')}`);
+        else if (count < 5) bad(`${where}: only ${count} names showing at the delta`);
+        else ok(`${where}: all ${count} names at the delta clear of each other, of the frame's edge and of the route`);
+        await context.close();
+    }
+
+    // You Draw It at phone widths, drawn and revealed: every label, the
+    // callout and the legend 11px or more, once the chart is scaled to fit.
+    for (const [width, height] of [[390, 844], [320, 700]]) {
+        const context = await browser.newContext({ viewport: { width, height }, reducedMotion: 'reduce' });
+        const page = await context.newPage();
+        await page.goto(`${origin}/index.html`, { waitUntil: 'load' });
+        await page.evaluate(() => document.getElementById('ydi').scrollIntoView({ block: 'center', behavior: 'instant' }));
+        await page.waitForFunction(() => document.querySelector('#ydiSvg .ydi-hit'), null, { timeout: 8000 }).catch(() => null);
+        await page.evaluate(() => document.getElementById('ydi').scrollIntoView({ block: 'center', behavior: 'instant' }));
+        await page.focus('#ydiSvg .ydi-hit').catch(() => null);
+        await page.keyboard.press('ArrowUp');
+        await page.keyboard.press('Enter');
+        await page.waitForTimeout(200);
+        const r = await page.evaluate((min) => {
+            const svg = document.getElementById('ydiSvg');
+            const s = svg.getBoundingClientRect();
+            const scale = s.width / svg.viewBox.baseVal.width;
+            const texts = Array.from(svg.querySelectorAll('text'));
+            const small = texts.map(t => [t.textContent, parseFloat(getComputedStyle(t).fontSize) * scale]).filter(([, px]) => px < min - 0.05);
+            const clipped = texts.filter((t) => { const b = t.getBoundingClientRect(); return b.left < s.left - 1 || b.right > s.right + 1 || b.top < s.top - 1 || b.bottom > s.bottom + 1; }).map(t => t.textContent);
+            const legend = document.getElementById('ydiLegend');
+            return {
+                count: texts.length, callout: !!svg.querySelector('.ydi-callout'),
+                small: small.map(([n, px]) => `${n} ${px.toFixed(1)}px`), clipped,
+                legend: legend.hidden ? 0 : Math.min(...Array.from(legend.querySelectorAll('.ydi-leg')).map(l => parseFloat(getComputedStyle(l).fontSize)))
+            };
+        }, LABEL_MIN_PX);
+        const where = `You Draw It at ${width}x${height}`;
+        if (!r.callout || r.count < 17) bad(`${where}: the chart did not draw and reveal (${r.count} labels)`);
+        else if (r.small.length) bad(`${where}: labels under ${LABEL_MIN_PX}px: ${r.small.join(', ')}`);
+        else if (r.clipped.length) bad(`${where}: labels cut off at the chart's edge: ${r.clipped.join(', ')}`);
+        else if (r.legend < LABEL_MIN_PX) bad(`${where}: the legend is ${r.legend}px`);
+        else ok(`${where}: all ${r.count} labels, the callout and the legend ${LABEL_MIN_PX}px or more, none cut off`);
         await context.close();
     }
 }
@@ -920,48 +1210,6 @@ async function exerciseNavigation(browser, origin) {
         else bad(`back to top: hidden at the very bottom of the page at ${size.width}x${size.height}`);
     }
 
-    // The photo lightbox takes focus as it opens, keeps Tab on its one
-    // control, and hands focus back on Escape, with reduced motion as well.
-    // The global reduced-motion rule once stretched its instant visibility
-    // flip to 0.01ms, so Close was still hidden when focus was sent to it,
-    // and focus stayed on the photo behind the modal. The dossier galleries
-    // are gone; the lightbox serves any gallery, so one photo is put back for
-    // it to open, as the jsdom suites do.
-    await p.route('**/index.html', async (route) => {
-        const res = await route.fetch();
-        const body = (await res.text()).replace('</main>', '<figure class="gallery-item"><img src="assets/img/profile.webp" alt="A test photo" width="640" height="960"><figcaption>A test photo</figcaption></figure></main>');
-        await route.fulfill({ response: res, body });
-    });
-    await p.setViewportSize({ width: 390, height: 844 });
-    await p.goto(`${origin}/index.html`, { waitUntil: 'load' });
-    for (const reducedMotion of ['reduce', 'no-preference']) {
-        await p.emulateMedia({ reducedMotion });
-        await p.evaluate(() => {
-            const open = document.querySelector('.gallery-open');
-            open.scrollIntoView({ block: 'center' });
-            open.focus();
-        });
-        const focused = () => p.evaluate(() => {
-            const el = document.activeElement;
-            return el.id ? `#${el.id}` : `${el.tagName.toLowerCase()}.${el.className}`;
-        });
-        await p.keyboard.press('Enter');
-        const opened = await focused();
-        await p.keyboard.press('Tab');
-        const kept = await focused();
-        await p.keyboard.press('Escape');
-        await p.waitForTimeout(400);
-        const back = await p.evaluate(() => ({
-            open: document.getElementById('lightbox').classList.contains('active'),
-            on: document.activeElement.className
-        }));
-        const tag = `lightbox, ${reducedMotion === 'reduce' ? 'reduced motion' : 'with motion'}`;
-        if (opened === '#lightboxClose' && kept === '#lightboxClose' && !back.open && back.on === 'gallery-open') {
-            ok(`${tag}: focus goes to Close as it opens, stays there on Tab, and returns to the photo on Escape`);
-        } else {
-            bad(`${tag}: focus on opening was on ${opened}, after Tab on ${kept}, after Escape ${back.open ? 'the dialog was still open' : `on .${back.on}`}`);
-        }
-    }
     await phone.close();
 }
 
@@ -1936,7 +2184,8 @@ async function checkWithoutJs(browser, origin) {
 // carbon-ai.html are checked once more with their scripts blocked, which is
 // the layout a reader without JavaScript gets (every nav link on show,
 // the calculator's note in place of the calculator). The case studies are
-// checked with both games loaded and played.
+// checked with both games loaded and played, with a row of photos open, and
+// with the lightbox open on one.
 //
 // Each size and theme gets its own browser context with reduced motion, so
 // axe judges what a reader settles on rather than an element halfway
@@ -2039,6 +2288,16 @@ async function axeView(browser, origin, view, note, trouble) {
                 await attempt(`${rel}: axe with the games played`, async () => {
                     await playGames(page);
                     for (const host of ['#play-borehole', '#play-flood']) note(rel, 'the games played', view, await axeRun(page, host));
+                });
+                await attempt(`${rel}: axe on a row of photos and the lightbox`, async () => {
+                    await page.evaluate(() => { const d = document.querySelector('#wuppertal details.cs-photos'); d.open = true; d.scrollIntoView({ block: 'center' }); });
+                    await page.waitForTimeout(300);
+                    note(rel, 'a row of photos open', view, await axeRun(page, '#wuppertal .cs-photos'));
+                    await page.click('#wuppertal .cs-photo a');
+                    await page.waitForSelector('#lightbox:not([hidden])', { timeout: 3000 });
+                    await page.waitForTimeout(300);
+                    note(rel, 'the lightbox open', view, await axeRun(page, '#lightbox'));
+                    await page.keyboard.press('Escape');
                 });
             }
             await page.close();

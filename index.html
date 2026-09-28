@@ -985,21 +985,6 @@
         </div>
     </footer>
 
-    <!-- Lightbox -->
-    <!-- A modal needs to say so. Without role/aria-modal a screen reader keeps
-         reading the page behind it, and without aria-labelledby the dialog
-         announces itself with no name. The caption is the name. Focus handling
-         lives in script.js. -->
-    <div class="lightbox" id="lightbox" role="dialog" aria-modal="true"
-         aria-labelledby="lightboxCaption" aria-hidden="true" tabindex="-1">
-        <!-- [html-validate-disable-block hidden-focusable, element-required-attributes -- closed, it is visibility:hidden, so the button is out of the tab order; script.js sets the src] -->
-        <button type="button" class="lightbox-close" id="lightboxClose" aria-label="Close image">&times;</button>
-        <figure class="lightbox-figure">
-            <img id="lightboxImage" alt="">
-            <figcaption id="lightboxCaption"></figcaption>
-        </figure>
-    </div>
-
     <!-- Scroll to top -->
     <button type="button" class="scroll-top" id="scrollTop" aria-label="Scroll to top">
         <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-arrow-up"></use></svg>

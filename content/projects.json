@@ -35,7 +35,14 @@
     "",
     "`widget` names the interactive a case study hosts on case-studies.html:",
     "\"borehole\" or \"flood\" (modules/dossier.js, loaded when it nears the",
-    "screen). Each may be hosted once."
+    "screen). Each may be hosted once.",
+    "",
+    "`gallery` is the case study's photos on case-studies.html, in the order",
+    "shown: each with `src`, `width`, `height` and `alt`, a `caption` printed",
+    "under it and a `fullCaption` shown when it is opened larger, both carried",
+    "over word for word from the homepage dossiers the photos came from.",
+    "`layout` is \"wide\" (drawn wider) or \"tall\" (not cropped to a",
+    "landscape box); `thumb` a 480px copy, where there is one."
   ],
 
   "caseStudies": [
@@ -52,6 +59,28 @@
       "tags": ["AI Governance", "Sustainability", "SDG 12 & 13", "Prototyping"],
       "photo": { "src": "assets/img/sustainable-ai-3.webp", "thumb": "assets/img/sustainable-ai-3-480.webp", "width": 900, "height": 675,
                  "alt": "Moses demonstrating the sustainable AI prototype at the Digital Society School" },
+      "gallery": [
+        { "src": "assets/img/sustainable-ai-2.webp", "width": 900, "height": 675,
+          "alt": "Moses at a public research stand at the Hogeschool van Amsterdam",
+          "caption": "Public research stand at the Hogeschool van Amsterdam — testing assumptions with real people, sticky notes and all.",
+          "fullCaption": "Gathering public input on AI and energy at the Hogeschool van Amsterdam — testing assumptions with real people, sticky notes and all." },
+        { "src": "assets/img/sustainable-ai-3.webp", "thumb": "assets/img/sustainable-ai-3-480.webp", "width": 900, "height": 675,
+          "alt": "Moses demonstrating an early prototype on a large screen",
+          "caption": "Demonstrating an early decision-support prototype at the Digital Society School.",
+          "fullCaption": "Demonstrating an early decision-support prototype at the Digital Society School, Amsterdam." },
+        { "src": "assets/img/sustainable-ai-4.webp", "width": 900, "height": 675,
+          "alt": "The research team in front of the Digital Society School's 'Dear future, I'm ready' wall",
+          "caption": "\"Dear future, I'm ready\" — the research team at the Digital Society School.",
+          "fullCaption": "'Dear future, I'm ready' — the research team at the Digital Society School, Amsterdam." },
+        { "src": "assets/img/sustainable-ai-6.webp", "width": 900, "height": 675,
+          "alt": "Five printed cards showing the framework's design principles on wooden stands",
+          "caption": "The framework distilled to five design principles — from \"make the invisible visible\" to a clear go/no-go checkpoint.",
+          "fullCaption": "The framework distilled to five design principles — from 'make the invisible visible' to a clear go/no-go checkpoint." },
+        { "src": "assets/img/sustainable-ai-5.webp", "width": 900, "height": 675, "layout": "wide",
+          "alt": "The team behind a demo table with toolkit cards, booklets and screens",
+          "caption": "Demo day — putting the decision-support toolkit into visitors' hands.",
+          "fullCaption": "Demo day — putting the decision-support toolkit into visitors' hands at the Digital Society School." }
+      ],
 
       "problem": "Generative AI is becoming government infrastructure — but every prompt has a footprint. How does a finance ministry adopt AI responsibly without greenwashing, and without grinding innovation to a halt?",
 
@@ -115,6 +144,20 @@
       "tags": ["Python", "R", "QGIS", "Scenario Building"],
       "photo": { "src": "assets/img/coastal-pollution-1.webp", "thumb": "assets/img/coastal-pollution-1-480.webp", "width": 900, "height": 675,
                  "alt": "Moses presenting the 'Dirty Delta' storyline at Wageningen University" },
+      "gallery": [
+        { "src": "assets/img/coastal-pollution-1.webp", "thumb": "assets/img/coastal-pollution-1-480.webp", "width": 900, "height": 675, "layout": "wide",
+          "alt": "Moses presenting the Dirty Delta storyline on a screen",
+          "caption": "Presenting the pessimistic \"Dirty Delta\" storyline to my research group at Wageningen University.",
+          "fullCaption": "Presenting the pessimistic 'Dirty Delta' storyline — a future scenario for African coastal waters — to my research group at Wageningen University." },
+        { "src": "assets/img/coastal-pollution-2.webp", "width": 900, "height": 506,
+          "alt": "Wide view of the seminar room during the Dirty Delta presentation",
+          "caption": "The same session from the room — scenario maps on screen, research group around the table.",
+          "fullCaption": "The 'Dirty Delta' session from the room — scenario maps of Africa's coasts on screen, the research group around the table." },
+        { "src": "assets/img/coastal-pollution-3.webp", "width": 900, "height": 1200,
+          "alt": "Moses on the Wageningen University campus",
+          "caption": "Home base for the thesis years — the Wageningen campus.",
+          "fullCaption": "Home base for the thesis years — the Wageningen University campus." }
+      ],
 
       "problem": "Rivers carry whatever we put in them straight to the sea. How do income, urbanisation and agriculture shape the export of multiple pollutants across the world's sub-basins — and what does that mean for Africa's coasts by mid-century?",
 
@@ -176,6 +219,28 @@
       "photo": { "src": "assets/img/wuppertal-resilience-1.webp", "thumb": "assets/img/wuppertal-resilience-1-480.webp", "width": 900, "height": 675,
                  "alt": "The consultancy team riding the Wuppertal Schwebebahn" },
       "widget": "flood",
+      "gallery": [
+        { "src": "assets/img/wuppertal-resilience-1.webp", "thumb": "assets/img/wuppertal-resilience-1-480.webp", "width": 900, "height": 675,
+          "alt": "The consultancy team inside a Schwebebahn cabin",
+          "caption": "Riding the Schwebebahn with the team — the very railway our project set out to protect.",
+          "fullCaption": "Riding the famous Schwebebahn with my interdisciplinary consultancy team during fieldwork in Wuppertal — the very railway our project set out to protect." },
+        { "src": "assets/img/wuppertal-resilience-2.webp", "width": 900, "height": 1200,
+          "alt": "Workshop sheet with sticky notes mapping flood vulnerability drivers",
+          "caption": "Mapping the drivers of flood vulnerability during a stakeholder analysis workshop.",
+          "fullCaption": "Mapping the drivers of flood vulnerability — land use, housing inequality, social cohesion — during a stakeholder analysis workshop." },
+        { "src": "assets/img/wuppertal-resilience-3.webp", "width": 900, "height": 1200, "layout": "tall",
+          "alt": "A Schwebebahn train suspended above the Wupper river",
+          "caption": "The Schwebebahn above the Wupper — the century-old railway our project set out to keep dry.",
+          "fullCaption": "The Schwebebahn gliding above the Wupper — the century-old suspension railway our project set out to keep dry." },
+        { "src": "assets/img/wuppertal-resilience-4.webp", "width": 900, "height": 675,
+          "alt": "Moses in a Schwebebahn cabin with the Wupper river visible below",
+          "caption": "Talking flood scenarios above the Wupper — the river runs right below the rails.",
+          "fullCaption": "Talking flood scenarios above the Wupper — the river that flooded catastrophically in July 2021 runs right below the rails." },
+        { "src": "assets/img/wuppertal-resilience-5.webp", "width": 900, "height": 675, "layout": "wide",
+          "alt": "The team walking through Wuppertal's city centre during fieldwork",
+          "caption": "Fieldwork on foot — tracing flood-prone streets through Wuppertal's centre.",
+          "fullCaption": "Fieldwork on foot — tracing flood-prone streets through Wuppertal's centre with the team." }
+      ],
 
       "problem": "Wuppertal's iconic suspended railway glides above a river that flooded catastrophically in 2021. The municipality asked: how do we keep the city — and the Schwebebahn — out of the water next time?",
 
@@ -232,6 +297,20 @@
       "tags": ["UN Frameworks", "Disaster Data", "Policy"],
       "photo": { "src": "assets/img/undrr-bonn-2.webp", "thumb": "assets/img/undrr-bonn-2-480.webp", "width": 900, "height": 675,
                  "alt": "Moses at his desk in the UN Campus with two monitors showing disaster data" },
+      "gallery": [
+        { "src": "assets/img/undrr-bonn.webp", "width": 900, "height": 1200, "layout": "tall",
+          "alt": "The UN Campus tower with the UN flag, Bonn",
+          "caption": "The UN Campus in Bonn — my base for five months with UNDRR.",
+          "fullCaption": "The UN Campus in Bonn, Germany — my base for five months working with the UN Office for Disaster Risk Reduction." },
+        { "src": "assets/img/undrr-bonn-2.webp", "thumb": "assets/img/undrr-bonn-2-480.webp", "width": 900, "height": 675,
+          "alt": "Moses at his desk in the UN Campus with two monitors showing disaster data",
+          "caption": "At the desk — auditing Caribbean disaster-loss records for the Sendai Framework Monitor.",
+          "fullCaption": "At the desk in the UN Campus — auditing Caribbean disaster-loss records for the Sendai Framework Monitor." },
+        { "src": "assets/img/undrr-bonn-3.webp", "width": 900, "height": 675,
+          "alt": "View over Bonn from the UN Campus tower",
+          "caption": "Bonn from the UN Campus tower.",
+          "fullCaption": "Bonn from the UN Campus tower — the former government quarter, now Germany's UN city." }
+      ],
 
       "problem": "UNDRR needed clean, comparable hazard information to support the Sendai Framework — especially for small island states, where one storm can erase years of development.",
 
@@ -288,6 +367,28 @@
       "tags": ["Water Management", "Systems Analysis", "Community Design"],
       "photo": { "src": "assets/img/soft-path-3.webp", "thumb": "assets/img/soft-path-3-480.webp", "width": 900, "height": 675,
                  "alt": "Moses defending his master's thesis at Hunan University" },
+      "gallery": [
+        { "src": "assets/img/soft-path-3.webp", "thumb": "assets/img/soft-path-3-480.webp", "width": 900, "height": 675, "layout": "wide",
+          "alt": "Moses presenting his master's defense at Hunan University",
+          "caption": "Defending the thesis at Hunan University, May 2021.",
+          "fullCaption": "Defending the thesis — 'Approach for soft path water management: thinking beyond cement, steel and pipes' — at Hunan University, May 2021." },
+        { "src": "assets/img/soft-path-2.webp", "width": 900, "height": 1200,
+          "alt": "Moses in graduation gown at Hunan University",
+          "caption": "Graduation day at Hunan University.",
+          "fullCaption": "Graduation day at Hunan University — the close of two years in China on a full MOFCOM scholarship." },
+        { "src": "assets/img/soft-path-4.webp", "width": 900, "height": 1200,
+          "alt": "Moses seated at a conference table with his name plate",
+          "caption": "At the table — representing graduate researchers at Hunan University.",
+          "fullCaption": "At the table — representing graduate researchers at Hunan University." },
+        { "src": "assets/img/soft-path-5.webp", "width": 900, "height": 675,
+          "alt": "Graduates in blue gowns at Hunan University",
+          "caption": "Graduation day with the international cohort at Hunan University.",
+          "fullCaption": "Graduation day with the international cohort at Hunan University." },
+        { "src": "assets/img/soft-path-6.webp", "width": 900, "height": 1200,
+          "alt": "Moses with a colleague at an industrial equipment expo in China",
+          "caption": "An industrial-equipment expo during the Hunan years — the engineering half of the story.",
+          "fullCaption": "An industrial-equipment expo during the Hunan years — the engineering half of the dual-master's story." }
+      ],
 
       "problem": "Freetown keeps building bigger pipes, and keeps running dry. The uncomfortable question: what if the answer isn't more hard infrastructure at all?",
 
@@ -337,6 +438,24 @@
       "photo": { "src": "assets/img/groundwater-mapping-1.webp", "thumb": "assets/img/groundwater-mapping-1-480.webp", "width": 900, "height": 675,
                  "alt": "A successful borehole striking water in rural Sierra Leone" },
       "widget": "borehole",
+      "gallery": [
+        { "src": "assets/img/groundwater-mapping-1.webp", "thumb": "assets/img/groundwater-mapping-1-480.webp", "width": 900, "height": 675,
+          "alt": "Water gushing from a freshly drilled borehole",
+          "caption": "Striking water — a successful borehole comes to life in rural Sierra Leone.",
+          "fullCaption": "Striking water — a successful borehole comes to life in rural Sierra Leone. Moments like this are why the mapping matters." },
+        { "src": "assets/img/groundwater-mapping-2.webp", "width": 900, "height": 1200,
+          "alt": "Moses on site with the drilling crew",
+          "caption": "On site with the drilling crew — geophysics turned into clean water.",
+          "fullCaption": "On site with the drilling crew — geophysics turned into clean water." },
+        { "src": "assets/img/groundwater-mapping-3.webp", "width": 900, "height": 675,
+          "alt": "Survey crew with resistivity cable reels and instruments in a field",
+          "caption": "Electrical-resistivity survey in progress — deciding where the drill bit goes.",
+          "fullCaption": "Electrical-resistivity survey in progress — cable reels and electrodes deciding where the drill bit goes." },
+        { "src": "assets/img/groundwater-mapping-4.webp", "width": 900, "height": 675,
+          "alt": "The drilling crew in hard hats in front of the rig",
+          "caption": "The drilling crew — the people who turn a resistivity curve into a working water point.",
+          "fullCaption": "The drilling crew — the people who turn a resistivity curve into a working water point." }
+      ],
 
       "problem": "The Freetown Complex is geologically stubborn — hard igneous rock where finding water is a gamble. Communities were paying for dry boreholes. The science needed to de-risk the drill bit.",
 

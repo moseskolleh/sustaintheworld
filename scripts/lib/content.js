@@ -162,6 +162,45 @@ function checkCard(at, cs) {
     return problems;
 }
 
+// How a photo in a case study's gallery may be drawn: wider than the rest,
+// or not cropped to a landscape box (the hints the homepage dossiers had).
+const PHOTO_LAYOUTS = ['wide', 'tall'];
+const PHOTO_KEYS = ['src', 'thumb', 'width', 'height', 'layout', 'alt', 'caption', 'fullCaption'];
+
+/**
+ * A case study's photos (optional): each a file in this repository at a
+ * declared size, with alt text and a caption. The captions are evidence,
+ * so none may be blank, and a misspelt field is refused rather than
+ * silently dropped from the page.
+ */
+function checkGallery(at, cs) {
+    if (cs.gallery === undefined) return [];
+    if (!Array.isArray(cs.gallery) || !cs.gallery.length) return [`${at}: gallery must be a list of photos (leave it out for none)`];
+    const problems = [];
+    const seen = new Set();
+    cs.gallery.forEach((p, i) => {
+        const where = `${at}, photo ${i + 1}`;
+        if (!p || typeof p !== 'object') { problems.push(`${where}: is not a photo`); return; }
+        Object.keys(p).filter(k => !PHOTO_KEYS.includes(k)).forEach(k => problems.push(`${where}: unknown field "${k}"`));
+        ['src'].concat(p.thumb === undefined ? [] : ['thumb']).forEach((k) => {
+            const bad = typeof p[k] === 'string' && localPath(p[k]) === p[k] ? urlProblem(p[k]) : 'is not a file in this repository';
+            if (bad) problems.push(`${where}: ${k} ${bad}`);
+        });
+        if (seen.has(p.src)) problems.push(`${where}: ${p.src} is already in this gallery`);
+        seen.add(p.src);
+        if (!(Number.isInteger(p.width) && p.width > 0 && Number.isInteger(p.height) && p.height > 0)) {
+            problems.push(`${where}: needs its intrinsic width and height, so nothing shifts as it arrives`);
+        }
+        ['alt', 'caption', 'fullCaption'].forEach((k) => {
+            if (!(typeof p[k] === 'string' && p[k].trim())) problems.push(`${where}: no ${k === 'alt' ? 'alt text' : k}`);
+        });
+        if (p.layout !== undefined && !PHOTO_LAYOUTS.includes(p.layout)) {
+            problems.push(`${where}: layout "${p.layout}" is not one of ${PHOTO_LAYOUTS.join(', ')}`);
+        }
+    });
+    return problems;
+}
+
 // A language level the Assay can compare with what a job ad asks for.
 // "Good" or "fluent" means different things to different readers; a CEFR
 // level (or "native") means the same thing to all of them.
@@ -621,6 +660,7 @@ function loadAll() {
         });
 
         problems.push(...checkCard(at, cs));
+        problems.push(...checkGallery(at, cs));
     });
 
     // Each interactive has one home: its ids are page-wide.
@@ -720,6 +760,8 @@ module.exports = {
     urlProblem,
     checkAvailability,
     checkCard,
+    checkGallery,
+    PHOTO_LAYOUTS,
     checkLanguages,
     checkAtAGlance,
     checkStats,

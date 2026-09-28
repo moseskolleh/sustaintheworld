@@ -280,6 +280,139 @@ html:not(.js) .cs-lenses { display: none; }
     color: var(--text-secondary);
 }
 
+/* A case study's photos, folded under one line until asked for, then a
+   row that scrolls sideways where it does not fit (a phone shows two and
+   the edge of a third). Each is cropped to the row's height, bar a "tall"
+   one, shown whole; a "wide" one is drawn wider (build-content.js asks for
+   these widths in `sizes`). inline-size: the row is the card's width, never
+   the photos' (as the card's content, 950px of them made a phone's page
+   scroll sideways). */
+.cs-photos { margin: 14px 0 0; contain: inline-size; }
+.cs-photos > summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    cursor: pointer;
+    font-size: 0.78rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--primary-green);
+}
+.cs-photos > summary::-webkit-details-marker { display: none; }
+.cs-photos > summary::before {
+    content: '+';
+    width: 1ch;
+    font-family: var(--font-mono, 'IBM Plex Mono', monospace);
+    font-size: 1rem;
+}
+.cs-photos[open] > summary::before { content: '\2212'; }
+.cs-photos > summary:focus-visible { outline: 2px solid var(--primary-green); outline-offset: 2px; }
+.cs-photos-list {
+    list-style: none;
+    margin: 4px 0 0;
+    padding: 3px 3px 8px;
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+}
+.cs-photos-list > li { flex: none; scroll-snap-align: start; }
+.cs-photo { margin: 0; width: 160px; }
+.cs-photo-wide { width: 213px; }
+.cs-photo a {
+    display: block;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: zoom-in;
+}
+.cs-photo a:hover { border-color: var(--primary-green); }
+.cs-photo a:focus-visible { outline: 2px solid var(--primary-green); outline-offset: 2px; }
+.cs-photo img {
+    display: block;
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+}
+.cs-photo-tall img { object-fit: contain; background: var(--darker-bg); }
+.cs-photo figcaption {
+    margin-top: 6px;
+    font-size: 0.74rem;
+    line-height: 1.45;
+    color: var(--text-secondary);
+}
+
+/* The lightbox the photos open in (the page's own script makes it at the
+   first press). It takes the page's colours, so it follows the theme; it
+   fades in only for a reader who has not asked for less motion, nor chosen
+   low-energy mode on the homepage. The photo
+   and its caption are centred, or, where they do not fit (a phone on its
+   side), start at the top and scroll, rather than lose their top edge. */
+html.lightbox-open { overflow: hidden; }
+.lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 2500;   /* over anything the page pins, as the homepage's was */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 64px 16px 20px;
+    overflow-y: auto;
+    background: var(--darker-bg);
+    color: var(--text-primary);
+}
+.lightbox:focus { outline: none; }
+.lightbox::before,
+.lightbox::after { content: ''; margin: auto; }   /* centred while it fits */
+@media (prefers-reduced-motion: no-preference) {
+    .lightbox:not(.lightbox-still) { animation: lightbox-in 0.2s ease; }
+}
+@keyframes lightbox-in { from { opacity: 0; } }
+.lightbox-figure { margin: 0; max-width: min(1000px, 100%); text-align: center; }
+.lightbox-figure img {
+    display: block;
+    margin: 0 auto;
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: calc(100vh - 240px);
+    border-radius: 8px;
+}
+.lightbox-figure figcaption {
+    margin: 12px auto 0;
+    max-width: 70ch;
+    font-size: 0.88rem;
+    line-height: 1.55;
+}
+.lightbox-steps { display: flex; align-items: center; gap: 16px; }
+.lightbox-count {
+    margin: 0;
+    min-width: 6em;
+    text-align: center;
+    font-family: var(--font-mono, 'IBM Plex Mono', monospace);
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+.lightbox-close,
+.lightbox-step {
+    width: 44px;
+    height: 44px;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    background: none;
+    color: var(--text-primary);
+    font-size: 1.3rem;
+    line-height: 1;
+    cursor: pointer;
+}
+.lightbox-close { position: absolute; top: 12px; right: 12px; }
+.lightbox-close:hover,
+.lightbox-step:hover { border-color: var(--primary-green); color: var(--primary-green); }
+.lightbox-close:focus-visible,
+.lightbox-step:focus-visible { outline: 2px solid var(--primary-green); outline-offset: 2px; }
+
 .cs-footnote {
     margin-top: 40px;
     padding: 22px 24px;

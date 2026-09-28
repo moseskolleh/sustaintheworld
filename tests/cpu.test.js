@@ -126,12 +126,6 @@ const key = (window, k, target, init) => {
                     if (type === 'keydown') onDocument++;
                     return add.call(this, type, ...rest);
                 };
-                // The dossier galleries are gone; the lightbox serves any
-                // gallery, so one photo is put back for it to open.
-                const fig = w.document.createElement('figure');
-                fig.className = 'gallery-item';
-                fig.innerHTML = '<img src="assets/img/profile.webp" alt="A test photo" width="640" height="960">';
-                w.document.getElementById('main').appendChild(fig);
             }
         });
         const doc = window.document;
@@ -140,22 +134,15 @@ const key = (window, k, target, init) => {
         const stray = ['script.js', 'modules/dossier.js', ...MODULE_FILES].filter(rel => (read(rel).match(/document\.addEventListener\(\s*['"]keydown/g) || []).length > (rel === 'script.js' ? 1 : 0));
         assert(stray.length === 0, `Keys: no module adds a document keydown listener of its own (${stray.join(', ') || 'none'})`);
         const ranks = mks.keyRank;
-        assert(ranks.terminal > ranks.lightbox && ranks.lightbox > ranks.player && ranks.player > ranks.menu && ranks.menu > ranks.page,
-            'Keys: the layers rank terminal, lightbox, player, menu, page — the order Escape closes them in');
+        assert(ranks.terminal > ranks.player && ranks.player > ranks.menu && ranks.menu > ranks.page,
+            'Keys: the layers rank terminal, player, menu, page — the order Escape closes them in');
+        // The photo lightbox left with the photos, for case-studies.html,
+        // which answers its own keys (tests/phone.test.js).
+        assert(!('lightbox' in ranks) && !doc.getElementById('lightbox'), 'Keys: the homepage has no lightbox layer left, nor a lightbox');
 
         const menu = doc.getElementById('navMenu');
         const toggle = doc.getElementById('navToggle');
-        const lightbox = doc.getElementById('lightbox');
         const menuOpen = () => menu.classList.contains('active');
-
-        // The lightbox over an open menu.
-        doc.querySelector('.gallery-item').click();
-        toggle.click();
-        assert(lightbox.classList.contains('active') && menuOpen(), 'Escape setup: the lightbox is open over an open menu');
-        key(window, 'Escape', doc.activeElement);
-        assert(!lightbox.classList.contains('active') && menuOpen(), 'Escape: the first press closes the lightbox and leaves the menu open');
-        key(window, 'Escape');
-        assert(!menuOpen() && doc.activeElement === toggle, 'Escape: the second closes the menu, and focus returns to its button');
 
         // The terminal over an open menu.
         toggle.click();
@@ -164,7 +151,7 @@ const key = (window, k, target, init) => {
         key(window, 'Escape', prompt);
         assert(!mks.terminal.isOpen() && menuOpen(), 'Escape: the terminal closes first, the menu stays open');
         key(window, 'Escape');
-        assert(!menuOpen(), 'Escape: then the menu');
+        assert(!menuOpen() && doc.activeElement === toggle, 'Escape: then the menu, and focus returns to its button');
 
         // Focus inside the open player, menu open behind it.
         const bar = doc.getElementById('dispatchBar');

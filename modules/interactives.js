@@ -681,12 +681,11 @@ window.mks.share = (() => {
     if (!svg || !revealBtn || !DATA) return;
     let cardData = null;
 
-    const NS = 'http://www.w3.org/2000/svg';
-    const mk = (name, attrs) => {
-        const e = document.createElementNS(NS, name);
+    const set = (e, attrs) => {
         for (const k in attrs) e.setAttribute(k, attrs[k]);
         return e;
     };
+    const mk = (name, attrs) => set(document.createElementNS('http://www.w3.org/2000/svg', name), attrs);
 
     const KEYS = ['llama-32-1b', 'gpt-4-1-nano', 'gpt-4o-mini', 'gemini-15-flash', 'gemini-20-flash', 'llama-33-70b', 'claude-37-sonnet', 'gpt-4o', 'gemini-15-pro', 'deepseek-r1'];
     const SHORT = { 'llama-32-1b': '1B', 'gpt-4-1-nano': 'nano', 'gpt-4o-mini': '4o-mini', 'gemini-15-flash': '1.5 Flash', 'gemini-20-flash': '2.0 Flash', 'llama-33-70b': '70B', 'claude-37-sonnet': 'Sonnet', 'gpt-4o': 'GPT-4o', 'gemini-15-pro': '1.5 Pro', 'deepseek-r1': 'R1' };
@@ -698,74 +697,62 @@ window.mks.share = (() => {
     if (n < 5) return;
     const KNOWN = 3;
 
-    const W = 640, H = 380;
-    const M = { l: 58, r: 18, t: 26, b: 86 };
-    const plotW = W - M.l - M.r, plotH = H - M.t - M.b;
+    // Drawn 640 units wide and scaled to fit, its labels were 5px tall on a
+    // phone. It is as many units wide as the pixels it is shown in now (to
+    // 640), so 11 units is 11px or more; under 480 it is taller (style.css
+    // holds that shape), the model names steeper into the room below.
     const yMax = 1.6;
+    let W, H, M, plotW, plotH, narrow;
     const xAt = (i) => M.l + (i / (n - 1)) * plotW;
     const yAt = (wh) => M.t + (1 - Math.min(wh, yMax) / yMax) * plotH;
     const whAtY = (y) => Math.max(0, Math.min(yMax, (1 - (y - M.t) / plotH) * yMax));
+    const pts = (whs) => whs.map((wh, i) => `${xAt(i)},${yAt(wh)}`).join(' ');
 
     const guess = models.map((m, i) => (i < KNOWN ? m.wh : models[KNOWN - 1].wh));
     let revealed = false;
     let interacted = false;
+    let cursor = KNOWN;
 
     // --- static layer: gridlines + y labels ---
-    [0, 0.5, 1.0, 1.5].forEach(v => {
-        const y = yAt(v);
-        svg.appendChild(mk('line', { x1: M.l, y1: y, x2: W - M.r, y2: y, class: 'ydi-grid' }));
-        const t = mk('text', { x: M.l - 10, y: y + 4, class: 'ydi-axis-label', 'text-anchor': 'end' });
+    const grid = [0, 0.5, 1.0, 1.5].map(v => {
+        const t = mk('text', { class: 'ydi-axis-label', 'text-anchor': 'end' });
         t.textContent = v.toFixed(1);
-        svg.appendChild(t);
+        return [v, svg.appendChild(mk('line', { class: 'ydi-grid' })), svg.appendChild(t)];
     });
-    const yTitle = mk('text', { x: M.l - 46, y: M.t - 10, class: 'ydi-axis-title', 'text-anchor': 'start' });
+    const yTitle = svg.appendChild(mk('text', { class: 'ydi-axis-title', 'text-anchor': 'start' }));
     yTitle.textContent = 'Wh / answer';
-    svg.appendChild(yTitle);
 
     // x labels
-    models.forEach((m, i) => {
-        const x = xAt(i);
-        const t = mk('text', { x: x, y: H - M.b + 20, class: 'ydi-xlabel' + (i < KNOWN ? ' known' : ''), 'text-anchor': 'end', transform: `rotate(-40 ${x} ${H - M.b + 20})` });
+    const xLabels = models.map((m, i) => {
+        const t = svg.appendChild(mk('text', { class: 'ydi-xlabel' + (i < KNOWN ? ' known' : ''), 'text-anchor': 'end' }));
         t.textContent = m.short;
-        svg.appendChild(t);
+        return t;
     });
 
     // divider + region labels
-    const dividerX = (xAt(KNOWN - 1) + xAt(KNOWN)) / 2;
-    svg.appendChild(mk('line', { x1: dividerX, y1: M.t, x2: dividerX, y2: M.t + plotH, class: 'ydi-divider' }));
-    const pLabel = mk('text', { x: xAt(n - 1), y: M.t - 10, class: 'ydi-region-label predict', 'text-anchor': 'end' });
+    const divider = svg.appendChild(mk('line', { class: 'ydi-divider' }));
+    const pLabel = svg.appendChild(mk('text', { class: 'ydi-region-label predict', 'text-anchor': 'end' }));
     pLabel.textContent = 'you predict →';
-    svg.appendChild(pLabel);
 
     // known line + dots
-    const knownPts = models.slice(0, KNOWN).map((m, i) => `${xAt(i)},${yAt(m.wh)}`).join(' ');
-    svg.appendChild(mk('polyline', { points: knownPts, class: 'ydi-known-line' }));
-    models.slice(0, KNOWN).forEach((m, i) => svg.appendChild(mk('circle', { cx: xAt(i), cy: yAt(m.wh), r: 4, class: 'ydi-known-dot' })));
+    const knownLine = svg.appendChild(mk('polyline', { class: 'ydi-known-line' }));
+    const knownDots = models.slice(0, KNOWN).map(() => svg.appendChild(mk('circle', { r: 4, class: 'ydi-known-dot' })));
 
-    // the illustrative straight-line guess + the published estimates (both revealed later)
-    const intuitLine = mk('polyline', { points: '', class: 'ydi-intuit-line' });
-    svg.appendChild(intuitLine);
-    const realLine = mk('polyline', { points: '', class: 'ydi-real-line' });
-    svg.appendChild(realLine);
-    const realDots = [];
+    // the illustrative straight-line guess + the published estimates (both
+    // revealed later, when the dots and the callout join them)
+    const intuitLine = svg.appendChild(mk('polyline', { class: 'ydi-intuit-line' }));
+    const realLine = svg.appendChild(mk('polyline', { class: 'ydi-real-line' }));
+    const realDots = models.map(() => mk('circle', { r: 4, class: 'ydi-real-dot' }));
+    const callout = mk('text', { class: 'ydi-callout', 'text-anchor': 'end' });
 
     // guess line + draggable dots
-    const guessLine = mk('polyline', { points: '', class: 'ydi-guess-line' });
-    svg.appendChild(guessLine);
-    const guessDots = models.map((m, i) => {
-        if (i < KNOWN) return null;
-        const c = mk('circle', { cx: xAt(i), cy: yAt(guess[i]), r: 5, class: 'ydi-guess-dot' });
-        svg.appendChild(c);
-        return c;
-    });
+    const guessLine = svg.appendChild(mk('polyline', { class: 'ydi-guess-line' }));
+    const guessDots = models.map((m, i) => (i < KNOWN ? null : svg.appendChild(mk('circle', { r: 5, class: 'ydi-guess-dot' }))));
 
     const drawGuess = () => {
-        const pts = [`${xAt(KNOWN - 1)},${yAt(models[KNOWN - 1].wh)}`];
-        for (let i = KNOWN; i < n; i++) pts.push(`${xAt(i)},${yAt(guess[i])}`);
-        guessLine.setAttribute('points', pts.join(' '));
-        for (let i = KNOWN; i < n; i++) guessDots[i].setAttribute('cy', yAt(guess[i]));
+        guessLine.setAttribute('points', pts(guess).split(' ').slice(KNOWN - 1).join(' '));
+        for (let i = KNOWN; i < n; i++) set(guessDots[i], { cx: xAt(i), cy: yAt(guess[i]) });
     };
-    drawGuess();
     // Pulse the first predict dot so people know the curve is grabbable.
     if (guessDots[KNOWN]) guessDots[KNOWN].classList.add('ydi-dot-pulse');
     // Device-aware hint: touch users tap or drag; pointer users drag.
@@ -773,14 +760,61 @@ window.mks.share = (() => {
     if (hintEl && coarse) hintEl.textContent = 'tap or drag across to draw';
 
     // --- interaction (pointer + keyboard) ---
-    let cursor = KNOWN;
-    const cursorRing = mk('circle', { class: 'ydi-cursor', r: 9, cx: xAt(cursor), cy: yAt(guess[cursor]) });
-    svg.appendChild(cursorRing);
-    const hit = mk('rect', { x: M.l, y: M.t, width: plotW, height: plotH, class: 'ydi-hit', fill: 'transparent' });
+    const cursorRing = svg.appendChild(mk('circle', { class: 'ydi-cursor', r: 9 }));
+    const hit = mk('rect', { class: 'ydi-hit', fill: 'transparent' });
     hit.setAttribute('tabindex', '0');
     hit.setAttribute('role', 'application');
     hit.setAttribute('aria-label', 'Draw your prediction: left/right arrows move between models, up/down arrows raise or lower the guessed energy, Enter reveals the research estimates. The Reveal button and the data table below are equivalent.');
     svg.appendChild(hit);
+
+    // The published estimates, and a third line: a straight-line guess that
+    // misses the reasoning spike, drawn, not sourced, so the legend and the
+    // data table say illustrative.
+    const drawReveal = () => {
+        const tiny = models[0].wh;
+        realLine.setAttribute('points', pts(models.map(m => m.wh)));
+        realDots.forEach((c, i) => set(c, { cx: xAt(i), cy: yAt(models[i].wh) }));
+        intuitLine.setAttribute('points', pts(models.map((m, i) => tiny + (i / (n - 1)) * (0.55 - tiny))));
+        set(callout, { x: xAt(n - 1) - 8, y: yAt(models[n - 1].wh) - 12 });
+    };
+
+    const place = () => {
+        W = Math.min(640, placedAt) || 640;   // placedAt is 0 before layout (and in jsdom)
+        narrow = W < 480;
+        H = Math.round(narrow ? W * 0.8 : W * 380 / 640);
+        M = narrow ? { l: 36, r: 12, t: 30, b: 64 } : { l: 58, r: 18, t: 26, b: 86 };
+        plotW = W - M.l - M.r;
+        plotH = H - M.t - M.b;
+        svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+        const lift = narrow ? 14 : 10;
+        const ly = H - M.b + (narrow ? 14 : 20);
+        grid.forEach(([v, line, t]) => {
+            set(line, { x1: M.l, y1: yAt(v), x2: W - M.r, y2: yAt(v) });
+            set(t, { x: M.l - (narrow ? 6 : 10), y: yAt(v) + 4 });
+        });
+        set(yTitle, { x: narrow ? 4 : M.l - 46, y: M.t - lift });
+        xLabels.forEach((t, i) => set(t, { x: xAt(i), y: ly, transform: `rotate(${narrow ? -45 : -40} ${xAt(i)} ${ly})` }));
+        const dividerX = (xAt(KNOWN - 1) + xAt(KNOWN)) / 2;
+        set(divider, { x1: dividerX, y1: M.t, x2: dividerX, y2: M.t + plotH });
+        set(pLabel, { x: xAt(n - 1), y: M.t - lift });
+        knownLine.setAttribute('points', pts(models.slice(0, KNOWN).map(m => m.wh)));
+        knownDots.forEach((c, i) => set(c, { cx: xAt(i), cy: yAt(models[i].wh) }));
+        set(hit, { x: M.l, y: M.t, width: plotW, height: plotH });
+        set(cursorRing, { cx: xAt(cursor), cy: yAt(guess[cursor]) });
+        drawGuess();
+        if (revealed) {
+            // A new length for the line: its draw-in dashes go.
+            realLine.style.strokeDasharray = realLine.style.strokeDashoffset = '';
+            drawReveal();
+        }
+    };
+    let placedAt;
+    const fit = () => {
+        const w = Math.round(svg.getBoundingClientRect().width);
+        if (w !== placedAt) { placedAt = w; place(); }
+    };
+    fit();
+    if ('ResizeObserver' in window) new ResizeObserver(fit).observe(svg);
 
     const markInteracted = () => {
         if (interacted) return;
@@ -813,8 +847,7 @@ window.mks.share = (() => {
     window.addEventListener('pointercancel', () => { dragging = false; });
 
     const moveCursor = () => {
-        cursorRing.setAttribute('cx', xAt(cursor));
-        cursorRing.setAttribute('cy', yAt(guess[cursor]));
+        set(cursorRing, { cx: xAt(cursor), cy: yAt(guess[cursor]) });
         hit.setAttribute('aria-valuetext', `${models[cursor].short}: your guess ${guess[cursor].toFixed(2)} Wh per answer`);
     };
     hit.addEventListener('focus', () => { svg.classList.add('ydi-kbd'); moveCursor(); });
@@ -850,7 +883,7 @@ window.mks.share = (() => {
         if (!interacted) { nudge(); return; }   // draw first — don't grade a guess never made
         revealed = true;
         const reduce = !window.mks.motionOK();
-        realLine.setAttribute('points', models.map((m, i) => `${xAt(i)},${yAt(m.wh)}`).join(' '));
+        drawReveal();
         svg.classList.add('revealed');
         // Draw the published estimates in, left to right.
         if (!reduce && realLine.getTotalLength) {
@@ -861,11 +894,7 @@ window.mks.share = (() => {
             realLine.style.transition = 'stroke-dashoffset 0.85s ease';
             realLine.style.strokeDashoffset = '0';
         }
-        models.forEach((m, i) => {
-            const c = mk('circle', { cx: xAt(i), cy: yAt(m.wh), r: 4, class: 'ydi-real-dot' });
-            svg.appendChild(c);
-            realDots.push(c);
-        });
+        realDots.forEach(c => svg.appendChild(c));
         if (hintEl) hintEl.style.opacity = '0';
         if (resetBtn) resetBtn.hidden = false;
         if (shareBtn) shareBtn.hidden = false;
@@ -902,15 +931,9 @@ window.mks.share = (() => {
         else shape = 'You put the peak before the frontier — the reasoning model is the outlier.';
         if (verdictEl) { verdictEl.innerHTML = `<span class="ydi-shape">${shape}</span> ${msg}`; verdictEl.hidden = false; }
         cardData = { shape, factor: factorFrontier, factors };
-        // Third line: a straight-line guess that misses the reasoning spike —
-        // drawn, not sourced, so the legend and the data table say illustrative.
-        const intuitEnd = 0.55;
-        intuitLine.setAttribute('points', models.map((m, i) => `${xAt(i)},${yAt(tiny + (i / (n - 1)) * (intuitEnd - tiny))}`).join(' '));
-        // Callout on the frontier spike.
-        const callout = mk('text', { x: xAt(n - 1) - 8, y: yAt(rWh) - 12, class: 'ydi-callout', 'text-anchor': 'end' });
+        // Callout on the frontier spike, where drawReveal put it.
         callout.textContent = `R1 · ~${factorFrontier}× a 1B model`;
         svg.appendChild(callout);
-        realDots.push(callout);
         if (legendEl) legendEl.hidden = false;
     };
     revealBtn.addEventListener('click', doReveal);
@@ -972,15 +995,11 @@ window.mks.share = (() => {
     if (resetBtn) {
         resetBtn.addEventListener('click', () => {
             revealed = false;
-            svg.classList.remove('revealed');
-            realLine.setAttribute('points', '');
-            realLine.style.strokeDasharray = '';
-            realLine.style.strokeDashoffset = '';
-            realLine.style.transition = '';
-            intuitLine.setAttribute('points', '');
+            svg.classList.remove('revealed');   // which hides the two lines
+            realLine.style.cssText = '';
             if (legendEl) legendEl.hidden = true;
             realDots.forEach(d => d.remove());
-            realDots.length = 0;
+            callout.remove();
             for (let i = KNOWN; i < n; i++) guess[i] = models[KNOWN - 1].wh;
             drawGuess();
             if (verdictEl) { verdictEl.hidden = true; verdictEl.textContent = ''; }

@@ -357,6 +357,142 @@ function widgetHost(name) {
 `;
 }
 
+// The photos from the work, back with the story they belong to (the
+// homepage's dossiers carried them until the dossiers became cards): a row
+// under the case study, each photo lazy at its declared size, its caption
+// under it. The row is folded away until asked for. Open, the six rows
+// would add 1,290px (1.4 screens on a desktop, 1.5 on a phone) to a page
+// already over ten, and a reader scrolling it would fetch up to 2.2 MB of
+// photos they did not ask to see; folded, each is one line, and nothing is
+// fetched until it opens (a closed <details> draws nothing, so its lazy
+// photos wait). Each photo is a plain link to the full one, which is all
+// it is without JavaScript; with it, the page's lightbox opens it among its
+// case study's others ([data-lightbox], the script below), with the longer
+// caption the dossier's lightbox showed.
+function photoStrip(cs) {
+    const drawn = (p) => (p.layout === 'wide' ? 213 : 160);   // px, as content.css draws them
+    const photos = cs.gallery.map((p) => {
+        const srcset = p.thumb ? ` srcset="${esc(p.thumb)} 480w, ${esc(p.src)} ${p.width}w" sizes="${drawn(p)}px"` : '';
+        return `
+                        <li><figure class="cs-photo${p.layout ? ` cs-photo-${p.layout}` : ''}">
+                            <a href="${esc(p.src)}" data-lightbox="${esc(cs.id)}" data-caption="${esc(p.fullCaption)}"><img src="${esc(p.src)}"${srcset} alt="${esc(p.alt)}" width="${p.width}" height="${p.height}" loading="lazy" decoding="async"></a>
+                            <figcaption>${esc(p.caption)}</figcaption>
+                        </figure></li>`;
+    }).join('');
+    return `
+                <details class="cs-photos">
+                    <summary>${cs.gallery.length} photo${cs.gallery.length === 1 ? '' : 's'}</summary>
+                    <ul class="cs-photos-list">${photos}
+                    </ul>
+                </details>`;
+}
+
+// The page's lightbox, in its own inline script: case-studies.html has no
+// script.js, and a module fetched on the first press would have to be paid
+// for out of the on-demand budget. It is about 1.3 KB gzipped of this page.
+const LIGHTBOX_SCRIPT = `
+    // The photos. Each is a link to the full photo, and without JavaScript
+    // that is all it is. With it, a press opens the photo here among its
+    // case study's others ([data-lightbox] names the group): previous and
+    // next, the arrow keys, "2 of 5", and Escape or Close to go back. Focus
+    // goes in, goes round the dialog's buttons and nowhere behind them, and
+    // returns to the photo pressed. The dialog is made at the first press,
+    // so a visit that opens no photo carries none of it.
+    (function () {
+        var links = document.querySelectorAll('a[data-lightbox]');
+        if (!links.length) return;
+        var box, img, caption, count, steps, closeBtn, group = [], at = 0, opener = null;
+
+        function show(i) {
+            at = (i + group.length) % group.length;   // past either end, round again
+            var link = group[at], thumb = link.querySelector('img');
+            var text = link.getAttribute('data-caption') || '';
+            // Its own shape before it arrives, from the size the page declares.
+            img.setAttribute('width', thumb.getAttribute('width'));
+            img.setAttribute('height', thumb.getAttribute('height'));
+            img.src = link.getAttribute('href');
+            img.alt = thumb.alt;
+            caption.textContent = text;
+            count.textContent = (at + 1) + ' of ' + group.length;
+            // Named by its caption; a photo without one, by its alt text.
+            if (text) { box.setAttribute('aria-labelledby', 'lightboxCaption'); box.removeAttribute('aria-label'); }
+            else { box.removeAttribute('aria-labelledby'); box.setAttribute('aria-label', thumb.alt || 'Photo'); }
+        }
+
+        function close() {
+            box.hidden = true;
+            document.documentElement.classList.remove('lightbox-open');
+            if (opener) opener.focus();
+            opener = null;
+        }
+
+        function build() {
+            box = document.createElement('div');
+            box.className = 'lightbox';
+            box.id = 'lightbox';
+            box.tabIndex = -1;
+            box.setAttribute('role', 'dialog');
+            box.setAttribute('aria-modal', 'true');
+            box.innerHTML = '<button type="button" class="lightbox-close" aria-label="Close photo">&times;</button>' +
+                '<figure class="lightbox-figure"><img alt=""><figcaption id="lightboxCaption" aria-live="polite"></figcaption></figure>' +
+                '<div class="lightbox-steps"><button type="button" class="lightbox-step" data-step="-1" aria-label="Previous photo">&larr;</button>' +
+                '<p class="lightbox-count" aria-live="polite"></p>' +
+                '<button type="button" class="lightbox-step" data-step="1" aria-label="Next photo">&rarr;</button></div>';
+            // Low-energy mode, as chosen on the homepage: no fade either.
+            try { box.classList.toggle('lightbox-still', localStorage.getItem('eco-mode') === 'on'); } catch (e) { /* storage refused */ }
+            document.body.appendChild(box);
+            img = box.querySelector('img');
+            caption = box.querySelector('figcaption');
+            count = box.querySelector('.lightbox-count');
+            steps = box.querySelector('.lightbox-steps');
+            closeBtn = box.querySelector('.lightbox-close');
+            box.addEventListener('click', function (e) {
+                var step = e.target.closest('[data-step]');
+                if (step) show(at + Number(step.getAttribute('data-step')));
+                else if (e.target === box || e.target === closeBtn) close();
+            });
+            box.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    close();
+                } else if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && group.length > 1) {
+                    e.preventDefault();
+                    show(at + (e.key === 'ArrowRight' ? 1 : -1));
+                } else if (e.key === 'Tab') {
+                    var ring = Array.prototype.filter.call(box.querySelectorAll('button'), function (b) { return !b.closest('[hidden]'); });
+                    var i = ring.indexOf(document.activeElement);
+                    if (i < 0) i = e.shiftKey ? 0 : -1;
+                    e.preventDefault();
+                    ring[(i + (e.shiftKey ? -1 : 1) + ring.length) % ring.length].focus();
+                }
+            });
+        }
+
+        function open(link) {
+            if (!box) build();
+            var name = link.getAttribute('data-lightbox');
+            group = Array.prototype.filter.call(document.querySelectorAll('a[data-lightbox]'), function (a) {
+                return a.getAttribute('data-lightbox') === name && a.querySelector('img');
+            });
+            opener = link;
+            show(group.indexOf(link));
+            steps.hidden = group.length < 2;
+            box.hidden = false;
+            document.documentElement.classList.add('lightbox-open');
+            closeBtn.focus();
+        }
+
+        document.addEventListener('click', function (e) {
+            var link = e.target.closest && e.target.closest('a[data-lightbox]');
+            // With a modifier, a press still opens the photo in a new tab.
+            if (!link || !link.querySelector('img') || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+            e.preventDefault();
+            open(link);
+        });
+        Array.prototype.forEach.call(links, function (a) { a.setAttribute('aria-haspopup', 'dialog'); });
+    })();
+`;
+
 function renderCaseStudies(data) {
     const { projects, lenses } = data;
     const all = [lenses.default].concat(lenses.lenses);
@@ -449,7 +585,7 @@ function renderCaseStudies(data) {
                     </ul>
                 </div>
 ${cs.widget ? widgetHost(cs.widget) : ''}${cs.caveat ? `
-                <p class="cs-caveat"><span class="mono-label">Caveat</span> ${prose(cs.caveat)}</p>` : ''}
+                <p class="cs-caveat"><span class="mono-label">Caveat</span> ${prose(cs.caveat)}</p>` : ''}${cs.gallery ? photoStrip(cs) : ''}
             </article>`;
     };
 
@@ -571,7 +707,7 @@ ${cards}
         }, { rootMargin: '100% 0px' });
         for (var i = 0; i < hosts.length; i++) io.observe(hosts[i]);
     })();
-    </script>`;
+${LIGHTBOX_SCRIPT}    </script>`;
 
     return pageShell({
         title: 'Case studies — Moses Kolleh Sesay',

@@ -11,7 +11,7 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 
 ## Features
 
-- **Living journey map**: a hand-built SVG map of the journey region — West Africa to East Asia, so every stop gets real resolution instead of a world map that's half empty ocean (Natural Earth 50 m coastlines, simplified hardest away from the Rhine delta where the map zooms deepest, zero runtime dependencies). It flies from Freetown to Changsha, Bonn, Wageningen and Amsterdam as you scroll, and fieldwork sites like Wuppertal join the map when the story reaches them. Regenerate with `npm install && npm run map:build`, then sync the printed stop pixels into `script.js`; `npm run map:check` proves the committed SVG still matches the script and runs in CI
+- **Living journey map**: a hand-built SVG map of the journey region — West Africa to East Asia, so every stop gets real resolution instead of a world map that's half empty ocean (Natural Earth 50 m coastlines, simplified hardest away from the Rhine delta where the map zooms deepest, zero runtime dependencies). It flies from Freetown to Changsha, Bonn, Wageningen and Amsterdam as you scroll (on a phone, in a band pinned under the nav bar above the stop you are reading), and fieldwork sites like Wuppertal join the map when the story reaches them. Every name on it is 11px or more on any screen, and the Rhine delta's four sit clear of each other and of the route. Regenerate with `npm install && npm run map:build`, then sync the printed stop pixels into `script.js`; `npm run map:check` proves the committed SVG still matches the script and runs in CI
 - **"Seven in ten" — site the borehole**: a playable resistivity profile on the [groundwater case study](case-studies.html#play-borehole) — read the curve, place the rig, drill. Water-bearing fracture, clay pocket or dry hole; your holes fill a scoreboard beside the field records' 7 in 10 (reading the curve first) and blind drilling's ~3 in 10, which is labelled illustrative until it has a source. It was two widgets, the game and a strike-rate slider, making one point; it is one now
 - **"Don't let it become a boat" flood scene**: a schematic Wupper cross-section on the [Wuppertal case study](case-studies.html#play-flood) — slide the river from a calm day to July 2021 and watch the margin under the Schwebebahn's hanging cars shrink. Both games load only when a reader scrolls near them, and without JavaScript each is one line of summary
 - **Field terminal**: press <code>`</code> anywhere (or the footer button) for a hidden green-on-black terminal — try `journey`, `drill`, `co2`, `voice`, `kushe`, `help`
@@ -49,7 +49,7 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 - Four exact figures (164 water points, 54 hazard systems, 3 continents, 2 master's degrees), written into the HTML so they read correctly without JavaScript; with it they count up to the same values, with nothing appended, and stay still under reduced motion or low-energy mode
 
 ### 🗺️ Journey
-- The living journey map: Freetown → Changsha → Bonn → Wageningen → Amsterdam, flown as you scroll, with a visitor mark for wherever you are reading from
+- The living journey map: Freetown → Changsha → Bonn → Wageningen → Amsterdam, flown as you scroll, with a visitor mark for wherever you are reading from. On a phone it is a band pinned under the nav bar while the stops scroll past below it, showing the one being read; it jumps instead of flying under reduced motion or low-energy mode
 
 ### 👤 About
 - Professional summary with the CV download, and the 164 water points itemised (100 wells rehabilitated, 50 boreholes drilled, 14 solar-powered)
@@ -62,9 +62,10 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 ### 🔬 Projects
 - Six teaser cards, generated from `content/projects.json` so they cannot disagree with the case studies: where and when, the headline result with the one line of its basis and whether you can check it from outside, the role lenses, the tools, a thumbnail photo, and one link to the whole story on `case-studies.html` (the subtitle is the case study's)
 - The two games that used to sit in the dossiers are on the case studies they illustrate: "Seven in ten" on groundwater, "Don't let it become a boat" on Wuppertal
+- So are the dossiers' 25 field photos, with their captions word for word: a row under each case study, folded under one line until asked for (nothing is fetched until then), each photo a link to the full one. With JavaScript they open in a lightbox that steps through that case study's photos: previous and next, the arrow keys, "2 of 5", Escape
 
 ### ⚡ AI, Weighed
-- You Draw It, the homepage's one chart from the EcoPrompt Coach research, with a link to the coach
+- You Draw It, the homepage's one chart from the EcoPrompt Coach research, with a link to the coach. It is drawn as wide as it is shown, so every label is 11px or more on a phone (they were about 5px)
 - The calculator and Anatomy of a Prompt (where one query lands on a CSRD report) are on `carbon-ai.html`; Anatomy is drawn from the calculator's own numbers and fetched only as its section comes near
 
 ### 🛠️ Skills & Education
@@ -411,6 +412,18 @@ The suites, and the failure each one exists to prevent:
   low-energy mode, and sizes its drawing labels for the scale they are
   drawn at, so a phone reads them at 11px or more. `npm run smoke` plays both
   in Chromium and measures those labels at 390 and 320px.
+- **`phone.test.js`** — the journey map follows the stop across a reading
+  line (below a phone's pinned band), not the next one arriving, zooms in
+  further on a narrow band where the stops are close, keeps every name 11 to
+  14px on screen and jumps under low-energy mode; You Draw It is drawn as
+  wide as it is shown, and again at a new width; the 25 field photos are back
+  on their case studies with their captions word for word, folded, lazy and
+  at their files' own sizes, and the validator refuses a photo without a
+  caption, a size or a file; the lightbox steps with buttons, arrow keys and
+  a "2 of 5", goes round, keeps Tab inside and hands focus back. `npm run
+  smoke` pins the band over none of its stop's text at 390 and 320px, checks
+  the delta's names on a desktop, measures the chart's labels, and steps the
+  lightbox in both themes.
 - **`stats.test.js`** — the open counts: every published count is 5 or more
   or reads `<5`, and no `<5` can be worked out by subtraction, from one table
   or a chain of them (the rows the review that found it used are the test);
@@ -488,7 +501,7 @@ The suites, and the failure each one exists to prevent:
   order and only when told, and every page with a first-view budget exists
   and is measured.
 - **`cpu.test.js`** — the page's keys go through one listener, so one Escape
-  closes one layer (terminal, then lightbox, then player, then menu) and the
+  closes one layer (terminal, then player, then menu) and the
   backtick follows one rule for "typing"; one `mks.motionOK()` answers for
   reduced motion and low-energy mode, live; the time-zone table is fetched
   only when the journey map needs it; everything the core shares hangs off
@@ -814,7 +827,8 @@ fonts are counted as-is. The first view is `index.html`, its stylesheet, the
 core script, the visit counter, the four font files, the icon and the one
 preloaded hero image. Everything else is fetched only when it is reached: the
 journey map on the first scroll, the portrait and the six project photos as
-you get to them (a 480px copy wherever that is enough), the remaining hero
+you get to them (a 480px copy wherever that is enough), a case study's photos
+when its row is opened, the remaining hero
 backgrounds when the rotation needs them, and no narration until someone
 presses play. So "every image in the repository" is what the repository
 holds, not the cost of arriving.
@@ -891,13 +905,16 @@ aspirational:
   it sits in)
 - Every form control has an accessible name; every image has `alt` plus
   intrinsic `width`/`height`
-- The lightbox is a real modal: `role="dialog"`, `aria-modal`, an accessible
-  name, focus moved in and restored on close, Escape to close, Tab kept inside
+- The case studies' photo lightbox is a real modal: `role="dialog"`,
+  `aria-modal`, an accessible name (the caption, or the alt text), focus moved
+  in and restored to the photo on close, Escape to close, Tab kept inside;
+  previous, next, the arrow keys and a "2 of 5" step through a case study's
+  photos, and without JavaScript each photo is a link to itself
 - Skip-to-content link that targets an element which exists and moves focus
   there, so the next Tab lands inside `<main>`; every in-page link moves focus
   and updates the address (`tests/navigation.test.js`, `npm run smoke`)
 - Single-letter shortcuts stand down while a form control has focus
-- Escape closes one layer at a time: the field terminal, then the lightbox, then the narration player, then the menu
+- Escape closes one layer at a time: the field terminal, then the narration player, then the menu
 - No duplicate `id`s, no focusable element inside an `aria-hidden` container
 
 `npm run smoke` adds axe-core in a real browser: every page at 1440×900 and
