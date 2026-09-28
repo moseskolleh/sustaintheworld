@@ -556,11 +556,14 @@ rule makes that cheap.
 ## Progress
 
 What branch `claude/plan-implementation-soh954` implements so far, step by step,
-checked against the code and the test runs on 2026-09-27 (`npm test`: 1382
-passing in sixteen suites; `npm run smoke` in Chromium: passes; the new
-Firefox pass has not run yet, see 6.7). ✓ done · ◐ partial, with the reason ·
-✗ waiting on Moses. Everything Moses has to supply is listed, with where it
-goes, in [owner-checklist.md](owner-checklist.md).
+checked against the code and the test runs on 2026-09-28 (`npm test`: 1,921
+passing in twenty-three suites; `npm run smoke` in Chromium: passes). Waves 1
+and 2 are on `main` (pull requests #48 and #49, merged by 2026-09-27, where
+CI's Chromium and Firefox smoke jobs passed). Wave 3 (Phase 2 and Phase 6
+step 8) is built on `wave/w3-integrate` for this branch and is not on `main`
+yet. ✓ done · ◐ partial, with the reason · ✗ waiting on Moses. Everything
+Moses has to supply is listed, with where it goes, in
+[owner-checklist.md](owner-checklist.md).
 
 **Phase 0 — wave 1.** Not done as a phase yet: step 9 waits on Moses, and
 step 4 has the leftover named below, which is his too. Its "done when" tests
@@ -575,13 +578,14 @@ the steps below.
    those while the digits count up (a screen reader heard "0 Master's
    degrees" until a scroll); a 4 s failsafe
    (and an `onerror` on `script.js`, and on carbon-ai.html's two scripts)
-   drops the class if the script never takes over. Below 1280px the nav
-   links wrap under the logo without JavaScript, all twelve on show; the
-   dossier titles ship `aria-expanded="true"`, as they are shown, and
-   script.js closes them. A late `script.js` keeps the six dossiers open and
-   puts back the line being read (they used to fold shut under the reader),
-   then holds it there while the widgets fill in: without scroll anchoring,
-   as in Safari, it slid up to 2,800px (smoke checks it with anchoring off).
+   drops the class if the script never takes over. Without JavaScript the
+   nav links wrap under the logo, all of them on show (twelve then, six
+   since wave 3). The collapsed dossiers this step opened are gone (wave
+   3); what script.js folds now, the experience cards and the Assay's box,
+   is whole without it and on a late start, and so is every Field Note (a
+   `<details>`). A late `script.js` puts back the line being read, then
+   holds it there while the page fills in: without scroll anchoring, as in
+   Safari, it slid up to 2,800px (smoke checks it with anchoring off).
    Copy that points at what only JavaScript draws hides with it. Smoke loads
    every page with JavaScript off (the homepage at 390, 1024 and 1280px),
    and the homepage with `script.js` blocked and late.
@@ -697,12 +701,13 @@ fixed, and what they changed is folded into the steps below and 6.6-6.7.
    per page view, every page's count accepted by `Code.gs`'s own schema
    check, and nothing under Do Not Track, Global Privacy Control or with
    JavaScript off. `tests/count.test.js` (75 assertions) and
-   `tests/apps-script.test.js` (80) hold the two ends to the same schema.
+   `tests/apps-script.test.js` (81) hold the two ends to the same schema.
    Every other browser context in smoke opens with Global Privacy Control
    on, so a test run never sends a real count.
 3. ✓ **The hooks are wired, and the Plausible/Cloudflare block is gone.**
-   All 27 `data-analytics` names now on the site (23 when this plan was
-   written) are counted when clicked, and so are the on-demand modules as
+   All 34 `data-analytics` names now on the site (23 when this plan was
+   written, 27 after wave 2; wave 3's shell, first view and Assay button
+   added the rest) are counted when clicked, and so are the on-demand modules as
    they are fetched (`module-<name>`), the contact form being sent, the
    terminal's `cv` command, and the Assay's grade; the ad itself never
    leaves the page, and the label by the Assay's button now says so ("the
@@ -713,7 +718,7 @@ fixed, and what they changed is folded into the steps below and 6.6-6.7.
    none). ✗ Whether the grade should be counted at all (S4).
 4. ◐ **`stats.html`, public.** Built: in the sitemap, linked from the
    footers of the homepage, case studies, research, AI, Weighed and itself,
-   and from the field report and the 404 page, under a 105 KB budget (91 KB
+   and from the field report and the 404 page, under a 105 KB budget (95 KB
    today), with a privacy note that prints a literal example payload and
    lists what is never collected. The weekly Action
    (`.github/workflows/stats.yml`, Mondays 04:17 UTC) reads the daily totals
@@ -747,21 +752,127 @@ fixed, and what they changed is folded into the steps below and 6.6-6.7.
    weeks of counting; Moses records it here (S6). Baseline: not yet recorded.
    Order matters: a baseline of the *current* homepage exists only if the
    counter runs for those four weeks before the Phase 2 redesign goes live.
-   Nothing in the code holds Phase 2 back; that is Moses's call (S7).
+   The redesign is built (wave 3, below) and goes live when its pull
+   request is merged; nothing in the code holds it back, and when is
+   Moses's call (S7).
    Transfer is kept per page (`kb` rows keyed by page), so the Phase 4.2
    statement can report measured activity data by page.
 
-**Phase 2.** 2.2 ◐ the nav numbers are gone (Phase 0.5), but it still has 12
-items and the hero still has three buttons. 2.5 ✓ one Listen control in the
-nav, first after the logo, where showing it late (voices often arrive after
-the first paint) moves nothing else in the bar; the browser voice by default
-at 0 bytes; the open player covers 13.3% of a 390×844 screen (15.5% with
-the introduction offered), smoke fails it above
-20%, and it never covers the send button. With no voice, the control and
-its focus stay put while the player's manifest answers, and the manifest is
-revalidated rather than read blind from the cache, so the day Moses records,
-returning visitors see it. Steps 1 (✗ Moses supplies the
-at-a-glance facts), 3, 4, 6, 7, 8 and 9 — not started.
+**Phase 2 — wave 3.** Built, and the homepage meets its length targets, but
+not done as a phase: the at-a-glance strip still lacks the four facts only
+Moses can give (2.1), and none of it is live until the wave's pull request
+is merged, which is his call (S7). Measured in Chromium once the page has
+settled: the homepage is 9.32 screens at 1440×900 and 16.27 at 390×844,
+from 19.4 and 32.7 when this plan was written (18.78 and 32.18 when the wave
+began); `index.html` is 84 KB on disk (21 KB gzipped), from 134 KB; the
+homepage's first view is 274 KB over the wire (280,445 bytes), from 282 KB.
+What the wave needs from Moses is in the owner checklist: F1–F3 (the
+strip's facts), P1 and P2 (two choices to confirm) and S7 (when it goes
+live).
+
+1. ◐ **The first view.** The availability line reads "Open to
+   sustainability, climate-risk, ESG and sustainable-AI roles and
+   consulting". Under it, an at-a-glance strip is written by
+   `build-content.js` from `content/profile.json` → `atAGlance`, between
+   markers `build:check` holds; it shows only what the repository states
+   (the roles and the location, Amsterdam, NL · EU · remote-friendly) and
+   leaves a `null` fact out, and the validator refuses a misspelt key, an
+   impossible date or a stand-in such as "TBC". The four exact figures and
+   the photo's caption are on the first screen at 1440×900 and 390×844
+   (the figures end at 827px and 795px, the caption at 121px and 108px; the
+   caption sat at 1,069px), and smoke checks it. ✗ Seniority, available
+   from, languages with the Dutch level, and right to work (owner checklist
+   F1–F3).
+2. ✓ **One primary action.** "See the evidence" (to the case studies, in
+   their default view) is the one primary button; "Get in touch" is second
+   and the CV a quieter link. The play index sits just before Contact. The
+   nav has six links and no numbers (Work, About, Experience, Research, CV,
+   Contact), beside Listen and the theme switch; the menu button takes over
+   below 900px, and Work lights up while the reader is in the homepage's
+   projects.
+3. ✓ **Halve the page.** The six dossiers (44 KB of markup) are six teaser
+   cards generated from `content/projects.json`, so they cannot disagree
+   with the case studies: a thumbnail, dates and place, the title, the
+   headline result and whether it can be checked, the lenses and tools, and
+   one link. Seven in Ten and the borehole game are one game, on the
+   groundwater case study, and the flood slider is on Wuppertal's; both are
+   fetched only as they near the screen (`modules/dossier.js`). AI, Weighed
+   keeps You Draw It; its calculator went (`carbon-ai.html` has its own)
+   and Anatomy of a Prompt moved to `carbon-ai.html`, fetched as its
+   section nears. Experience is short cards at every width, not only on a
+   phone, each opened by a More button named for its role. The Assay sits
+   below the contact form, its question and promise in view and its box
+   behind one "Grade a job description" button. To reach the targets
+   without losing a fact, beyond the plan: section padding 100 → 56px (44px
+   on a phone); About dropped six chips and four fact cards that repeated
+   facts shown elsewhere, and took in the Field Notes and the 164's
+   breakdown; Skills and Education are one section; the call-to-action band
+   between them is gone. `tests/sections.test.js` checks every fact is
+   still on the page or one click away.
+4. ✓ **A scroll-length budget.** `LENGTH` in `scripts/check-budget.js`
+   gives every page a ceiling in screens at 1440×900 and 390×844.
+   `npm run smoke` measures each page once it has settled (fonts loaded,
+   walked top to bottom, on-demand features arrived, nothing opened,
+   reduced motion) and fails one over its ceiling, printing the homepage
+   section by section; `--lengths-only` does only that, in about 13 s. The
+   open counts page is held to its length drawn full, as the weekly Action
+   will commit it. Lengths are measured in Chromium only.
+5. ✓ **One listen control, docked,** in the nav, first after the logo,
+   where showing it late (voices often arrive after the first paint) moves
+   nothing else in the bar; the browser voice by default at 0 bytes; the
+   open player covers 13.3% of a 390×844 screen (15.5% with the
+   introduction offered), smoke fails it above 20%, and it never covers the
+   send button. With no voice, the control and its focus stay put while the
+   player's manifest answers, and the manifest is revalidated rather than
+   read blind from the cache, so the day Moses records, returning visitors
+   see it.
+6. ✓ **The journey map on phones.** Below 980px the map is a band pinned
+   under the nav bar (about 170px tall at 390px) while the stops scroll past
+   beneath it, and it shows the stop crossing a reading line rather than the
+   next one arriving; under reduced motion or low-energy mode it jumps
+   instead of flying. Every name is 11px or more on screen, and on a
+   desktop the Rhine delta's four names sit clear of each other and of the
+   route (Wuppertal's and Changsha's moved). The journey section is shorter
+   on a phone for it: 2.70 → 2.15 screens at 390×844. Smoke checks the band
+   covers none of its stop's text at 390 and 320px.
+7. ✓ **Legibility on phones.** You Draw It is drawn as many units wide as
+   the pixels it is shown in (up to 640, 5:4 below 480px) and redrawn when
+   that changes: every label is 11px or more (4.9px at 390×844 before). The
+   two games size their labels from the scale they are drawn at (12px, 11px
+   for small print). Anatomy of a Prompt is drawn one unit to one pixel,
+   every label 11px or more and inside the drawing at 320, 390 and 1440px.
+   The grid instruction names the dropdown it is ("Choose Norway under Grid
+   region"). The lightbox left the homepage with its photos and is rebuilt
+   on the case studies, where the dossiers' 25 photos are back with their
+   captions word for word, folded until asked for: previous and next,
+   "2 of 5", the arrow keys and Escape, with focus kept inside and handed
+   back. Smoke measures the labels at 390 and 320px and steps the lightbox
+   in both themes.
+8. ✓ **A shared shell.** `build-content.js` gives every page but the
+   homepage the same nav (Home, Case studies, Research, CV, Contact, the
+   page you are on marked) and a closing call to action ("Open to" the
+   roles in `profile.json`, the email as a link, Send a message, Download
+   CV), then Back to top, on the generated pages and, between markers
+   `build:check` verifies, on `carbon-ai.html`; the lens links no longer
+   lead to a page with no way to reach him. The four pages built on
+   `carbon-ai.css` have the homepage's light theme and its switch
+   (`theme.js`, before the first paint); a choice is shared with the
+   homepage both ways, and with none stored every page, the homepage
+   included, follows the system's setting. The field report and the 404
+   page take the nav and the call to action as plain lines, with no script,
+   no back to top and no light theme: the field report is 9,720 bytes, just
+   under where its quoted "9 KB" would round to 10, and `404.html` is
+   self-contained. axe finds no violation on any page in either theme.
+9. ✓ **Ratchet the budgets,** once the rest of wave 3 was in: the
+   homepage's first view 300 → 288 KB, the largest image 220 → 210 KB, the
+   field report file 12 → 11 KB, case studies 120 → 109 KB, research 110 →
+   99 KB, and the homepage's length 10 → 9.79 screens on a desktop and
+   18 → 17.09 on a phone; every other page's length ceiling is set at its
+   measurement plus 5%. `npm run budget -- --ratchet` does it and never
+   raises a ceiling; the audio and open-counts budgets are held for what
+   has not happened yet (the recording, a full page of counts), and the
+   on-demand total (72 of 72 KB) and `carbon-ai.html` (110 of 111 KB) had
+   no room to give.
 
 **Phase 3** — not started (3.5 and 3.10 ✗ Moses). The core-log depths
 (3.9) are still hard-coded.
@@ -775,11 +886,16 @@ move to `content/brief.json`. 4.2 and 4.4 not started.
 
 **Phase 5** — not started (5.2, 5.5 and 5.6 ✗ Moses).
 
-**Phase 6 — steps 3, 6 and 7 in wave 2.** Steps 1, 2, 4, 5 and 8–11 not
-started.
+**Phase 6 — steps 3, 6 and 7 in wave 2, step 8 in wave 3.** Steps 1 and
+9–11 not started; 2, 4 and 5 only as far as wave 3 went in passing.
 
-3. ✓ **CPU.** The nine homepage sections below the hero get
-   `content-visibility: auto` once JavaScript runs, and only where the
+2. ◐ **Images.** The dossier half is done, by the dossiers leaving: each of
+   the homepage's six project cards carries one lazy thumbnail (a 480px
+   copy), and the case studies' 25 photos fetch nothing until their row is
+   opened. Not started: an 800px hero for phones, dropping
+   `fetchpriority=high`, AVIF.
+3. ✓ **CPU.** The homepage's sections below the hero (nine then, seven
+   since wave 3) get `content-visibility: auto` once JavaScript runs, and only where the
    browser anchors scrolling (`@supports (overflow-anchor: auto)`): Safari
    has no scroll anchoring and was not tested, so it draws every section as
    before. Sections the reader
@@ -792,13 +908,19 @@ started.
    by the lane at 4× CPU slowdown in Chromium (medians of 15 loads before,
    10 after): layout on load 238 → 125 ms, the longest task 238 → 110 ms,
    and the idle main thread 1,023 → 16 ms per 3 s at the top of the page.
-   This run of smoke measured 5 ms at the top and 7 ms mid-page per 2 s,
+   Smoke on 2026-09-28 measured 5 ms at the top and 4 ms mid-page per 2 s,
    against a 100 ms ceiling. On the way, the portrait's stated height was
    found wrong (640 for a 640×960 image, a 159px jump as it loaded); it is
    fixed, and a test checks every image's stated shape against its file.
+4. Not started. Wave 3 took eleven unused symbols out of the homepage's
+   sprite, and `tests/html.test.js` checks every icon a page draws resolves
+   to a symbol on that page.
+5. Not started. Wave 3 took the `@font-face` blocks out of `content.css`
+   (the shell's pages load `carbon-ai.css`, which has them), so two
+   stylesheets carry them, not three.
 6. ◐ **JS hygiene.** ✓ One `keydown` handler on `document` routes every key
-   by layer (terminal, lightbox, player, menu, page), so one Escape closes
-   one layer; the other page-wide listeners that hear keys only watch for
+   by layer (terminal, player, menu, page; the lightbox layer left with the
+   homepage's photos in wave 3), so one Escape closes one layer; the other page-wide listeners that hear keys only watch for
    the reader taking over (the jump hold lets go, the journey map starts
    loading). ✓ One reduced-motion helper, `mks.motionOK()`, which answers
    for low-energy mode too. ✓ The time-zone table is `assets/timezones.json`,
@@ -815,28 +937,47 @@ started.
    scripts outside the core still put names on their own page's `window`:
    `ai-carbon-data.js` (`AICarbonData`) and `voice-scripts.js`
    (`VoiceScripts`), which export themselves for the browser and for Node,
-   and carbon-ai.html's `carbon-ai.js` (four top-level functions). A test
-   names each of them, so a new one cannot be added unnoticed.
+   and carbon-ai.html's `carbon-ai.js` (four top-level functions, and
+   `EcoPromptCoach`, through which `modules/anatomy.js` reads the
+   calculator since wave 3). A test names each of them, so a new one cannot
+   be added unnoticed.
 7. ◐ **CI.** ✓ `push` runs on `main` only, and a newer commit on a pull
    request cancels the older run. ✓ Node 22 (`engines`:
    `^22.22.0 || >=24.8.0`, which html-validate needs). ✓ Chromium pinned to
    the build `playwright-core` 1.56.1 names (141.0.7390.37), cached in CI.
    ✓ Suites run side by side, one process each, and the timing suites on a
-   fake clock: `test:unit` takes about 8 s here for sixteen suites (about
-   30 s of work on four cores), where twelve used to take about 17 s one
-   after another; a new
-   suite runs the day it exists. ✓ axe-core in smoke on every page at
+   fake clock: `test:unit` takes about 12 s here for twenty-three suites
+   (about 44 s of work on four cores), where twelve used to take about 17 s
+   one after another; a new suite runs the day it exists. ✓ axe-core in smoke on every page at
    1440×900 and 390×844 in both themes, and on the homepage's open states
    (0 violations); html-validate on every page in `npm test`, not in smoke
    as this step says: on the source files it needs no browser, runs early in
    the test job, and names the file and line to fix, and
    what scripts add after load is covered by axe in smoke. ✓ A budget
-   for `carbon-ai.html` (106 KB of 111 KB), and smoke compares every
-   budgeted page's measured first view with its estimate. ◐ A Firefox pass
-   is a CI job of its own, but it has never run: no Firefox build was
-   available to try it, so its first CI run on the pull request is its first
-   real run (its path was exercised in Chromium with the Chromium-only byte
-   counts off). Not started: comparing smoke screenshots with a baseline,
-   left until after the Phase 2 redesign, which would change every one.
+   for `carbon-ai.html` (110 KB of 111 KB today), and smoke compares every
+   budgeted page's measured first view with its estimate. ✓ A Firefox pass,
+   a CI job of its own: its first run, on pull request #49, failed eight
+   checks (carbon-ai.html's selects in each browser's own font, and one
+   check that read a jump before it settled), fixed in `c85f9b6`, and it
+   then passed. Wave 3's new smoke checks have run only in Chromium so far;
+   their first Firefox run is on the wave's pull request. Not started:
+   comparing smoke screenshots with a baseline, left until after the Phase
+   2 redesign, which changes every one.
+8. ◐ **A carbon receipt on every pull request.**
+   `.github/workflows/receipt.yml` measures `main` and the pull request
+   with the pull request's own scripts (`check-budget.js --json`, and
+   `smoke.js --lengths-only` in the pinned Chromium), and
+   `scripts/receipt.js` writes one comment, edited on each push: every
+   budget's bytes and how they moved, the CO₂e of each page's first view at
+   0.36 g/MB (network transfer only), each page's length at both sizes, and
+   anything over its ceiling first; from a fork it goes to the job summary
+   instead. `check-budget.js` ends its report with "you could lower X from
+   A to B" wherever there is more than 10% headroom, and writes the
+   README's budget and length tables and its quoted first-view ceiling;
+   `npm test` fails while they are stale, and the weekly open-counts Action
+   rewrites them. Partial: the workflow has never run (tested here from
+   fixtures, and end to end against an earlier commit); its first run is on
+   wave 3's pull request. The README's on-demand modules table is still
+   written by hand.
 
 **Phase 7** — not started.

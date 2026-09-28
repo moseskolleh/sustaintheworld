@@ -34,7 +34,7 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 
 - **HTML5**: Semantic markup for better SEO and accessibility
 - **CSS3**: Modern styling with CSS Grid, Flexbox, animations, and transitions
-- **JavaScript (Vanilla)**: no framework, no bundler. A 73 KB core (`script.js`, 23 KB gzipped) and four on-demand modules in `modules/` (plus the player's stylesheet, `modules/dispatch.css`) that the core fetches the first time a feature is used
+- **JavaScript (Vanilla)**: no framework, no bundler. A 72 KB core (`script.js`, 24 KB gzipped) and five on-demand modules in `modules/`, each fetched the first time it is needed: the core fetches three on the homepage (the section-05 interactives with the Assay and the footer receipt, the narration player with its stylesheet, the field terminal), the case studies fetch the two games (`dossier.js` and `.css`) and `carbon-ai.html` fetches Anatomy of a Prompt (`anatomy.js` and `.css`), each as it comes near the screen
 - **Icons**: an inline SVG symbol sprite, no icon font
 - **Fonts**: Inter, Space Grotesk and IBM Plex Mono, self-hosted as Latin subsets under the SIL Open Font License (see [Fonts](#fonts))
 - **GitHub Pages**: Free hosting for static websites
@@ -249,7 +249,8 @@ npm run voice -- --clone path/to/sample # make a voice model (add --sections to 
 
 The API key is used only there, on your machine; it never reaches the browser.
 Fish Audio bills 1 credit per UTF-8 byte of text, so the cost is known before
-anything is sent: the eight sections are ~8,000 credits today, and the dry run
+anything is sent: the eight sections are ~7,900 credits today (7,927 on
+2026-09-28), and the dry run
 prints the exact figure. Scripts are hashed, so fixing one sentence re-renders
 one file. `scripts/lib/voice-signature.js` is
 the one definition of "has this track already been rendered?", shared by the
@@ -315,10 +316,10 @@ CI uses Node 22.
 | `npm run build:check` | every generated page still matches `content/` |
 | `npm run fonts:check` | the committed fonts still hash to their manifest and every stylesheet's `@font-face` block is current |
 | `npm run lint:html` | every page is valid HTML ([html-validate](https://html-validate.org/)'s recommended rules; the two relaxations are explained in `.htmlvalidate.cjs`) |
-| `npm run test:unit` | every `tests/*.test.js`, side by side, one process per suite, so a new suite runs the day it exists: the seventeen listed below (1369 passing assertions on 2026-09-27) |
+| `npm run test:unit` | every `tests/*.test.js`, side by side, one process per suite, so a new suite runs the day it exists: the twenty-three listed below (1921 passing assertions on 2026-09-28) |
 | `npm run map:check` | the committed `journey-map.svg` still matches its generator |
 | `npm run budget` | the weights this README quotes, and that its budget tables still say what the script measures (see [Performance](#performance)) |
-| `npm run smoke` | every page in a real browser: no errors, no failed or off-origin requests, every on-demand module arrives when used, no axe-core violation at 1440×900 or 390×844 in either theme, and each budgeted page's measured first view no heavier than the budget claims, and every page no longer than its length budget at both sizes once it has settled; every page again with JavaScript off, and the homepage with `script.js` blocked and late; the skip link, Back, the theme switch, back to top and the nav bar at every width; the listen control and its player; the Assay; where jumps land while sections are drawn on demand, that reading back up after skipping ahead moves nothing, find-in-page and printing, which loops run, and how busy the idle page keeps the main thread at 4× CPU slowdown; the carbon-ai page's dropdowns and numbers; and the visit counter's one request, taken apart: exactly the documented fields, no cookie, no Referer, once per page view, and nothing under Do Not Track or Global Privacy Control or with JavaScript off (its own CI job; needs Chromium — `-- --browser firefox` runs it in Firefox, which CI also does) |
+| `npm run smoke` | every page in a real browser: no errors, no failed or off-origin requests, every on-demand module arrives when used, no axe-core violation at 1440×900 or 390×844 in either theme, and each budgeted page's measured first view no heavier than the budget claims, and every page no longer than its length budget at both sizes once it has settled; every page again with JavaScript off, and the homepage with `script.js` blocked and late; the skip link, Back, the theme switch (followed from page to page, and the system's setting with nothing chosen), back to top and the nav bar at every width, and every other page's shared nav and call to action at 320px; the first screen's figures, caption, strip and primary action; the journey map pinned over none of its stop's text on a phone, and its delta's names clear of each other on a desktop; the listen control and its player; the Assay; the case studies' two games, photo rows and lightbox; every drawing label at 11px or more on a phone; where jumps land while sections are drawn on demand, that reading back up after skipping ahead moves nothing, find-in-page and printing, which loops run, and how busy the idle page keeps the main thread at 4× CPU slowdown; the carbon-ai page's dropdowns and numbers; and the visit counter's one request, taken apart: exactly the documented fields, no cookie, no Referer, once per page view, and nothing under Do Not Track or Global Privacy Control or with JavaScript off (its own CI job; needs Chromium — `-- --browser firefox` runs it in Firefox, which CI also does) |
 | `npm run mcp:verify` | the pinned MCP package still hashes to the reviewed tarball (needs network) |
 
 The suites, and the failure each one exists to prevent:
@@ -355,12 +356,18 @@ The suites, and the failure each one exists to prevent:
   figures, says whose report its Scope lines are on, and keeps every label at
   11px or more inside the drawing, from a 320px phone to a desktop; nothing
   tells a reader to drag the grid, which is a dropdown.
-- **`sections.test.js`** — the shorter homepage: experience as short cards on
-  a phone, each More button named for its role, and nothing taken out of the
-  page; the contact form before the Assay; Skills and Education shortened by
-  their repetition, never a fact (every area, framework, degree and
-  certificate stays, and each figure taken out of Skills is still on the page
-  with the role it belongs to).
+- **`sections.test.js`** — the shorter homepage, and its one rule: no fact
+  leaves the site. Seven sections numbered 01 to 07, the Field Notes inside
+  About and Education inside Skills (`#notes` and `#education` still
+  addresses), and no call-to-action band between them; experience as short
+  cards at every width, each More button a real button named for its role,
+  every card whole without JavaScript and in print; the contact form before
+  the Assay, whose question and promise stay in view while its box opens from
+  one "Grade a job description" button (at once, before its module arrives,
+  and from the play index's link); every area, framework, degree,
+  certificate, field note and project subtitle still on the page or its case
+  study, and each figure taken out of About or Skills still shown with the
+  role it belongs to; and the narration matching the merged sections.
 - **`assay.test.js`** — the paste-a-job-ad fit check: an ad asking for fluent
   Dutch, 5+ years at a Big Four firm and SAP gets every one of those as a gap
   and not the top grade; ads that do fit still grade well, with evidence
@@ -525,10 +532,13 @@ The suites, and the failure each one exists to prevent:
   looping animation runs on transform and opacity and pauses out of view and
   in a hidden tab.
 
-The jsdom harness (`tests/harness.js`) evaluates `script.js` and then every
-file in `modules/`, so the suites see the page the way a visitor who used
-every feature would — and a module that declared anything at the top level,
-or reached for storage directly, fails `resilience.test.js`. A suite that
+The jsdom harness (`tests/harness.js`) evaluates the theme script at the top
+of `<body>`, `script.js`, and then the three modules the core fetches on
+demand, so the suites see the homepage the way a visitor who used every
+feature would — and a module that declared anything at the top level, or
+reached for storage directly, fails `resilience.test.js`. The case studies'
+games and Anatomy of a Prompt are booted with their own pages
+(`widgets.test.js`, `carbon.test.js`). A suite that
 tests timing passes `clock: true` and moves time with `await clock.tick(ms)`
 instead of sleeping, so a 1.7-second timeout costs nothing to test.
 
@@ -542,8 +552,8 @@ Everything derived now comes from `content/`:
 
 | Source | Feeds |
 |---|---|
-| `content/profile.json` | JSON-LD, `sitemap.xml`, the Assay's facts block in `modules/interactives.js`, the shared shell's call to action on every page but the homepage, the facts `content.test.js` holds every page to |
-| `content/projects.json` | `case-studies.html` |
+| `content/profile.json` | JSON-LD, `sitemap.xml`, the homepage's at-a-glance strip, the Assay's facts block in `modules/interactives.js`, the shared shell's call to action on every page but the homepage, the facts `content.test.js` holds every page to |
+| `content/projects.json` | `case-studies.html` (with each case study's photos and game), and the homepage's six project cards |
 | `content/lenses.json` | the role-specific views |
 | `content/research.json` | `research.html` |
 | `content/narration.json` | `voice-scripts.js` |
@@ -555,8 +565,11 @@ npm run build:check       # fail if a generated file is out of date (runs in CI)
 ```
 
 `index.html` and `field-report.html` stay hand-authored — they are long-form
-editorial pages, and templating over 130 KB of hand-tuned markup to remove
+editorial pages, and templating over their hand-tuned markup to remove
 duplication a test already catches would trade a small problem for a large one.
+The exceptions are regions the generator writes between markers: in
+`index.html` the JSON-LD block, the at-a-glance strip and the six project
+cards.
 `content.test.js` holds them to `content/` instead. `carbon-ai.html` and
 `404.html` are hand-authored too, bar the shared shell: the generator writes
 the nav and the call to action into them and the field report, between
@@ -661,21 +674,22 @@ visitor's own browser, and sends none of it.) All of it is `count.js`: 3 KB
 (2 KB gzipped), loaded deferred on every page and counted in each page's
 budget.
 
-**Status.** Built and tested, but not yet counting: the live Apps Script has
-to be published again with the counter's code first (item S1 in
+**Status.** Built, tested and on `main`, which the live site is built from,
+since pull request #49 was merged (2026-09-27), but not yet counting: the live Apps Script has to be
+published again with the counter's code first (item S1 in
 [docs/owner-checklist.md](docs/owner-checklist.md)). Until then the counts
 reach the old script. Every version of `Code.gs` committed here from
 2026-07-17 on reads a count as a contact message with no name and refuses it,
-so nothing is recorded and nobody is emailed; the 2025 versions would have
-recorded and emailed every one, which is why the checklist publishes the new
-script before this reaches the live site.
+so nothing is recorded and nobody is emailed; the 2025 versions would record
+and email every one, which is why S1 starts by checking which version is
+live.
 
 **What one page view sends.** One POST, the first time the page is hidden or
 left (`visibilitychange` to hidden, or `pagehide`), and never a second for the
 same page view. This is the whole of one, exactly as `count.js` sends it:
 
 ```json
-{"v":1,"page":"index","lens":"","deepest":"contact","features":["cv-download-hero","cv-download","module-dossier"],"ref":"www.linkedin.com","vp":"m","kb":284}
+{"v":1,"page":"index","lens":"","deepest":"contact","features":["cv-download-hero","cv-download","module-interactives"],"ref":"www.linkedin.com","vp":"m","kb":284}
 ```
 
 | Key | What it holds |
@@ -684,7 +698,7 @@ same page view. This is the whole of one, exactly as `count.js` sends it:
 | `page` | the page's file name without `.html` (`index`, `case-studies`, `research`, `carbon-ai`, `field-report`, `stats`), or `404` |
 | `lens` | the `?lens=` the page view arrived with, or `""` |
 | `deepest` | the id of the furthest top-level part of `<main>` that came on screen: on the homepage one of its seven sections, from `journey` to `contact`; `csGrid` on the case studies; `""` on the pages that have no such part |
-| `features` | up to 20 distinct names of things used: the site's `data-analytics` hooks (27 today, such as `cv-download-hero` and `receipt-open`), `cv-download` once for a view that used any CV link (the CV-downloads figure counts page views), `cv-download-terminal` when the field terminal's `cv` command fetches the CV, `module-<name>` for each on-demand module fetched, `contact-form-submit`, and the Assay's grade (`assay-high`, `assay-workable`, `assay-marginal`) |
+| `features` | up to 20 distinct names of things used: the site's `data-analytics` hooks (34 today, such as `cv-download-hero` and `receipt-open`), `cv-download` once for a view that used any CV link (the CV-downloads figure counts page views), `cv-download-terminal` when the field terminal's `cv` command fetches the CV, `module-<name>` for each on-demand module fetched, `contact-form-submit`, and the Assay's grade (`assay-high`, `assay-workable`, `assay-marginal`) |
 | `ref` | the referring site's host only (`www.linkedin.com`); `""` if there was none, or it was this site |
 | `vp` | the browser window's width as a class: `s` under 600 px, `m` under 1024 px, `l` wider |
 | `kb` | whole KB this page view transferred, from the browser's Resource Timing API, so a cached revisit counts as the near-zero it is |
@@ -775,8 +789,8 @@ To change the color scheme, edit the CSS variables in `style.css`:
 ```
 
 ### Content
-- Update personal information in `index.html`
-- Modify section content directly in the HTML
+- Update personal facts in `content/profile.json` (they feed the JSON-LD, the at-a-glance strip, the Assay and every other page's call to action) and projects in `content/projects.json`, then run `npm run build:content`; `npm test` names any hand-authored page that still disagrees
+- Modify the rest of a section's content directly in the HTML
 - Add or remove projects, experiences, and skills as needed
 
 ### Images
@@ -793,9 +807,10 @@ What CI runs every page in, on every pull request:
 
 - ✅ Chromium, the build pinned by `playwright-core` — so Chrome and Edge,
   which share its engine
-- ◐ Firefox, the build pinned by `playwright-core` (142 at the moment): the
-  job is in CI, and its first run is on the pull request that adds it; this
-  becomes ✅ once that run has passed
+- ✅ Firefox, the build pinned by `playwright-core` (142 at the moment): its
+  own CI job, which first passed on pull request #49 (2026-09-27), once what
+  its first run found was fixed. The length budget is measured in Chromium
+  only
 - ✅ Phone width (390×844) and desktop (1440×900), in both themes, for the
   accessibility checks — a browser window at that size, not a real phone
 
@@ -987,7 +1002,8 @@ aspirational:
 `npm run smoke` adds axe-core in a real browser: every page at 1440×900 and
 390×844 in both themes, the homepage again with the Assay's verdict, the
 carbon receipt, the player, the terminal and the phone menu open, and with
-its script blocked, and the case studies with both games played. Any violation fails, contrast included —
+its script blocked, and the case studies with both games played, a row of
+photos open and the lightbox open. Any violation fails, contrast included —
 but axe fails only what it can decide, and text over an image or a gradient
 it leaves for a person to review.
 

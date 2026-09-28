@@ -201,7 +201,7 @@ risk. Categories worth starting from are
 [professional](https://fish.audio/voice-library/professional/) and
 [announcer](https://fish.audio/voice-library/announcer/).
 
-Whatever you pick, listen to a full section before rendering all ten. A voice
+Whatever you pick, listen to a full section before rendering all eight. A voice
 that sounds fine for one sentence can grate over 60 seconds.
 
 ### Step 4 — clone your voice and render
@@ -215,7 +215,7 @@ npm run voice -- --clone path/to/your-voice.mp3
 ```
 
 That uploads the sample, creates the voice model and writes the returned id back
-into `.env`. Add `--sections` to render all ten sections in it. Later runs
+into `.env`. Add `--sections` to render all eight sections in it. Later runs
 re-render only what changed:
 
 ```bash
@@ -242,10 +242,10 @@ before anything runs:
 npm run voice -- --sections --dry-run
 ```
 
-The full page is **~7,850 credits** (the dry run above prints the exact figure:
-7,848 in September 2026). The free plan grants **8,000 per cycle**, so
-one complete render uses about 98% of a free month and leaves almost nothing for
-corrections. Check your balance and per-call limit first — ask the Fish Audio
+The full page is **~7,900 credits** for its eight sections (the dry run above
+prints the exact figure: 7,927 on 2026-09-28). The free plan grants **8,000 per
+cycle**, so one complete render uses about 99% of a free month and leaves almost
+nothing for corrections. Check your balance and per-call limit first — ask the Fish Audio
 connector for `get_credit_balance`, or look at the dashboard.
 
 Two things follow from that:

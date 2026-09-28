@@ -12,16 +12,20 @@ check it. A path such as `content/profile.json` → `experience[4].teamSize`
 means that file, then that field (lists count from 0). After editing anything
 in `content/`, run `npm run build:content` and then `npm test`.
 
-Last updated with wave 2 of the plan (Phase 1, the visit counter and open
-counts, and Phase 6 steps 3, 6 and 7), 2026-09-27. Wave 1 covered Phase 0 and
-the narration steps of Phases 2.5 and 4.3.
+Last updated with wave 3 of the plan (Phase 2, the recruiter-first homepage,
+and Phase 6 step 8, the carbon receipt on every pull request), 2026-09-28.
+Wave 1 covered Phase 0 and the narration steps of Phases 2.5 and 4.3; wave 2
+covered Phase 1 (the visit counter and open counts) and Phase 6 steps 3, 6
+and 7. Waves 1 and 2 are on `main` (pull requests #48 and #49, the second
+merged 2026-09-27); wave 3 is the Phase 2 pull request S7 is about.
 
-**Before this branch reaches the live site,** run the one-line check at the
-top of S1, and if you can, do C2 (publish the current `Code.gs`, which now
-includes the visit counter). The site's new visit counter posts to the same
-deployment as the contact form, and the 2025 versions of the script would
-record every page view as a message and email it to you; if the check says
-the live script might be one of those, C2 must come first.
+**Now that wave 2 is on `main`** (and so on the live site once GitHub Pages
+has rebuilt), run the one-line check at the top of S1, and if you can, do C2
+(publish the current `Code.gs`, which includes the visit counter). The
+site's visit counter, on every page since #49 was merged, posts to the same
+deployment as the contact form, and the 2025 versions of
+the script would record every page view as a message and email it to you; if
+the check says the live script might be one of those, do C2 at once.
 
 ---
 
@@ -71,7 +75,7 @@ https://script.google.com/macros/s/AKfycbzgyqRUmu0d2UFjb0WxbYyoDbO8F9jVnlvIQnNAf
     code in the editor does not change the live endpoint; only a new
     deployment version does. One publish of the current file covers all
     three.
-  - *When:* before this branch is merged to `main`, if you can (see S1).
+  - *When:* now: the counter has been on `main` since 2026-09-27 (see S1).
   - *Steps:*
     1. Open `google-apps-script/Code.gs` in this repository (last changed
        2026-09-27, when the visit counter was added), copy all of it, and
@@ -106,10 +110,11 @@ https://script.google.com/macros/s/AKfycbzgyqRUmu0d2UFjb0WxbYyoDbO8F9jVnlvIQnNAf
     land on a plain page titled "Message sent" that says "Thank you" and
     "Response recorded successfully!", with a link back. "Something went
     wrong" or "undefined" means C2 has not taken effect.
-    - This needs wave 1 on the live site. Until this branch is merged and
-      GitHub Pages has rebuilt, the live homepage without JavaScript is still
-      covered by its loading screen. To test the same server path before
-      then, post the form's fields the way the browser would:
+    - This needs wave 1 on the live site. It is on `main` (pull request
+      #48); if the live homepage without JavaScript still shows only its
+      loading screen, GitHub Pages has not rebuilt from `main` yet. To test
+      the same server path without the page, post the form's fields the way
+      the browser would:
 
       ```bash
       curl -L "https://script.google.com/macros/s/AKfycbzgyqRUmu0d2UFjb0WxbYyoDbO8F9jVnlvIQnNAfMU0v8JFpH5KAefy4z9BNoQqd68/exec" \
@@ -145,17 +150,17 @@ README under "The visit counter and privacy".
 
 - [ ] **S1. Give the script a `STATS_TOKEN`, publish the counter, then run
   `testCounter()` once.**
-  - *First, before this branch is merged to `main`:* find out how old the
+  - *First, now (wave 2 reached `main` on 2026-09-27):* find out how old the
     live script is. Run `curl -L "<the URL above>"` (or open that address in
     a browser). If the reply is an HTML page rather than one line of JSON
     (the old page says "Form Response Capture API" and names the
     spreadsheet), the live script is from before 2026-08-05, and may be one
     of the 2025 versions, which record any POST as a contact message and
-    email it to you. Once the site ships `count.js`, that would be one row
-    and one email per page view, so publish (below) before merging. If it prints `{"status":"ok",...}`, the live script is
-    from 2026-08-05 or later: it reads a count as a message with no name and
-    refuses it, recording nothing, so merging first is harmless, and nothing
-    is counted until you publish.
+    email it to you. With `count.js` on the live site, that is one row and
+    one email per page view, so publish (below) at once. If it prints
+    `{"status":"ok",...}`, the live script is from 2026-08-05 or later: it
+    reads a count as a message with no name and refuses it, recording
+    nothing, so no harm is done, and nothing is counted until you publish.
   - *The token:* the daily totals `?action=stats` serves are not suppressed,
     and the web app's address is in `count.js` on every page, so the script
     serves them only to a request carrying `&token=` set to the
@@ -182,7 +187,7 @@ README under "The visit counter and privacy".
   - *Check:* `curl -L "<the URL above>?action=stats&token=<STATS_TOKEN>"`
     prints `{"v":1,"rows":[...]}`, and the same without `&token=...` prints
     `{"status":"refused",...}` and no rows; before the publish both printed
-    the health check. Once the branch is live, open a page of the site in a
+    the health check. Then open a page of the live site in a
     browser with neither Do Not Track nor Global Privacy Control on, switch
     to another tab, and run the first `curl` again: today's `visits` row has
     gone up by one.
@@ -209,8 +214,8 @@ README under "The visit counter and privacy".
     `stats.html` and the README's budget table straight to `main` as
     `github-actions[bot]`. If a branch rule blocks direct pushes, let GitHub
     Actions bypass it, or the weekly commit fails.
-  - *Check:* the Action runs from `main`, so after this branch is merged:
-    **Actions → Open counts → Run workflow**. Its "Fetch the week's totals"
+  - *Check:* the Action runs from `main`, where it has been since pull
+    request #49: **Actions → Open counts → Run workflow**. Its "Fetch the week's totals"
     step prints `fetch-stats: N row(s) from script.google.com (json), <first
     day> to <last day> → content/stats.json`, or
     `script.google.com has no daily totals yet` if nothing has been counted,
@@ -308,6 +313,25 @@ README under "The visit counter and privacy".
 
 ## Facts about you the site cannot state yet
 
+**The at-a-glance strip (Phase 2.1).** Wave 3 put a strip of facts under the
+homepage hero's copy, written by `npm run build:content` from
+`content/profile.json` into `index.html` between the `AT-A-GLANCE` markers.
+Today it shows two: the roles you are open to and your location. The four a
+recruiter checks next are missing, and a missing fact is left out rather
+than shown as "TBC":
+
+| Fact | Where it goes in `content/profile.json` | Today | Item |
+|---|---|---|---|
+| Seniority | `atAGlance.seniority` | `null`, not shown | F3 |
+| Available from | `atAGlance.availableFrom` | `null`, not shown | F3 |
+| Languages, with your Dutch level | a top-level `languages` list | absent, not shown | F1 |
+| Right to work in the NL and the EU (and whether a visa needs sponsoring) | `atAGlance.rightToWork` | `null`, not shown | F2 |
+
+To check all four at once: after `npm run build:content`, `index.html`
+between `<!-- AT-A-GLANCE:START` and `<!-- AT-A-GLANCE:END -->` has a
+"Seniority", "Available", "Languages" and "Right to work" line above
+"Location", and `npm test` passes.
+
 - [ ] **F1. Languages and levels.**
   - *What:* every language you work in, named in English, with a CEFR level
     (A1 to C2) or "native". Dutch matters most: the job market is Amsterdam.
@@ -348,7 +372,10 @@ README under "The visit counter and privacy".
   - *Where:* `content/profile.json` → `atAGlance`:
     - `targetRoles`: filled from the site's own availability line
       ("sustainability, climate-risk, ESG and sustainable-AI roles and
-      consulting"). Confirm it, or correct it.
+      consulting"). Confirm it, or correct it. The same words open the
+      hero's "Open to …" line and the closing call to action on the case
+      studies, research, open counts and AI, Weighed pages ("Open to …:
+      write to me at …").
     - `seniority`: `null` today. One short phrase for the level of role
       you are looking for.
     - `availableFrom`: `null` today. `"now"`, or a date as `YYYY-MM` or
@@ -454,9 +481,12 @@ README under "The visit counter and privacy".
     range.
   - *Where:* `ai-carbon-data.js`, with `source`, `range` and a review date like
     every other factor (`tests/carbon.test.js` fails a factor without them).
-  - *Unlocks:* Scope 3 as a number on both `carbon-ai.html` and the homepage's
-    Anatomy of a Prompt at once. Today both name Scope 3 and exclude it.
-  - *Check:* `npm test` passes and both pages show the same figure.
+  - *Unlocks:* Scope 3 as a number in `carbon-ai.html`'s calculator and in
+    its Anatomy of a Prompt at once (Anatomy moved there from the homepage in
+    wave 3, and draws the calculator's own figures). Today both name Scope 3
+    and exclude it.
+  - *Check:* `npm test` passes and the calculator and Anatomy show the same
+    figure.
 
 ---
 
@@ -497,6 +527,43 @@ already on the site; confirm it or give the right value.
 `npm run build:content`, and `npm test` names every page that still disagrees.
 K3 has no test behind it: the field report and the case study's `role` and
 `method[0]` are changed together, by hand.
+
+---
+
+## Confirm two choices wave 3 made (Phase 2)
+
+Wave 3 made two choices you may want the other way. Neither blocks
+anything.
+
+- [ ] **P1. The photo on each project card.**
+  - *What:* each of the homepage's six project cards shows one thumbnail,
+    chosen from the photos its old dossier already used.
+  - *Where:* `content/projects.json` → `caseStudies[i].photo`: `src`,
+    `thumb` (the same picture 480px wide), `width`, `height` and `alt`. Any
+    photo in that case study's `gallery` will do; one without a 480px
+    `thumb` needs one made (`cwebp -resize 480 0 -q 72`), and every image in
+    the repository counts against a 3.5 MB budget with about 140 KB free.
+    Then `npm run build:content`.
+  - *Unlocks:* the cards show the pictures you would pick.
+  - *Check:* `npm test` passes (`tests/portfolio.test.js` holds each card's
+    stated size to its file), and the homepage's Projects section shows them.
+
+- [ ] **P2. The case studies' photo rows: folded or open?**
+  - *What:* the 25 field photos that were in the dossiers are back on their
+    case studies, one row under each, folded behind a line such as
+    "5 photos" until pressed, so nothing is fetched until then.
+  - *Where:* to show them open, add `open` to the `<details class="cs-photos">`
+    in `photoStrip()` in `scripts/build-content.js`, then
+    `npm run build:content`.
+  - *Cost:* open, the six rows make `case-studies.html` about 940px longer
+    than folded at 1440×900 (1,288px against 348px), about a screen, which
+    takes it past its length ceiling (11.28 screens measured, 11.85 allowed),
+    and a reader who only scrolls would fetch up to 2.2 MB of photos.
+    Something of equal length would have to come off the page first, since
+    ceilings are not raised.
+  - *Check:* nothing to check while they stay folded. Opened, each case
+    study shows its photos without a press, and `npm run smoke` passes its
+    length check once something of equal length has gone.
 
 ---
 

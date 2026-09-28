@@ -59,7 +59,7 @@ used, is in the repository's README, under "The visit counter and privacy".
 **The payload, schema v1.** Exactly these eight keys, and nothing else:
 
 ```
-{"v":1,"page":"index","lens":"","deepest":"contact","features":["cv-download-hero","cv-download","module-dossier"],"ref":"www.linkedin.com","vp":"m","kb":284}
+{"v":1,"page":"index","lens":"","deepest":"contact","features":["cv-download-hero","cv-download","module-interactives"],"ref":"www.linkedin.com","vp":"m","kb":284}
 ```
 
 | Key | What it holds |

@@ -14,7 +14,8 @@
 //     its box behind one button.
 //
 // A real browser measures the length and checks the same at 320, 390 and
-// 1280/1440px (scripts/smoke.js, exerciseSections and exerciseLength).
+// 1280/1440px (scripts/smoke.js: exerciseSections, and checkLengths against
+// the LENGTH ceilings in scripts/check-budget.js).
 //
 // Run with: node tests/sections.test.js
 
