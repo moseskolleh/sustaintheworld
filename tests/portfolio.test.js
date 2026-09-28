@@ -390,13 +390,16 @@ function dom(file) {
         if (!thumb || thumb.width !== 480 || Math.abs(thumb.height - Math.round(480 * p.height / p.width)) > 1) bad.push(`${cs.id}: ${p.thumb} is ${thumb && `${thumb.width}x${thumb.height}`}, not the photo at 480px wide`);
         const imgs = doc.querySelectorAll(`[data-project="${cs.id}"] img`);
         const img = imgs[0];
+        // A thumbnail at every width (80px, 64px on a phone): `sizes` says
+        // so, and a browser then takes the 480px copy even on a 2x screen.
+        const drawn = /^(\d+)px$/.exec(img ? img.getAttribute('sizes') || '' : '');
         if (imgs.length !== 1) bad.push(`${cs.id}: ${imgs.length} photos on the card`);
         else if (img.getAttribute('loading') !== 'lazy' || img.getAttribute('src') !== p.src || !img.getAttribute('alt') ||
-            img.getAttribute('srcset') !== `${p.thumb} 480w, ${p.src} ${p.width}w` || !/96px/.test(img.getAttribute('sizes') || '')) {
-            bad.push(`${cs.id}: the card's photo is not lazy, alt-texted and offered at both sizes`);
+            img.getAttribute('srcset') !== `${p.thumb} 480w, ${p.src} ${p.width}w` || !drawn || Number(drawn[1]) > 96) {
+            bad.push(`${cs.id}: the card's photo is not lazy, alt-texted, offered at both sizes and sized as a thumbnail`);
         }
     });
-    assert(bad.length === 0, `Cards: one lazy photo each, its declared size the file's own, with a 480px copy for small sizes (${bad.join('; ') || 'all six'})`);
+    assert(bad.length === 0, `Cards: one lazy photo each, its declared size the file's own, drawn as a thumbnail from its 480px copy (${bad.join('; ') || 'all six'})`);
 }
 
 // --- the validator holds the card to its content -------------------------

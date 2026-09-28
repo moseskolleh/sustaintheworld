@@ -362,6 +362,8 @@ const navMenu = document.getElementById('navMenu');
 
 // Open the receipt panel when a deep-link target is in it, so a shared
 // /#receiptPanel reveals the receipt instead of landing on a closed panel.
+// The Assay the same: "grade your job description" lands on it open. It
+// grows below its own top, so there is nothing to wait for.
 const revealTarget = (target) => {
     if (!target || !target.closest) return false;
     let expanded = false;
@@ -370,6 +372,9 @@ const revealTarget = (target) => {
         const rb = document.getElementById('receiptBtn');
         if (rb) { rb.click(); expanded = true; }
     }
+    const assay = target.closest('#assay');
+    const shut = assay && assay.querySelector('.assay-open[aria-expanded="false"]');
+    if (shut) shut.click();
     return expanded;
 };
 
@@ -1243,11 +1248,13 @@ document.querySelectorAll('.current-year').forEach(el => {
     // Presses waiting for the module. A second press on the same button
     // while it is on its way is the same request: replaying both opened the
     // receipt and closed it again.
+    // The Assay's own open button is this file's, not the module's: it asks
+    // for the module itself, and a replay would close it again.
     const waiting = new Set();
     document.addEventListener('click', (e) => {
         if (mks.loaded.interactives) return;
         const btn = e.target && e.target.closest ? e.target.closest('button') : null;
-        if (!btn || !btn.closest(INTERACTIVE_HOSTS)) return;
+        if (!btn || !btn.closest(INTERACTIVE_HOSTS) || btn.classList.contains('assay-open')) return;
         e.preventDefault();
         if (waiting.has(btn)) return;
         waiting.add(btn);
@@ -1259,13 +1266,13 @@ document.querySelectorAll('.current-year').forEach(el => {
 })();
 
 // ===================================
-// EXPERIENCE — short cards on a phone
+// EXPERIENCE — short cards
 // ===================================
-// Below 600px style.css shows each role as its title, organisation, dates
-// and first line, and keeps the rest of the card until it is asked for:
-// the whole log was 5.3 screens on a 390px phone. The button that asks is
-// made here, because nothing could press it without this script; above
-// 600px it is not shown and every card is whole.
+// style.css shows each role as its title, organisation, dates and first
+// line, and keeps the rest of the card until it is asked for: the whole
+// log was 5.3 screens on a 390px phone and 2.6 on a desktop. The button
+// that asks is made here, because nothing could press it without this
+// script; without it every card is whole.
 (() => {
     document.querySelectorAll('.corelog-item .timeline-content').forEach((card, i) => {
         const list = card.querySelector('ul');
@@ -1294,6 +1301,34 @@ document.querySelectorAll('.current-year').forEach(el => {
         });
         card.appendChild(btn);
     });
+})();
+
+// ===================================
+// THE ASSAY — one button under the form
+// ===================================
+// Open, the Assay was 470px of a desktop and 660 of a phone under the
+// contact form, for the few who want it. Its question and its promise
+// stay in view; the box to paste into, the samples and the verdict open
+// from a button that says what it does. Made here, like the experience
+// cards' More: without this script the Assay is not shown at all (it
+// cannot run), and style.css folds the box only once the button exists.
+(() => {
+    const assay = document.getElementById('assay');
+    const body = document.getElementById('assayBody');
+    const head = assay && assay.querySelector('.assay-head');
+    if (!body || !head) return;
+    head.insertAdjacentHTML('afterend', '<button type="button" class="btn btn-secondary btn-small assay-open" data-analytics="assay-open" ' +
+        `aria-controls="${body.id}" aria-expanded="false">Grade a job description ` +
+        '<svg class="icon" aria-hidden="true" focusable="false"><use href="#i-chevron-down"></use></svg></button>');
+    const btn = head.nextElementSibling;
+    btn.addEventListener('click', () => {
+        const open = !assay.classList.contains('is-open');
+        assay.classList.toggle('is-open', open);
+        btn.setAttribute('aria-expanded', String(open));
+        if (open) mksLoad('interactives').catch(mksLoadWarn);
+        document.dispatchEvent(new CustomEvent('mks:layout'));
+    });
+    assay.classList.add('is-folding');
 })();
 
 // ===================================

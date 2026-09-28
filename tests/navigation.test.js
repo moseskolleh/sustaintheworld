@@ -227,7 +227,7 @@ const countScrolls = (window) => {
         const band = observers.filter(o => o.els.length).pop();
         const watched = (sel) => !!band && Array.from(doc.querySelectorAll(sel)).every(el => band.els.includes(el));
         const CONTROLS = ['.hero-availability', '.hero-cta a', '.contact-form input', '.contact-form textarea', '.btn-submit',
-            '.corelog-more', '.project-link', '#ydiReveal', '.assay-sample', '.toolkit-proof', '.carbon-badge', '.receipt-btn', '.eco-mode-toggle', '.terminal-toggle'];
+            '.corelog-more', '.project-link', '#ydiReveal', '.assay-sample', '.assay-open', '.toolkit-proof', '.carbon-badge', '.receipt-btn', '.eco-mode-toggle', '.terminal-toggle'];
         const missing = CONTROLS.filter(sel => !doc.querySelector(sel) || !watched(sel));
         assert(!!band && missing.length === 0, `Back to top: it watches every control it could sit on, from the hero to the footer (not watched: ${missing.join(', ') || 'none'})`);
         assert(!!band && !band.els.some(el => el.classList.contains('footer') || el.classList.contains('contact-form')),

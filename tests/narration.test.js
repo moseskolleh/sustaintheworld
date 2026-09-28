@@ -175,7 +175,7 @@ const slowFetch = (window, delay, body, asked) => {
         assert(!bar.hidden && btn.getAttribute('aria-expanded') === 'true', 'Docked: a press opens the player');
         assert(doc.documentElement.style.scrollPaddingTop === '188px', `Docked: while open, jumps and Tab stops land below the player (scroll-padding-top ${doc.documentElement.style.scrollPaddingTop || 'unset'})`);
         assert(window.mks.narration.state().playing === 'about', `Docked: it reads the section in view (${window.mks.narration.state().playing})`);
-        assert(/03 \/ 10 · the about section/i.test(bar.querySelector('.dispatch-title').textContent), `Docked: the player says which section, and where it is (${bar.querySelector('.dispatch-title').textContent})`);
+        assert(/03 \/ 08 · the about section/i.test(bar.querySelector('.dispatch-title').textContent), `Docked: the player says which section, and where it is (${bar.querySelector('.dispatch-title').textContent})`);
         assert(/0 KB transferred/.test(bar.querySelector('.dispatch-weight').textContent), 'Docked: the browser voice is labelled 0 KB transferred');
         assert(!asked.some(u => /\.mp3/.test(u)), 'Docked: nothing but the manifest was fetched — no audio');
 

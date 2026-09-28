@@ -35,7 +35,10 @@
 //   - more than one listen control, a nav bar that moves when it appears,
 //     a player that covers more than 20% of a phone screen or the send
 //     button, or a recording fetched unasked
-//   - an Assay that grades a mismatched ad well, or sends anything
+//   - an Assay that grades a mismatched ad well, or sends anything; one
+//     whose box is not folded behind a named button, by pointer and keys
+//   - a homepage longer than 10 screens at 1440x900 or 18 at 390x844, or
+//     an experience card that is not short, or whose More sits on its text
 //   - a case-study game fetched before a reader nears it, that will not
 //     play, whose labels are under 11px on a phone, or that moves the
 //     page under a reader when it arrives above them
@@ -288,6 +291,7 @@ async function visit(context, page, rel, origin) {
     await exerciseFirstView(browser, origin);
     await exerciseNavigation(browser, origin);
     await exerciseSections(browser, origin);
+    await exerciseLength(browser, origin);
     await exerciseCpu(browser, origin);
     await exerciseStatsPage(browser, origin);
 
@@ -369,6 +373,7 @@ async function exerciseAssay(page, r) {
     // first: past that deferred check, and no request for 800 ms.
     await quietNetwork(page);
     page.on('request', onRequest);
+    await page.click('#assay .assay-open');   // its box is folded until asked for
     await page.fill('#assayInput', [
         'Senior ESG Reporting Consultant. Help clients prepare for CSRD and ESRS reporting.',
         '- Fluent Dutch and English',
@@ -824,13 +829,16 @@ async function exerciseNavigation(browser, origin) {
             await pg.waitForTimeout(3000);
             const r = await pg.evaluate((i) => ({
                 top: Math.round(document.getElementById(i).getBoundingClientRect().top),
-                bar: Math.round(document.getElementById('navbar').getBoundingClientRect().bottom)
+                bar: Math.round(document.getElementById('navbar').getBoundingClientRect().bottom),
+                // A link to the Assay opens its folded box as it lands.
+                shut: i === 'assay' && document.getElementById('assayInput').getClientRects().length === 0
             }), id);
             if (Math.abs(r.top - r.bar) > 4) misses.push(`${r.top}px against ${r.bar}px`);
+            if (r.shut) misses.push('its box still folded');
             await ctx.close();
         }
-        if (misses.length) bad(`shared link /#${id} at 390px: stopped short of the nav bar (${misses.join(', ')})`);
-        else ok(`shared link /#${id} at 390px: lands under the nav bar, 3 of 3 times with the cache warm`);
+        if (misses.length) bad(`shared link /#${id} at 390px: stopped short of the nav bar, or shut (${misses.join(', ')})`);
+        else ok(`shared link /#${id} at 390px: lands under the nav bar${id === 'assay' ? ', open' : ''}, 3 of 3 times with the cache warm`);
     }
 
     // Without script the switch could not switch anything, so it must not show.
@@ -865,8 +873,9 @@ async function exerciseNavigation(browser, origin) {
     // The controls in between used to be sat on: the calculator's selects
     // (on carbon-ai.html now), a sample chip, the dossier titles (now the
     // project cards' links), the toolkit's proof links. The experience
-    // cards' More buttons are new.
-    const GUARDED = ['.hero-availability', '.hero-cta .btn', '.corelog-more', '#ydiReveal', '.assay-sample', '.project-link', '.toolkit-proof',
+    // cards' More buttons are new, and the Assay's open button (its sample
+    // chips are folded away until it is pressed).
+    const GUARDED = ['.hero-availability', '.hero-cta .btn', '.corelog-more', '#ydiReveal', '.assay-open', '.project-link', '.toolkit-proof',
         '.btn-submit', '.carbon-badge', '.receipt-btn', '.footer-fieldreport a', '.eco-mode-toggle', '.terminal-toggle'];
     const covered = [];
     let passes = 0;
@@ -1037,18 +1046,20 @@ async function exerciseStatsPage(browser, origin) {
 }
 
 // ------------------------------------------------------------------
-// The shorter sections: experience as cards on a phone, the Assay under
-// the form
+// The shorter sections: experience as short cards, the Assay under the
+// form behind one button
 // ------------------------------------------------------------------
-// The experience log was 5.3 screens on a 390px phone. Below 600px each
-// role is now its title, organisation, dates and first line, the rest a
-// press away; the desktop keeps the whole core log. And the contact form
-// comes first in #contact, the Assay under it. body's overflow-x:hidden
-// hides a card that runs off the side, so the cards themselves are measured.
+// The experience log was 5.3 screens on a 390px phone and 2.6 on a
+// desktop. Each role is now its dates, title, organisation and first line,
+// the rest a press away, at every width; a desktop keeps the core log's
+// depths and draws a shut card as one row. The contact form comes first in
+// #contact, the Assay under it, its box behind a button that says what it
+// does. body's overflow-x:hidden hides a card that runs off the side, so the
+// cards themselves are measured. Reduced motion throughout: nothing either
+// disclosure shows may wait on a transition.
 async function exerciseSections(browser, origin) {
-    console.log('  index.html — experience on a phone, the Assay under the form');
+    console.log('  index.html — experience as short cards, the Assay under the form');
     for (const [width, height] of [[320, 700], [390, 844], [1280, 800]]) {
-        const phone = width < 600;
         const ctx = await browser.newContext({ viewport: { width, height }, reducedMotion: 'reduce' });
         const page = await ctx.newPage();
         await page.goto(`${origin}/index.html`, { waitUntil: 'load' });
@@ -1061,38 +1072,58 @@ async function exerciseSections(browser, origin) {
             cards.forEach(c => c.querySelectorAll('h3, h4, .timeline-date, li, .corelog-more').forEach((el) => {
                 if (shown(el) && parseFloat(getComputedStyle(el).fontSize) < 12) small.push(`"${el.textContent.trim().slice(0, 24)}"`);
             }));
+            // The button sits in the card's top right corner, on the dates'
+            // line: over nothing, and inside its card.
+            const hit = (a, b) => !(a.right <= b.left || a.left >= b.right || a.bottom <= b.top || a.top >= b.bottom);
+            const clash = cards.filter((c) => {
+                const btn = c.querySelector('.corelog-more');
+                if (!shown(btn)) return false;
+                const b = btn.getBoundingClientRect();
+                const card = c.getBoundingClientRect();
+                const inside = b.left >= card.left && b.right <= card.right && b.top >= card.top && b.bottom <= card.bottom;
+                const over = Array.from(c.querySelectorAll('.timeline-date, h3, h4, .partner, li')).filter(shown).some((el) => {
+                    const r = document.createRange();
+                    r.selectNodeContents(el);
+                    return Array.from(r.getClientRects()).some(t => hit(t, b));
+                });
+                return !inside || over;
+            }).map(c => c.querySelector('h3').textContent.trim().slice(0, 24));
             return {
                 n: cards.length,
                 heads: cards.every(c => ['h3', 'h4', '.timeline-date', 'li'].every(s => shown(c.querySelector(s)))),
                 folded: cards.reduce((n, c) => n + Array.from(c.querySelectorAll('li')).filter(li => !shown(li)).length, 0),
                 tags: cards.filter(c => shown(c.querySelector('.tags'))).length,
                 buttons: cards.filter(c => shown(c.querySelector('.corelog-more'))).length,
+                depths: Array.from(document.querySelectorAll('#experience .corelog-depth')).filter(shown).length,
                 off: cards.filter(c => c.getBoundingClientRect().right > innerWidth + 0.5 || c.getBoundingClientRect().left < -0.5).length,
                 screens: +(document.getElementById('experience').getBoundingClientRect().height / innerHeight).toFixed(2),
-                small
+                small,
+                clash
             };
         });
         const x = await look();
         const tag = `experience at ${width}px`;
         if (x.off || x.small.length) bad(`${tag}: ${x.off} card(s) run off the screen; text under 12px: ${x.small.join(', ') || 'none'}`);
         else ok(`${tag}: every card on screen, no text under 12px`);
-        if (phone) {
-            if (x.heads && x.folded > 0 && x.tags === 0 && x.buttons === x.n) ok(`${tag}: ${x.n} short cards — role, organisation, dates and one line each, ${x.folded} lines and the tags a press away (${x.screens} screens)`);
-            else bad(`${tag}: not short cards (every head and first line shown ${x.heads}, lines folded ${x.folded}, tags shown ${x.tags}, More buttons ${x.buttons} of ${x.n})`);
-            if (width === 390 && x.screens > 2.5) bad(`${tag}: ${x.screens} screens tall; the short cards should keep it under 2.5 (5.3 as the full log)`);
-            // One card opened and closed again, by its button.
-            await page.click('#experience .corelog-more');
-            const open = await page.evaluate(() => {
-                const card = document.querySelector('#experience .timeline-content');
-                const btn = card.querySelector('.corelog-more');
-                return { all: Array.from(card.querySelectorAll('li, .tags')).every(el => el.getClientRects().length > 0), expanded: btn.getAttribute('aria-expanded'), name: btn.textContent };
-            });
-            await page.click('#experience .corelog-more');
-            const shut = await page.evaluate(() => document.querySelector('#experience .corelog-more').getAttribute('aria-expanded'));
-            if (open.all && open.expanded === 'true' && shut === 'false' && /Researcher/.test(open.name)) ok(`${tag}: "More" opens the whole card and "Less" folds it (named "${open.name.trim()}")`);
-            else bad(`${tag}: More showed the whole card ${open.all}, aria-expanded ${open.expanded} then ${shut}, name "${open.name}"`);
-        } else if (x.heads && x.folded === 0 && x.tags === x.n && x.buttons === 0) ok(`${tag}: the whole core log, nothing folded`);
-        else bad(`${tag}: the desktop log is folded (lines hidden ${x.folded}, tags shown ${x.tags} of ${x.n}, buttons ${x.buttons})`);
+        if (x.heads && x.folded > 0 && x.tags === 0 && x.buttons === x.n) ok(`${tag}: ${x.n} short cards — dates, role, organisation and one line each, ${x.folded} lines and the tags a press away (${x.screens} screens)`);
+        else bad(`${tag}: not short cards (every head and first line shown ${x.heads}, lines folded ${x.folded}, tags shown ${x.tags}, More buttons ${x.buttons} of ${x.n})`);
+        if (x.clash.length) bad(`${tag}: a More button sits over its card's text or outside it (${x.clash.join(', ')})`);
+        else ok(`${tag}: each More button in its card's corner, over none of its text`);
+        if (width < 600 ? x.depths === 0 : x.depths === x.n) ok(`${tag}: ${width < 600 ? 'the depth column gives its width to the text' : 'the core log keeps its depths'}`);
+        else bad(`${tag}: ${x.depths} depth labels shown`);
+        const ceiling = { 390: 2.5, 1280: 1.6 }[width];
+        if (ceiling && x.screens > ceiling) bad(`${tag}: ${x.screens} screens tall; short cards should keep it under ${ceiling} (5.3 and 2.6 as the full log)`);
+        // One card opened and closed again, by its button.
+        await page.click('#experience .corelog-more');
+        const open = await page.evaluate(() => {
+            const card = document.querySelector('#experience .timeline-content');
+            const btn = card.querySelector('.corelog-more');
+            return { all: Array.from(card.querySelectorAll('li, .tags')).every(el => el.getClientRects().length > 0), expanded: btn.getAttribute('aria-expanded'), name: btn.textContent };
+        });
+        await page.click('#experience .corelog-more');
+        const shut = await page.evaluate(() => document.querySelector('#experience .corelog-more').getAttribute('aria-expanded'));
+        if (open.all && open.expanded === 'true' && shut === 'false' && /Researcher/.test(open.name)) ok(`${tag}: "More" opens the whole card and "Less" folds it (named "${open.name.trim()}")`);
+        else bad(`${tag}: More showed the whole card ${open.all}, aria-expanded ${open.expanded} then ${shut}, name "${open.name}"`);
 
         // The contact form first, the Assay under it.
         const c = await page.evaluate(() => {
@@ -1107,6 +1138,72 @@ async function exerciseSections(browser, origin) {
         });
         if (c.after && c.below && c.first) ok(`contact at ${width}px: the form comes first, the Assay below it`);
         else bad(`contact at ${width}px: the Assay after the form ${c.after}, below it ${c.below}, the form's fields first ${c.first}`);
+
+        // The Assay's question and promise in view, its box a button away:
+        // opened and shut by pointer and by keyboard, shown at once.
+        const assay = () => page.evaluate(() => {
+            const btn = document.querySelector('#assay .assay-open');
+            const box = document.getElementById('assayInput');
+            const head = document.querySelector('#assay .assay-lede');
+            return {
+                name: btn ? btn.textContent.trim() : null,
+                expanded: btn && btn.getAttribute('aria-expanded'),
+                box: !!box && box.getClientRects().length > 0 && getComputedStyle(box).visibility !== 'hidden',
+                promise: !!head && head.getClientRects().length > 0 && /never leaves this page/.test(head.textContent)
+            };
+        });
+        const shutAt = await assay();
+        await page.click('#assay .assay-open');
+        const opened = await assay();
+        await page.focus('#assay .assay-open');
+        await page.keyboard.press('Enter');
+        const byEnter = await assay();
+        await page.keyboard.press('Space');
+        const bySpace = await assay();
+        const at = `the Assay at ${width}px`;
+        if (shutAt.name === 'Grade a job description' && shutAt.expanded === 'false' && !shutAt.box && shutAt.promise) ok(`${at}: its question and promise in view, its box behind "${shutAt.name}"`);
+        else bad(`${at}: on arrival the button is "${shutAt.name}" (aria-expanded ${shutAt.expanded}), the box shown ${shutAt.box}, the promise shown ${shutAt.promise}`);
+        if (opened.box && opened.expanded === 'true' && !byEnter.box && byEnter.expanded === 'false' && bySpace.box && bySpace.expanded === 'true') ok(`${at}: a press opens it at once, and Enter and Space fold and open it again`);
+        else bad(`${at}: pressed ${opened.box}/${opened.expanded}, Enter ${byEnter.box}/${byEnter.expanded}, Space ${bySpace.box}/${bySpace.expanded}`);
+        await ctx.close();
+    }
+}
+
+// ------------------------------------------------------------------
+// The homepage's length
+// ------------------------------------------------------------------
+// Length is a cost to a busy reader too (plan Phase 2, step 3: at most 10
+// screens on a desktop and 18 on a phone; it was 19.4 and 32.7). Measured
+// the way a reader meets it: reduced motion, the fonts in, the page walked
+// top to bottom so every section drawn by estimate (content-visibility)
+// takes its real height, then back to the top. Each part is printed, so a
+// failure says where the length went.
+const LENGTH_CEILINGS = [[1440, 900, 10], [390, 844, 18]];
+
+async function exerciseLength(browser, origin) {
+    console.log('  index.html — its length');
+    for (const [width, height, ceiling] of LENGTH_CEILINGS) {
+        const ctx = await browser.newContext({ viewport: { width, height }, reducedMotion: 'reduce' });
+        const page = await ctx.newPage();
+        await page.goto(`${origin}/index.html`, { waitUntil: 'load' });
+        await page.evaluate(() => document.fonts.ready);
+        await page.evaluate(async () => {
+            const rest = (ms) => new Promise(r => setTimeout(r, ms));
+            for (let y = 0; y < document.documentElement.scrollHeight; y += innerHeight / 2) { scrollTo(0, y); await rest(40); }
+            scrollTo(0, document.documentElement.scrollHeight);
+            await rest(300);
+            scrollTo(0, 0);
+            await rest(600);
+        });
+        const m = await page.evaluate(() => {
+            const parts = [document.getElementById('home')].concat(Array.from(document.querySelectorAll('main > *')), [document.querySelector('body > footer')])
+                .filter(el => el && el.getBoundingClientRect().height >= 1)
+                .map(el => `${el.id || (el.getAttribute('class') || el.localName).split(' ')[0]} ${(el.getBoundingClientRect().height / innerHeight).toFixed(2)}`);
+            return { screens: document.documentElement.scrollHeight / innerHeight, parts };
+        });
+        const tag = `index.html at ${width}x${height}: ${m.screens.toFixed(2)} screens (ceiling ${ceiling})`;
+        if (m.screens <= ceiling) ok(`${tag} — ${m.parts.join(', ')}`);
+        else bad(`${tag} — ${m.parts.join(', ')}`);
         await ctx.close();
     }
 }
@@ -1979,7 +2076,8 @@ async function axeHomepageStates(page, view, note, attempt) {
 
     // The Assay's verdict, with rows for what matched and for the gaps.
     await attempt(`${rel}: axe on the Assay's verdict`, async () => {
-        await page.fill('#assayInput', 'ESG Reporting Consultant for CSRD and ESRS. Fluent Dutch. ' +
+        await page.click('#assay .assay-open', within);
+        await page.fill('#assayInput','ESG Reporting Consultant for CSRD and ESRS. Fluent Dutch. ' +
             '5+ years at a Big Four firm. Hands-on SAP. GHG accounting and stakeholder engagement.');
         await page.click('#assayRun', within);
         await page.waitForSelector('#assayResult .assay-row-gap', within);
@@ -2217,17 +2315,19 @@ async function exerciseCpu(browser, origin) {
         const work = await lit();
         if (work === 'Work') ok('the nav lights Work on this page\'s projects'); else bad(`on #projects the nav lights ${work}, not Work`);
 
-        // Find-in-page, from the top, reaches a section not yet drawn.
+        // Find-in-page, from the top, reaches a section not yet drawn. (The
+        // field notes that used to be looked for are in About now, near the
+        // top; the certificates are far down, in Skills & Education.)
         await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
         const found = await page.evaluate(() => {
-            const heading = document.querySelector('#notes h3');
+            const heading = document.querySelector('#education .certification:last-child .cert-title');
             const text = heading ? heading.textContent.trim() : '';
             const hit = !!text && window.find(text);
             const sel = getSelection();
-            return { text, hit, inside: !!(sel.anchorNode && document.getElementById('notes').contains(sel.anchorNode)) };
+            return { text, hit, inside: !!(sel.anchorNode && document.getElementById('education').contains(sel.anchorNode)) };
         });
         if (found.hit && found.inside) ok(`find-in-page reaches a section not yet drawn ("${found.text}")`);
-        else bad(`find-in-page could not find "${found.text}" in #notes from the top of the page`);
+        else bad(`find-in-page could not find "${found.text}" in #education from the top of the page`);
 
         await page.emulateMedia({ media: 'print' });
         const printed = await page.evaluate(() => Array.from(document.querySelectorAll('main > section'))

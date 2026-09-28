@@ -146,8 +146,11 @@ img {
     padding: 0 24px;
 }
 
+/* One rhythm for every section: 56px above and below on a desktop, 44px
+   on a phone (RESPONSIVE). At 100px the padding alone was two screens of
+   the homepage's length. */
 section {
-    padding: 100px 0;
+    padding: 56px 0;
     position: relative;
 }
 
@@ -667,37 +670,6 @@ body.light-mode .hero-availability {
     color: var(--text-secondary);
 }
 
-/* Mid-scroll conversion band — catches warm visitors before the very end */
-.cta-band {
-    background: var(--card-bg-alt);
-    border-top: 1px solid var(--line-color);
-    border-bottom: 1px solid var(--line-color);
-    padding: 44px 0;
-}
-
-.cta-band-inner {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 28px;
-    flex-wrap: wrap;
-}
-
-.cta-band-copy p {
-    font-family: var(--font-display);
-    font-size: clamp(1.1rem, 2vw, 1.45rem);
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-top: 6px;
-    max-width: 34ch;
-}
-
-.cta-band-actions {
-    display: flex;
-    gap: 14px;
-    flex-wrap: wrap;
-}
-
 /* The Receipt — the page prints its own itemised carbon bill */
 .receipt-btn {
     display: inline-block;
@@ -869,12 +841,34 @@ body.light-mode .hero-availability {
    no fill, a dashed edge, a smaller title than the form's section. */
 .assay {
     max-width: 820px;
-    margin: 56px auto 0;
+    margin: 32px auto 0;
     border: 1px dashed var(--line-color);
     border-radius: var(--border-radius);
-    padding: 24px 28px;
+    padding: 22px 28px;
 }
 .assay-head { margin-bottom: 14px; }
+
+/* Folded until asked for: the question and the promise show, the box to
+   paste into opens from script.js's button (only once it is there). On a
+   desktop the button sits beside them, the box full width under both. */
+html.js .assay.is-folding:not(.is-open) .assay-body { display: none; }
+.assay-body { margin-top: 18px; }
+.assay-open .icon { transition: transform 0.2s ease; }
+.assay.is-open .assay-open .icon { transform: rotate(180deg); }
+
+@media (min-width: 900px) {
+    .assay.is-folding {
+        max-width: none;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        column-gap: 32px;
+    }
+
+    .assay.is-folding .assay-head { margin: 0; }
+    .assay.is-folding .assay-body { grid-column: 1 / -1; }
+}
+
 .assay-title { font-size: clamp(1.1rem, 2vw, 1.35rem); margin: 6px 0 8px; }
 .assay-lede { color: var(--text-secondary); font-size: 0.95rem; line-height: 1.6; }
 .assay-lede strong { color: var(--primary-green); }
@@ -1183,8 +1177,11 @@ body.light-mode .hero-photo-caption {
 /* ===================================
    SECTION HEADERS
    =================================== */
+/* From 768px the index sits on the title's line, not over it, and the
+   introduction runs to 780px: a line saved in every section, twice where
+   the introduction had wrapped at 640px. */
 .section-header {
-    margin-bottom: 60px;
+    margin-bottom: 32px;
     position: relative;
     z-index: 2;
 }
@@ -1195,7 +1192,7 @@ body.light-mode .hero-photo-caption {
     color: var(--primary-green);
     letter-spacing: 0.25em;
     display: block;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
 }
 
 .section-index::after {
@@ -1203,8 +1200,25 @@ body.light-mode .hero-photo-caption {
     color: var(--line-color);
 }
 
+@media (min-width: 768px) {
+    .section-header {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        align-items: baseline;
+        column-gap: 20px;
+    }
+
+    .section-index {
+        margin: 0;
+    }
+
+    .section-header > :not(.section-index, .section-title) {
+        grid-column: 1 / -1;
+    }
+}
+
 .section-title {
-    font-size: clamp(2rem, 5vw, 3rem);
+    font-size: clamp(1.9rem, 4.4vw, 2.75rem);
     text-transform: uppercase;
     letter-spacing: 0.01em;
 }
@@ -1215,8 +1229,8 @@ body.light-mode .hero-photo-caption {
 
 .section-description {
     color: var(--text-secondary);
-    max-width: 640px;
-    margin-top: 14px;
+    max-width: 780px;
+    margin-top: 12px;
     font-size: 1.05rem;
 }
 
@@ -1364,8 +1378,8 @@ body.light-mode .hero-photo-caption {
    =================================== */
 .about-grid {
     display: grid;
-    grid-template-columns: 320px 1fr;
-    gap: 50px;
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: 48px;
     align-items: start;
 }
 
@@ -1398,10 +1412,13 @@ body.light-mode .hero-photo-caption {
 
 .portrait-meta {
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
-    margin-top: 14px;
+    gap: 2px 10px;
+    margin: 12px 0 10px;
     padding: 0 4px;
+    white-space: nowrap;
 }
 
 .portrait-location {
@@ -1432,60 +1449,18 @@ body.light-mode .hero-photo-caption {
     color: var(--text-primary);
 }
 
-.about-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 10px;
+/* The 164 water points, itemised under the paragraph that claims them. */
+.about-text .impact-row {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px dashed var(--line-soft);
 }
 
-.chip {
-    font-size: 0.83rem;
-    color: var(--text-primary);
-    background: var(--card-bg);
-    border: 1px solid var(--line-soft);
-    border-radius: 999px;
-    padding: 8px 16px;
-    transition: var(--transition);
-}
-
-.chip:hover {
-    border-color: var(--primary-green);
-    transform: translateY(-2px);
-}
-
-.about-facts {
-    grid-column: 2;
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
-    margin-top: 8px;
-}
-
-.fact-card {
-    display: flex;
-    gap: 16px;
-    align-items: flex-start;
-    background: var(--card-bg);
-    border: 1px solid var(--line-soft);
-    border-radius: var(--border-radius);
-    padding: 20px 22px;
-    transition: var(--transition);
-}
-
-.fact-card:hover {
-    border-color: var(--line-color);
-    transform: translateY(-4px);
-}
-
-.fact-card h3 {
-    font-size: 1rem;
-    margin-bottom: 4px;
-}
-
-.fact-card p {
-    color: var(--text-secondary);
-    font-size: 0.88rem;
+@media (max-width: 599px) {
+    .about-lead {
+        font-size: 1.12rem;
+        margin-bottom: 16px;
+    }
 }
 
 /* ===================================
@@ -1510,7 +1485,7 @@ body.light-mode .hero-photo-caption {
     border: 1px dashed var(--line-color);
     border-radius: 6px;
     padding: 10px 16px;
-    margin-bottom: 26px;
+    margin-bottom: 16px;
     color: var(--primary-green);
 }
 
@@ -1575,7 +1550,7 @@ body.light-mode .hero-photo-caption {
 }
 
 .corelog-item .timeline-content {
-    margin-bottom: 34px;
+    margin-bottom: 12px;
 }
 
 .corelog-item:last-of-type .timeline-content {
@@ -1583,7 +1558,7 @@ body.light-mode .hero-photo-caption {
 }
 
 .corelog-foot {
-    margin-top: 26px;
+    margin-top: 16px;
     text-align: center;
     color: var(--text-secondary);
     border-top: 2px dashed var(--line-color);
@@ -1592,10 +1567,11 @@ body.light-mode .hero-photo-caption {
 }
 
 .timeline-content {
+    position: relative;
     background: var(--card-bg);
     border: 1px solid var(--line-soft);
     border-radius: var(--border-radius);
-    padding: 28px 32px;
+    padding: 18px 24px;
     transition: var(--transition);
 }
 
@@ -1614,26 +1590,26 @@ body.light-mode .hero-photo-caption {
 }
 
 .timeline-content h3 {
-    font-size: 1.2rem;
-    margin-bottom: 4px;
+    font-size: 1.15rem;
+    margin-bottom: 2px;
 }
 
 .timeline-content h4 {
-    font-size: 0.95rem;
+    font-size: 0.92rem;
     font-weight: 500;
     color: var(--text-secondary);
-    margin-bottom: 12px;
+    margin-bottom: 8px;
 }
 
 .timeline-content .partner {
     font-size: 0.85rem;
     color: var(--primary-green);
-    margin-bottom: 12px;
+    margin-bottom: 8px;
 }
 
 .timeline-content ul {
     list-style: none;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
 }
 
 .timeline-content ul li {
@@ -1668,26 +1644,68 @@ body.light-mode .hero-photo-caption {
     padding: 4px 10px;
 }
 
-/* On a phone the log is a stack of short cards: role, organisation, dates
-   and the first line, with the rest a press away. The full log was 5.3
-   screens tall at 390px. Only with script.js, which makes the button that
-   opens a card (and never on a late start, which leaves html.js off):
-   without it every card is shown whole. The desktop log is unchanged. */
+/* Each layer is a short card: dates, role, organisation and the first
+   line, with the rest and the tags a press away. The whole log was 5.3
+   screens on a 390px phone and 2.6 on a desktop. Only with script.js,
+   which makes the button that opens a card (and never on a late start,
+   which leaves html.js off): without it every card is shown whole. The
+   button sits at the card's top right, on the dates' line, open or shut. */
 .corelog-more {
     display: none;
-    margin-top: 10px;
+    position: absolute;
+    top: 12px;
+    right: 14px;
     background: none;
     border: 1px dashed var(--line-color);
     border-radius: 999px;
     color: var(--primary-green);
     font-family: var(--font-mono);
     font-size: 0.75rem;
+    line-height: 1.5;
     letter-spacing: 0.06em;
-    padding: 6px 14px;
+    padding: 4px 12px;
     cursor: pointer;
 }
 
 .corelog-more:hover { border-color: var(--primary-green); }
+
+html.js .timeline-content:not(.is-open) ul li:nth-child(n+2),
+html.js .timeline-content:not(.is-open) .tags {
+    display: none;
+}
+
+html.js .timeline-content:not(.is-open) ul,
+html.js .timeline-content:not(.is-open) ul li { margin-bottom: 0; }
+html.js .corelog-more { display: inline-block; }
+/* The dates wrap before they reach the button (at 320px they did not fit). */
+html.js .timeline-date { padding-right: 64px; }
+
+/* On a desktop a shut card is one row under its dates: who and where on
+   the left, what the work was on the right. Open, it is the whole card. */
+@media (min-width: 900px) {
+    html.js .timeline-content:not(.is-open) {
+        display: grid;
+        grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+        column-gap: 28px;
+        align-items: start;
+    }
+
+    html.js .timeline-content:not(.is-open) > .timeline-date {
+        grid-column: 1 / -1;
+    }
+
+    html.js .timeline-content:not(.is-open) .timeline-head > :last-child {
+        margin-bottom: 0;
+    }
+}
+
+/* Printed, every card is whole: paper has no More button. */
+@media print {
+    html.js .timeline-content:not(.is-open) { display: block; }
+    html.js .timeline-content:not(.is-open) ul li:nth-child(n+2) { display: list-item; }
+    html.js .timeline-content:not(.is-open) .tags { display: flex; }
+    html.js .corelog-more { display: none; }
+}
 
 @media (max-width: 599px) {
     .corelog-head,
@@ -1703,20 +1721,11 @@ body.light-mode .hero-photo-caption {
 
     .corelog-item .timeline-content {
         padding: 16px 18px;
-        margin-bottom: 14px;
+        margin-bottom: 12px;
     }
 
     .timeline-content h3 { font-size: 1.05rem; }
-    .timeline-content h4 { font-size: 0.88rem; margin-bottom: 8px; }
-    .timeline-content .partner { margin-bottom: 8px; }
-
-    html.js .timeline-content:not(.is-open) ul li:nth-child(n+2),
-    html.js .timeline-content:not(.is-open) .tags {
-        display: none;
-    }
-
-    html.js .timeline-content:not(.is-open) ul { margin-bottom: 0; }
-    html.js .corelog-more { display: inline-block; }
+    .timeline-content h4 { font-size: 0.88rem; }
 }
 
 /* ===================================
@@ -1725,23 +1734,26 @@ body.light-mode .hero-photo-caption {
 /* One card per case study, generated from content/projects.json: where and
    when, the headline result with its basis, the role lenses and the tools,
    and one link to the whole story on case-studies.html. Three across on a
-   desktop and two on a tablet; on a phone the photo becomes a thumbnail
-   beside the title, so the six cost about three screens, not five. */
+   desktop, two on a tablet and one on a phone, the photo a thumbnail beside
+   the date and title at every width: as a banner it was a fifth of each
+   card's height, and the section 1.9 screens on a desktop. */
 .projects-list {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 22px;
+    gap: 18px;
 }
 
+/* The last row takes what is left, so a row's links line up at its foot. */
 .project-card {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding: 0 20px 20px;
+    display: grid;
+    grid-template-columns: 80px minmax(0, 1fr);
+    grid-template-rows: auto auto auto auto 1fr;
+    align-items: start;
+    gap: 10px 14px;
+    padding: 18px;
     background: var(--card-bg);
     border: 1px solid var(--line-soft);
     border-radius: var(--border-radius);
-    overflow: hidden;
     transition: border-color 0.3s ease;
 }
 
@@ -1750,26 +1762,34 @@ body.light-mode .hero-photo-caption {
     border-color: var(--line-color);
 }
 
+.project-card > :not(.project-photo, .project-meta, h3) {
+    grid-column: 1 / -1;
+}
+
 .project-photo {
+    grid-row: 1 / span 2;
     display: block;
-    width: calc(100% + 40px);
-    max-width: none;
+    width: 80px;
     height: auto;
-    aspect-ratio: 2 / 1;
-    margin: 0 -20px 6px;
+    aspect-ratio: 1;
+    border-radius: 8px;
     object-fit: cover;
     filter: saturate(0.9);
 }
 
-.project-card h3 {
-    font-size: 1.2rem;
-    line-height: 1.3;
+.project-meta {
+    align-self: end;
 }
 
-.project-sub {
-    color: var(--text-secondary);
-    font-size: 0.9rem;
-    line-height: 1.5;
+/* Tighter than the house label, so "2025 — present · Amsterdam, NL"
+   keeps to one line beside the photo. */
+.project-meta .mono-label {
+    letter-spacing: 0.03em;
+}
+
+.project-card h3 {
+    font-size: 1.12rem;
+    line-height: 1.3;
 }
 
 /* The headline result, ruled green when a reader can check it (as on the
@@ -1804,6 +1824,14 @@ body.light-mode .hero-photo-caption {
     font-size: 0.7rem;
 }
 
+/* The role lenses and the tools, on one run of small type. */
+.project-tags {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 12px;
+}
+
 .project-lenses {
     list-style: none;
     display: flex;
@@ -1818,13 +1846,12 @@ body.light-mode .hero-photo-caption {
     color: var(--primary-green);
     border: 1px solid var(--line-color);
     border-radius: 999px;
-    padding: 3px 10px;
+    padding: 1px 8px;
 }
 
+/* The tools join the lenses' run (a div has nothing to announce). */
 .project-tech {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 2px 12px;
+    display: contents;
 }
 
 .project-tech span {
@@ -1837,8 +1864,8 @@ body.light-mode .hero-photo-caption {
 
 /* Last in the card and pushed to its foot, so a row's links line up. */
 .project-link {
-    margin-top: auto;
-    align-self: flex-start;
+    align-self: end;
+    justify-self: start;
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -1988,33 +2015,37 @@ body.light-mode .hero-photo-caption {
 }
 
 /* ===================================
-   SKILLS
+   SKILLS & EDUCATION
    =================================== */
+/* One section, two panels: the tools with their proof, the areas and the
+   frameworks; then the degrees and certificates. */
 .skills {
     background: var(--darker-bg);
 }
 
 .skills-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 26px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 22px;
+    align-items: start;
 }
 
 .skills-panel {
     background: var(--card-bg);
     border: 1px solid var(--line-soft);
     border-radius: var(--border-radius);
-    padding: 32px 34px;
+    padding: 24px 28px;
 }
 
 .skills-panel h3 {
-    font-size: 1.1rem;
-    margin-bottom: 24px;
+    font-size: 1.05rem;
+    margin-bottom: 10px;
 }
 
-.skills-panel h3 i {
+.skills-panel h3 .icon,
+.panel-label .icon {
     color: var(--primary-green);
-    margin-right: 10px;
+    margin-right: 6px;
 }
 
 /* Toolkit with receipts — each tool links to where it earned its place */
@@ -2023,16 +2054,15 @@ body.light-mode .hero-photo-caption {
 }
 
 .toolkit-item {
-    padding: 13px 0;
+    padding: 8px 0;
     border-bottom: 1px dashed var(--line-soft);
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 1px;
 }
 
 .toolkit-item:last-child {
     border-bottom: none;
-    padding-bottom: 0;
 }
 
 .toolkit-name {
@@ -2062,167 +2092,142 @@ body.light-mode .hero-photo-caption {
     color: var(--primary-green);
 }
 
-/* Lists, not a wall of pills: eight skills were eight rows on a phone,
-   and ten framework cards four more. */
-.skills-checklist {
-    list-style: none;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 8px 18px;
-    margin-bottom: 26px;
-    font-size: 0.88rem;
-}
-
-.skills-checklist .icon {
-    color: var(--primary-green);
-    margin-right: 6px;
-    font-size: 0.75rem;
-}
-
 .skills-panel h3.frameworks-title {
-    margin-bottom: 12px;
+    margin: 18px 0 8px;
+}
+
+/* The areas and the frameworks as runs of names, not rows or pills: eight
+   areas were eight rows on a phone, and ten frameworks four more. The dot
+   trails each name, so a line never starts with one. */
+.skills-checklist,
+.frameworks-list {
+    list-style: none;
+    font-size: 0.9rem;
+    line-height: 1.8;
+    color: var(--text-secondary);
+}
+
+.skills-checklist li,
+.frameworks-list li {
+    display: inline;
+}
+
+.frameworks-list li {
+    white-space: nowrap;
 }
 
 .frameworks-list {
-    list-style: none;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px 0;
-    margin-bottom: 26px;
     font-family: var(--font-mono);
     font-size: 0.8rem;
     letter-spacing: 0.04em;
 }
 
-/* The dot trails each name, so a wrapped line never starts with one. */
+.skills-checklist li:not(:last-child)::after,
 .frameworks-list li:not(:last-child)::after {
     content: '·';
     margin: 0 10px;
     color: var(--primary-green);
 }
 
-@media (max-width: 560px) {
-    .skills-panel { padding: 24px 20px; }
-}
-
 /* ===================================
    EDUCATION
    =================================== */
-.education-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 22px;
+/* A degree is a row: its name with its dates, the institution, then one
+   run of what it held, green first. A certificate: its name, issuer and
+   date on one line, what it covered under it. */
+.panel-label {
+    color: var(--primary-green);
+    margin-bottom: 4px;
 }
 
 .education-card {
-    background: var(--card-bg);
-    border: 1px solid var(--line-soft);
-    border-radius: var(--border-radius);
-    padding: 28px 30px;
-    transition: var(--transition);
-    position: relative;
-    overflow: hidden;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    column-gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px dashed var(--line-soft);
 }
 
-.education-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 3px;
-    background: linear-gradient(90deg, var(--primary-green), transparent);
-    opacity: 0;
-    transition: var(--transition);
+.education-card > * {
+    grid-column: 1 / -1;
 }
 
-.education-card:hover {
-    border-color: var(--line-color);
-    transform: translateY(-6px);
+.skills-panel .education-card > h3 {
+    grid-column: 1;
+    grid-row: 1;
+    font-size: 1.02rem;
+    margin: 0;
 }
 
-.education-card:hover::before {
-    opacity: 1;
-}
-
-.education-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
-}
-
-.education-card h3 {
-    font-size: 1.1rem;
-    margin-bottom: 6px;
+.education-card > .education-top {
+    grid-column: 2;
+    grid-row: 1;
+    white-space: nowrap;
 }
 
 .education-card h4 {
-    font-size: 0.9rem;
+    font-size: 0.88rem;
     font-weight: 500;
     color: var(--text-secondary);
-    margin-bottom: 10px;
+    margin: 2px 0 4px;
+}
+
+.specialization,
+.education-card ul,
+.education-card ul li {
+    display: inline;
+    font-size: 0.86rem;
+    line-height: 1.6;
 }
 
 .specialization {
-    font-size: 0.85rem;
     color: var(--primary-green);
-    margin-bottom: 12px;
 }
 
 .education-card ul {
     list-style: none;
-}
-
-.education-card ul li {
     color: var(--text-secondary);
-    font-size: 0.88rem;
-    padding-left: 18px;
-    position: relative;
-    margin-bottom: 6px;
 }
 
 .education-card ul li::before {
-    content: '▸';
-    position: absolute;
-    left: 0;
+    content: ' · ';
     color: var(--primary-green);
 }
 
-/* The certificates: four short cards in a row under the degrees. */
-.cert-heading {
-    margin: 34px 0 14px;
+/* The certificates, under the degrees. */
+.skills-panel .cert-heading {
+    margin: 18px 0 0;
     color: var(--primary-green);
     font-size: 0.75rem;
 }
 
-.cert-grid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 16px;
+.education-card.certification {
+    display: block;
+    padding: 10px 0;
 }
 
-.education-card.certification {
-    padding: 18px 20px;
+.education-card:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
 }
 
 .education-card .cert-title {
+    display: inline;
     font-family: var(--font-display);
     font-size: 0.98rem;
     font-weight: 600;
     color: var(--text-primary);
-    margin-bottom: 6px;
-}
-
-.cert-title .icon {
-    color: var(--primary-green);
-    margin-right: 4px;
 }
 
 .cert-meta {
+    display: inline;
     font-size: 0.82rem;
     color: var(--text-secondary);
-    margin-bottom: 8px;
+}
+
+.cert-meta::before {
+    content: ' — ';
 }
 
 .cert-meta .mono-label {
@@ -2231,15 +2236,14 @@ body.light-mode .hero-photo-caption {
 }
 
 .cert-line {
+    margin-top: 2px;
     font-size: 0.84rem;
     line-height: 1.5;
     color: var(--text-secondary);
 }
 
-/* .education : the tablet's two columns come later in the file. */
 @media (max-width: 560px) {
-    .education .cert-grid { grid-template-columns: minmax(0, 1fr); }
-    .education-card { padding: 22px 20px; }
+    .skills-panel { padding: 20px 18px; }
 }
 
 /* ===================================
@@ -2265,7 +2269,7 @@ body.light-mode .hero-photo-caption {
 .contact-info {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 10px;
 }
 
 .contact-card {
@@ -2275,7 +2279,7 @@ body.light-mode .hero-photo-caption {
     background: var(--card-bg);
     border: 1px solid var(--line-soft);
     border-radius: var(--border-radius);
-    padding: 22px 26px;
+    padding: 14px 20px;
     text-decoration: none;
     color: inherit;
     transition: var(--transition);
@@ -2308,15 +2312,22 @@ body.light-mode .hero-photo-caption {
     min-width: 0;
 }
 
+@media (max-width: 599px) {
+    .contact-card {
+        padding: 10px 16px;
+        gap: 14px;
+    }
+}
+
 .social-links {
     display: flex;
     gap: 14px;
-    margin-top: 8px;
+    margin-top: 4px;
 }
 
 .social-links a {
-    width: 52px;
-    height: 52px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     border: 1px solid var(--line-color);
     display: flex;
@@ -2338,12 +2349,29 @@ body.light-mode .hero-photo-caption {
     background: var(--card-bg);
     border: 1px solid var(--line-soft);
     border-radius: var(--border-radius);
-    padding: 36px;
+    padding: 28px;
 }
 
 .form-group {
     position: relative;
-    margin-bottom: 24px;
+    margin-bottom: 18px;
+}
+
+/* Name and email share a line where there is room for both. */
+@media (min-width: 600px) {
+    .contact-form {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        column-gap: 16px;
+    }
+
+    .contact-form > * {
+        grid-column: 1 / -1;
+    }
+
+    .contact-form > .form-group:nth-child(-n+2) {
+        grid-column: auto;
+    }
 }
 
 .form-group input,
@@ -2445,30 +2473,35 @@ body.light-mode .form-status.error {
 .footer {
     background: var(--darker-bg);
     border-top: 1px solid var(--line-soft);
-    padding: 50px 0;
+    padding: 36px 0;
     text-align: center;
 }
 
-/* At the very end of the page the floating buttons cannot be scrolled clear,
-   and on narrow screens they sat on the low-energy switch and the terminal
-   button. The footer leaves room for them. */
+/* At the very end of the page back to top cannot be scrolled clear, and on
+   narrow screens it sat on the low-energy switch and the terminal button.
+   The footer leaves room under them for its 80px corner. */
 @media (max-width: 760px) {
     .footer {
-        padding-bottom: 160px;
+        padding-bottom: 100px;
     }
 }
 
+/* The mark and where it is, on one line. */
 .footer-logo {
+    display: inline-block;
+    vertical-align: middle;
     font-family: var(--font-display);
     font-weight: 700;
-    font-size: 1.5rem;
+    font-size: 1.3rem;
     letter-spacing: 0.15em;
-    margin-bottom: 10px;
+    margin: 0 12px 8px 0;
 }
 
 .footer-coords {
+    display: inline-block;
+    vertical-align: middle;
     color: var(--primary-green);
-    margin-bottom: 14px;
+    margin-bottom: 8px;
 }
 
 .footer-content p {
@@ -2476,13 +2509,19 @@ body.light-mode .form-status.error {
     font-size: 0.9rem;
 }
 
-.footer-fieldreport a {
-    color: var(--text-secondary);
+/* The two plain links side by side where they fit, apart where they wrap,
+   on a line of their own. */
+.footer-links {
+    margin-top: 6px;
 }
 
-/* On a phone two in a row read, and tap, as one block without a gap. */
-.footer-fieldreport + .footer-fieldreport {
-    margin-top: 10px;
+.footer-fieldreport {
+    display: inline-block;
+    margin: 4px 10px 0;
+}
+
+.footer-fieldreport a {
+    color: var(--text-secondary);
 }
 
 .footer-fieldreport a:hover {
@@ -2490,7 +2529,7 @@ body.light-mode .form-status.error {
 }
 
 .footer-tagline {
-    margin-top: 6px;
+    margin-top: 2px;
     font-style: italic;
 }
 
@@ -2742,21 +2781,42 @@ html.js .nojs-note { display: none; }
 
 @media (max-width: 1024px) {
     .about-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 26px;
     }
 
+    /* The portrait as a thumbnail beside where he is and the CV. Full
+       width it was 513px of a 390px phone before a word of the text. */
     .about-portrait {
         position: static;
-        max-width: 320px;
+        display: grid;
+        grid-template-columns: 112px minmax(0, 1fr);
+        column-gap: 18px;
+        align-items: center;
+        align-content: center;
     }
 
-    .about-facts {
-        grid-column: auto;
+    .portrait-frame {
+        grid-row: 1 / span 2;
     }
 
-    .education-grid,
-    .cert-grid {
-        grid-template-columns: repeat(2, 1fr);
+    .portrait-ring {
+        inset: 6px;
+        border-radius: 6px;
+    }
+
+    .portrait-meta {
+        justify-content: flex-start;
+        flex-wrap: wrap;
+        gap: 4px 10px;
+        margin: 0 0 10px;
+        padding: 0;
+        align-self: end;
+    }
+
+    .about-portrait .btn-cv {
+        justify-self: start;
+        align-self: start;
     }
 }
 
@@ -2774,7 +2834,7 @@ html.js .nojs-note { display: none; }
 
 @media (max-width: 768px) {
     section {
-        padding: 70px 0;
+        padding: 44px 0;
     }
 
     .hero-photo-caption {
@@ -2782,14 +2842,6 @@ html.js .nojs-note { display: none; }
         right: 16px;
         max-width: calc(100% - 32px);
         font-size: 0.62rem;
-    }
-
-    .education-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .about-facts {
-        grid-template-columns: 1fr;
     }
 
     .gallery-item-wide img {
@@ -3068,18 +3120,53 @@ body.light-mode .journey-map-readout {
    width it alone was over a screen tall on a desktop. */
 .ecoprompt .ydi {
     max-width: 860px;
+    margin-bottom: 28px;
 }
 
-/* Under You Draw It: the way on to the full calculator. */
+/* On a desktop the question and its buttons sit beside the chart, not
+   over it: stacked, the section was 1.5 screens. The last row takes what the
+   chart leaves, so the buttons stay under the question. */
+@media (min-width: 1024px) {
+    .ecoprompt .ydi {
+        max-width: none;
+        display: grid;
+        grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+        grid-template-rows: auto auto auto auto 1fr;
+        column-gap: 40px;
+        align-items: start;
+    }
+
+    .ecoprompt .ydi > * {
+        grid-column: 1;
+    }
+
+    .ecoprompt .ydi > .ydi-chart {
+        grid-column: 2;
+        grid-row: 1 / -1;
+    }
+
+    .ecoprompt .ydi-legend,
+    .ecoprompt .ydi-controls {
+        margin-top: 0;
+        margin-bottom: 14px;
+    }
+
+    .ecoprompt .ydi-verdict {
+        margin-top: 0;
+    }
+}
+
+/* Under You Draw It: the way on to the full calculator, and its sources. */
 .eco-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 14px;
-    margin: -16px 0 14px;
+    align-items: center;
+    gap: 10px 20px;
 }
 
 .eco-footnote {
-    max-width: 860px;
+    flex: 1 1 360px;
+    max-width: 760px;
     font-size: 0.75rem;
     color: var(--text-secondary);
     opacity: 0.8;
@@ -3091,14 +3178,8 @@ body.light-mode .journey-map-readout {
 }
 
 /* ===================================
-   IMPACT PANEL (field-tested numbers)
+   IMPACT BAR (the 164 water points, itemised, in About)
    =================================== */
-.impact-viz {
-    display: flex;
-    flex-direction: column;
-    gap: 30px;
-}
-
 .impact-row-head {
     display: flex;
     justify-content: space-between;
@@ -3141,7 +3222,7 @@ body.light-mode .impact-seg-c { background: rgba(34, 139, 34, 0.3); }
 .impact-legend {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px 22px;
+    gap: 4px 18px;
     margin-top: 10px;
     color: var(--text-secondary);
 }
@@ -3155,17 +3236,22 @@ body.light-mode .impact-seg-c { background: rgba(34, 139, 34, 0.3); }
 }
 
 /* ===================================
-   FIELD NOTES
+   FIELD NOTES (in About)
    =================================== */
 .fieldnotes {
-    background: var(--dark-bg);
+    margin-top: 36px;
 }
 
+.fieldnotes .panel-label {
+    margin-bottom: 12px;
+}
+
+/* Three notes in a row on a desktop, each its tag and title until opened;
+   a list of three on a phone. */
 .fieldnotes-grid {
-    max-width: 860px;
-    margin: 0 auto;
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: start;
     gap: 16px;
 }
 
@@ -3185,10 +3271,10 @@ body.light-mode .impact-seg-c { background: rgba(34, 139, 34, 0.3); }
     list-style: none;
     cursor: pointer;
     display: grid;
-    grid-template-columns: 130px 1fr 34px;
+    grid-template-columns: minmax(0, 1fr) 30px;
     align-items: center;
-    gap: 18px;
-    padding: 22px 26px;
+    gap: 4px 14px;
+    padding: 16px 20px;
 }
 
 .fieldnote summary::-webkit-details-marker {
@@ -3200,11 +3286,14 @@ body.light-mode .impact-seg-c { background: rgba(34, 139, 34, 0.3); }
 }
 
 .fieldnote summary h3 {
+    grid-column: 1;
     font-size: 1.05rem;
     font-weight: 600;
 }
 
 .fieldnote-toggle {
+    grid-column: 2;
+    grid-row: 1 / span 2;
     width: 30px;
     height: 30px;
     border-radius: 50%;
@@ -3224,8 +3313,14 @@ body.light-mode .impact-seg-c { background: rgba(34, 139, 34, 0.3); }
 }
 
 .fieldnote-body {
-    padding: 0 26px 26px;
-    max-width: 700px;
+    padding: 0 20px 20px;
+}
+
+@media (max-width: 899px) {
+    .fieldnotes-grid {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 12px;
+    }
 }
 
 .fieldnote-body p {
@@ -3245,7 +3340,7 @@ body.light-mode .impact-seg-c { background: rgba(34, 139, 34, 0.3); }
     display: inline-flex;
     align-items: center;
     gap: 10px;
-    margin-top: 22px;
+    margin-top: 16px;
     border: 1px solid var(--line-color);
     border-radius: 100px;
     padding: 9px 18px;
@@ -3325,20 +3420,6 @@ body.eco-mode *::after {
 
 body.eco-mode .hero-bg-slide:not(.active) {
     display: none;
-}
-
-/* ===================================
-   RESPONSIVE — new components
-   =================================== */
-@media (max-width: 860px) {
-    .fieldnote summary {
-        grid-template-columns: 1fr 34px;
-        row-gap: 6px;
-    }
-
-    .fieldnote-tag {
-        grid-column: 1 / -1;
-    }
 }
 
 /* ===================================
@@ -3752,8 +3833,7 @@ body.light-mode .journey-you-readout {
     }
 }
 
-/* Two across on a tablet; on a phone, one, with the photo as a thumbnail
-   beside the date and title and everything else below both. */
+/* Two across on a tablet; on a phone, one. */
 @media (max-width: 1023px) {
     .projects-list {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3767,36 +3847,25 @@ body.light-mode .journey-you-readout {
     }
 
     .project-card {
-        display: grid;
-        grid-template-columns: 96px minmax(0, 1fr);
-        align-content: start;
+        grid-template-columns: 64px minmax(0, 1fr);
         gap: 8px 14px;
-        padding: 16px;
+        padding: 14px 16px;
     }
 
     .project-photo {
-        grid-row: 1 / span 2;
-        width: 96px;
-        aspect-ratio: 1;
-        margin: 0;
-        border-radius: 8px;
-    }
-
-    .project-card > :not(.project-photo, .project-meta, h3) {
-        grid-column: 1 / -1;
+        width: 64px;
     }
 }
 
 /* Pointer from the teaser cards to the evidence-shaped case studies, and
-   to the same six projects read for one kind of role. */
+   to the same six projects read for one kind of role: the section's one
+   line of introduction, ruled like a result. */
 .section-cta {
-    max-width: 68ch;
-    margin: 14px auto 0;
-    padding: 12px 16px;
+    padding: 10px 16px;
     border-left: 3px solid var(--accent-color);
     background: rgba(124, 252, 0, 0.04);
     border-radius: 4px;
-    font-size: 0.88rem;
+    font-size: 0.95rem;
     line-height: 1.65;
     color: var(--text-secondary);
 }

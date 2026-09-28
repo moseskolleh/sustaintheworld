@@ -22,13 +22,13 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 - **No dead ends**: every page but the homepage shares one small nav (Home, Case studies, Research, CV, Contact, with the page you are on marked) and ends with a way to reach Moses: his address, the contact form and the CV. The pages built on `carbon-ai.css` have the homepage's light theme and its switch, and keep the reader's choice from page to page (`theme.js`, before the first paint); with nothing chosen they follow the system's setting, with or without JavaScript. The text-only field report and the 404 page take the nav and the call to action as plain lines, and no script
 - **[Research outputs](research.html)**: theses, reports, datasets, code and tools, each labelled public / on request / held by the client. No DOI, journal or conference is named anywhere, because none of this work has one — and a test fails the build if one ever appears without proof
 - **[Open counts](stats.html)**: what the site's own cookieless counter has counted, rebuilt weekly — the five numbers that say whether the site works, page views by page, lens and window width, referrers, features used and bytes per page view, in whole weeks. Every count under 5 reads `<5`, a figure that would let one be worked out by subtraction reads `held`, and the page prints the exact payload a page view sends. See [Open counts](#open-counts)
-- **Borehole core-log experience timeline**: career history logged the way a geologist logs a core — depth is time, every layer is a chapter. On a phone each role is a short card (role, organisation, dates, one line), the rest a press away
+- **Borehole core-log experience timeline**: career history logged the way a geologist logs a core — depth is time, every layer is a chapter. Each role is a short card (dates, role, organisation, one line), the rest a press away
 - **"AI, Weighed"**: one chart from the EcoPrompt Coach research on the homepage — guess how the energy of one AI answer grows with model size, then see the published estimates. The calculator (model × grid × tokens → energy, carbon, water) and Anatomy of a Prompt are on [`carbon-ai.html`](carbon-ai.html)
-- **Evidence-first skills**: no invented percentages — every tool links to the project where it earned its place, and the 164 water points are itemized
-- **The Assay**: paste a job ad under the contact form and get an honest fit, graded in the browser; the ad itself is never sent (the page view's count carries the grade, see [The visit counter and privacy](#the-visit-counter-and-privacy)). It lists matched evidence with links, and gaps (languages, years of experience, named tools, consulting-firm or director-level experience, financial modelling, a PhD or a law degree), first when they cap the grade; right to work, visa, clearance, driving licence, relocation and the level of English are named as things to confirm with Moses, never guessed. General skills (stakeholders, data, delivery, international work, research) count towards a grade but never make one: an ad with nothing from his own field is "Different field" Its facts about him come from `content/profile.json`
-- **Field Notes**: short essays connecting boreholes, scenario storytelling and sustainable AI
+- **Evidence-first skills**: no invented percentages — every tool links to the project where it earned its place; the 164 water points are itemized in About
+- **The Assay**: under the contact form, behind one button, paste a job ad and get an honest fit, graded in the browser; the ad itself is never sent (the page view's count carries the grade, see [The visit counter and privacy](#the-visit-counter-and-privacy)). It lists matched evidence with links, and gaps (languages, years of experience, named tools, consulting-firm or director-level experience, financial modelling, a PhD or a law degree), first when they cap the grade; right to work, visa, clearance, driving licence, relocation and the level of English are named as things to confirm with Moses, never guessed. General skills (stakeholders, data, delivery, international work, research) count towards a grade but never make one: an ad with nothing from his own field is "Different field" Its facts about him come from `content/profile.json`
+- **Field Notes**: short essays connecting boreholes, scenario storytelling and sustainable AI, under About
 - **Modern design**: dark theme with vibrant green accents, light mode, responsive layout, full SEO/social metadata (Open Graph, JSON-LD, sitemap)
-- **Comprehensive sections**: journey, about (with CV download), experience, six project cards leading to the case studies, AI cost widget, skills, education, field notes, contact form
+- **Seven sections**: journey, about (with the CV download and the field notes), experience, six project cards leading to the case studies, AI, Weighed, skills and education, contact form
 
 ## Technologies Used
 
@@ -52,35 +52,29 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 - The living journey map: Freetown → Changsha → Bonn → Wageningen → Amsterdam, flown as you scroll, with a visitor mark for wherever you are reading from
 
 ### 👤 About
-- Professional summary with the CV download
-- Four fact cards: where the work was done, the 164 water points, the data toolkit and the ESG certificate
+- Professional summary with the CV download, and the 164 water points itemised (100 wells rehabilitated, 50 boreholes drilled, 14 solar-powered)
+- The three Field Notes, each its title until opened
 
 ### 💼 Experience
 - The borehole core-log timeline: depth is time, every layer a chapter, technology tags for each
-- Below 600px, short cards: role, organisation, dates and the first line, with the rest and the tags behind a More button
+- Short cards at every width: dates, role, organisation and the first line, with the rest and the tags behind a More button named for its role; on a desktop a shut card is one row
 
 ### 🔬 Projects
-- Six teaser cards, generated from `content/projects.json` so they cannot disagree with the case studies: where and when, the headline result with the one line of its basis and whether you can check it from outside, the role lenses, the tools, one photo, and one link to the whole story on `case-studies.html`
+- Six teaser cards, generated from `content/projects.json` so they cannot disagree with the case studies: where and when, the headline result with the one line of its basis and whether you can check it from outside, the role lenses, the tools, a thumbnail photo, and one link to the whole story on `case-studies.html` (the subtitle is the case study's)
 - The two games that used to sit in the dossiers are on the case studies they illustrate: "Seven in ten" on groundwater, "Don't let it become a boat" on Wuppertal
 
 ### ⚡ AI, Weighed
 - You Draw It, the homepage's one chart from the EcoPrompt Coach research, with a link to the coach
 - The calculator and Anatomy of a Prompt (where one query lands on a CSRD report) are on `carbon-ai.html`; Anatomy is drawn from the calculator's own numbers and fetched only as its section comes near
 
-### 🛠️ Skills
+### 🛠️ Skills & Education
 - Evidence-first: every tool links to the project where it earned its place, with real field numbers instead of percentages
-- ESG frameworks and standards (SBTi, CDP, GHG Protocol, TCFD, TNFD, etc.)
-
-### 🎓 Education
-- Master's degrees in Environmental Sciences and Industrial Engineering
-- Bachelor's degree in Geology
-- Professional certifications (ESG Specialist, Google Data Analytics, etc.)
-
-### 📝 Field Notes
-- Short essays connecting boreholes, scenario storytelling and sustainable AI
+- Areas of expertise, and ESG frameworks and standards (SBTi, CDP, GHG Protocol, TCFD, TNFD, etc.)
+- Master's degrees in Environmental Sciences and Industrial Engineering, and a Bachelor's in Geology, each with its dates, institution and what it held
+- Professional certifications (ESG Specialist, Google Data Analytics, etc.), each with its issuer, date and what it covered
 
 ### 📧 Contact
-- Direct contact details, social links and the contact form (Google Apps Script backend, honeypot, rate limits; works without JavaScript by posting to the same endpoint), with The Assay below the form as the optional step
+- Direct contact details, social links and the contact form (Google Apps Script backend, honeypot, rate limits; works without JavaScript by posting to the same endpoint), with The Assay below the form as the optional step: its question and promise in view, its box behind a "Grade a job description" button
 
 ## Setup Instructions
 
@@ -254,7 +248,7 @@ npm run voice -- --clone path/to/sample # make a voice model (add --sections to 
 
 The API key is used only there, on your machine; it never reaches the browser.
 Fish Audio bills 1 credit per UTF-8 byte of text, so the cost is known before
-anything is sent: the ten sections are ~7,850 credits today, and the dry run
+anything is sent: the eight sections are ~8,000 credits today, and the dry run
 prints the exact figure. Scripts are hashed, so fixing one sentence re-renders
 one file. `scripts/lib/voice-signature.js` is
 the one definition of "has this track already been rendered?", shared by the
@@ -662,7 +656,7 @@ same page view. This is the whole of one, exactly as `count.js` sends it:
 | `v` | `1`, the version of this format |
 | `page` | the page's file name without `.html` (`index`, `case-studies`, `research`, `carbon-ai`, `field-report`, `stats`), or `404` |
 | `lens` | the `?lens=` the page view arrived with, or `""` |
-| `deepest` | the id of the furthest top-level part of `<main>` that came on screen: on the homepage one of the nine sections the nav links to, from `journey` to `contact`; `csGrid` on the case studies; `""` on the pages that have no such part |
+| `deepest` | the id of the furthest top-level part of `<main>` that came on screen: on the homepage one of its seven sections, from `journey` to `contact`; `csGrid` on the case studies; `""` on the pages that have no such part |
 | `features` | up to 20 distinct names of things used: the site's `data-analytics` hooks (27 today, such as `cv-download-hero` and `receipt-open`), `cv-download` once for a view that used any CV link (the CV-downloads figure counts page views), `cv-download-terminal` when the field terminal's `cv` command fetches the CV, `module-<name>` for each on-demand module fetched, `contact-form-submit`, and the Assay's grade (`assay-high`, `assay-workable`, `assay-marginal`) |
 | `ref` | the referring site's host only (`www.linkedin.com`); `""` if there was none, or it was this site |
 | `vp` | the browser window's width as a class: `s` under 600 px, `m` under 1024 px, `l` wider |
