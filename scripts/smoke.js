@@ -5,6 +5,9 @@
 //     npm run smoke                      every page, headless Chromium
 //     npm run smoke -- --browser firefox the same pass in Firefox
 //     npm run smoke -- --screens         also save a screenshot per page to .smoke/
+//     npm run smoke -- --lengths-only    only measure how long each page is
+//                                        (--lengths-out FILE, --root DIR: see
+//                                        checkLengths below)
 //
 // The jsdom suites in tests/ exercise the logic; this exercises the page.
 // It serves the repository the way GitHub Pages does (text gzipped, images
@@ -49,6 +52,8 @@
 //   - a case-study game fetched before a reader nears it, that will not
 //     play, whose labels are under 11px on a phone, or that moves the
 //     page under a reader when it arrives above them
+//   - a page longer than its length budget in scripts/check-budget.js, at
+//     1440x900 or 390x844, once it has settled
 //   - a clipped dropdown or an unreadable number on carbon-ai.html
 //   - stats.html, drawn full from fixture totals, splitting a word in a
 //     table to make room for the figures, or scrolling sideways, on a phone
@@ -84,10 +89,14 @@ const http = require('http');
 const zlib = require('zlib');
 const { execSync } = require('child_process');
 
-const ROOT = path.join(__dirname, '..');
 const args = process.argv.slice(2);
+const argValue = (name) => { const i = args.indexOf(name); return i > -1 && args[i + 1] ? args[i + 1] : null; };
+// --root serves another checkout with this script: the pull-request
+// receipt measures main's lengths with the pull request's own method.
+const ROOT = path.resolve(argValue('--root') || path.join(__dirname, '..'));
 const SCREENS = args.includes('--screens');
 const REQUIRE = args.includes('--require');
+const LENGTHS_ONLY = args.includes('--lengths-only');
 const BROWSER = (() => {
     const i = args.findIndex(a => a === '--browser' || a.startsWith('--browser='));
     if (i === -1) return 'chromium';
@@ -215,6 +224,10 @@ async function visit(context, page, rel, origin) {
         console.error(`  ✗ --browser ${BROWSER}: this smoke test runs in chromium or firefox`);
         process.exit(1);
     }
+    if (LENGTHS_ONLY && !CHROMIUM) {
+        console.error('  ✗ --lengths-only: lengths are measured in Chromium, where their ceilings were set');
+        process.exit(1);
+    }
     let engine;
     try { engine = require('playwright-core')[BROWSER]; }
     catch (e) { console.error('  playwright-core is not installed — run `npm install`'); process.exit(1); }
@@ -248,6 +261,15 @@ async function visit(context, page, rel, origin) {
     if (SCREENS) fs.mkdirSync(path.join(ROOT, '.smoke'), { recursive: true });
 
     console.log(`\n  Smoke test in ${browserSpec.label} ${browser.version()}\n`);
+
+    if (LENGTHS_ONLY) {
+        await checkLengths(browser, origin);
+        await browser.close();
+        server.close();
+        if (failures) { console.log(`\n  ${failures} problem(s)\n`); process.exit(1); }
+        console.log('\n  Every page within its length budget\n');
+        return;
+    }
 
     // The budget script's first-view estimates, to hold the measurements against.
     const budget = require('./check-budget.js');
@@ -294,6 +316,8 @@ async function visit(context, page, rel, origin) {
             bad(`${rel}: measured first view ${fmt(r.arrivalBytes)} exceeds the budget's estimate of ${fmt(estimate)} — check-budget.js is missing something the page fetches on load`);
         }
     });
+
+    await checkLengths(browser, origin);
 
     await exerciseFirstView(browser, origin);
     await exerciseNavigation(browser, origin);
@@ -363,6 +387,125 @@ async function quietNetwork(page, quietMs = 800, maxMs = 8000) {
     }, null, { timeout: maxMs, polling: 100 }).catch(() => null);
     while (Date.now() - last < quietMs && Date.now() - start < maxMs) await page.waitForTimeout(100);
     events.forEach((e) => page.off(e, bump));
+}
+
+// ------------------------------------------------------------------
+// Length: how far a reader has to scroll, held like the bytes
+// ------------------------------------------------------------------
+// Every page at the two sizes in check-budget.js's VIEWPORTS, measured once
+// it has settled: fonts loaded; walked top to bottom, so every section is
+// drawn at its real height (content-visibility sizes one by a 2000px
+// estimate until it nears the screen) and whatever is fetched on the way
+// (the journey map, section 05, the case studies' games, Anatomy of a
+// Prompt) arrives and is drawn; then walked again until the height holds.
+// Nothing is opened (the player, the terminal, an experience card's More).
+// Reduced motion, so no reveal is caught half-way. A length is scrollHeight over innerHeight, to
+// two places. stats.html is measured drawn full as well (drawStats, a busy
+// quarter), and its budget holds whichever is longer.
+//
+// What it measured is written to .smoke/length.json (--lengths-out FILE to
+// put it elsewhere), which `npm run budget -- --ratchet --lengths` and
+// scripts/receipt.js read. Chromium only, like the weights: the ceilings
+// were measured there, and another engine's line breaks move a long page
+// by more than the 5% a ceiling allows.
+const LENGTH_PARALLEL = 4;
+
+async function measureLength(browser, origin, rel, size, html) {
+    const context = await browser.newContext({ viewport: { width: size.width, height: size.height }, reducedMotion: 'reduce' });
+    try {
+        const page = await context.newPage();
+        if (html) await page.route(`${origin}/${rel}`, route => route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: html }));
+        await page.goto(`${origin}/${rel}`, { waitUntil: 'load' });
+        await page.evaluate(() => document.fonts.ready);
+        const walk = () => page.evaluate(async () => {
+            // Two frames a step: one lays out what came into view, the next
+            // draws it. The timer stands in if frames are held back.
+            const settle = () => new Promise((r) => { requestAnimationFrame(() => requestAnimationFrame(r)); setTimeout(r, 150); });
+            const root = document.documentElement;
+            for (let y = 0; y < root.scrollHeight; y += innerHeight / 2) {
+                scrollTo({ top: y, behavior: 'instant' });
+                await settle();
+            }
+            scrollTo({ top: root.scrollHeight, behavior: 'instant' });
+            await settle();
+            scrollTo({ top: 0, behavior: 'instant' });
+            await settle();
+            return root.scrollHeight;
+        });
+        let px = await walk();
+        await quietNetwork(page);
+        for (let i = 0; i < 4; i++) {
+            const again = await walk();
+            if (again === px) break;
+            px = again;
+            await quietNetwork(page, 400);
+        }
+        const height = await page.evaluate(() => innerHeight);
+        return { px, screens: Math.round((px / height) * 100) / 100 };
+    } finally {
+        await context.close();
+    }
+}
+
+async function checkLengths(browser, origin) {
+    console.log('  Length — every page settled, in screens (page height ÷ window height)');
+    if (!CHROMIUM) return ok(`lengths: not measured in ${BROWSER} — the Chromium run holds them to their budgets`);
+    const budget = require('./check-budget.js');
+    const sizes = Object.entries(budget.VIEWPORTS);
+    const jobs = [];
+    PAGES.forEach(rel => sizes.forEach(([vp, size]) => {
+        jobs.push({ rel, vp, size });
+        if (rel === 'stats.html') jobs.push({ rel, vp, size, full: true });
+    }));
+    let fullStats = null;
+    const got = new Map();
+    let next = 0;
+    const worker = async () => {
+        while (next < jobs.length) {
+            const job = jobs[next++];
+            try {
+                const html = job.full ? (fullStats = fullStats || drawStats(500, 12)) : null;
+                got.set(`${job.rel} ${job.vp}${job.full ? ' full' : ''}`, await measureLength(browser, origin, job.rel, job.size, html));
+            } catch (e) {
+                bad(`${job.rel} at ${job.vp}${job.full ? ', drawn full' : ''}: length not measured (${e.message.split('\n')[0]})`);
+            }
+        }
+    };
+    await Promise.all(Array.from({ length: LENGTH_PARALLEL }, worker));
+
+    // In page and viewport order, whatever order the measurements finished in.
+    const pages = {};
+    PAGES.forEach((rel) => {
+        pages[rel] = {};
+        sizes.forEach(([vp]) => {
+            const m = got.get(`${rel} ${vp}`);
+            const full = got.get(`${rel} ${vp} full`);
+            if (m) pages[rel][vp] = full ? { ...m, full } : m;
+        });
+    });
+    const measured = { schema: budget.SCHEMA, browser: `Chromium ${browser.version()}`, viewports: budget.VIEWPORTS, pages };
+    const file = path.resolve(argValue('--lengths-out') || path.join(ROOT, '.smoke', 'length.json'));
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, JSON.stringify(measured, null, 2) + '\n');
+
+    PAGES.forEach((rel) => {
+        const ceilings = budget.LENGTH[rel];
+        if (!ceilings) return bad(`${rel}: has no length budget — give it one in LENGTH, scripts/check-budget.js`);
+        sizes.forEach(([vp]) => {
+            const m = pages[rel][vp];
+            if (!m) return;
+            const held = budget.heldLength(m);
+            const two = n => n.toFixed(2);
+            const shown = `${two(m.screens)} screens${m.full ? ` (${two(m.full.screens)} drawn full)` : ''}`;
+            if (held <= ceilings[vp]) ok(`${rel} at ${vp}: ${shown}, within ${two(ceilings[vp])}`);
+            else bad(`${rel} at ${vp}: ${shown}, over its ceiling of ${two(ceilings[vp])} — shorten the page; a ceiling only moves down`);
+        });
+    });
+    Object.keys(budget.LENGTH).filter(rel => !PAGES.includes(rel))
+        .forEach(rel => bad(`${rel}: has a length budget in check-budget.js but is not a page here`));
+    budget.hints(budget.budgetJson({}, measured)).forEach(h => ok(h));
+    const where = path.relative(process.cwd(), file);
+    ok(`lengths written to ${where.startsWith('..') ? file : where}`);
 }
 
 // ------------------------------------------------------------------
@@ -1223,31 +1366,36 @@ async function exerciseNavigation(browser, origin) {
 // once broke "Sustainable AI" after "Sustainabl" and "Homepage" after
 // "Homepag"), and the page must not scroll sideways. Host names may break
 // anywhere: they have no spaces to break at.
-async function exerciseStatsPage(browser, origin) {
+//
+// drawStats(perDay, weeks) is that page, `perDay` visits a day for `weeks`
+// whole weeks; checkLengths holds the page's length budget to it drawn full.
+function drawStats(perDay, weeks) {
     const fetchStats = require('./fetch-stats.js');
     const { renderStats } = require('./build-content.js');
     const { lenses, projects } = require('./lib/content.js').loadAll();
     const known = fetchStats.knownNames();
     const today = '2026-10-05';                        // a Monday
     const sections = ['journey', 'about', 'experience', 'projects', 'skills', 'contact'].concat(projects.caseStudies.map(c => c.id));
-    const draw = (perDay, weeks) => {
-        const rows = [];
-        const n = f => Math.max(1, Math.round(perDay * f));
-        const others = ['case-studies', 'research', 'carbon-ai', 'field-report', 'stats', '404'];
-        for (let d = fetchStats.addDays(today, -7 * weeks); d < today; d = fetchStats.addDays(d, 1)) {
-            rows.push([d, 'visits', '', perDay], [d, 'kb', '', perDay * 260]);
-            others.forEach(p => rows.push([d, 'page', p, n(0.06)]));
-            rows.push([d, 'page', 'index', perDay - others.length * n(0.06)]);
-            rows.push([d, 'vp', 's', n(0.4)], [d, 'vp', 'm', n(0.1)], [d, 'vp', 'l', perDay - n(0.4) - n(0.1)]);
-            known.lenses.forEach(l => rows.push([d, 'lens', l, n(0.1)]));
-            known.features.forEach(f => rows.push([d, 'feature', f, n(0.05)]));
-            sections.forEach(id => rows.push([d, 'deepest', id, n(0.05)]));
-            rows.push([d, 'ref', 'www.linkedin.com', n(0.1)]);
-            for (let h = 0; h < 16; h++) rows.push([d, 'ref', `referring-site-${h}.example-company.com`, n(0.02)]);
-        }
-        const stats = fetchStats.transform(fetchStats.cleanRows(rows, known, today).rows, { today, known });
-        return renderStats({ stats, lenses });
-    };
+    const rows = [];
+    const n = f => Math.max(1, Math.round(perDay * f));
+    const others = ['case-studies', 'research', 'carbon-ai', 'field-report', 'stats', '404'];
+    for (let d = fetchStats.addDays(today, -7 * weeks); d < today; d = fetchStats.addDays(d, 1)) {
+        rows.push([d, 'visits', '', perDay], [d, 'kb', '', perDay * 260]);
+        others.forEach(p => rows.push([d, 'page', p, n(0.06)]));
+        rows.push([d, 'page', 'index', perDay - others.length * n(0.06)]);
+        rows.push([d, 'vp', 's', n(0.4)], [d, 'vp', 'm', n(0.1)], [d, 'vp', 'l', perDay - n(0.4) - n(0.1)]);
+        known.lenses.forEach(l => rows.push([d, 'lens', l, n(0.1)]));
+        known.features.forEach(f => rows.push([d, 'feature', f, n(0.05)]));
+        sections.forEach(id => rows.push([d, 'deepest', id, n(0.05)]));
+        rows.push([d, 'ref', 'www.linkedin.com', n(0.1)]);
+        for (let h = 0; h < 16; h++) rows.push([d, 'ref', `referring-site-${h}.example-company.com`, n(0.02)]);
+    }
+    const stats = fetchStats.transform(fetchStats.cleanRows(rows, known, today).rows, { today, known });
+    return renderStats({ stats, lenses });
+}
+
+async function exerciseStatsPage(browser, origin) {
+    const draw = drawStats;
     const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
     const page = await context.newPage();
     const errors = [];

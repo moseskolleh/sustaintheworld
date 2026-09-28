@@ -205,10 +205,10 @@ README under "The visit counter and privacy".
   - *Order:* after S1. Before it, `?action=stats` answers with the health
     check, and the Action fails rather than publish that. Without the right
     token it answers `refused`, and the Action fails and says so.
-  - *If `main` is protected:* the Action commits `content/stats.json` and
-    `stats.html` straight to `main` as `github-actions[bot]`. If a branch
-    rule blocks direct pushes, let GitHub Actions bypass it, or the weekly
-    commit fails.
+  - *If `main` is protected:* the Action commits `content/stats.json`,
+    `stats.html` and the README's budget table straight to `main` as
+    `github-actions[bot]`. If a branch rule blocks direct pushes, let GitHub
+    Actions bypass it, or the weekly commit fails.
   - *Check:* the Action runs from `main`, so after this branch is merged:
     **Actions → Open counts → Run workflow**. Its "Fetch the week's totals"
     step prints `fetch-stats: N row(s) from script.google.com (json), <first

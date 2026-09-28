@@ -317,8 +317,8 @@ CI uses Node 22.
 | `npm run lint:html` | every page is valid HTML ([html-validate](https://html-validate.org/)'s recommended rules; the two relaxations are explained in `.htmlvalidate.cjs`) |
 | `npm run test:unit` | every `tests/*.test.js`, side by side, one process per suite, so a new suite runs the day it exists: the seventeen listed below (1369 passing assertions on 2026-09-27) |
 | `npm run map:check` | the committed `journey-map.svg` still matches its generator |
-| `npm run budget` | the weights this README quotes (see [Performance](#performance)) |
-| `npm run smoke` | every page in a real browser: no errors, no failed or off-origin requests, every on-demand module arrives when used, no axe-core violation at 1440×900 or 390×844 in either theme, and each budgeted page's measured first view no heavier than the budget claims; every page again with JavaScript off, and the homepage with `script.js` blocked and late; the skip link, Back, the theme switch, back to top and the nav bar at every width; the listen control and its player; the Assay; where jumps land while sections are drawn on demand, that reading back up after skipping ahead moves nothing, find-in-page and printing, which loops run, and how busy the idle page keeps the main thread at 4× CPU slowdown; the carbon-ai page's dropdowns and numbers; and the visit counter's one request, taken apart: exactly the documented fields, no cookie, no Referer, once per page view, and nothing under Do Not Track or Global Privacy Control or with JavaScript off (its own CI job; needs Chromium — `-- --browser firefox` runs it in Firefox, which CI also does) |
+| `npm run budget` | the weights this README quotes, and that its budget tables still say what the script measures (see [Performance](#performance)) |
+| `npm run smoke` | every page in a real browser: no errors, no failed or off-origin requests, every on-demand module arrives when used, no axe-core violation at 1440×900 or 390×844 in either theme, and each budgeted page's measured first view no heavier than the budget claims, and every page no longer than its length budget at both sizes once it has settled; every page again with JavaScript off, and the homepage with `script.js` blocked and late; the skip link, Back, the theme switch, back to top and the nav bar at every width; the listen control and its player; the Assay; where jumps land while sections are drawn on demand, that reading back up after skipping ahead moves nothing, find-in-page and printing, which loops run, and how busy the idle page keeps the main thread at 4× CPU slowdown; the carbon-ai page's dropdowns and numbers; and the visit counter's one request, taken apart: exactly the documented fields, no cookie, no Referer, once per page view, and nothing under Do Not Track or Global Privacy Control or with JavaScript off (its own CI job; needs Chromium — `-- --browser firefox` runs it in Firefox, which CI also does) |
 | `npm run mcp:verify` | the pinned MCP package still hashes to the reviewed tarball (needs network) |
 
 The suites, and the failure each one exists to prevent:
@@ -500,6 +500,19 @@ The suites, and the failure each one exists to prevent:
   it rather than a hand-kept list of suites, the fake clock fires timers in
   order and only when told, and every page with a first-view budget exists
   and is measured.
+- **`budget.test.js`** — the budgets themselves: `npm run budget -- --json`
+  gives every budget its measure, ceiling and headroom; the ratchet, run on
+  made-up measurements from far under to far over, lowers ceilings to what
+  they hold plus 5% and never raises one (or touches a held one, or any line
+  but a ceiling's); every page has a length budget at both sizes, the
+  homepage's the plan's 10 and 18 screens; the README's tables say exactly
+  what `--readme` would write; and the receipt workflow asks for no more
+  than it needs and cannot comment from a fork.
+- **`receipt.test.js`** — the pull-request receipt, from fixture budgets and
+  lengths: a rise with a plus, a fall with a minus, no change as 0, the
+  CO₂e at 0.36 g per MB of 1024² bytes, a budget over its ceiling or new on
+  one side, the open counts page held drawn full, and tables whose rows are
+  as wide as their headers.
 - **`cpu.test.js`** — the page's keys go through one listener, so one Escape
   closes one layer (terminal, then player, then menu) and the
   backtick follows one rule for "typing"; one `mks.motionOK()` answers for
@@ -794,21 +807,27 @@ This section used to claim a Lighthouse score of 95+ and sub-two-second loads,
 with nothing measuring either. Claims like that decay quietly: by the time
 anyone checked, the image total had grown past 3 MB while the README still said
 "under 2 MB". So the numbers below are the ones `npm run budget` measures on
-every run of `npm test`, and the build fails when they are exceeded.
+every run of `npm test`, and the build fails when they are exceeded. The
+table itself is written by `npm run budget -- --readme` from those
+measurements and the ceilings in `scripts/check-budget.js`, and `npm test`
+fails while it says anything else, so it cannot drift the way the old claims
+did.
 
+<!-- BUDGET-TABLE:START — generated by scripts/check-budget.js (npm run budget -- --readme). Do not edit by hand. -->
 | Budget | Measured | Ceiling |
 |---|---|---|
 | First view of the homepage, over the wire (fonts included) | ~274 KB | 300 KB |
 | Everything a full visit adds on demand (modules, scripts, map) | ~72 KB | 72 KB |
-| Case studies page, over the wire (fonts included) | ~96 KB | 120 KB |
-| Research outputs page, over the wire (fonts included) | ~90 KB | 110 KB |
-| AI, Weighed (`carbon-ai.html`), over the wire (fonts included) | ~107 KB | 111 KB |
-| Text-only field report, the HTML file (the size the footer quotes) | ~9 KB | 12 KB |
-| Text-only field report, over the wire (with its visit counter) | ~6 KB | 8 KB |
 | Largest single image | ~200 KB | 220 KB |
 | Every image in the repository | ~3.36 MB | 3.5 MB |
-| Recorded narration: Moses's introduction (0 KB until he records it) | 0 KB | 800 KB |
-| Open counts page, over the wire (fonts included; empty today) | ~91 KB | 105 KB |
+| Recorded narration: Moses's introduction (sized for his 60–90 s take) | 0 KB | 800 KB |
+| Text-only field report, the HTML file (the size the footer quotes) | ~9 KB | 12 KB |
+| Text-only field report, over the wire (with its visit counter) | ~6 KB | 8 KB |
+| Case studies page, over the wire (fonts included) | ~96 KB | 120 KB |
+| Open counts page, over the wire (fonts included; sized for a full page) | ~91 KB | 105 KB |
+| Research outputs page, over the wire (fonts included) | ~90 KB | 110 KB |
+| AI, Weighed (`carbon-ai.html`), over the wire (fonts included) | ~107 KB | 111 KB |
+<!-- BUDGET-TABLE:END -->
 
 **What the estimate used to miss.** An earlier version of this table said
 234 KB. Opening the page in a real browser measured over 500 KB. Two things
@@ -854,9 +873,54 @@ speak; the first press fetches the player, its stylesheet and its scripts.
 
 Run `npm run budget` to see the current numbers, asset by asset. To make
 room under a ceiling, remove something of equal weight rather than raise it
-([docs/plan.md](docs/plan.md), "Stop doing"). A ceiling that does change is
-changed in `scripts/check-budget.js` **and** in this table, in the same
-commit.
+([docs/plan.md](docs/plan.md), "Stop doing"). The report ends by naming every
+budget with more than 10% headroom: "you could lower … from X to Y".
+
+**Length is a budget too.** A long page costs a busy reader what a heavy one
+costs the network, so every page is also held to a length: its scroll height
+over the window's height, in screens, at 1440×900 and 390×844. `npm run
+smoke` measures it in Chromium once the page has settled (fonts loaded, every
+section drawn at its real height, on-demand features arrived, nothing opened)
+and fails a page above its ceiling. The homepage's ceilings are the plan's
+targets; every other page's is what it measured when the budget was set,
+plus 5% (the open counts page drawn full, as the smoke's fixture draws a busy
+quarter, since that is the page the weekly Action will commit).
+
+<!-- LENGTH-TABLE:START — generated by scripts/check-budget.js (npm run budget -- --readme). Do not edit by hand. -->
+| Page | Desktop, 1440×900 | Phone, 390×844 |
+|---|---|---|
+| `index.html` | 10 screens | 18 screens |
+| `case-studies.html` | 11.21 screens | 18.95 screens |
+| `carbon-ai.html` | 6.84 screens | 12.98 screens |
+| `research.html` | 5.63 screens | 8.59 screens |
+| `stats.html` | 10.57 screens | 15.66 screens |
+| `field-report.html` | 4.38 screens | 7.4 screens |
+| `404.html` | 1.05 screens | 1.05 screens |
+<!-- LENGTH-TABLE:END -->
+
+```bash
+npm run smoke -- --lengths-only        # just the lengths: every page, both sizes (writes .smoke/length.json)
+npm run budget -- --ratchet --lengths .smoke/length.json
+```
+
+**Ceilings only move down.** `npm run budget -- --ratchet` lowers every
+ceiling to what it measures plus 5% (at least 1 KB, or a tenth of a screen,
+over it; bytes round up to a whole KB), rewrites this README to match, and
+never raises one. Two budgets are held where they are, because they are
+sized for something that has not happened yet: the recording Moses has not
+made, and the open counts page once it is full of counts.
+
+**A carbon receipt on every pull request.** `.github/workflows/receipt.yml`
+measures `main` and the pull request with the pull request's own scripts
+(`check-budget.js --json`, and `smoke.js --lengths-only` in the Chromium
+build CI pins) and posts one comment, updated on each push: the bytes of
+every budget and how they moved, the estimated CO₂e of each page's first
+view, and how each page's length moved at both sizes. The CO₂e uses the
+constant the footer badge uses (Sustainable Web Design, 0.36 g per MB
+transferred) and counts network transfer only. `scripts/receipt.js` writes
+it from two budget files and two length files; on a fork, whose token cannot
+comment, it goes to the job summary instead. The receipt reports; the CI
+workflow is what fails a pull request over a budget.
 
 **Measured in a browser, not scored.** `npm run smoke` runs every page in
 headless Chromium (its own job in CI) and reports the bytes actually

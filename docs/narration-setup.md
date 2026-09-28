@@ -70,7 +70,7 @@ Press **Listen** in the nav bar; the player now offers "Hear Moses introduce
 himself · N KB". When it sounds right:
 
 ```bash
-git add assets/audio content/narration.json voice-scripts.js
+git add assets/audio content/narration.json voice-scripts.js README.md
 git commit -m "Add Moses's recorded introduction" && git push
 ```
 

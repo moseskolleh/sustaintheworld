@@ -719,7 +719,7 @@ const page = (s) => new JSDOM(renderStats({ stats: s, lenses })).window.document
     assert(/vars\.STATS_SOURCE_URL/.test(yml), 'Action: reads STATS_SOURCE_URL from the repository variables');
     const order = ['npm ci', 'node scripts/fetch-stats.js', 'npm run build:content', 'npm test'].map(s => yml.indexOf(s));
     assert(order.every((n, i) => n > -1 && (i === 0 || n > order[i - 1])), 'Action: installs, fetches, rebuilds and tests, in that order');
-    assert(/git add content\/stats\.json stats\.html\s*\n/.test(yml), 'Action: commits content/stats.json and stats.html only');
+    assert(/git add content\/stats\.json stats\.html README\.md\s*\n/.test(yml), 'Action: commits content/stats.json, stats.html and the README\'s budget table only');
     assert(/git diff --cached --quiet/.test(yml), 'Action: commits nothing when nothing changed');
     assert(/github-actions\[bot\]/.test(yml), 'Action: commits as github-actions[bot]');
 }

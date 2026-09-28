@@ -12,8 +12,17 @@
 // budgets below, so the README can quote numbers that are true by
 // construction. Run by `npm test`.
 //
-//     npm run budget            the report
-//     npm run budget -- --json  the measurements, for other scripts
+//     npm run budget                  the report, and what could be lowered
+//     npm run budget -- --json        every budget as JSON: measured, ceiling,
+//                                     headroom (for scripts/receipt.js)
+//     npm run budget -- --readme      rewrite the README's budget tables
+//     npm run budget -- --ratchet     lower every ceiling to what is measured
+//                                     plus 5%; never raises one
+//
+// --lengths FILE adds the scroll lengths `npm run smoke` measured (it
+// writes them to .smoke/length.json) to --json, --ratchet and the report;
+// --root DIR measures another checkout with this script, which is how the
+// pull-request receipt weighs main (see .github/workflows/receipt.yml).
 //
 // WHAT "WIRE WEIGHT" MEANS. GitHub Pages compresses text responses, so the
 // bytes a visitor downloads for HTML/CSS/JS are the gzipped bytes, not the
@@ -38,8 +47,16 @@
 const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
+const os = require('os');
+const { execFileSync } = require('child_process');
 
-const ROOT = path.join(__dirname, '..');
+// Command-line flags are read only when this file is run, never when a
+// test or smoke.js requires it: smoke.js has a --root of its own.
+const CLI = require.main === module ? process.argv.slice(2) : [];
+const flag = (name) => CLI.includes(name);
+const option = (name) => { const i = CLI.indexOf(name); return i > -1 && CLI[i + 1] ? CLI[i + 1] : null; };
+
+const ROOT = path.resolve(option('--root') || path.join(__dirname, '..'));
 const KB = 1024;
 const MB = 1024 * 1024;
 
@@ -52,14 +69,18 @@ const MB = 1024 * 1024;
 // paid for the time-zone table moving here out of script.js), with the
 // audio budget at 0% until Moses records his introduction. To make room,
 // remove something of equal weight rather than raise a ceiling
-// (docs/plan.md, "Stop doing"). When a ceiling does change, the README
-// quotes these, so update it in the same commit.
+// (docs/plan.md, "Stop doing"); `--ratchet` lowers them. The README's
+// table is written from these (`readme` is the row's name there) by
+// `npm run budget -- --readme`, and npm test fails while it is out of date.
+//
+// A budget with `hold` is sized for a state the site has not reached yet,
+// so the ratchet and the "you could lower" hints leave it where it is.
 // ------------------------------------------------------------------
 const BUDGETS = {
     criticalWire: {
         label: 'First view of the homepage, over the wire (HTML + CSS + JS gzipped, the fonts, and eagerly-loaded images)',
         max: 300 * KB,
-        readme: 'the number the README quotes for a first visit'
+        readme: 'First view of the homepage, over the wire (fonts included)'
     },
     // What a visit fetches after arriving, if it uses everything: the
     // on-demand modules, the narration scripts and AI data behind them, the
@@ -68,17 +89,17 @@ const BUDGETS = {
     onDemand: {
         label: 'Everything a full visit adds on demand (modules, scripts, map — gzipped)',
         max: 72 * KB,
-        readme: 'fetched one feature at a time, only when that feature is used'
+        readme: 'Everything a full visit adds on demand (modules, scripts, map)'
     },
     largestImage: {
         label: 'Largest single image',
         max: 220 * KB,
-        readme: 'no single image may dominate a gallery open'
+        readme: 'Largest single image'
     },
     allImages: {
         label: 'Every image in the repository',
         max: 3.5 * MB,
-        readme: 'every photo the repository holds; a visit fetches only those it reaches'
+        readme: 'Every image in the repository'
     },
     // The only audio the site ships is Moses's own recorded introduction:
     // one 60–90 s take, and 90 s of mono MP3 at 64 kbps is about 720 KB.
@@ -88,12 +109,15 @@ const BUDGETS = {
     introAudio: {
         label: "Recorded narration: Moses's introduction, the one audio file the site ships",
         max: 800 * KB,
-        readme: 'fetched only when a visitor asks to hear him'
+        readme: "Recorded narration: Moses's introduction (sized for his 60–90 s take)",
+        hold: 'sized for his recording, which is not made yet'
     },
+    // The footer calls it "the whole portfolio in 9 KB"; this is what keeps
+    // that true.
     fieldReport: {
         label: 'Text-only field report, the HTML file as saved (uncompressed)',
         max: 12 * KB,
-        readme: 'the footer calls it "the whole portfolio in 9 KB" — this is what keeps that true'
+        readme: 'Text-only field report, the HTML file (the size the footer quotes)'
     },
     // The same page as a visit costs it: its HTML gzipped, the visit counter
     // (the one script it loads) and its icon. The footer's figure above is
@@ -101,7 +125,7 @@ const BUDGETS = {
     fieldReportWire: {
         label: 'Text-only field report, over the wire (with its visit counter)',
         max: 8 * KB,
-        readme: 'a first view like the other pages, counter included'
+        readme: 'Text-only field report, over the wire (with its visit counter)'
     },
     // The generated pages carry no images and no framework, so they should
     // stay small. A budget here is what stops "just one more section" turning
@@ -109,7 +133,7 @@ const BUDGETS = {
     caseStudiesWire: {
         label: 'Case studies page, over the wire (with fonts)',
         max: 120 * KB,
-        readme: 'generated from content/projects.json — text only, no images'
+        readme: 'Case studies page, over the wire (fonts included)'
     },
     // Sized for the page once it is full, not for today's empty state (about
     // 88 KB), so the weekly Action cannot turn red just because counting
@@ -118,12 +142,13 @@ const BUDGETS = {
     statsWire: {
         label: 'Open counts page, over the wire (with fonts)',
         max: 105 * KB,
-        readme: 'generated from content/stats.json — text only, no images'
+        readme: 'Open counts page, over the wire (fonts included; sized for a full page)',
+        hold: "sized for the page full of counts, not for today's"
     },
     researchWire: {
         label: 'Research outputs page, over the wire (with fonts)',
         max: 110 * KB,
-        readme: 'generated from content/research.json — text only, no images'
+        readme: 'Research outputs page, over the wire (fonts included)'
     },
     // "AI, Weighed" carries its calculator and the emission-factor data on
     // arrival, so it is the heaviest page after the homepage and it went
@@ -133,7 +158,7 @@ const BUDGETS = {
     carbonAiWire: {
         label: 'AI, Weighed (carbon-ai.html), over the wire (with fonts)',
         max: 111 * KB,
-        readme: 'the calculator and its emission-factor data arrive with the page'
+        readme: 'AI, Weighed (`carbon-ai.html`), over the wire (fonts included)'
     }
 };
 
@@ -148,6 +173,75 @@ const PAGE_BUDGETS = {
     'stats.html': 'statsWire',
     'field-report.html': 'fieldReportWire'
 };
+
+// ------------------------------------------------------------------
+// Length: how far a reader has to scroll.
+//
+// Weight is what a page costs the network; length is what it costs a busy
+// reader, and nothing held it. The homepage had grown to 19.4 screens on a
+// desktop and 32.7 on a phone when docs/plan.md set it targets of 10 and
+// 18 (Phase 2). A length is the page's scroll height over the window's
+// height, in "screens", at the two sizes the accessibility pass uses.
+//
+// It takes a browser to measure, so this file holds only the ceilings:
+// `npm run smoke` measures every page once it has settled (fonts loaded,
+// every section drawn at its real height rather than the 2000px estimate
+// content-visibility uses until then, on-demand features arrived, nothing
+// opened), fails a page above its ceiling, and writes what it measured to
+// .smoke/length.json for --json, --ratchet and the pull-request receipt.
+//
+// The homepage's ceilings are the plan's targets, not a measurement. Every
+// other page's is what it measured when the budget was set (27 September
+// 2026, in Chromium 141, the build CI pins) plus 5%. stats.html is held
+// drawn full, as the smoke's fixture draws a busy quarter: that is the page
+// the weekly Action will commit, and the page as committed today is shorter.
+// ------------------------------------------------------------------
+const VIEWPORTS = {
+    '1440x900': { width: 1440, height: 900, label: 'desktop' },
+    '390x844': { width: 390, height: 844, label: 'phone' }
+};
+const LENGTH = {
+    'index.html': { '1440x900': 10, '390x844': 18 },
+    'case-studies.html': { '1440x900': 11.21, '390x844': 18.95 },
+    'carbon-ai.html': { '1440x900': 6.84, '390x844': 12.98 },
+    'research.html': { '1440x900': 5.63, '390x844': 8.59 },
+    'stats.html': { '1440x900': 10.57, '390x844': 15.66 },
+    'field-report.html': { '1440x900': 4.38, '390x844': 7.4 },
+    '404.html': { '1440x900': 1.05, '390x844': 1.05 }
+};
+
+// A page's length as a budget reads it: the longest state the smoke draws
+// it in (stats.html also drawn full; see above).
+const heldLength = (m) => (m ? Math.max(m.screens, m.full ? m.full.screens : 0) : null);
+
+// ------------------------------------------------------------------
+// The ratchet: a ceiling earned by a measurement is 5% above it, and at
+// least a small floor above it, so a small page is not held to within a
+// few bytes of today. Byte ceilings round up to a whole KB, lengths to a
+// hundredth of a screen. `--ratchet` moves each ceiling down to that and
+// never up; the report names every budget with more than 10% headroom.
+// ------------------------------------------------------------------
+const RATCHET = { share: 0.05, floorBytes: 1 * KB, floorScreens: 0.1, hintAbove: 0.10 };
+
+function ratchetTarget(measured, unit) {
+    if (unit === 'screens') {
+        const want = Math.max(measured * (1 + RATCHET.share), measured + RATCHET.floorScreens);
+        // 2 × 1.05 × 100 is 210.00000000000003 in floating point; the
+        // epsilon keeps that from rounding up to 2.11.
+        return Math.ceil(want * 100 - 1e-6) / 100;
+    }
+    const want = Math.max(measured * (1 + RATCHET.share), measured + RATCHET.floorBytes);
+    return Math.ceil(want / KB - 1e-9) * KB;
+}
+
+// What a ceiling could come down to, or null: only when the headroom is
+// over 10% of it and the budget is not held for later.
+function couldLowerTo(measured, ceiling, unit, hold) {
+    if (hold || typeof measured !== 'number' || !(ceiling > 0)) return null;
+    if ((ceiling - measured) / ceiling <= RATCHET.hintAbove) return null;
+    const target = ratchetTarget(measured, unit);
+    return target < ceiling ? target : null;
+}
 
 const fmt = (bytes) => (bytes >= MB ? `${(bytes / MB).toFixed(2)} MB` : `${(bytes / KB).toFixed(0)} KB`);
 const sizeOf = (rel) => {
@@ -262,7 +356,8 @@ function measure() {
 
     const critical = criticalAssets().map((rel) => ({ rel, raw: sizeOf(rel), wire: wireOf(rel) }));
     const onDemand = onDemandAssets().map((rel) => ({ rel, raw: sizeOf(rel), wire: wireOf(rel) }));
-    const pageWire = (page) => criticalAssets(page).reduce((n, rel) => n + wireOf(rel), 0);
+    // null for a page this checkout does not have (an older one, by --root).
+    const pageWire = (page) => (sizeOf(page) === null ? null : criticalAssets(page).reduce((n, rel) => n + wireOf(rel), 0));
 
     const measured = {
         criticalWire: critical.reduce((n, a) => n + a.wire, 0),
@@ -276,7 +371,7 @@ function measure() {
         introAudio: audio.reduce((n, f) => n + (sizeOf(f) || 0), 0),
         // Uncompressed, because that is the number the footer quotes and the one a
         // reader can verify by saving the page.
-        fieldReport: sizeOf('field-report.html') || 0,
+        fieldReport: sizeOf('field-report.html'),
         fieldReportWire: pageWire('field-report.html')
     };
     const largest = images.map(f => ({ f, size: sizeOf(f) || 0 })).sort((a, b) => b.size - a.size)[0] || null;
@@ -284,13 +379,229 @@ function measure() {
 }
 
 // ------------------------------------------------------------------
+// Every budget as data: what it measures, its ceiling, the headroom
+// between them, and what it could come down to. The report, the README's
+// tables, the ratchet and the pull-request receipt (scripts/receipt.js)
+// all read this one object, so they cannot disagree about a number.
+// ------------------------------------------------------------------
+const SCHEMA = 1;
+const round2 = (n) => Math.round(n * 100) / 100;
+
+// The lengths smoke.js wrote, checked for shape so a file from anything
+// else is refused rather than read as a page of zeros.
+function readLengths(file) {
+    const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+    if (!data || data.schema !== SCHEMA || !data.pages || typeof data.pages !== 'object') {
+        throw new Error(`${file} is not a length measurement from scripts/smoke.js (schema ${SCHEMA})`);
+    }
+    return data;
+}
+
+function budgetJson(measured, lengths = null) {
+    const pageOf = Object.fromEntries(Object.entries(PAGE_BUDGETS).map(([page, key]) => [key, page]));
+    const bytes = {};
+    Object.entries(BUDGETS).forEach(([key, b]) => {
+        const m = typeof measured[key] === 'number' ? measured[key] : null;
+        bytes[key] = {
+            label: b.label,
+            readme: b.readme,
+            page: pageOf[key] || null,
+            unit: 'bytes',
+            measured: m,
+            ceiling: b.max,
+            headroom: m === null ? null : b.max - m,
+            hold: b.hold || null,
+            couldLowerTo: couldLowerTo(m, b.max, 'bytes', b.hold)
+        };
+    });
+    const length = {};
+    Object.entries(LENGTH).forEach(([page, ceilings]) => {
+        length[page] = {};
+        Object.keys(VIEWPORTS).forEach((vp) => {
+            const m = lengths && lengths.pages[page] ? heldLength(lengths.pages[page][vp]) : null;
+            const c = ceilings[vp];
+            length[page][vp] = {
+                unit: 'screens',
+                measured: m,
+                ceiling: c,
+                headroom: m === null ? null : round2(c - m),
+                couldLowerTo: couldLowerTo(m, c, 'screens')
+            };
+        });
+    });
+    return { schema: SCHEMA, viewports: VIEWPORTS, bytes, length };
+}
+
+// A ceiling as a person writes it: 300 KB, 3.5 MB.
+const fmtCeiling = (bytes) => (bytes >= MB ? `${+(bytes / MB).toFixed(2)} MB` : `${+(bytes / KB).toFixed(1)} KB`);
+// A measurement as the README quotes it: ~274 KB, ~3.36 MB, 0 KB.
+const fmtApprox = (bytes) => (bytes === null ? 'missing' : bytes === 0 ? '0 KB' : `~${fmt(bytes)}`);
+
+function hints(json) {
+    const out = [];
+    Object.values(json.bytes).forEach((b) => {
+        if (b.couldLowerTo !== null) out.push(`you could lower ${b.readme} from ${fmtCeiling(b.ceiling)} to ${fmtCeiling(b.couldLowerTo)}`);
+    });
+    Object.entries(json.length).forEach(([page, vps]) => Object.entries(vps).forEach(([vp, l]) => {
+        if (l.couldLowerTo !== null) out.push(`you could lower the length of ${page} at ${vp} from ${l.ceiling} to ${l.couldLowerTo} screens`);
+    }));
+    return out;
+}
+
+// ------------------------------------------------------------------
+// The README's budget tables, between markers, written from the object
+// above. tests/budget.test.js fails while what the README says differs
+// from what this writes, and so does the report below.
+// ------------------------------------------------------------------
+const README_TABLES = {
+    bytes: ['<!-- BUDGET-TABLE:START — generated by scripts/check-budget.js (npm run budget -- --readme). Do not edit by hand. -->', '<!-- BUDGET-TABLE:END -->'],
+    length: ['<!-- LENGTH-TABLE:START — generated by scripts/check-budget.js (npm run budget -- --readme). Do not edit by hand. -->', '<!-- LENGTH-TABLE:END -->']
+};
+// Prose that quotes a ceiling, kept true the same way.
+const README_QUOTES = [{ key: 'criticalWire', re: /(against a )\d+( KB ceiling)/ }];
+
+function readmeTables(json) {
+    const bytes = ['| Budget | Measured | Ceiling |', '|---|---|---|']
+        .concat(Object.values(json.bytes).map(b => `| ${b.readme} | ${fmtApprox(b.measured)} | ${fmtCeiling(b.ceiling)} |`));
+    const vps = Object.entries(json.viewports);
+    const cap = (s) => s[0].toUpperCase() + s.slice(1);
+    const length = [`| Page | ${vps.map(([, v]) => `${cap(v.label)}, ${v.width}×${v.height}`).join(' | ')} |`, `|---|${vps.map(() => '---|').join('')}`]
+        .concat(Object.entries(json.length).map(([page, l]) => `| \`${page}\` | ${vps.map(([vp]) => `${l[vp].ceiling} screens`).join(' | ')} |`));
+    return { bytes: bytes.join('\n'), length: length.join('\n') };
+}
+
+function renderReadme(text, json) {
+    const tables = readmeTables(json);
+    let out = text;
+    Object.entries(README_TABLES).forEach(([which, [start, end]]) => {
+        const a = out.indexOf(start);
+        const b = out.indexOf(end);
+        if (a === -1 || b < a) throw new Error(`README.md is missing the ${start.slice(5, start.indexOf(':'))} markers`);
+        out = out.slice(0, a + start.length) + '\n' + tables[which] + '\n' + out.slice(b);
+    });
+    README_QUOTES.forEach(({ key, re }) => {
+        if (!re.test(out)) throw new Error(`README.md no longer quotes the ${key} ceiling where ${re} expects it`);
+        out = out.replace(re, `$1${Math.round(json.bytes[key].ceiling / KB)}$2`);
+    });
+    return out;
+}
+
+const readmePath = () => path.join(ROOT, 'README.md');
+const readmeIsCurrent = (json) => {
+    const text = fs.readFileSync(readmePath(), 'utf8');
+    return renderReadme(text, json) === text;
+};
+
+// ------------------------------------------------------------------
+// The ratchet. It rewrites this file's own source, each BUDGETS `max:`
+// and each LENGTH ceiling, to what the measurement earns, and only where
+// that is lower. Pure, so tests/budget.test.js can run it on any
+// measurement without touching the file; `--ratchet` loads the result as
+// a module and checks it before writing it back.
+// ------------------------------------------------------------------
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+function ratchetSource(source, json) {
+    let out = source;
+    const changes = [];
+    Object.entries(json.bytes).forEach(([key, b]) => {
+        if (b.hold || b.measured === null) return;
+        const to = ratchetTarget(b.measured, 'bytes');
+        if (to >= b.ceiling) return;
+        const re = new RegExp(`(\\n {4}${escapeRe(key)}: \\{[^]*?\\n {8}max: )([^,\\n]+)`);
+        if (!re.test(out)) throw new Error(`cannot find the ceiling of ${key} in check-budget.js`);
+        out = out.replace(re, `$1${to / KB} * KB`);
+        changes.push({ kind: 'bytes', key, name: b.readme, from: b.ceiling, to });
+    });
+    Object.entries(json.length).forEach(([page, vps]) => Object.entries(vps).forEach(([vp, l]) => {
+        if (l.measured === null) return;
+        const to = ratchetTarget(l.measured, 'screens');
+        if (to >= l.ceiling) return;
+        const re = new RegExp(`(\\n {4}'${escapeRe(page)}': \\{[^}\\n]*'${escapeRe(vp)}': )([\\d.]+)`);
+        if (!re.test(out)) throw new Error(`cannot find the length ceiling of ${page} at ${vp} in check-budget.js`);
+        out = out.replace(re, `$1${to}`);
+        changes.push({ kind: 'length', page, vp, name: `${page} at ${vp}`, from: l.ceiling, to });
+    }));
+    return { source: out, changes };
+}
+
+// Load a rewritten check-budget.js as a module, from a copy, without
+// running it (require.main is not the copy).
+function loadSource(source) {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mks-budget-'));
+    const file = path.join(dir, 'check-budget.js');
+    try {
+        fs.writeFileSync(file, source);
+        return require(file);
+    } finally {
+        delete require.cache[file];
+        fs.rmSync(dir, { recursive: true, force: true });
+    }
+}
+
+function ratchet(json) {
+    const before = fs.readFileSync(__filename, 'utf8');
+    const { source, changes } = ratchetSource(before, json);
+    if (Object.values(json.length).every(vps => Object.values(vps).every(l => l.measured === null))) {
+        console.log('\n  Lengths not measured, so their ceilings stay: run `npm run smoke` and pass --lengths .smoke/length.json.');
+    }
+    if (!changes.length) {
+        console.log('\n  Nothing to lower: every ceiling is within 5% (or the floor) of what it holds.\n');
+        return;
+    }
+    // Every ceiling as the new source states it: the ones changed exactly
+    // as meant, and none of them above where it was.
+    const next = loadSource(source);
+    const wrong = [];
+    Object.entries(BUDGETS).forEach(([key, b]) => {
+        const c = changes.find(x => x.kind === 'bytes' && x.key === key);
+        const want = c ? c.to : b.max;
+        if (!next.BUDGETS[key] || next.BUDGETS[key].max !== want) wrong.push(`${key}: ${next.BUDGETS[key] && next.BUDGETS[key].max}, not ${want}`);
+    });
+    Object.entries(LENGTH).forEach(([page, vps]) => Object.entries(vps).forEach(([vp, was]) => {
+        const c = changes.find(x => x.kind === 'length' && x.page === page && x.vp === vp);
+        const want = c ? c.to : was;
+        if (!next.LENGTH[page] || next.LENGTH[page][vp] !== want) wrong.push(`${page} ${vp}: ${next.LENGTH[page] && next.LENGTH[page][vp]}, not ${want}`);
+    }));
+    if (wrong.length) throw new Error(`the rewritten check-budget.js would not say what was meant (${wrong.join('; ')}); nothing was written`);
+
+    fs.writeFileSync(__filename, source);
+    console.log('\n  Ceilings lowered in scripts/check-budget.js:\n');
+    changes.forEach((c) => {
+        const show = c.kind === 'bytes' ? fmtCeiling : (n) => `${n} screens`;
+        console.log(`    · ${c.name}: ${show(c.from)} → ${show(c.to)}`);
+    });
+    // The README quotes the ceilings, so it is rewritten from the new file.
+    execFileSync(process.execPath, [__filename, '--readme'], { stdio: 'inherit' });
+    console.log('  Commit scripts/check-budget.js and README.md together.\n');
+}
+
+// ------------------------------------------------------------------
 // Report
 // ------------------------------------------------------------------
 function report() {
     const { measured, critical, onDemand, largest } = measure();
+    const lengthsFile = option('--lengths');
+    const lengths = lengthsFile ? readLengths(lengthsFile) : null;
+    const json = budgetJson(measured, lengths);
 
-    if (process.argv.includes('--json')) {
-        console.log(JSON.stringify(measured));
+    // Data, not a verdict: it exits 0 even over a ceiling, because the
+    // receipt measures main with it, and main may be over a ceiling the
+    // pull request sets.
+    if (flag('--json')) {
+        console.log(JSON.stringify(json, null, 2));
+        return;
+    }
+    if (flag('--readme')) {
+        const text = fs.readFileSync(readmePath(), 'utf8');
+        const next = renderReadme(text, json);
+        if (next === text) console.log('\n  README.md: the budget tables are already current.\n');
+        else { fs.writeFileSync(readmePath(), next); console.log('\n  README.md: budget tables rewritten.\n'); }
+        return;
+    }
+    if (flag('--ratchet')) {
+        if (option('--root')) throw new Error('--ratchet lowers this checkout\'s own ceilings; it cannot take --root');
+        ratchet(json);
         return;
     }
 
@@ -310,6 +621,12 @@ function report() {
     let over = 0;
     Object.entries(BUDGETS).forEach(([key, budget]) => {
         const value = measured[key];
+        if (typeof value !== 'number') {
+            over++;
+            console.log(`    ✗ ${budget.label}`);
+            console.log('      not measured: the file it weighs is missing');
+            return;
+        }
         const pct = Math.round((value / budget.max) * 100);
         const ok = value <= budget.max;
         if (!ok) over++;
@@ -319,16 +636,49 @@ function report() {
 
     if (largest) console.log(`\n  Heaviest image: ${largest.f} (${fmt(largest.size)})`);
 
+    // Lengths are measured by `npm run smoke`; here only when handed its file.
+    console.log(`\n  Length, in screens (page height ÷ window height)${lengths ? '' : ' — ceilings; `npm run smoke` measures them'}:\n`);
+    Object.entries(json.length).forEach(([page, vps]) => {
+        const cells = Object.entries(vps).map(([vp, l]) => {
+            if (l.measured === null) return `${vp} ≤ ${l.ceiling.toFixed(2)}`;
+            if (l.measured > l.ceiling) over++;
+            return `${vp} ${l.measured.toFixed(2)} of ${l.ceiling.toFixed(2)}${l.measured > l.ceiling ? ' ✗' : ''}`;
+        });
+        console.log(`    ${page.padEnd(20)} ${cells.join('   ')}`);
+    });
+
+    const could = hints(json);
+    if (could.length) {
+        console.log('\n  More than 10% headroom (`npm run budget -- --ratchet` lowers them all):\n');
+        could.forEach(h => console.log(`    · ${h}`));
+    }
+
+    let stale = null;
+    try { if (!readmeIsCurrent(json)) stale = 'its budget tables are out of date'; } catch (e) { stale = e.message; }
+    if (stale) {
+        console.error(`\n  README.md: ${stale}.`);
+        console.error('  Run `npm run budget -- --readme` and commit README.md with the change.');
+    }
     if (over) {
         console.error(`\n  ${over} budget(s) exceeded.`);
-        console.error('  Either bring the weight back down, or raise the budget in');
-        console.error('  scripts/check-budget.js AND update the figure the README quotes.\n');
+        console.error('  Bring the weight or the length back down: remove something of equal');
+        console.error('  weight rather than raise a ceiling (docs/plan.md, "Stop doing").');
+    }
+    if (stale || over) {
+        console.error('');
         process.exit(1);
     }
 
-    console.log('\n  All budgets met.\n');
+    console.log('\n  All budgets met, and the README says so.\n');
 }
 
-if (require.main === module) report();
+if (require.main === module) {
+    try { report(); } catch (e) { console.error(`\n  check-budget: ${e.message}\n`); process.exit(1); }
+}
 
-module.exports = { BUDGETS, PAGE_BUDGETS, measure, criticalAssets, onDemandAssets };
+module.exports = {
+    BUDGETS, PAGE_BUDGETS, LENGTH, VIEWPORTS, RATCHET, SCHEMA, README_TABLES,
+    measure, criticalAssets, onDemandAssets,
+    budgetJson, readLengths, heldLength, hints, ratchetTarget, couldLowerTo, ratchetSource, loadSource,
+    readmeTables, renderReadme, fmtCeiling
+};

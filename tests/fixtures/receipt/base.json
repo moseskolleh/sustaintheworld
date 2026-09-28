@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "viewports": {
+    "1440x900": { "width": 1440, "height": 900, "label": "desktop" },
+    "390x844": { "width": 390, "height": 844, "label": "phone" }
+  },
+  "bytes": {
+    "criticalWire": { "label": "First view of the homepage", "readme": "First view of the homepage, over the wire (fonts included)", "page": "index.html", "unit": "bytes", "measured": 280899, "ceiling": 307200, "headroom": 26301, "hold": null, "couldLowerTo": null },
+    "onDemand": { "label": "On demand", "readme": "Everything a full visit adds on demand (modules, scripts, map)", "page": null, "unit": "bytes", "measured": 73480, "ceiling": 73728, "headroom": 248, "hold": null, "couldLowerTo": null },
+    "introAudio": { "label": "Recorded narration", "readme": "Recorded narration: Moses's introduction (sized for his 60–90 s take)", "page": null, "unit": "bytes", "measured": 0, "ceiling": 819200, "headroom": 819200, "hold": "sized for his recording, which is not made yet", "couldLowerTo": null },
+    "caseStudiesWire": { "label": "Case studies page", "readme": "Case studies page, over the wire (fonts included)", "page": "case-studies.html", "unit": "bytes", "measured": 98522, "ceiling": 122880, "headroom": 24358, "hold": null, "couldLowerTo": 104448 },
+    "retiredWire": { "label": "A page this branch removes", "readme": "A page this branch removes, over the wire", "page": "retired.html", "unit": "bytes", "measured": 5000, "ceiling": 8192, "headroom": 3192, "hold": null, "couldLowerTo": null }
+  },
+  "length": {
+    "index.html": {
+      "1440x900": { "unit": "screens", "measured": null, "ceiling": 10, "headroom": null, "couldLowerTo": null },
+      "390x844": { "unit": "screens", "measured": null, "ceiling": 18, "headroom": null, "couldLowerTo": null }
+    },
+    "stats.html": {
+      "1440x900": { "unit": "screens", "measured": null, "ceiling": 10.57, "headroom": null, "couldLowerTo": null },
+      "390x844": { "unit": "screens", "measured": null, "ceiling": 15.66, "headroom": null, "couldLowerTo": null }
+    }
+  }
+}

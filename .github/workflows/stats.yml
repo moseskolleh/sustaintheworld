@@ -2,7 +2,8 @@ name: Open counts
 
 # Reads the visit counter's daily totals once a week, suppresses them into
 # content/stats.json, rebuilds stats.html, and commits the two files if they
-# changed. Only suppressed aggregates are ever committed; the raw daily
+# changed (with README.md, whose budget table quotes the page's weight).
+# Only suppressed aggregates are ever committed; the raw daily
 # totals stay in the owner's Google Sheet.
 #
 # STATS_SOURCE_URL is a repository secret (Settings → Secrets and variables
@@ -44,6 +45,9 @@ jobs:
         env:
           STATS_SOURCE_URL: ${{ secrets.STATS_SOURCE_URL || vars.STATS_SOURCE_URL }}
       - run: npm run build:content
+      # The README's budget table quotes this page's weight, and the tests
+      # fail while it is out of date, so it is rewritten with the page.
+      - run: node scripts/check-budget.js --readme
       # The same checks CI runs: content/stats.json is refused if any count
       # under 5 or any daily row got into it, and the page must stay in budget.
       - run: npm test
@@ -51,7 +55,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add content/stats.json stats.html
+          git add content/stats.json stats.html README.md
           if git diff --cached --quiet; then
             echo "nothing to commit"
           else
