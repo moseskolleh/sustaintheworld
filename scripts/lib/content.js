@@ -240,7 +240,24 @@ const GLANCE_KEYS = ['targetRoles', 'workArea', 'seniority', 'availableFrom', 'r
 const PLACEHOLDER = /^\s*(?:tbc|tbd|to be (?:confirmed|decided)|n\/?a|todo|unknown|\?+|-+|…|\.\.\.)\s*$/i;
 const AVAILABLE_FROM = /^(?:now|(\d{4})-(0[1-9]|1[0-2])(?:-(0[1-9]|[12]\d|3[01]))?)$/;
 
-function checkAtAGlance(glance) {
+// How long each fact may be. On a phone the first screen holds the strip,
+// the buttons and the hero's four figures, and filled in a line per fact,
+// the strip pushed the figures off a 390x844 screen. So "short" is a
+// number here, and smoke.js draws the strip with every fact at its longest
+// and checks that it all still fits. Raise one only with that check passing.
+const GLANCE_LIMITS = {
+    targetRoles: 80,    // characters
+    workArea: 32,       // characters, the phrases joined by ", "
+    seniority: 32,
+    rightToWork: 48,
+    languages: 80       // characters of profile.languages as the strip
+};                      // writes it: "English (C2) · Dutch (B1)"
+
+// The languages line as the strip shows it (build-content.js writes the
+// same words, escaped): every language, none left out to make room.
+const glanceLanguages = (languages) => languages.map(l => `${l.language} (${l.level})`).join(' · ');
+
+function checkAtAGlance(glance, languages) {
     const at = 'profile: atAGlance';
     if (!glance || typeof glance !== 'object' || Array.isArray(glance)) return [`${at} is missing — the hero's availability line is written from it`];
     const problems = [];
@@ -255,14 +272,26 @@ function checkAtAGlance(glance) {
         }
         if (typeof v !== 'string' || !v.trim()) problems.push(`${at}.${key} must be a phrase, or null until it is known`);
         else if (PLACEHOLDER.test(v)) problems.push(`${at}.${key} is "${v}" — leave it null until it is known; the strip then leaves it out`);
+        else if (v.length > GLANCE_LIMITS[key]) problems.push(`${at}.${key} is ${v.length} characters; the first screen has room for ${GLANCE_LIMITS[key]}`);
     };
     phrase('targetRoles', true);
     ['seniority', 'rightToWork'].forEach(k => phrase(k, false));
-    // Where he will work, after where he lives: a list of short phrases.
+    // Where he would work, after the roles on the availability line: a
+    // list of short phrases.
     const area = glance.workArea;
     if (area !== null && area !== undefined) {
         if (!Array.isArray(area) || !area.length || area.some(a => typeof a !== 'string' || !a.trim() || PLACEHOLDER.test(a))) {
             problems.push(`${at}.workArea must be a list of short phrases, or null`);
+        } else if (area.join(', ').length > GLANCE_LIMITS.workArea) {
+            problems.push(`${at}.workArea is ${area.join(', ').length} characters; the first screen has room for ${GLANCE_LIMITS.workArea}`);
+        }
+    }
+    // profile.languages is checked for shape by checkLanguages; here, only
+    // for whether the strip has room for all of it.
+    if (Array.isArray(languages) && languages.every(l => l && typeof l === 'object')) {
+        const line = glanceLanguages(languages);
+        if (line.length > GLANCE_LIMITS.languages) {
+            problems.push(`profile: the languages come to ${line.length} characters in the at-a-glance strip ("${line}"); the first screen has room for ${GLANCE_LIMITS.languages}`);
         }
     }
 
@@ -731,7 +760,7 @@ function loadAll() {
     problems.push(...checkLanguages(profile.languages));
 
     // --- the at-a-glance strip -------------------------------------------
-    problems.push(...checkAtAGlance(profile.atAGlance));
+    problems.push(...checkAtAGlance(profile.atAGlance, profile.languages));
 
     if (problems.length) {
         throw new Error(`content failed validation:\n  - ${problems.join('\n  - ')}`);
@@ -764,6 +793,8 @@ module.exports = {
     PHOTO_LAYOUTS,
     checkLanguages,
     checkAtAGlance,
+    GLANCE_LIMITS,
+    glanceLanguages,
     checkStats,
     peel,
     orderForLens

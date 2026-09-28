@@ -431,6 +431,12 @@ const state = (doc) => {
         const literal = ['carbon-ai.css', 'content.css', 'stats.css']
             .flatMap(f => (strip(read(f)).match(/(?<![-\w])color:(?!\s*var\()[^;]+/g) || []).map(d => `${f}: ${d}`));
         assert(literal.length === 0, `Palette: every text colour on these pages is a token (${literal.join('; ') || 'none fixed'})`);
+        // A line drawn in white (or black) is there in one theme only: the
+        // calculator's rows and the equivalence list lost their dividers on
+        // the light page. A tinted line shows on both; a neutral one is a token.
+        const neutral = ['carbon-ai.css', 'content.css', 'stats.css']
+            .flatMap(f => (strip(read(f)).match(/(?<![-\w])border[\w-]*:[^;]*(?:rgba?\(\s*(?:255\s*,\s*255\s*,\s*255|0\s*,\s*0\s*,\s*0)\b|#f{3}\b|#f{6}\b|#0{3}\b|#0{6}\b|\bwhite\b|\bblack\b)[^;]*/gi) || []).map(d => `${f}: ${d}`));
+        assert(neutral.length === 0, `Palette: no line on these pages is a fixed white or black, which one theme cannot see (${neutral.join('; ') || 'none'})`);
         // Anatomy of a Prompt's accents: carbon-ai.html has no body.light-mode.
         const anatomy = strip(read('modules/anatomy.css'));
         assert(/\[data-theme=["']?light["']?\]\s+\.ca-anatomy\s*{/.test(anatomy) && !/light-mode/.test(anatomy),

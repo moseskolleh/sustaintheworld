@@ -24,17 +24,21 @@
 //     and phone width, in either theme (see the end of this file)
 //   - a first view heavier than scripts/check-budget.js claims, or one
 //     (1440x900, 390x844) without the hero's figures, its photo caption,
-//     the at-a-glance strip and one primary action, or with the play index;
-//     a photo caption over the eyebrow or the name, down to 320px
+//     the at-a-glance strip and one primary action, or with the play index,
+//     today or with every at-a-glance fact filled in at the longest
+//     content.js accepts; a photo caption over the eyebrow or the name,
+//     down to 320px
 //   - a page that, with JavaScript off (or script.js blocked or late), is
 //     covered, leaves content invisible, shows a [hidden] element or a
 //     control only a script could drive, or hides the contact form
 //   - a skip link, nav link or Back that does not land where it says; a
-//     theme switch or nav item off the bar; back to top over a control
+//     link to a game, a case study or Anatomy of a Prompt that lands it
+//     under the other pages' nav bar; a theme switch or nav item off the
+//     bar; back to top over a control
 //   - a page whose theme does not follow the reader's choice (or, with none,
 //     the system's; the homepage from its first frame), or a page other
 //     than the homepage with no room on a 320px phone for its nav and its
-//     call to action
+//     call to action, or whose nav moves as its theme switch appears
 //   - on a phone, a journey map out of view while its stops are read, over
 //     the text of the stop it shows, or showing another; a name on the map
 //     under 11px, or on a desktop over another name, the frame's edge or
@@ -50,8 +54,8 @@
 //     whose box is not folded behind a named button, by pointer and keys
 //   - an experience card that is not short, or whose More sits on its text
 //   - a case-study game fetched before a reader nears it, that will not
-//     play, whose labels are under 11px on a phone, or that moves the
-//     page under a reader when it arrives above them
+//     play, whose labels are under 11px on a phone or run past its edge,
+//     or that moves the page under a reader when it arrives above them
 //   - a page longer than its length budget in scripts/check-budget.js, at
 //     1440x900 or 390x844, once it has settled (the homepage's is under
 //     the plan's 10 and 18 screens)
@@ -321,6 +325,7 @@ async function visit(context, page, rel, origin) {
     await checkLengths(browser, origin);
 
     await exerciseFirstView(browser, origin);
+    await exerciseLongestStrip(browser, origin);
     await exerciseNavigation(browser, origin);
     await exerciseSections(browser, origin);
     await exerciseCpu(browser, origin);
@@ -740,6 +745,72 @@ async function exerciseFirstView(browser, origin) {
 }
 
 // ------------------------------------------------------------------
+// The first view once Moses has filled in the at-a-glance strip
+// ------------------------------------------------------------------
+// Today the strip has one fact; four more wait for him (seniority, start
+// date, languages, right to work). Laid out a line each, they pushed the
+// figures off a 390x844 screen, so filling them in, the only way to finish
+// the strip, would have failed the check above. Here the strip is drawn by
+// build-content.js's own renderer from a fixture profile with every fact
+// at the longest content.js accepts, served in place of index.html's, and
+// the first view is checked again. The values are fixtures: none of them
+// reaches a page.
+async function exerciseLongestStrip(browser, origin) {
+    console.log('  index.html — the first view, every at-a-glance fact at its longest');
+    const { GLANCE_LIMITS: L, glanceLanguages, checkAtAGlance } = require('./lib/content.js');
+    const { renderAtAGlance } = require('./build-content.js');
+    // Words of a common length, cut to exactly n characters, so each fact
+    // wraps as prose of its full length would.
+    const fill = (n) => {
+        const words = ['Fixture', 'wording', 'at', 'the', 'longest', 'this', 'fact', 'may', 'run'];
+        let s = '';
+        for (let i = 0; s.length < n; i++) s += (s ? ' ' : '') + words[i % words.length];
+        return s.slice(0, n).replace(/ $/, 'x');
+    };
+    const languages = [];
+    const one = () => ({ language: 'Language', level: languages.length % 2 ? 'native' : 'C2' });
+    while (glanceLanguages(languages.concat(one())).length <= L.languages) languages.push(one());
+    languages[languages.length - 1].language += 'x'.repeat(L.languages - glanceLanguages(languages).length);
+    const profile = JSON.parse(fs.readFileSync(path.join(ROOT, 'content', 'profile.json'), 'utf8'));
+    profile.languages = languages;
+    profile.atAGlance = {
+        targetRoles: fill(L.targetRoles),
+        workArea: [fill(L.workArea)],
+        seniority: fill(L.seniority),
+        availableFrom: '2031-09-30',          // the longest a date is written: "30 Sep 2031"
+        rightToWork: fill(L.rightToWork)
+    };
+    const refused = checkAtAGlance(profile.atAGlance, profile.languages);
+    if (refused.length) return bad(`the longest strip: content.js refuses the fixture (${refused.join('; ')})`);
+
+    const START = '            <!-- AT-A-GLANCE:START', END = '<!-- AT-A-GLANCE:END -->';
+    const page0 = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+    const html = page0.slice(0, page0.indexOf(START)) + renderAtAGlance(profile) + page0.slice(page0.indexOf(END) + END.length);
+    for (const [width, height] of [[1440, 900], [390, 844]]) {
+        const context = await browser.newContext({ viewport: { width, height } });
+        await context.route(`${origin}/index.html`, (route) => route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: html }));
+        const page = await context.newPage();
+        await page.goto(`${origin}/index.html`, { waitUntil: 'load' });
+        await page.evaluate(() => document.fonts.ready);
+        await page.waitForFunction(() => !document.getElementById('preloader'), null, { timeout: 5000 }).catch(() => null);
+        const r = await page.evaluate(() => {
+            const bottom = (sel) => Math.round(document.querySelector(sel).getBoundingClientRect().bottom);
+            return {
+                facts: document.querySelectorAll('#home .glance-fact').length,
+                glance: bottom('.at-a-glance'), act: bottom('#home .btn-primary'), stats: bottom('.hero-stats'),
+                wide: document.documentElement.scrollWidth > innerWidth
+            };
+        });
+        const at = `longest strip at ${width}x${height}`;
+        if (r.facts !== 5) bad(`${at}: ${r.facts} facts drawn, not 5`);
+        if (Math.max(r.glance, r.act, r.stats) <= height) ok(`${at}: the strip, the primary action and the figures are on the first screen (the figures end at ${r.stats}px)`);
+        else bad(`${at}: the strip ends at ${r.glance}px, the primary action at ${r.act}px and the figures at ${r.stats}px, past the first ${height}px`);
+        if (r.wide) bad(`${at}: the page scrolls sideways`);
+        await context.close();
+    }
+}
+
+// ------------------------------------------------------------------
 // case-studies.html: the two games, fetched as a reader nears them
 // ------------------------------------------------------------------
 // They used to open inside the homepage's dossiers. Now each is under the
@@ -801,19 +872,32 @@ async function exerciseCaseStudyGames(page, r) {
     if (played.level === 'July 2021' && played.water < 200) ok(`the flood slider raises the Wupper to July 2021 (water line at ${played.water})`);
     else bad(`the flood slider: level "${played.level}", water line at ${played.water}`);
 
-    // Every label a reader needs, drawn at 11px or more, at a phone's width
-    // and a small one; and nothing pushes the page sideways.
+    // Every label a reader needs, drawn at 11px or more and whole (the
+    // borehole's title ran past the drawing's edge on a 320px phone, cut
+    // at "dips reac"), at a phone's width and a small one; and nothing
+    // pushes the page sideways.
     for (const [width, height] of [[390, 844], [320, 700]]) {
         await page.setViewportSize({ width, height });
         await page.waitForTimeout(300);
         const m = await page.evaluate(() => {
             const small = [];
+            const cut = [];
+            // A text's box is its font's full height, a few pixels taller
+            // than its letters; the letters are what must stay inside.
+            const ink = document.createElement('canvas').getContext('2d');
             document.querySelectorAll('.cs-play svg').forEach((svg) => {
-                const scale = svg.getBoundingClientRect().width / svg.viewBox.baseVal.width;
+                const box = svg.getBoundingClientRect();
+                const scale = box.width / svg.viewBox.baseVal.width;
                 svg.querySelectorAll('text').forEach((t) => {
                     if (getComputedStyle(t).display === 'none') return;
                     const px = parseFloat(getComputedStyle(t).fontSize) * scale;
                     if (px < 10.95) small.push(`"${t.textContent}" ${px.toFixed(1)}px`);
+                    ink.font = `${px}px ${getComputedStyle(t).fontFamily}`;
+                    const f = ink.measureText(t.textContent);
+                    const b = t.getBoundingClientRect();
+                    const top = b.top + f.fontBoundingBoxAscent - f.actualBoundingBoxAscent;
+                    const bottom = b.bottom - (f.fontBoundingBoxDescent - f.actualBoundingBoxDescent);
+                    if (b.left < box.left - 1 || b.right > box.right + 1 || top < box.top - 1 || bottom > box.bottom + 1) cut.push(`"${t.textContent}"`);
                 });
             });
             document.querySelectorAll('.cs-play.is-live :is(p, span, label, button)').forEach((el) => {
@@ -821,10 +905,12 @@ async function exerciseCaseStudyGames(page, r) {
                 const px = parseFloat(getComputedStyle(el).fontSize);
                 if (px < 10.95) small.push(`${el.className || el.tagName} ${px}px`);
             });
-            return { small, wide: document.documentElement.scrollWidth > innerWidth };
+            return { small, cut, wide: document.documentElement.scrollWidth > innerWidth };
         });
         if (!m.small.length) ok(`case-studies.html at ${width}px: every game label is 11px or more`);
         else bad(`case-studies.html at ${width}px: game labels under 11px: ${m.small.join(', ')}`);
+        if (!m.cut.length) ok(`case-studies.html at ${width}px: every game label inside its drawing`);
+        else bad(`case-studies.html at ${width}px: game labels past the drawing's edge: ${m.cut.join(', ')}`);
         if (m.wide) bad(`case-studies.html at ${width}px: the page scrolls sideways`);
     }
     await page.setViewportSize({ width: 1280, height: 800 });
@@ -2517,9 +2603,10 @@ async function axeHomepageStates(page, view, note, attempt) {
 // build-content.js; tests/shell.test.js holds the markup). What jsdom
 // cannot show: the switch pressed for real, the choice followed through
 // the nav to the next page, to the homepage and back, the system's setting
-// honoured with nothing stored and with JavaScript off, and every page on
-// a 320px phone. Both themes go through axe with every page (see
-// accessibilityPass).
+// honoured with nothing stored and with JavaScript off, every page on a
+// 320px phone, a link to a game, a card or Anatomy of a Prompt landing it
+// clear of the bar, and the switch arriving without moving the page. Both
+// themes go through axe with every page (see accessibilityPass).
 async function exerciseShell(browser, origin) {
     console.log('  the other pages — shared nav, theme, 320px');
     const LIGHT_BG = 'rgb(244, 246, 240)';
@@ -2663,6 +2750,82 @@ async function exerciseShell(browser, origin) {
             }
             if (problems.length) bad(`${rel} at 320px: ${problems.join('; ')}`);
             else ok(`${rel} at 320px: fits the screen, the five nav links and the call to action on it${top ? ', back to top goes to the top' : ''}`);
+            await page.close();
+        }
+        await context.close();
+    }
+
+    // (d) A link to anything on these pages lands it clear of the bar, on a
+    // desktop, where the bar stays put. Room was made for the case-study
+    // and research cards, not for the games or Anatomy of a Prompt, whose
+    // headings landed under it. Loaded by address, followed from the
+    // homepage's play index, and followed from a link on the page itself.
+    {
+        const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
+        const page = await context.newPage();
+        const clear = async (where) => {
+            await page.waitForTimeout(1200);   // a game may arrive meanwhile
+            const r = await page.evaluate(() => {
+                const t = document.getElementById(decodeURIComponent(location.hash.slice(1)));
+                const head = t && t.querySelector('h2, h3, h4');
+                const bar = Math.round(document.querySelector('.ca-nav').getBoundingClientRect().bottom);
+                return t && { top: Math.round(t.getBoundingClientRect().top), head: head && Math.round(head.getBoundingClientRect().top), bar };
+            });
+            if (r && r.top >= r.bar && (r.head === null || r.head >= r.bar)) ok(`${where}: lands clear of the nav bar (at ${r.top}px; the bar ends at ${r.bar}px)`);
+            else bad(`${where}: lands under the nav bar ${JSON.stringify(r)}`);
+        };
+        await page.goto(`${origin}/research.html`, { waitUntil: 'load' });
+        const item = await page.evaluate(() => document.querySelector('.rs-item[id]').id);
+        for (const url of ['case-studies.html#play-borehole', 'case-studies.html#groundwater', 'carbon-ai.html#anatomy', `research.html#${item}`]) {
+            await page.goto(`${origin}/${url}`, { waitUntil: 'load' });
+            await clear(url);
+        }
+        for (const [rel, href] of [['index.html', 'case-studies.html#play-borehole'], ['index.html', 'carbon-ai.html#anatomy'], ['case-studies.html', '#play-flood'], ['carbon-ai.html', '#anatomy']]) {
+            await page.goto(`${origin}/${rel}`, { waitUntil: 'load' });
+            const link = page.locator(`a[href="${href}"]`).first();
+            await link.scrollIntoViewIfNeeded();
+            await Promise.all([rel === 'index.html' ? page.waitForNavigation({ waitUntil: 'load' }) : null, link.click()]);
+            await clear(`${rel}, its link to ${href}`);
+        }
+        await context.close();
+    }
+
+    // (e) Nothing moves as the page finishes arriving. The theme switch is
+    // shipped hidden and shown once the page's scripts are in; on a phone,
+    // where it shares the first row with the logo, it arriving then pushed
+    // the links and everything under them 10px down (a layout shift of
+    // 0.09 on carbon-ai.html). The scripts are held back 1.5 s here, as on a
+    // slow connection, so that late arrival is what is measured. Chromium
+    // only: Firefox does not report layout shifts.
+    if (CHROMIUM) {
+        const context = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' });
+        await context.route(/\.js$/, async (route) => {
+            if (!/\/theme\.js$/.test(new URL(route.request().url()).pathname)) await new Promise(r => setTimeout(r, 1500));
+            await route.fallback();
+        });
+        await context.addInitScript(() => {
+            window.__shifts = [];
+            new PerformanceObserver((list) => list.getEntries().forEach((e) => {
+                if (!e.hadRecentInput) window.__shifts.push({ value: e.value, nodes: e.sources.map(x => x.node).filter(Boolean) });
+            })).observe({ type: 'layout-shift', buffered: true });
+        });
+        const withSwitch = PAGES.filter(rel => /id="themeToggle"/.test(fs.readFileSync(path.join(ROOT, rel), 'utf8')) && rel !== 'index.html');
+        for (const rel of withSwitch) {
+            const page = await context.newPage();
+            await page.goto(`${origin}/${rel}`, { waitUntil: 'load' });
+            await page.waitForTimeout(500);
+            const r = await page.evaluate(() => {
+                const nav = document.querySelector('.ca-nav');
+                const main = document.getElementById('main');
+                const moved = window.__shifts.filter(e => e.nodes.some(n => nav.contains(n) || n === main));
+                return {
+                    shown: !document.getElementById('themeToggle').hidden,
+                    moved: +moved.reduce((n, e) => n + e.value, 0).toFixed(4),
+                    all: +window.__shifts.reduce((n, e) => n + e.value, 0).toFixed(4)
+                };
+            });
+            if (r.shown && r.moved === 0) ok(`${rel} at 390px, scripts late: the theme switch arrives without moving the nav or the page (layout shift ${r.all} in all)`);
+            else bad(`${rel} at 390px, scripts late: ${r.shown ? `the nav and the page moved as it arrived (layout shift ${r.moved})` : 'the theme switch never appeared'}`);
             await page.close();
         }
         await context.close();

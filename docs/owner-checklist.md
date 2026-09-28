@@ -327,10 +327,20 @@ than shown as "TBC":
 | Languages, with your Dutch level | a top-level `languages` list | absent, not shown | F1 |
 | Right to work in the NL and the EU (and whether a visa needs sponsoring) | `atAGlance.rightToWork` | `null`, not shown | F2 |
 
+Each is a short phrase, and "short" is a number: `npm test` refuses a
+seniority over 32 characters, a right to work over 48, or languages that
+come to more than 80 as the strip writes them ("English (C2) · Dutch
+(B1)"). On a phone the strip shares the first screen with the buttons and
+the hero's figures, and the limits are what fits.
+
 To check all four at once: after `npm run build:content`, `index.html`
 between `<!-- AT-A-GLANCE:START` and `<!-- AT-A-GLANCE:END -->` has a
 "Seniority", "Available", "Languages" and "Right to work" line above
-"Location", and `npm test` passes.
+"Location", `npm test` passes, and so does `npm run smoke` (the pull
+request's smoke job runs it for you): its "first view at" lines check
+that the figures are still on the first screen at 1440×900 and 390×844,
+and its "longest strip at" lines check the same for the longest strip the
+limits allow.
 
 - [ ] **F1. Languages and levels.**
   - *What:* every language you work in, named in English, with a CEFR level
@@ -370,21 +380,29 @@ between `<!-- AT-A-GLANCE:START` and `<!-- AT-A-GLANCE:END -->` has a
 
 - [ ] **F3. Target roles, seniority and available-from date** (Phase 2.1).
   - *Where:* `content/profile.json` → `atAGlance`:
-    - `targetRoles`: filled from the site's own availability line
-      ("sustainability, climate-risk, ESG and sustainable-AI roles and
-      consulting"). Confirm it, or correct it. The same words open the
-      hero's "Open to …" line and the closing call to action on the case
-      studies, research, open counts and AI, Weighed pages ("Open to …:
-      write to me at …").
+    - `targetRoles`: "sustainability, climate-risk, ESG and sustainable-AI
+      roles and consulting". The site's availability line said
+      "sustainability, climate-risk & ESG roles and consulting"; wave 3
+      added sustainable AI, your current field, because plan step 2.1 asks
+      for it. That addition is the site's wording, not yours yet: confirm
+      it, or correct it. The same words open the hero's "Open to …" line
+      and the closing call to action on the case studies, research, open
+      counts and AI, Weighed pages ("Open to …: write to me at …"). The
+      homepage's Contact section says the same in its own words, written
+      by hand in `index.html` ("Open to roles & consulting in
+      sustainability, climate risk, ESG and sustainable AI"), and so does
+      its narration (the `contact` script in `content/narration.json`): if
+      you correct the field, correct those two lines too.
     - `seniority`: `null` today. One short phrase for the level of role
       you are looking for.
     - `availableFrom`: `null` today. `"now"`, or a date as `YYYY-MM` or
       `YYYY-MM-DD`; the strip shows it as "Now", "Jan 2027" or
       "15 Jan 2027". A past date does not fail the build (`npm test`
       prints a notice), so update it when you check `meta.verifiedOn`.
-    - The location line comes from `person.locality` and `person.country`,
-      followed by `atAGlance.workArea` (`["EU", "remote-friendly"]`, as the
-      page already said).
+    - The location line comes from `person.locality` and `person.country`.
+      `atAGlance.workArea` (`["EU", "remote-friendly"]`, as the page already
+      said) follows the roles on the "Open to …" line, where it reads as the
+      preference it is rather than as a right to work.
   - *Unlocks:* the first view saying which job you want and when you can
     start. A `null` field is left out of the strip entirely.
   - *Check:* after `npm run build:content`, the strip under the hero shows

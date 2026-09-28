@@ -61,11 +61,18 @@
     "location (person.locality and person.country).",
     "",
     "targetRoles   required; the hero's availability line, after 'Open to '",
-    "workArea      optional; phrases shown after the location",
+    "workArea      optional; phrases on the same line, after the roles: where",
+    "              he would work, which is a preference, not a right to work",
     "seniority     a short phrase: the level of role sought",
     "availableFrom 'now', or a date as YYYY-MM or YYYY-MM-DD",
     "rightToWork   a short phrase: where he may work, and whether an employer",
-    "              would need to sponsor a visa"
+    "              would need to sponsor a visa",
+    "",
+    "Short is a number: at most 80 characters for targetRoles, 32 for",
+    "seniority and for workArea (joined), 48 for rightToWork and 80 for the",
+    "languages as the strip writes them. On a phone the strip, the buttons",
+    "and the hero's figures share one screen; smoke.js checks the longest",
+    "strip these allow still fits (GLANCE_LIMITS in scripts/lib/content.js)."
   ],
   "atAGlance": {
     "targetRoles": "sustainability, climate-risk, ESG and sustainable-AI roles and consulting",

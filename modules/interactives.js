@@ -353,7 +353,7 @@ window.mks.share = (() => {
         ['#experience li', '#experience', (el) => clean(el) + (up(el, '.timeline-content', 'h3') ? ` (${up(el, '.timeline-content', 'h3')})` : '')],
         ['#projects .project-tech span', '#projects', (el) => `Listed as a tool on the ${up(el, '.project-card', 'h3')} project`],
         ['#education li, #education .cert-line', '#education', (el) => `Covered in ${up(el, '.education-card', 'h3, .cert-title')}: ${clean(el)}`],
-        ['#skills .skills-checklist li, #skills .frameworks-list li', '#skills', () => 'Listed under Skills & Expertise']
+        ['#skills .skills-checklist li, #skills .frameworks-list li', '#skills', () => 'Listed under Skills & Education']
     ];
     function toolEvidence(tool, doc) {
         for (const [sel, href, say] of (doc ? SOURCES : [])) {

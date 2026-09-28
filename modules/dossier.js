@@ -127,10 +127,12 @@
         const surfaceY = (x) => SURFACE + 4 * Math.sin(x / 90) + 2 * Math.sin(x / 31);
 
         // Where "high" and "low" at a readable size would sit on the curve,
-        // they give way and the title says which way is low.
+        // they give way and the title says which way is low, in fewer words
+        // where it would run past the edge.
         const roomFor = (k) => {
             const tight = k > 1.6;
             title.textContent = tight ? 'apparent resistivity: dips read low' : 'apparent resistivity along the profile';
+            if (tight && title.getComputedTextLength && title.getComputedTextLength() > W - 20) title.textContent = 'resistivity: dips read low';
             sideLabels.forEach(t => { t.style.display = tight ? 'none' : ''; });
         };
 

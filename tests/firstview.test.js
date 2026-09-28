@@ -76,8 +76,13 @@ const facts = (d) => Array.from(d.querySelectorAll('.glance-fact')).map(f => [te
         `Today: the availability line names sustainable AI beside sustainability, climate risk and ESG ("${line}")`);
     const shown = facts(d);
     assert(shown.length === 1 && shown[0][0] === 'Location', `Today: one fact, the location; the rest wait for Moses (${shown.map(f => f[0]).join(', ')})`);
-    assert(/^Amsterdam, NL\b/.test(shown[0][1]) && /remote-friendly/.test(shown[0][1]),
-        `Today: the location is person.locality and person.country, with the work area after it ("${shown[0][1]}")`);
+    assert(shown[0][1] === 'Amsterdam, NL',
+        `Today: the location is person.locality and person.country, and only that ("${shown[0][1]}")`);
+    // Where he would work is a preference, said with what he is open to.
+    // Under "Location", "EU" read as where he is or may work, beside a
+    // right to work the strip does not state yet.
+    assert(line.endsWith(` — ${profile.atAGlance.workArea.join(', ')}`),
+        `Today: the work area follows the roles on the availability line, not the location ("${line}")`);
     assert(!/TBC|TBD|to be confirmed|n\/a|\?/i.test(d.body.textContent), 'Today: no stand-in for a fact nobody has stated');
 }
 
@@ -88,6 +93,7 @@ const facts = (d) => Array.from(d.querySelectorAll('.glance-fact')).map(f => [te
     const none = strip(withGlance({ seniority: null, availableFrom: null, rightToWork: null, workArea: null }, { languages: null }));
     const shown = facts(none);
     assert(shown.length === 1 && shown[0][1] === 'Amsterdam, NL', `Null: seniority, start date, languages and right to work leave no label behind (${shown.map(f => f.join(': ')).join(' | ')})`);
+    assert(!/—/.test(text(none.querySelector('.hero-availability'))), 'Null: no work area, no dash left after the roles');
     assert(none.querySelectorAll('dt').length === none.querySelectorAll('dd').length, 'Null: every label has its value');
 
     const set = strip(withGlance({
@@ -103,6 +109,8 @@ const facts = (d) => Array.from(d.querySelectorAll('.glance-fact')).map(f => [te
     assert(value('Available') === 'Feb 2031' && !!set.querySelector('time[datetime="2031-02"]'),
         `Set: a month reads as the site writes dates, with a machine-readable <time> ("${value('Available')}")`);
     assert(value('Languages') === 'Fixturish (native) · Dutch (B1)', `Set: languages come from profile.languages, each with its level ("${value('Languages')}")`);
+    assert(value('Languages') === content.glanceLanguages([{ language: 'Fixturish', level: 'native' }, { language: 'Dutch', level: 'B1' }]),
+        'Set: the languages line is the one content.js measures against its limit');
     assert(value('Right to work') === 'Fixture <right> & work' && !set.querySelector('right'), 'Set: a value is escaped, never markup');
 
     const now = facts(strip(withGlance({ availableFrom: 'now' })));
@@ -139,6 +147,24 @@ const facts = (d) => Array.from(d.querySelectorAll('.glance-fact')).map(f => [te
         assert(problems.length === 0, `Validate: accepts availableFrom ${JSON.stringify(v)} (${problems.join('; ') || 'no problems'})`);
     });
 
+    // Short is a number: the phone's first screen has room for so much
+    // (smoke.js draws the strip at these limits and checks it fits).
+    const L = content.GLANCE_LIMITS;
+    const of = (n) => 'x'.repeat(n);
+    ['targetRoles', 'seniority', 'rightToWork'].forEach((k) => {
+        assert(check(Object.assign({}, base, { [k]: of(L[k]) })).length === 0, `Validate: accepts a ${k} of ${L[k]} characters`);
+        refused(Object.assign({}, base, { [k]: of(L[k] + 1) }), `a ${k} of ${L[k] + 1} characters`);
+    });
+    const area = [of(10), of(L.workArea - 12)];
+    assert(area.join(', ').length === L.workArea && check(Object.assign({}, base, { workArea: area })).length === 0,
+        `Validate: accepts a work area of ${L.workArea} characters, joined`);
+    refused(Object.assign({}, base, { workArea: [of(10), of(L.workArea - 11)] }), `a work area of ${L.workArea + 1} characters, joined`);
+    const langs = (n) => [{ language: 'English', level: 'C2' }, { language: of(n - 'English (C2) · '.length - ' (B1)'.length), level: 'B1' }];
+    assert(content.glanceLanguages(langs(L.languages)).length === L.languages && check(base, langs(L.languages)).length === 0,
+        `Validate: accepts languages that come to ${L.languages} characters in the strip`);
+    const long = check(base, langs(L.languages + 1));
+    assert(long.length > 0, `Validate: refuses languages that come to ${L.languages + 1} characters (${long[0] || 'accepted'})`);
+
     // A start date that has passed is stale, not invalid, and the build
     // cannot tell (its output is compared byte for byte, so it never reads
     // the clock). Said here, loudly, like a stale verifiedOn.
@@ -149,7 +175,7 @@ const facts = (d) => Array.from(d.querySelectorAll('.glance-fact')).map(f => [te
 
     // loadAll runs it: a bad strip fails the build, not just this test.
     const src = fs.readFileSync(path.join(ROOT, 'scripts', 'lib', 'content.js'), 'utf8');
-    assert(/problems\.push\(\.\.\.checkAtAGlance\(profile\.atAGlance\)\)/.test(src), 'Validate: loadAll checks the strip, so npm run build:content refuses a bad one');
+    assert(/problems\.push\(\.\.\.checkAtAGlance\(profile\.atAGlance, profile\.languages\)\)/.test(src), 'Validate: loadAll checks the strip and the languages it shows, so npm run build:content refuses a bad one');
 }
 
 // ===================================================================
@@ -195,6 +221,13 @@ const facts = (d) => Array.from(d.querySelectorAll('.glance-fact')).map(f => [te
         'Play index: no longer the first thing after the hero');
     assert(!!index && index.nextElementSibling === doc.getElementById('contact'), 'Play index: it sits just before Contact');
     assert(!!index && index.querySelectorAll('a').length === 5, 'Play index: still five ways to try something');
+    // A count is of the list, not the site: "five things on this site" was
+    // untrue once the flood slider and the calculator had pages of their own.
+    const NUM = { five: 5, six: 6, seven: 7, eight: 8 };
+    const label = index ? index.querySelector('.play-index-label').textContent.trim() : '';
+    const counted = (label.match(/^(\w+) things\b/i) || [])[1];
+    assert(!!counted && NUM[counted.toLowerCase()] === index.querySelectorAll('a').length && !/\bsite\b/i.test(label),
+        `Play index: its label counts the links it has, and makes no claim about the whole site ("${label}")`);
 }
 
 // ===================================================================

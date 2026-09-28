@@ -61,6 +61,9 @@ function boot(opts = {}) {
     window.SVGElement.prototype.getBoundingClientRect = function () {
         return { left: 0, top: 0, right: width, bottom: width / 2, width, height: width / 2 };
     };
+    // ...and, when asked, each character of a label the width a browser
+    // draws it (in the drawing's 800 units, so scaled by --k).
+    if (opts.charPx) window.SVGElement.prototype.getComputedTextLength = function () { return this.textContent.length * opts.charPx * 800 / width; };
     let caught = null;
     try { window.eval(moduleJs); } catch (err) { caught = err; }
     // Animation frames run only when a test asks for them.
@@ -277,6 +280,12 @@ const text = (el) => (el ? el.textContent.replace(/\s+/g, ' ').trim() : '');
     const onShow = labels.filter(t => t.style.display !== 'none').map(t => t.textContent);
     assert(!onShow.includes('high') && !onShow.includes('low') && onShow.some(t => /dips read low/.test(t)),
         `Labels: where "high" and "low" would sit on the curve, they give way and the title says which way is low (${onShow.join(' | ')})`);
+    // On a 320px phone the drawing is 222px wide, and that title ran past
+    // its edge, cut at "dips reac". Measured (7.2px a character, IBM Plex
+    // Mono at 12px), it says the same in fewer words there, and only there.
+    const titleAt = (w) => boot({ width: w, charPx: 7.2 }).doc.querySelector('#boreholeStage svg text').textContent;
+    assert(titleAt(222) === 'resistivity: dips read low' && titleAt(290) === 'apparent resistivity: dips read low' && titleAt(700) === 'apparent resistivity along the profile',
+        `Labels: a title that would run past the drawing's edge is shortened, and only then (222px "${titleAt(222)}", 290px "${titleAt(290)}", 700px "${titleAt(700)}")`);
 
     const desk = boot({ width: 760 });
     const deskLabels = Array.from(desk.doc.querySelectorAll('#boreholeStage svg text')).filter(t => t.style.display !== 'none').map(t => t.textContent);

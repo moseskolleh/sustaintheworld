@@ -266,8 +266,11 @@ const profile = JSON.parse(read('content/profile.json'));
     const now = new Date(2026, 8, 27);
     const found = (a, label) => (a.met || []).concat(a.matched || []).find(m => m.label === label);
     const lca = found(A.analyse('Sustainability Analyst. You will run a life cycle assessment of our products, build the GHG inventory, assess climate risk and report to stakeholders across the business.', { now }), 'Life Cycle Assessment');
-    assert(!!lca && lca.ev[0].t === 'Listed under Skills & Expertise' && lca.ev[0].href === '#skills',
-        `Skills: the Assay finds Life Cycle Assessment in the expertise list (${lca ? lca.ev[0].t : 'not found'})`);
+    // ...and names a heading the reader can find there: it said "Skills &
+    // Expertise" after the section became Skills & Education.
+    const heading = text(skills.querySelector('h2'));
+    assert(!!lca && lca.ev[0].t === `Listed under ${heading}` && lca.ev[0].href === '#skills',
+        `Skills: the Assay finds Life Cycle Assessment in the expertise list, under the section's own heading, "${heading}" (${lca ? lca.ev[0].t : 'not found'})`);
     const alone = new JSDOM(`<main>${education.outerHTML}</main>`).window.document;
     const excel = found(A.analyse('Sustainability Data Analyst. You will build dashboards in Excel from our emissions data, run statistical analysis, and report to stakeholders on climate risk every quarter.', { now, doc: alone }), 'Excel');
     assert(!!excel && /^Covered in Data Analytics Training: SQL, Python, Excel, Tableau/.test(excel.ev[0].t),
@@ -311,6 +314,38 @@ const profile = JSON.parse(read('content/profile.json'));
         .every(s => byId.skills.text.includes(s)), 'Narration: Skills & Education reads the degrees and the certificates');
     assert(/sustainable A\.I\./.test(byId.contact.text) && !/intersection of climate, water or A\.I\./.test(byId.contact.text),
         'Narration: Contact says what the section says: the four fields, and no sentence the page no longer has');
+
+    // Every sentence of the contact script, and where the section says it.
+    // Checking for one retired sentence let another outlive its source: the
+    // Assay's lede lost "doing this in a few kilobytes … is the whole point
+    // of my work" and the script went on saying it. A sentence with no entry
+    // here fails, and so does one whose words the section no longer has.
+    const section = text(bare.getElementById('contact'));
+    const SAID = [
+        [/^I'm open to roles and consulting in sustainability, climate risk, E\.S\.G\. and sustainable A\.I\. — in Amsterdam and the E\.U\., and remote-friendly\.$/,
+            ['Open to roles & consulting in sustainability, climate risk, ESG and sustainable AI', 'Amsterdam / EU, remote-friendly']],
+        [/^I usually reply within a couple of days\.$/, ['I usually reply within a couple of days.']],
+        [/^And if you're still deciding, there's a tool below the form\.$/, ['Still deciding?']],
+        [/^Open it, paste in a job description, and it grades how well my record fits the role, mapping each requirement to the evidence that backs it, and listing the ones this site can't show\.$/,
+            ['Paste a job description', 'grades the fit', 'maps each requirement to the evidence that backs it', 'lists the ones this site has no evidence for']],
+        [/^It runs entirely in your browser\.$/, ['entirely in your browser']],
+        [/^The text never leaves this page, and no A\.I\. model is downloaded to do it\.$/, ['the text never leaves this page', 'no AI model is downloaded to do it']]
+    ];
+    byId.contact.text.split(/(?<=[.!?])\s+(?=[A-Z])/).forEach((sentence) => {
+        const entry = SAID.find(([re]) => re.test(sentence));
+        const missing = entry ? entry[1].filter(words => !section.includes(words)) : null;
+        assert(!!entry && !missing.length,
+            `Narration: Contact's "${sentence.slice(0, 48)}…" is in the section (${!entry ? 'no entry says where' : missing.length ? `the section no longer says "${missing.join('", "')}"` : 'it is'})`);
+    });
+
+    // The chart's script offers the calculator as the page does, and no more:
+    // it said "any model, any electricity grid" of a tool with ten models
+    // and thirteen grids, and a caveat that newer models are left out.
+    const footnote = text(bare.querySelector('#ecoprompt .eco-footnote'));
+    assert(/^The full calculator, and where one answer lands on a CSRD report, are there\./.test(footnote) &&
+        /The full calculator, and where one answer lands on a sustainability report, are on their own page: the EcoPrompt Coach\.$/.test(byId.ecoprompt.text) &&
+        !/\bany (?:model|electricity grid|grid)\b/.test(byId.ecoprompt.text),
+        'Narration: the A.I. chart offers the full calculator in the words the page uses, not "any model, any grid"');
     assert(/Press More on any layer/.test(byId.experience.text) && !/research in Wageningen/.test(byId.experience.text),
         'Narration: the experience log names the layers it has, and the button that opens each');
 }

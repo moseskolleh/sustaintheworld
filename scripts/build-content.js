@@ -1503,8 +1503,10 @@ function renderAtAGlance(profile) {
     const languages = Array.isArray(profile.languages) && profile.languages.length
         ? profile.languages.map(l => `${esc(l.language)} (${esc(l.level)})`).join(' &middot; ')
         : null;
-    const place = [`${profile.person.locality}, ${profile.person.country}`].concat(g.workArea || [])
-        .map(esc).join(' &middot; ');
+    // Where he would work is a preference, so it goes with what he is open
+    // to, as the contact section says it. Under "Location", "EU" read as
+    // where he is, or may work, beside a right to work not yet stated.
+    const area = g.workArea && g.workArea.length ? ` &mdash; ${g.workArea.map(esc).join(', ')}` : '';
 
     // In the order a recruiter asks: level, start date, languages, right
     // to work, place. Values arrive escaped (or built from escaped parts).
@@ -1513,13 +1515,13 @@ function renderAtAGlance(profile) {
         ['Available', when],
         ['Languages', languages],
         ['Right to work', g.rightToWork && esc(g.rightToWork)],
-        ['Location', place]
+        ['Location', esc(`${profile.person.locality}, ${profile.person.country}`)]
     ].filter(([, value]) => value);
 
     const lines = [
         GLANCE_START,
         '            <div class="at-a-glance">',
-        `                <p class="hero-availability"><span class="blink-dot"></span>Open to ${prose(g.targetRoles)}</p>`
+        `                <p class="hero-availability"><span class="blink-dot"></span>Open to ${prose(g.targetRoles)}${area}</p>`
     ];
     if (facts.length) {
         lines.push('                <dl class="glance-facts">');

@@ -198,7 +198,7 @@ try {
             assert(readme.split(start).length === 2 && readme.split(end).length === 2 && readme.indexOf(start) < readme.indexOf(end),
                 `README: one ${start.slice(5, start.indexOf(':'))} region, in order`);
         });
-        assert(budget.renderReadme(readme, json) === readme, 'README: the budget and length tables are current (run `npm run budget -- --readme` if not)');
+        assert(budget.renderReadme(readme, json) === readme, 'README: the budget, length and on-demand module tables are current (run `npm run budget -- --readme` if not)');
         const quoted = readme.match(/against a (\d+) KB ceiling/);
         assert(!!quoted && +quoted[1] === BUDGETS.criticalWire.max / KB, `README: the summary quotes the first view's real ceiling (${quoted && quoted[1]} KB)`);
         Object.values(BUDGETS).forEach((b) => {
@@ -211,6 +211,30 @@ try {
         let threw = null;
         try { budget.renderReadme(readme.replace(budget.README_TABLES.bytes[1], ''), json); } catch (e) { threw = e; }
         assert(!!threw && /missing/.test(threw.message), 'README: a missing marker is an error, not a silent skip');
+
+        // The on-demand modules table was typed by hand, and went stale
+        // (interactives ~35 KB, dossier ~6 KB) until a review caught it. Now
+        // its weights are measured, row by row, and add up to the budget.
+        const { measured, onDemand } = budget.measure();
+        const m = measured.modules;
+        assert(m.rows.every(r => typeof r.measured === 'number') && m.rows.reduce((n, r) => n + r.measured, 0) === measured.onDemand,
+            `Modules: every row is measured, and the rows add up to the on-demand budget (${m.rows.reduce((n, r) => n + (r.measured || 0), 0)} of ${measured.onDemand})`);
+        assert(m.unlisted.length === 0 && m.twice.length === 0,
+            `Modules: every file fetched on demand is in exactly one row (unlisted: ${m.unlisted.join(', ') || 'none'}; twice: ${m.twice.join(', ') || 'none'})`);
+        const [mStart, mEnd] = budget.README_TABLES.modules;
+        const region = readme.slice(readme.indexOf(mStart), readme.indexOf(mEnd));
+        const staleRow = readme.replace(region, region.replace(/\| ~(\d+) KB \|/, (x, n) => `| ~${+n + 1} KB |`));
+        assert(staleRow !== readme && budget.renderReadme(staleRow, json) === readme, 'Modules: a stale weight in the README\'s table is rewritten to the measured one');
+        // A new module with no row is an error, not a table that quietly
+        // leaves it out; so is a file counted in two rows.
+        const added = budget.moduleRows(onDemand.concat({ rel: 'modules/fixture.js', wire: 100 }));
+        let unlisted = null;
+        try { budget.readmeTables(Object.assign({}, json, { modules: added })); } catch (e) { unlisted = e; }
+        assert(added.unlisted.join() === 'modules/fixture.js' && !!unlisted && /modules\/fixture\.js .*no row of MODULE_TABLE/.test(unlisted.message),
+            `Modules: a file fetched on demand with no row stops the README being written (${unlisted && unlisted.message})`);
+        let twice = null;
+        try { budget.readmeTables(Object.assign({}, json, { modules: Object.assign({}, m, { twice: ['modules/terminal.js'] }) })); } catch (e) { twice = e; }
+        assert(!!twice && /more than one row/.test(twice.message), 'Modules: a file in two rows stops it too');
     }
 
     // --- The report and its hints ------------------------------------------

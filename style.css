@@ -2751,6 +2751,46 @@ html.js .nojs-note { display: none; }
 }
 
 @media (max-width: 480px) {
+    /* Filled in, the strip is five facts, and a line each pushed the
+       figures off a 390x844 screen (smoke.js checks the longest strip
+       content.js accepts). So the description follows the figures here,
+       and the labels get a column. The source order, which a screen
+       reader follows, is unchanged. */
+    .hero-content {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .hero-description {
+        order: 1;
+        margin: 20px 0 0;
+    }
+
+    .at-a-glance {
+        gap: 8px;
+    }
+
+    .hero-availability {
+        padding: 4px 12px;
+        line-height: 1.5;
+    }
+
+    .glance-facts {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        align-items: baseline;
+        gap: 4px 12px;
+    }
+
+    .glance-fact {
+        display: contents;
+    }
+
+    .glance-fact dd {
+        font-size: 0.8rem;
+        line-height: 1.4;
+    }
+
     .hero-cta .btn {
         flex: 1 1 auto;
         justify-content: center;

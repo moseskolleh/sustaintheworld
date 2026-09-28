@@ -110,7 +110,6 @@ html:not(.js) .cs-lenses { display: none; }
     border: 1px solid var(--border);
     border-radius: 8px;
     background: var(--card-bg);
-    scroll-margin-top: 90px;
 }
 
 /* Out-of-lens studies stay on the page and stay readable — they are simply
@@ -483,7 +482,6 @@ html.lightbox-open { overflow: hidden; }
     border: 1px solid var(--border);
     border-radius: 8px;
     background: var(--card-bg);
-    scroll-margin-top: 90px;
 }
 .rs-item-head {
     display: flex;
@@ -556,12 +554,6 @@ html.lightbox-open { overflow: hidden; }
     .rs-item { padding: 16px 16px; }
     .rs-repro, .cs-footnote { padding: 18px 18px; }
 }
-/* Below 720px the nav scrolls away (carbon-ai.css), so a link to a case
-   study lands it at the top, not 90px down under a bar that is not there. */
-@media (max-width: 719px) {
-    .cs-card, .rs-item { scroll-margin-top: 12px; }
-}
-
 /* Low-energy and reduced-motion visitors get no transitions to pay for. */
 @media (prefers-reduced-motion: reduce) {
     .cs-lens { transition: none; }

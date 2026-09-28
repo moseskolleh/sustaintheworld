@@ -42,7 +42,7 @@
         {
             id: "ecoprompt",
             label: "the A.I. energy chart",
-            text: "This is one question from my current research: how much energy does a single A.I. answer take as the models get bigger? Have a guess. The three smallest models are already plotted for you. Drag across the chart to predict the rest, from mid-size models up to a frontier reasoning model — then reveal what the research estimates. A straight line is the natural guess. It isn't one. The gap between that guess and what the research estimates is, more or less, my entire job. The full calculator — any model, any electricity grid, and where one answer lands on a sustainability report — is on its own page, the EcoPrompt Coach."
+            text: "This is one question from my current research: how much energy does a single A.I. answer take as the models get bigger? Have a guess. The three smallest models are already plotted for you. Drag across the chart to predict the rest, from mid-size models up to a frontier reasoning model — then reveal what the research estimates. A straight line is the natural guess. It isn't one. The gap between that guess and what the research estimates is, more or less, my entire job. The full calculator, and where one answer lands on a sustainability report, are on their own page: the EcoPrompt Coach."
         },
         {
             id: "skills",
@@ -52,7 +52,7 @@
         {
             id: "contact",
             label: "the contact section",
-            text: "I'm open to roles and consulting in sustainability, climate risk, E.S.G. and sustainable A.I. — in Amsterdam and the E.U., and remote-friendly. I usually reply within a couple of days. And if you're still deciding, there's a tool below the form. Open it, paste in a job description, and it grades how well my record fits the role, mapping each requirement to the evidence that backs it, and listing the ones this site can't show. It runs entirely in your browser. The text never leaves this page, and no A.I. model is downloaded to do it. Doing that in a few kilobytes instead of a gigabyte-sized model is, more or less, the whole point of my work."
+            text: "I'm open to roles and consulting in sustainability, climate risk, E.S.G. and sustainable A.I. — in Amsterdam and the E.U., and remote-friendly. I usually reply within a couple of days. And if you're still deciding, there's a tool below the form. Open it, paste in a job description, and it grades how well my record fits the role, mapping each requirement to the evidence that backs it, and listing the ones this site can't show. It runs entirely in your browser. The text never leaves this page, and no A.I. model is downloaded to do it."
         }
     ];
 

@@ -765,24 +765,31 @@ is merged, which is his call (S7). Measured in Chromium once the page has
 settled: the homepage is 9.32 screens at 1440×900 and 16.27 at 390×844,
 from 19.4 and 32.7 when this plan was written (18.78 and 32.18 when the wave
 began); `index.html` is 84 KB on disk (21 KB gzipped), from 134 KB; the
-homepage's first view is 274 KB over the wire (280,445 bytes), from 282 KB.
+homepage's first view is 274 KB over the wire, from 282 KB.
 What the wave needs from Moses is in the owner checklist: F1–F3 (the
 strip's facts), P1 and P2 (two choices to confirm) and S7 (when it goes
 live).
 
 1. ◐ **The first view.** The availability line reads "Open to
    sustainability, climate-risk, ESG and sustainable-AI roles and
-   consulting". Under it, an at-a-glance strip is written by
+   consulting — EU, remote-friendly": where he would work is a preference,
+   so it is said there and not under "Location", beside a right to work
+   not yet stated. Under it, an at-a-glance strip is written by
    `build-content.js` from `content/profile.json` → `atAGlance`, between
    markers `build:check` holds; it shows only what the repository states
-   (the roles and the location, Amsterdam, NL · EU · remote-friendly) and
-   leaves a `null` fact out, and the validator refuses a misspelt key, an
-   impossible date or a stand-in such as "TBC". The four exact figures and
-   the photo's caption are on the first screen at 1440×900 and 390×844
-   (the figures end at 827px and 795px, the caption at 121px and 108px; the
-   caption sat at 1,069px), and smoke checks it. ✗ Seniority, available
-   from, languages with the Dutch level, and right to work (owner checklist
-   F1–F3).
+   (the location, Amsterdam, NL) and leaves a `null` fact out, and the
+   validator refuses a misspelt key, an impossible date, a stand-in such as
+   "TBC", or a fact longer than the first screen has room for
+   (`GLANCE_LIMITS` in `scripts/lib/content.js`). The four exact figures
+   and the photo's caption are on the first screen at 1440×900 and 390×844
+   (the figures end at 827px and 672px, the caption at 121px and 108px; the
+   caption sat at 1,069px), and smoke checks it, and checks it again with
+   every fact filled in at the longest the validator accepts (the figures
+   then end at 859px and 815px). On a phone that takes the facts as a
+   two-column list and the hero's description after the figures; filled in
+   a line each, the facts had pushed the figures off the screen. ✗
+   Seniority, available from, languages with the Dutch level, and right to
+   work (owner checklist F1–F3).
 2. ✓ **One primary action.** "See the evidence" (to the case studies, in
    their default view) is the one primary button; "Get in touch" is second
    and the CV a quieter link. The play index sits just before Contact. The
@@ -975,9 +982,11 @@ move to `content/brief.json`. 4.2 and 4.4 not started.
    A to B" wherever there is more than 10% headroom, and writes the
    README's budget and length tables and its quoted first-view ceiling;
    `npm test` fails while they are stale, and the weekly open-counts Action
-   rewrites them. Partial: the workflow has never run (tested here from
-   fixtures, and end to end against an earlier commit); its first run is on
-   wave 3's pull request. The README's on-demand modules table is still
-   written by hand.
+   rewrites them. The README's table of on-demand modules is written the
+   same way: the words for each row are in `MODULE_TABLE`, the weights are
+   measured, and a file fetched on demand that no row names stops it being
+   written. Partial: the workflow has never run (tested here from fixtures,
+   and end to end against an earlier commit); its first run is on wave 3's
+   pull request.
 
 **Phase 7** — not started.

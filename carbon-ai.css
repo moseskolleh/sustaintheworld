@@ -48,6 +48,7 @@
     --text-dim: #8f8f8f;
     --amber: #e0a800;
     --border: rgba(124, 252, 0, 0.18);
+    --divider: rgba(255, 255, 255, 0.05);
     --nav-bg: rgba(0, 0, 0, 0.85);
 }
 
@@ -69,6 +70,7 @@
     --text-dim: #5f635a;
     --amber: #8a6100;
     --border: rgba(34, 139, 34, 0.25);
+    --divider: rgba(22, 25, 20, 0.08);
     --nav-bg: rgba(255, 255, 255, 0.88);
 }
 @media (prefers-color-scheme: light) {
@@ -84,6 +86,7 @@
         --text-dim: #5f635a;
         --amber: #8a6100;
         --border: rgba(34, 139, 34, 0.25);
+        --divider: rgba(22, 25, 20, 0.08);
         --nav-bg: rgba(255, 255, 255, 0.88);
     }
 }
@@ -138,6 +141,11 @@ h1, h2, h3 {
 }
 
 a { color: var(--primary-green); }
+
+/* A link to anything on these pages lands it clear of the nav below. Given
+   to the case-study and research cards one at a time, it missed the games
+   and Anatomy of a Prompt, whose headings landed under the bar. */
+html { scroll-padding-top: 90px; }
 
 /* The shared nav (scripts/build-content.js writes it on every page but the
    homepage): the logo, the theme switch and five places to go, Contact the
@@ -239,10 +247,16 @@ a { color: var(--primary-green); }
 }
 
 @media (max-width: 719px) {
+    html { scroll-padding-top: 12px; }   /* no bar to clear */
     .ca-nav {
         position: static;
         padding: 8px 16px 4px;
     }
+    /* The first row, the logo and the theme switch, is the switch's height
+       from the first frame. theme.js shows the switch once the page's
+       scripts are in, and the row growing from the logo's 30px to its 40px
+       then pushed the links and the page under them 10px down. */
+    .ca-nav-logo { min-height: 40px; }
     /* All five in one row down to 320px: spread, not spaced, and no
        further apart than on a wide phone. */
     .ca-nav-links {
@@ -517,7 +531,7 @@ a { color: var(--primary-green); }
     padding: 8px 12px;
     background: var(--darker-bg);
     border-radius: 6px;
-    border: 1px solid rgba(255,255,255,0.05);
+    border: 1px solid var(--divider);
     font-size: 0.9rem;
 }
 .ca-equiv li span:last-child {
@@ -597,7 +611,7 @@ a { color: var(--primary-green); }
     align-items: center;
     gap: 12px;
     padding: 8px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
+    border-bottom: 1px solid var(--divider);
 }
 .bar-row:last-child { border-bottom: none; }
 .bar-label {
