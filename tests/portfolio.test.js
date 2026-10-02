@@ -352,6 +352,28 @@ function dom(file) {
     });
     assert(wrong.length === 0, `Cards: each says what its case study says — title, headline, basis, checkability, lenses — and links to it (wrong: ${wrong.join('; ') || 'none'})`);
 
+    // "Checkable from outside: The tool is public", under a card titled
+    // Sustainable AI Framework, read as covering the framework, which the
+    // client holds. Where a case study has public work and work held
+    // elsewhere, a checkable headline names what can be checked.
+    const unnamed = projects.caseStudies.filter((cs) => {
+        const head = cs.results[0];
+        const open = (cs.artifacts || []).filter(a => a.status === 'public');
+        const held = (cs.artifacts || []).filter(a => a.status !== 'public');
+        return head.verifiable && open.length && held.length && !open.some(a => head.brief.includes(a.name.split(' — ')[0]));
+    }).map(cs => `${cs.id}: "${cs.results[0].brief}"`);
+    assert(unnamed.length === 0, `Cards: a checkable headline beside work held elsewhere names the public work it means (${unnamed.join('; ') || 'all do'})`);
+
+    // The soft-path thesis, named in research.json, the case study's
+    // artifact and a photo caption: "Approach to" in two, "Approach for" in
+    // the third, a few lines apart on one evidence page (owner checklist K6).
+    const spelled = (obj) => (JSON.stringify(obj).match(/\w+ \w+ soft path water management: [\w ,]+/gi) || []).map(t => t.trim());
+    const listed = spelled(research);
+    const named = spelled(projects);
+    const differ = [...new Set(named.filter(n => n !== listed[0]))];
+    assert(listed.length === 1 && named.length >= 2 && differ.length === 0,
+        `Thesis: its title is spelled as research.json has it wherever a case study names it ("${listed[0]}"; ${differ.join(' | ') || `${named.length} mentions agree`})`);
+
     // Every card link lands on a case study that is there.
     const cs = new JSDOM(fs.readFileSync(path.join(ROOT, 'case-studies.html'), 'utf8')).window.document;
     const dead = Array.from(doc.querySelectorAll('a[href^="case-studies.html#"]'))

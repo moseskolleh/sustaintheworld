@@ -54,6 +54,8 @@
     fill: var(--text-secondary);
 }
 .bh-label-dim { font-size: calc(11px * var(--k, 1)); opacity: 0.8; }
+/* Over the holes, haloed: under, a shaft struck through them. */
+.bh-label-ground { paint-order: stroke; stroke: color-mix(in srgb, var(--primary-green) 7%, var(--card-bg)); stroke-width: calc(5px * var(--k, 1)); }
 
 /* --- Seven in ten: site the borehole ------------------------------- */
 .borehole-stage {

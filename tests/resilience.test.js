@@ -61,7 +61,7 @@ function assert(cond, msg) {
         toggle.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }));
     } catch (err) { threw = err; }
     assert(!threw, `Storage blocked: toggling the theme does not throw (${threw && threw.message})`);
-    assert(doc.body.classList.contains('light-mode'), 'Storage blocked: the theme still changes, it just is not remembered');
+    assert(doc.documentElement.classList.contains('light-mode'), 'Storage blocked: the theme still changes, it just is not remembered');
 
     const eco = doc.getElementById('ecoModeToggle');
     threw = null;

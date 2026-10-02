@@ -242,9 +242,9 @@ before anything runs:
 npm run voice -- --sections --dry-run
 ```
 
-The full page is **~7,900 credits** for its eight sections (the dry run above
-prints the exact figure: 7,927 on 2026-09-28). The free plan grants **8,000 per
-cycle**, so one complete render uses about 99% of a free month and leaves almost
+The full page is **~7,800 credits** for its eight sections (the dry run above
+prints the exact figure: 7,781 on 2026-10-02). The free plan grants **8,000 per
+cycle**, so one complete render uses about 97% of a free month and leaves almost
 nothing for corrections. Check your balance and per-call limit first — ask the Fish Audio
 connector for `get_credit_balance`, or look at the dashboard.
 

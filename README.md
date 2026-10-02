@@ -13,7 +13,7 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 
 - **Living journey map**: a hand-built SVG map of the journey region — West Africa to East Asia, so every stop gets real resolution instead of a world map that's half empty ocean (Natural Earth 50 m coastlines, simplified hardest away from the Rhine delta where the map zooms deepest, zero runtime dependencies). It flies from Freetown to Changsha, Bonn, Wageningen and Amsterdam as you scroll (on a phone, in a band pinned under the nav bar above the stop you are reading), and fieldwork sites like Wuppertal join the map when the story reaches them. Every name on it is 11px or more on any screen, and the Rhine delta's four sit clear of each other and of the route. Regenerate with `npm install && npm run map:build`, then sync the printed stop pixels into `script.js`; `npm run map:check` proves the committed SVG still matches the script and runs in CI
 - **"Seven in ten" — site the borehole**: a playable resistivity profile on the [groundwater case study](case-studies.html#play-borehole) — read the curve, place the rig, drill. Water-bearing fracture, clay pocket or dry hole; your holes fill a scoreboard beside the field records' 7 in 10 (reading the curve first) and blind drilling's ~3 in 10, which is labelled illustrative until it has a source. It was two widgets, the game and a strike-rate slider, making one point; it is one now
-- **"Don't let it become a boat" flood scene**: a schematic Wupper cross-section on the [Wuppertal case study](case-studies.html#play-flood) — slide the river from a calm day to July 2021 and watch the margin under the Schwebebahn's hanging cars shrink. Both games load only when a reader scrolls near them, and without JavaScript each is one line of summary
+- **"Don't let it become a boat" flood scene**: a schematic Wupper cross-section on the [Wuppertal case study](case-studies.html#play-flood) — slide the river from a calm day to July 2021 and watch the margin under the Schwebebahn's hanging cars shrink. Both games load only when a reader scrolls near them, and without JavaScript each is a note that it needs JavaScript and one line of summary
 - **Field terminal**: press <code>`</code> anywhere (or the footer button) for a hidden green-on-black terminal — try `journey`, `drill`, `co2`, `voice`, `kushe`, `help`
 - **The spoken page**: one `Listen` control in the nav reads the section in view with the browser's own speech engine, which transfers **zero bytes**. The one recording on the site is Moses introducing himself in his own voice, offered once he has recorded it, fetched only on click and labelled with exactly what it transfers (see [Narration](#narration-the-spoken-page)). Nothing ever autoplays
 - **Carbon-aware by construction**: images ship as optimized WebP, the three typefaces are self-hosted subsets, and a first view costs about **274 KB over the wire, fonts included**, against a 288 KB ceiling `npm test` enforces — a budget, not a number in a README, and one that `npm run smoke` checks against a real browser (see [Performance](#performance)). Everything a visit does not reach — the narration player, the field terminal, the section-05 interactives, the case studies' two games — is fetched only when it is used. Nothing is loaded from any other origin, and only two things are ever sent to one, both to the site's own Apps Script endpoint: a contact message, and one cookieless visit count per page view (never under Do Not Track or Global Privacy Control; see [The visit counter and privacy](#the-visit-counter-and-privacy)). A live footer badge weighs each visit in the browser (Resource Timing API × Sustainable Web Design model), counting network transfer only. A low-energy mode pauses all animation and honours `prefers-reduced-motion`
@@ -44,7 +44,7 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 ### 🏠 Home (Hero)
 - Name, role and a one-line value proposition over a rotating set of fieldwork photographs (the rotation only runs while the hero is on screen and the tab is visible)
 - An at-a-glance strip written from `content/profile.json` by `npm run build:content`: the roles he is open to and where he is today; seniority, start date, languages and right to work appear once Moses states them, and a fact that is `null` is simply not shown
-- One primary action (**See the evidence**, to the case studies), **Get in touch** second, and a quieter CV link; the figures below and the photo's caption sit inside the first screen at 1440×900 and 390×844
+- One primary action (**See the evidence**, to the case studies), **Get in touch** second, and a quieter CV link; the figures below and the photo's caption sit inside the first screen at 1440×900 and 390×844, and in a laptop's shorter browser window (1366×657, 1280×720), where the description follows the figures as it does on a phone
 - A six-link nav: Work, About, Experience, Research, CV and Contact, with the one `Listen` control and the theme switch beside them. The index of the five interactive features sits just before Contact
 - Four exact figures (164 water points, 54 hazard systems, 3 continents, 2 master's degrees), written into the HTML so they read correctly without JavaScript; with it they count up to the same values, with nothing appended, and stay still under reduced motion or low-energy mode
 
@@ -249,8 +249,8 @@ npm run voice -- --clone path/to/sample # make a voice model (add --sections to 
 
 The API key is used only there, on your machine; it never reaches the browser.
 Fish Audio bills 1 credit per UTF-8 byte of text, so the cost is known before
-anything is sent: the eight sections are ~7,900 credits today (7,927 on
-2026-09-28), and the dry run
+anything is sent: the eight sections are ~7,800 credits today (7,781 on
+2026-10-02), and the dry run
 prints the exact figure. Scripts are hashed, so fixing one sentence re-renders
 one file. `scripts/lib/voice-signature.js` is
 the one definition of "has this track already been rendered?", shared by the
@@ -316,7 +316,7 @@ CI uses Node 22.
 | `npm run build:check` | every generated page still matches `content/` |
 | `npm run fonts:check` | the committed fonts still hash to their manifest and every stylesheet's `@font-face` block is current |
 | `npm run lint:html` | every page is valid HTML ([html-validate](https://html-validate.org/)'s recommended rules; the two relaxations are explained in `.htmlvalidate.cjs`) |
-| `npm run test:unit` | every `tests/*.test.js`, side by side, one process per suite, so a new suite runs the day it exists: the twenty-three listed below (1921 passing assertions on 2026-09-28) |
+| `npm run test:unit` | every `tests/*.test.js`, side by side, one process per suite, so a new suite runs the day it exists: the twenty-three listed below, and it ends by counting the assertions that passed, so no figure for them is kept here to go stale |
 | `npm run map:check` | the committed `journey-map.svg` still matches its generator |
 | `npm run budget` | the weights this README quotes, and that its budget tables still say what the script measures (see [Performance](#performance)) |
 | `npm run smoke` | every page in a real browser: no errors, no failed or off-origin requests, every on-demand module arrives when used, no axe-core violation at 1440×900 or 390×844 in either theme, and each budgeted page's measured first view no heavier than the budget claims, and every page no longer than its length budget at both sizes once it has settled; every page again with JavaScript off, and the homepage with `script.js` blocked and late; the skip link, Back, the theme switch (followed from page to page, and the system's setting with nothing chosen), back to top and the nav bar at every width, and every other page's shared nav and call to action at 320px, links to a game, a case study or Anatomy of a Prompt landing clear of that nav, and the nav not moving as its theme switch appears; the first screen's figures, caption, strip and primary action, as the strip is today and with every fact at the longest the validator accepts; the journey map pinned over none of its stop's text on a phone, and its delta's names clear of each other on a desktop; the listen control and its player; the Assay; the case studies' two games, photo rows and lightbox; every drawing label at 11px or more on a phone, and inside its drawing; where jumps land while sections are drawn on demand, that reading back up after skipping ahead moves nothing, find-in-page and printing, which loops run, and how busy the idle page keeps the main thread at 4× CPU slowdown; the carbon-ai page's dropdowns and numbers; and the visit counter's one request, taken apart: exactly the documented fields, no cookie, no Referer, once per page view, and nothing under Do Not Track or Global Privacy Control or with JavaScript off (its own CI job; needs Chromium — `-- --browser firefox` runs it in Firefox, which CI also does) |
@@ -339,8 +339,9 @@ The suites, and the failure each one exists to prevent:
   `html.js`, one global `[hidden]` rule instead of per-element patches, the
   hero figures written as their real values and read as those while they
   count up, counters that never append a `+` or move under reduced motion or
-  low-energy mode, project cards with nothing a script has to open and case
-  study games that ship their controls hidden, copy that promises a click
+  low-energy mode and that end 1.8 s in at any frame rate, project cards with nothing a script has to open and case
+  study games that ship their controls hidden and say, without JavaScript,
+  that they need it, copy that promises a click
   hidden with the script, and a late start that holds the line being read
   while the page fills in. `npm run smoke` loads every page
   with JavaScript disabled (every nav link on show at 390 and 1024px too),
@@ -491,7 +492,8 @@ The suites, and the failure each one exists to prevent:
   one primary action, the nav six links with no numbers, the play index sits
   out of the first view, and the nav lights Work on the homepage's projects.
   `npm run smoke` checks that the figures, the caption, the strip and the
-  primary action are on the first screen at 1440×900 and 390×844.
+  primary action are on the first screen at 1440×900 and 390×844 and in two
+  laptop windows, 1366×657 and 1280×720.
 - **`shell.test.js`** — every page but the homepage has the same five nav
   links, the current page marked, and one call to action with the address,
   the contact form and the CV; the theme switch only where `theme.js` runs,
@@ -499,12 +501,14 @@ The suites, and the failure each one exists to prevent:
   stored choice (or the system's) on `<html>` before the first paint, a
   press, blocked storage, Back from the page cache, and one choice shared
   with the homepage, which with none opens in the theme `theme.js` would
-  (the system's, before its first paint); and the light palette twice and
-  the same, the homepage's. `npm run smoke` follows the choice through the
+  (the system's, set on `<html>` from `<head>`, before its stylesheet, so
+  no frame is drawn dark first); and the light palette twice and the same,
+  the homepage's. `npm run smoke` follows the choice through the
   nav in a real browser, checks the system's setting with JavaScript off
   and on the homepage from its first frame, and every page at 320px.
 - **`tooling.test.js`** — the machinery under the rest: the runner fails when
-  any suite fails and keeps each suite's output in one block, `npm test` runs
+  any suite fails, keeps each suite's output in one block and counts the
+  assertions that passed, `npm test` runs
   it rather than a hand-kept list of suites, the fake clock fires timers in
   order and only when told, and every page with a first-view budget exists
   and is measured.

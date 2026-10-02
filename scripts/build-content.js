@@ -306,14 +306,18 @@ ${bodyEnd}
 // until the module has wired them, so without JavaScript, or before the
 // module arrives, or if it never does, the host is its heading and one
 // static line, never a dead widget. For everyone else the line stays as the
-// widget's footnote, which is where its honesty labels live.
+// widget's footnote, which is where its honesty labels live. Without
+// JavaScript a note says why there is no game: the artifact cards above
+// link here, and a heading and a footnote alone read as a broken page.
 const WIDGET_HOSTS = {
     // "Site the borehole" and "Seven in Ten" were two widgets making one
     // point. They are one now: the game is the play, and the waffle is its
     // scoreboard, the reader's holes beside the field records and the
-    // illustrative blind-drilling rate.
+    // blind-drilling rate, which has no recorded source and so is labelled
+    // illustrative wherever it appears.
     borehole: {
         title: 'Seven in ten: what reading the ground is worth',
+        noun: 'drilling game',
         live: `
                         <p class="dw-intro">This is a resistivity profile like the ones we walked across the Freetown Complex. Low resistivity &mdash; the dips in the curve &mdash; can mean water-bearing fractures. Or clay. Move the rig, pick your spot, drill.</p>
                         <div class="borehole-stage" id="boreholeStage" tabindex="0" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-label="Drilling rig position along the resistivity profile. Left and right arrow keys move the rig, Enter drills."></div>
@@ -331,6 +335,7 @@ const WIDGET_HOSTS = {
     },
     flood: {
         title: 'Don&rsquo;t let it become a boat',
+        noun: 'river slider',
         live: `
                         <p class="dw-intro">The Schwebebahn hangs a few metres above the Wupper. Raise the river and watch the margin shrink &mdash; this is the problem the municipality handed us.</p>
                         <div class="flood-stage" id="floodStage"></div>
@@ -350,6 +355,7 @@ function widgetHost(name) {
     return `
                 <div class="cs-play" id="play-${name}" data-widget="${name}">
                     <h4 class="cs-stage-h">${w.title}</h4>
+                    <p class="nojs-note">This ${w.noun} runs in your browser, so it needs JavaScript switched on. What it shows is in the line below.</p>
                     <div class="dw-live" hidden>${w.live}
                     </div>
                     <p class="cs-play-summary">${w.summary}</p>
@@ -966,9 +972,8 @@ ${five.map((n) => {
             <p>
                 Every change I plan for this site is a bet about what a recruiter does on it: that the evidence
                 should come sooner, that a shorter homepage gets read further, that a link framed for one kind of
-                role lands better than a general one. Without counts none of those bets can be checked, so the site
-                measures itself first and changes second. Four weeks of these numbers are the baseline the homepage
-                redesign will be judged against.
+                role lands better than a general one. Without counts none of those bets can be checked. The first
+                four weeks of these numbers are the baseline every change after them is judged against.
             </p>
             <p>
                 Every figure but the contact messages is a count of page views. With no id there is no way to tell

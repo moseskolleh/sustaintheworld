@@ -118,8 +118,8 @@
       "results": [
         {
           "claim": "A working decision-support prototype, not a slide deck",
-          "basis": "The tool is public and runnable — every number it prints is derived in ai-carbon-data.js, which carries a source, publication date, uncertainty range and review date per factor.",
-          "brief": "The tool is public and runnable, and every factor it uses carries its source.",
+          "basis": "The EcoPrompt Coach is public and runnable — every number it prints is derived in ai-carbon-data.js, which carries a source, publication date, uncertainty range and review date per factor.",
+          "brief": "The EcoPrompt Coach prototype is public and runnable, and every factor it uses carries its source.",
           "verifiable": true
         },
         {
@@ -264,7 +264,7 @@
           "kind": "tool",
           "status": "public",
           "url": "case-studies.html#play-flood",
-          "note": "A schematic Wupper cross-section, below: slide the river from a calm day to July 2021 and watch the clearance under the Schwebebahn's hanging cars shrink."
+          "note": "A schematic Wupper cross-section, below, drawn in your browser with JavaScript on: slide the river from a calm day to July 2021 and watch the clearance under the Schwebebahn's hanging cars shrink."
         }
       ],
 
@@ -371,7 +371,7 @@
         { "src": "assets/img/soft-path-3.webp", "thumb": "assets/img/soft-path-3-480.webp", "width": 900, "height": 675, "layout": "wide",
           "alt": "Moses presenting his master's defense at Hunan University",
           "caption": "Defending the thesis at Hunan University, May 2021.",
-          "fullCaption": "Defending the thesis — 'Approach for soft path water management: thinking beyond cement, steel and pipes' — at Hunan University, May 2021." },
+          "fullCaption": "Defending the thesis — 'Approach to soft path water management: thinking beyond cement, steel and pipes' — at Hunan University, May 2021." },
         { "src": "assets/img/soft-path-2.webp", "width": 900, "height": 1200,
           "alt": "Moses in graduation gown at Hunan University",
           "caption": "Graduation day at Hunan University.",
@@ -484,7 +484,7 @@
           "kind": "tool",
           "status": "public",
           "url": "case-studies.html#play-borehole",
-          "note": "A playable version of the reading the method depends on, below: read the curve, place the rig, drill, and set your strike rate beside the field records."
+          "note": "A playable version of the reading the method depends on, below, run in your browser with JavaScript on: read the curve, place the rig, drill, and set your strike rate beside the field records."
         }
       ],
 

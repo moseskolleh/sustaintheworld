@@ -65,8 +65,8 @@ function assert(cond, msg) {
     assert(!!toggle, 'Bug2 setup: theme toggle exists');
     const use = toggle && toggle.querySelector('use');
     const href = use && (use.getAttribute('href') || use.getAttribute('xlink:href'));
-    const isLight = window.document.body.classList.contains('light-mode');
-    assert(isLight, 'Bug2 setup: body is in light-mode from localStorage');
+    const isLight = window.document.documentElement.classList.contains('light-mode');
+    assert(isLight, 'Bug2 setup: the page is in light-mode from localStorage');
     assert(
         href === '#i-sun',
         'Bug2: icon should be the sun symbol when loaded in light mode (was: ' + href + ')'

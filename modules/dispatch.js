@@ -10,10 +10,6 @@
 // it shares the page's global scope, so it declares nothing at the top
 // level and talks to the core only through window.mks.
 // ===================================================================
-
-// ===================================
-// FIELD DISPATCH — the spoken page
-// ===================================
 // Two things can speak here, and each says what it costs.
 //
 //   browser voice — window.speechSynthesis reads any section aloud. Zero

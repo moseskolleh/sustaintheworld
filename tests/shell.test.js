@@ -27,7 +27,7 @@
 const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
-const { run, ROOT } = require('./harness.js');
+const { run, ROOT, themeJs: themeHome } = require('./harness.js');
 const { shellFacts, shellRegions, shellMarkers } = require('../scripts/build-content.js');
 
 let failures = 0;
@@ -325,7 +325,7 @@ const state = (doc) => {
         const here = await open({ stored: 'dark', system: 'dark' });
         here.doc.getElementById('themeToggle').click();
         const back = run(here.window.localStorage.getItem('theme'), quiet);
-        assert(back.window.document.body.classList.contains('light-mode'), 'Shared: light chosen here is the homepage\'s theme too');
+        assert(back.window.document.documentElement.classList.contains('light-mode'), 'Shared: light chosen here is the homepage\'s theme too');
         // Left open: a homepage closed while the suite still awaits has its
         // timers fire into a window with no document.
     }
@@ -333,8 +333,8 @@ const state = (doc) => {
     // --- the homepage with nothing stored: the system's, as here -------------
     // It opened dark whatever the system said, so a reader on a light system
     // who had never pressed a switch met light on every page but the first.
-    // mks.theme, the first thing in index.html's <body>, decides now, by the
-    // rule theme.js uses: a stored choice, else the system's, else dark.
+    // mks.theme, inline in index.html's <head>, decides now, by the rule
+    // theme.js uses: a stored choice, else the system's, else dark.
     {
         const system = (scheme) => (w) => {
             w.console.log = () => {};
@@ -347,7 +347,7 @@ const state = (doc) => {
             const doc = r.window.document;
             const b = doc.getElementById('themeToggle');
             const s = {
-                light: doc.body.classList.contains('light-mode'),
+                light: doc.documentElement.classList.contains('light-mode'),
                 name: b.getAttribute('aria-label'),
                 icon: b.querySelector('use').getAttribute('href'),
                 bar: doc.querySelector('meta[name="theme-color"]').getAttribute('content'),
@@ -356,23 +356,37 @@ const state = (doc) => {
             return Object.assign(r, { doc, s });
         };
 
+        // It sat at the top of <body>, after the stylesheet's <link>. An
+        // inline script after a stylesheet still loading waits for it, and
+        // Chromium could draw a frame in between: dark, on a light system,
+        // in about one smoke run in ten. Before the stylesheet nothing makes
+        // it wait, and <html> is there to take the class.
         const html = read('index.html');
-        assert(/<body>\s*(?:<!--[\s\S]*?-->\s*)?<script>[^<]*\bmks\.theme\(\)<\/script>/.test(html),
-            'Homepage: mks.theme is the first thing in <body>, inline, so the theme is on the page before anything is drawn');
-        // A style pass can fall between <body> opening and mks.theme. Under
-        // reduced motion every element transitions for 0.01ms, so body's
-        // colour then eased from dark's white, and what was styled in that
-        // frame kept white text on the light page until next restyled (axe
-        // caught it, one smoke run in four). Body never transitions.
+        const head = html.slice(0, html.indexOf('</head>'));
+        const at = head.search(/<script>[^<]*\bmks\.theme\(\)<\/script>/);
+        const sheet = head.indexOf('rel="stylesheet"');
+        assert(at > -1 && sheet > -1 && at < sheet,
+            `Homepage: mks.theme is inline in <head>, before the stylesheet, so nothing holds it back from the first frame (script at ${at}, stylesheet at ${sheet})`);
+        assert(/documentElement\.classList\.toggle\('light-mode'/.test(themeHome) && !/document\.body\b/.test(themeHome),
+            'Homepage: it marks <html>, which exists in <head>, not <body>, which does not yet');
+        const homeCss = read('style.css').replace(/\/\*[\s\S]*?\*\//g, '');
+        const bodyKeyed = (homeCss.match(/body\.light-mode[^{]*/g) || []).concat((read('modules/dispatch.css').match(/body\.light-mode[^{]*/g) || []));
+        assert(bodyKeyed.length === 0 && /html\.light-mode\s*{/.test(homeCss),
+            `Homepage: the light palette is keyed on html.light-mode, where mks.theme puts it (${bodyKeyed.join('; ') || 'nothing on body'})`);
+        // Under reduced motion every element transitions for 0.01ms, so a
+        // change of theme eased body's colour from dark's white, and what
+        // was styled in that frame kept white text on the light page until
+        // next restyled (axe caught it, one smoke run in four). Body never
+        // transitions.
         const calm = (read('style.css').match(/@media \(prefers-reduced-motion: reduce\) \{\s*\*, \*::before, \*::after \{[\s\S]*?\n\}/) || [''])[0];
         assert(/transition-duration: 0\.01ms !important/.test(calm) && /\n\s*body \{ transition: none !important; \}/.test(calm),
-            'Homepage: under reduced motion, where everything else transitions for 0.01ms, body does not, so a theme set as it opens is not eased in');
+            'Homepage: under reduced motion, where everything else transitions for 0.01ms, body does not, so a change of theme is not eased in');
 
         const lit = home(undefined, 'light');
         assert(lit.s.light && lit.s.name === 'Switch to dark theme' && lit.s.icon === '#i-sun' && lit.s.bar === '#f4f6f0' && lit.s.stored === null && lit.errors.length === 0,
             `Homepage: a light system and nothing stored opens light, the switch and the browser bar with it, and nothing is stored for it (${JSON.stringify(lit.s)})`);
         lit.doc.getElementById('themeToggle').click();
-        assert(!lit.doc.body.classList.contains('light-mode') && lit.window.localStorage.getItem('theme') === 'dark',
+        assert(!lit.doc.documentElement.classList.contains('light-mode') && lit.window.localStorage.getItem('theme') === 'dark',
             'Homepage: a press from the system\'s light is dark, and that choice is stored');
         const dark = home(undefined, 'dark');
         assert(!dark.s.light && dark.s.name === 'Switch to light theme' && dark.s.bar === '#0a0a0a', `Homepage: a dark system and nothing stored opens dark (${JSON.stringify(dark.s)})`);
@@ -398,7 +412,7 @@ const state = (doc) => {
         const shown = new kept.window.Event('pageshow');
         shown.persisted = true;
         kept.window.dispatchEvent(shown);
-        const now = { light: kept.doc.body.classList.contains('light-mode'), name: kept.doc.getElementById('themeToggle').getAttribute('aria-label'), bar: kept.doc.querySelector('meta[name="theme-color"]').getAttribute('content') };
+        const now = { light: kept.doc.documentElement.classList.contains('light-mode'), name: kept.doc.getElementById('themeToggle').getAttribute('aria-label'), bar: kept.doc.querySelector('meta[name="theme-color"]').getAttribute('content') };
         assert(now.light && now.name === 'Switch to dark theme' && now.bar === '#f4f6f0', `Homepage: Back to a kept page takes up the choice made elsewhere since (${JSON.stringify(now)})`);
     }
 
@@ -417,7 +431,7 @@ const state = (doc) => {
         const unpaired = Object.keys(explicit).filter(k => !(k in dark)).concat(Object.keys(dark).filter(k => !(k in explicit)));
         assert(unpaired.length === 0, `Palette: every token has a dark and a light value (${unpaired.join(', ') || 'all paired'})`);
 
-        const home = tokens((strip(read('style.css')).match(/body\.light-mode\s*{([^}]*)}/) || [])[1] || '');
+        const home = tokens((strip(read('style.css')).match(/html\.light-mode\s*{([^}]*)}/) || [])[1] || '');
         const same = { '--primary-green': '--primary-green', '--card-bg': '--card-bg', '--text-primary': '--text-primary',
             '--text-secondary': '--text-secondary', '--text-dim': '--text-dim', '--amber': '--accent-amber', '--border': '--line-color' };
         const differ = Object.entries(same).filter(([mine, theirs]) => explicit[mine] !== home[theirs])
@@ -437,7 +451,7 @@ const state = (doc) => {
         const neutral = ['carbon-ai.css', 'content.css', 'stats.css']
             .flatMap(f => (strip(read(f)).match(/(?<![-\w])border[\w-]*:[^;]*(?:rgba?\(\s*(?:255\s*,\s*255\s*,\s*255|0\s*,\s*0\s*,\s*0)\b|#f{3}\b|#f{6}\b|#0{3}\b|#0{6}\b|\bwhite\b|\bblack\b)[^;]*/gi) || []).map(d => `${f}: ${d}`));
         assert(neutral.length === 0, `Palette: no line on these pages is a fixed white or black, which one theme cannot see (${neutral.join('; ') || 'none'})`);
-        // Anatomy of a Prompt's accents: carbon-ai.html has no body.light-mode.
+        // Anatomy of a Prompt's accents: carbon-ai.html has no html.light-mode.
         const anatomy = strip(read('modules/anatomy.css'));
         assert(/\[data-theme=["']?light["']?\]\s+\.ca-anatomy\s*{/.test(anatomy) && !/light-mode/.test(anatomy),
             'Palette: Anatomy of a Prompt takes its light accents from data-theme, which is what carbon-ai.html sets');

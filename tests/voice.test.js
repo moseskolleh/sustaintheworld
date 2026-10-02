@@ -193,6 +193,23 @@ const runGenerator = (args) => execFileSync(
         `Generator: …and prices it at one credit per byte (~${bytes.toLocaleString()})`
     );
 
+    // The docs quote that bill: what the dry run prints, rounded, and the
+    // share of a free month (8,000 credits). Typed by hand, it said 7,927
+    // after a cut sentence had made it 7,781.
+    const credits = (rel) => {
+        const doc = fs.readFileSync(path.join(ROOT, rel), 'utf8').replace(/\s+/g, ' ');
+        return {
+            rounded: +((doc.match(/~(\d,\d{3}) credits/) || [])[1] || '').replace(',', ''),
+            exact: +((doc.match(/\((?:the dry run above prints the exact figure: )?(\d,\d{3}) on \d{4}-\d{2}-\d{2}\)/) || [])[1] || '').replace(',', ''),
+            share: +((doc.match(/about (\d+)% of a free month/) || [])[1] || NaN)
+        };
+    };
+    const readme = credits('README.md');
+    const setup = credits('docs/narration-setup.md');
+    const near = Math.round(bytes / 100) * 100;
+    assert(readme.exact === bytes && readme.rounded === near && setup.exact === bytes && setup.rounded === near && setup.share === Math.round(bytes / 80),
+        `Docs: the README and narration-setup.md quote the dry run's figure (${bytes}, ~${near}, ${Math.round(bytes / 80)}% of a free month; they say ${JSON.stringify({ readme, setup })})`);
+
     assert(fs.readFileSync(MANIFEST_PATH, 'utf8') === before, 'Generator: none of these runs touched the manifest');
 }
 

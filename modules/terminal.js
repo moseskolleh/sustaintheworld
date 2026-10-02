@@ -9,10 +9,6 @@
 // it shares the page's global scope, so it declares nothing at the top
 // level and talks to the core only through window.mks.
 // ===================================================================
-
-// ===================================
-// FIELD TERMINAL — press ` or the footer button
-// ===================================
 (() => {
     const mks = window.mks;
     const toggleBtn = document.getElementById('terminalToggle');
@@ -175,7 +171,7 @@
         theme: () => {
             const b = document.querySelector('.theme-toggle');
             if (b) b.click();
-            print('theme: ' + (document.body.classList.contains('light-mode') ? 'light' : 'dark'));
+            print('theme: ' + (document.documentElement.classList.contains('light-mode') ? 'light' : 'dark'));
         },
         kushe: () => {
             print('Kushe! Aw di bodi?');

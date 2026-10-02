@@ -598,6 +598,15 @@ const page = (s) => new JSDOM(renderStats({ stats: s, lenses })).window.document
     }
     const doc = page(fetchStats.EMPTY);
     assert(/Counting has not started yet/.test(doc.body.textContent) && !doc.querySelector('.st-values'), 'Empty: rendered from the empty file, it shows no figures');
+
+    // When the redesigned homepage goes live is Moses's call (S7): before
+    // four weeks of counts, or after. The page said "the site measures
+    // itself first and changes second", which only the second makes true.
+    // What it says now holds either way.
+    const why = (Array.from(doc.querySelectorAll('section')).find(s => /Why count at all/.test(s.textContent)) || { textContent: '' }).textContent.replace(/\s+/g, ' ');
+    assert(/The first four weeks of these numbers are the baseline every change after them is judged against\./.test(why) &&
+        !/\bfirst and changes second\b|redesign will be judged/.test(why),
+        'Why: the baseline is for every change after the first four weeks, true whenever the redesign goes live (S7)');
 }
 
 // --- the counting state, from the fixture ----------------------------------------

@@ -18,10 +18,11 @@ const { JSDOM } = require('jsdom');
 const ROOT = path.join(__dirname, '..');
 
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-// The first thing index.html's <body> runs: mks.theme, which puts the stored
-// or the system's theme on the page before its first paint. jsdom is told
-// to run no inline script, so the harness runs this one where the page does.
-const themeJs = (html.match(/<body>\s*(?:<!--[\s\S]*?-->\s*)?<script>([\s\S]*?)<\/script>/) || [])[1] || '';
+// What index.html's <head> runs before its stylesheet: mks.theme, which puts
+// the stored or the system's theme on <html> before the first paint. jsdom
+// is told to run no inline script, so the harness runs this one as the page
+// does.
+const themeJs = (html.match(/<script>([^<]*\bmks\.theme\(\))<\/script>/) || [])[1] || '';
 const js = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8');
 const voiceJs = fs.readFileSync(path.join(ROOT, 'voice-scripts.js'), 'utf8');
 const dataJs = fs.readFileSync(path.join(ROOT, 'ai-carbon-data.js'), 'utf8');
@@ -115,7 +116,7 @@ function run(theme, options) {
     if (typeof opts.before === 'function') opts.before(window);
 
     // Execute the site scripts in the window context, in the order the
-    // browser would: the theme at the top of <body>, the two data files a
+    // browser would: the theme from <head>, the two data files a
     // module depends on, the core, then the modules the core would have
     // fetched on demand.
     window.eval(themeJs);

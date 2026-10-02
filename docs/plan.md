@@ -556,8 +556,9 @@ rule makes that cheap.
 ## Progress
 
 What branch `claude/plan-implementation-soh954` implements so far, step by step,
-checked against the code and the test runs on 2026-09-28 (`npm test`: 1,921
-passing in twenty-three suites; `npm run smoke` in Chromium: passes). Waves 1
+checked against the code and the test runs on 2026-10-02 (`npm test`: 1,970
+passing in twenty-three suites, the figure the runner prints at the end;
+`npm run smoke` in Chromium: passes). Waves 1
 and 2 are on `main` (pull requests #48 and #49, merged by 2026-09-27, where
 CI's Chromium and Firefox smoke jobs passed). Wave 3 (Phase 2 and Phase 6
 step 8) is built on `wave/w3-integrate` for this branch and is not on `main`
@@ -787,7 +788,12 @@ live).
    every fact filled in at the longest the validator accepts (the figures
    then end at 859px and 815px). On a phone that takes the facts as a
    two-column list and the hero's description after the figures; filled in
-   a line each, the facts had pushed the figures off the screen. ✗
+   a line each, the facts had pushed the figures off the screen. A laptop's
+   browser window is shorter than its screen (1366×768 leaves about
+   1366×657, where the figures sat wholly below the fold), so below 880px
+   tall a desktop takes the description after the figures too, and smoke
+   checks 1366×657 and 1280×720 as well (the figures end at 588px and
+   600px; 652px and 664px with every fact at its longest). ✗
    Seniority, available from, languages with the Dutch level, and right to
    work (owner checklist F1–F3).
 2. ✓ **One primary action.** "See the evidence" (to the case studies, in

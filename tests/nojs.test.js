@@ -184,6 +184,40 @@ function rules(css) {
     assert(tags.length === 2 && tags.every(t => /onerror=["'][^"']*classList\.remove\('js'\)/.test(t)),
         `carbon-ai.html: each script that fails to load brings the note back (onerror on ${tags.filter(t => /onerror/.test(t)).length} of ${tags.length})`);
     assert(/class="nojs-note"/.test(html), 'index.html: a note stands in for the section-05 calculators without JavaScript');
+    // Without JavaScript the note sat flush on the coach's button, and both
+    // led to the same page: two ways on, back to back. And the footnote
+    // cited the sources of a chart that was not there.
+    const { JSDOM } = require('jsdom');
+    const home = new JSDOM(html).window.document;
+    const note = home.querySelector('#ecoprompt .nojs-note');
+    const ways = Array.from(home.querySelectorAll('#ecoprompt a[href="carbon-ai.html"]'));
+    assert(!!note && !note.querySelector('a') && ways.length === 1 && ways[0].closest('.eco-actions'),
+        `index.html: without JavaScript, AI, Weighed has one way on to the coach, its button (${ways.length} links)`);
+    const cite = Array.from(home.querySelectorAll('#ecoprompt .eco-footnote *')).find(el => /Jegham/.test(el.textContent) && !el.querySelector('*:not(a)') );
+    assert(!!cite && !!cite.closest('.needs-js'), 'index.html: the chart\'s sources go with the chart when JavaScript cannot run');
+    const noteRule = rules(read('style.css')).find(r => r.selectors.includes('.nojs-note'));
+    assert(!!noteRule && /margin(?:-bottom)?:\s*[^;]*[1-9]/.test(noteRule.body), 'index.html: the note keeps its distance from what follows it');
+}
+// The case studies' two games. Without JavaScript a host was its heading
+// and a footnote, under artifact cards that call it interactive and link
+// to it: nothing said why there was no game.
+{
+    const { JSDOM } = require('jsdom');
+    const doc = new JSDOM(read('case-studies.html')).window.document;
+    const hosts = Array.from(doc.querySelectorAll('[data-widget]'));
+    const bare = hosts.filter(h => !h.querySelector(':scope > .nojs-note') || !/needs JavaScript/.test(h.querySelector(':scope > .nojs-note').textContent))
+        .map(h => h.id);
+    assert(hosts.length === 2 && bare.length === 0,
+        `case-studies.html: each of the ${hosts.length} games says, without JavaScript, that it needs it (${bare.join(', ') || 'all do'})`);
+    const css = stripComments(read('carbon-ai.css'));
+    assert(/html\.js \.nojs-note\s*\{\s*display:\s*none/.test(css) && /<link rel="stylesheet" href="carbon-ai\.css">/.test(read('case-studies.html')),
+        'case-studies.html: the note goes with JavaScript on (carbon-ai.css, which the page loads)');
+    // A card that links to a game says it runs with JavaScript, so the
+    // promise holds for a reader without it too.
+    const { projects } = require('../scripts/lib/content.js').loadAll();
+    const promising = projects.caseStudies.flatMap(p => (p.artifacts || []).filter(a => /#play-/.test(a.url || '')))
+        .filter(a => !/JavaScript/.test(a.note || '')).map(a => a.name);
+    assert(promising.length === 0, `case-studies.html: every artifact that links to a game says it needs JavaScript (${promising.join('; ') || 'all do'})`);
 }
 
 // ===================================================================
@@ -360,6 +394,42 @@ async function lateLineCase() {
     await counterCase('Counters (reduced motion)', { reduce: true }, false);
     await counterCase('Counters (low-energy mode)', { eco: 'on' }, false);
     await counterCase('Counters (late start)', { markJs: false }, false);
+
+    // The count is timed, not counted in frames. It added a fixed step per
+    // frame, so on a device whose frames ran slow (smoke's own 4x CPU
+    // throttle, a busy runner) it was still running on the first screen
+    // long after its 1.8 s, and smoke's idle main-thread check went over
+    // its ceiling at random. Here the frames and the clock are the test's.
+    for (const [hz, label] of [[3, 'slow frames, 3 a second'], [120, 'fast frames, 120 a second']]) {
+        let observers = [];
+        const frames = [];
+        let t = 1000;
+        const { window, errors } = run('dark', {
+            before(w) {
+                observers = fakes(w);
+                w.requestAnimationFrame = (fn) => { frames.push(fn); return frames.length; };
+                w.performance.now = () => t;
+            }
+        });
+        const doc = window.document;
+        await tick(0);
+        fireStats(window, observers);
+        // A count is running while its digits are hidden from screen readers
+        // (the digits can show the figure a frame early, since they round up).
+        const counting = () => !!doc.querySelector('.hero-stat-number[aria-hidden]');
+        // Every frame due up to `ms` after the count began.
+        const at = (ms) => {
+            while (frames.length && t + 1000 / hz <= 1000 + ms + 1e-6) { t += 1000 / hz; frames.splice(0).forEach(fn => fn(t)); }
+            return counting();
+        };
+        const halfway = at(900);
+        const late = at(1790);
+        const after = at(1800 + 1000 / hz);
+        const shown = Array.from(doc.querySelectorAll('.hero-stat-number')).map(c => c.textContent).join('|');
+        assert(errors.length === 0 && halfway && late && !after && shown === targets(doc) && !doc.querySelector('.hero-stats .sr-only'),
+            `Counters (${label}): still counting 0.9 s and 1.79 s in, done on the first frame after 1.8 s on its exact figures (${halfway}, ${late}, ${after}: ${shown})`);
+        window.close();
+    }
 
     // Low-energy mode switched on after the counters were zeroed but before
     // they came into view: they are put straight back, not counted up.

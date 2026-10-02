@@ -251,6 +251,11 @@ const webpSize = (rel) => {
         assert(sizes.length >= 2 && small.length === 0, `Chart: no label in style.css is set below 11 units (${small.join(', ') || `${sizes.length} sizes checked`})`);
         assert(/@container \(width < 479\.5px\) \{\s*\.ydi-svg \{ aspect-ratio: 5 \/ 4; \}/.test(css),
             'Chart: the stylesheet holds the phone shape (5:4) before the script draws it, so nothing below moves');
+        // A finger's drag draws: touch-action on the <svg> itself. On the
+        // <rect> inside, Chromium ignores it, and a drag was cancelled as a
+        // scroll after two moves (smoke drags it with touch events).
+        const svgRule = (css.replace(/\/\*[\s\S]*?\*\//g, '').match(/(?:^|\})\s*\.ydi-svg\s*\{([^}]*)\}/) || [])[1] || '';
+        assert(/touch-action:\s*none/.test(svgRule), `Chart: a drag across the chart draws rather than scrolls (touch-action on .ydi-svg: ${(svgRule.match(/touch-action:\s*[^;]+/) || ['none set'])[0]})`);
     }
 
     // ===============================================================

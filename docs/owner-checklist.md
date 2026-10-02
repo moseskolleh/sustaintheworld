@@ -305,7 +305,10 @@ README under "The visit counter and privacy".
     its own first four weeks (no before-and-after, but a baseline for every
     later change).
   - *Where:* your merge of the Phase 2 (Wave 3) pull request; note the choice
-    under Phase 1, step 5 in `docs/plan.md` → "Progress".
+    under Phase 1, step 5 in `docs/plan.md` → "Progress". `stats.html` says
+    only that the first four weeks are the baseline for every change after
+    them, which holds whichever you choose; it does not promise a
+    before-and-after.
   - *Check:* the figures in `docs/plan.md` match `content/stats.json` →
     `weeks` for the same four weeks.
 
@@ -541,7 +544,14 @@ already on the site; confirm it or give the right value.
   experience entry, the field report). If the ministry's own
   boundary was the hosted-service one, say so and those lines can name it.
 
-*Check for K1, K2 and K4:* change the value in `content/`, run
+- [ ] **K6. The soft-path thesis title.** The site now spells it one way
+  everywhere: "Approach to soft path water management: thinking beyond
+  cement, steel and pipes — Freetown as case study" (`content/research.json`,
+  and in `content/projects.json` → `water-management` the artifact and the
+  defence photo's caption, which said "Approach for"). If the title on the
+  thesis is different, change all three.
+
+*Check for K1, K2, K4 and K6:* change the value in `content/`, run
 `npm run build:content`, and `npm test` names every page that still disagrees.
 K3 has no test behind it: the field report and the case study's `role` and
 `method[0]` are changed together, by hand.

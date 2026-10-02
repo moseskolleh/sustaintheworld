@@ -687,14 +687,15 @@ const animateCounters = () => {
             if (counter.textContent !== String(target)) { counter.textContent = String(target); still(counter, false); }
             return;
         }
+        // By the clock, not a step per frame: on a slow device that ran on
+        // well past 1.8 s, the first screen busy all the while.
         const duration = 1800;
-        const increment = target / (duration / 16);
-        let current = 0;
+        const start = performance.now();
 
         const updateCounter = () => {
-            current += increment;
-            if (current < target) {
-                counter.textContent = Math.ceil(current);
+            const progress = Math.min(1, Math.max(0, (performance.now() - start) / duration));
+            if (progress < 1) {
+                counter.textContent = Math.ceil(target * progress);
                 requestAnimationFrame(updateCounter);
             } else {
                 counter.textContent = String(target);
@@ -1074,7 +1075,7 @@ const initThemeToggle = () => {
     const sync = () => {
         syncThemeColor();
         if (!toggle) return;
-        const isLightMode = document.body.classList.contains('light-mode');
+        const isLightMode = document.documentElement.classList.contains('light-mode');
         const use = toggle.querySelector('use');
         if (use) use.setAttribute('href', `#i-${isLightMode ? 'sun' : 'moon'}`);
         toggle.setAttribute('aria-label', isLightMode ? 'Switch to dark theme' : 'Switch to light theme');
@@ -1088,8 +1089,7 @@ const initThemeToggle = () => {
     toggle.hidden = false;
 
     toggle.addEventListener('click', () => {
-        document.body.classList.toggle('light-mode');
-        const isLightMode = document.body.classList.contains('light-mode');
+        const isLightMode = document.documentElement.classList.toggle('light-mode');
         safeStorage.local.set('theme', isLightMode ? 'light' : 'dark');
         sync();
     });
@@ -1101,14 +1101,14 @@ const initThemeToggle = () => {
 const themeColorMeta = document.querySelector('meta[name="theme-color"]');
 const syncThemeColor = () => {
     if (!themeColorMeta) return;
-    const light = document.body.classList.contains('light-mode');
+    const light = document.documentElement.classList.contains('light-mode');
     themeColorMeta.setAttribute('content', light ? THEME_COLOR_LIGHT : THEME_COLOR_DARK);
 };
 const THEME_COLOR_DARK = '#0a0a0a';
 const THEME_COLOR_LIGHT = '#f4f6f0';
 
-// The theme is on the page already (mks.theme, atop index.html's <body>);
-// the switch and the browser bar follow it.
+// The theme is on the page already (mks.theme, in index.html's <head>, on
+// <html>); the switch and the browser bar follow it.
 initThemeToggle();
 
 // ===================================

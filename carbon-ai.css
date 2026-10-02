@@ -52,7 +52,7 @@
     --nav-bg: rgba(0, 0, 0, 0.85);
 }
 
-/* The light palette is the homepage's (style.css, body.light-mode), the
+/* The light palette is the homepage's (style.css, html.light-mode), the
    page behind it the colour of the browser bar there. theme.js sets
    data-theme before the first paint, from the reader's choice or else the
    system's; without it the system's setting decides here. Written twice,
@@ -98,12 +98,10 @@
 [hidden] { display: none !important; }
 
 /* Without JavaScript (no html.js, set in <head>) the calculator cannot run:
-   a note stands in for its controls and the ledger it renders, and copy
-   that points at either (or at the homepage's calculators) goes with them. */
+   a note stands in for its controls and the ledger it renders. */
 html:not(.js) .ca-presets,
 html:not(.js) .ca-grid,
-html:not(.js) .ca-ledger-section,
-html:not(.js) .ca-needs-js {
+html:not(.js) .ca-ledger-section {
     display: none !important;
 }
 

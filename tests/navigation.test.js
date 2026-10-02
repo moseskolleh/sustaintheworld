@@ -181,12 +181,12 @@ const countScrolls = (window) => {
 
         toggle.click();
         const use = toggle.querySelector('use');
-        assert(doc.body.classList.contains('light-mode'), 'Theme: pressing it switches to light');
+        assert(doc.documentElement.classList.contains('light-mode'), 'Theme: pressing it switches to light');
         assert(toggle.getAttribute('aria-label') === 'Switch to dark theme' && use.getAttribute('href') === '#i-sun', 'Theme: the name and the icon follow');
         assert(meta.getAttribute('content') === '#f4f6f0', `Theme: the browser chrome colour follows (${meta.getAttribute('content')})`);
         assert(window.localStorage.getItem('theme') === 'light', 'Theme: the choice is remembered');
         toggle.click();
-        assert(!doc.body.classList.contains('light-mode') && toggle.getAttribute('aria-label') === 'Switch to light theme' && meta.getAttribute('content') === '#0a0a0a', 'Theme: and back to dark');
+        assert(!doc.documentElement.classList.contains('light-mode') && toggle.getAttribute('aria-label') === 'Switch to light theme' && meta.getAttribute('content') === '#0a0a0a', 'Theme: and back to dark');
     }
     {
         const { window } = run('light');

@@ -671,10 +671,14 @@ async function exerciseCarbonTool(page, r) {
 // behind it: the hero's stats sat at 883px of a 900px desktop and 1,010px
 // of a phone's 844, its photo caption at 1,019px, and the play index was
 // the next thing down. Measured once the page has settled: fonts in, the
-// loading screen gone, nothing scrolled.
+// loading screen gone, nothing scrolled. Besides the plan's two screens,
+// two laptops' browser windows, which are shorter than their screens: a
+// 1366x768 laptop leaves about 1366x657, and the figures sat wholly below
+// it; at 1280x720 the fold cut through the digits.
+const FIRST_VIEWS = [[1440, 900], [390, 844], [1366, 657], [1280, 720]];
 async function exerciseFirstView(browser, origin) {
     console.log('  index.html — the first view');
-    for (const [width, height] of [[1440, 900], [390, 844]]) {
+    for (const [width, height] of FIRST_VIEWS) {
         const context = await browser.newContext({ viewport: { width, height } });
         const page = await context.newPage();
         await page.goto(`${origin}/index.html`, { waitUntil: 'load' });
@@ -786,7 +790,7 @@ async function exerciseLongestStrip(browser, origin) {
     const START = '            <!-- AT-A-GLANCE:START', END = '<!-- AT-A-GLANCE:END -->';
     const page0 = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
     const html = page0.slice(0, page0.indexOf(START)) + renderAtAGlance(profile) + page0.slice(page0.indexOf(END) + END.length);
-    for (const [width, height] of [[1440, 900], [390, 844]]) {
+    for (const [width, height] of FIRST_VIEWS) {
         const context = await browser.newContext({ viewport: { width, height } });
         await context.route(`${origin}/index.html`, (route) => route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: html }));
         const page = await context.newPage();
@@ -1239,6 +1243,81 @@ async function exerciseJourneyAndChart(browser, origin) {
         else ok(`${where}: all ${r.count} labels, the callout and the legend ${LABEL_MIN_PX}px or more, none cut off`);
         await context.close();
     }
+
+    // You Draw It's own small print, in both themes: the hint's pill was
+    // dark's grey on the light chart (green on it at 1.9:1), and the models
+    // already plotted were faded to 2.1:1. axe cannot see either: the hint
+    // is aria-hidden and the labels are inside role=img.
+    for (const scheme of ['light', 'dark']) {
+        const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, colorScheme: scheme, reducedMotion: 'reduce' });
+        const page = await context.newPage();
+        await page.goto(`${origin}/index.html`, { waitUntil: 'load' });
+        await page.evaluate(() => document.getElementById('ydi').scrollIntoView({ block: 'center', behavior: 'instant' }));
+        await page.waitForFunction(() => document.querySelector('#ydiSvg .ydi-xlabel.known'), null, { timeout: 8000 }).catch(() => null);
+        const c = await page.evaluate(() => {
+            const rgb = (s) => (s.match(/[\d.]+/g) || []).map(Number);
+            const lin = (v) => ((v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+            const lum = ([r, g, b]) => 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+            const over = (fg, bg, a = fg.length > 3 ? fg[3] : 1) => [0, 1, 2].map(i => fg[i] * a + bg[i] * (1 - a));
+            const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return +((x + 0.05) / (y + 0.05)).toFixed(2); };
+            const chart = rgb(getComputedStyle(document.querySelector('.ydi-chart')).backgroundColor);
+            const hint = getComputedStyle(document.getElementById('ydiHint'));
+            const known = Array.from(document.querySelectorAll('#ydiSvg .ydi-xlabel.known')).map((t) => {
+                const s = getComputedStyle(t);
+                return ratio(over(rgb(s.fill), chart, parseFloat(s.opacity)), chart);
+            });
+            return { light: document.documentElement.classList.contains('light-mode'), hint: ratio(rgb(hint.color), over(rgb(hint.backgroundColor), chart)), known };
+        });
+        const where = `You Draw It, ${scheme} theme`;
+        if (c.light !== (scheme === 'light')) bad(`${where}: the page opened in the other theme`);
+        else if (c.hint >= 4.5 && c.known.length && c.known.every(k => k >= 4.5)) ok(`${where}: the hint reads at ${c.hint}:1 and the plotted models' names at ${Math.min(...c.known)}:1`);
+        else bad(`${where}: the hint reads at ${c.hint}:1 and the plotted models' names at ${c.known.join(', ') || 'none found'} (want 4.5:1)`);
+        await context.close();
+    }
+
+    // You Draw It drawn with a finger: one drag across the chart sets every
+    // guess. touch-action sat on the SVG <rect> the pointer handlers are on,
+    // where Chromium ignores it; the <svg> was 'auto', so the browser took
+    // the drag for a scroll and cancelled it after two moves, and one column
+    // moved. Touch is sent through DevTools, so Chromium only.
+    if (browser.browserType().name() === 'chromium') {
+        const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce' });
+        const page = await context.newPage();
+        await page.goto(`${origin}/index.html`, { waitUntil: 'load' });
+        await page.evaluate(() => document.getElementById('ydi').scrollIntoView({ block: 'center', behavior: 'instant' }));
+        await page.waitForFunction(() => document.querySelector('#ydiSvg .ydi-hit'), null, { timeout: 8000 }).catch(() => null);
+        await page.evaluate(() => document.getElementById('ydi').scrollIntoView({ block: 'center', behavior: 'instant' }));
+        await page.waitForTimeout(300);
+        const box = await page.evaluate(() => {
+            const hit = document.querySelector('#ydiSvg .ydi-hit');
+            const seen = (window.__ydiTouch = { pointerdown: 0, pointermove: 0, pointerup: 0, pointercancel: 0 });
+            Object.keys(seen).forEach((type) => hit.addEventListener(type, () => { seen[type]++; }));
+            const dots = Array.from(document.querySelectorAll('#ydiSvg .ydi-guess-dot'));
+            window.__ydiBefore = dots.map(d => d.getAttribute('cy'));
+            const h = hit.getBoundingClientRect();
+            // From the first column to guess (the first dot) to the last.
+            return { x0: dots[0].getBoundingClientRect().left + 5, x1: h.right - 2, top: h.top, bottom: h.bottom, n: dots.length };
+        });
+        const cdp = await context.newCDPSession(page);
+        const touch = (type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
+        const STEPS = 20;
+        const yAt = (k) => box.bottom - (box.bottom - box.top) * (0.15 + 0.7 * k / STEPS);   // low to high
+        await touch('touchStart', box.x0, yAt(0));
+        for (let k = 1; k <= STEPS; k++) await touch('touchMove', box.x0 + (box.x1 - box.x0) * k / STEPS, yAt(k));
+        await touch('touchEnd');
+        await page.waitForTimeout(200);
+        const r = await page.evaluate(() => ({
+            events: window.__ydiTouch,
+            moved: Array.from(document.querySelectorAll('#ydiSvg .ydi-guess-dot')).map((d, i) => d.getAttribute('cy') !== window.__ydiBefore[i]),
+            touchAction: getComputedStyle(document.getElementById('ydiSvg')).touchAction,
+            url: location.pathname
+        }));
+        const still = r.moved.map((m, i) => (m ? null : i + 1)).filter(Boolean);
+        if (box.n && !still.length && !r.events.pointercancel && r.events.pointerup === 1) {
+            ok(`You Draw It at 390x844 by touch: one drag sets all ${box.n} guesses, no pointercancel (${r.events.pointermove} moves; the chart's touch-action is ${r.touchAction})`);
+        } else bad(`You Draw It at 390x844 by touch: guesses ${still.join(', ') || 'none'} of ${box.n} unmoved, events ${JSON.stringify(r.events)}, touch-action ${r.touchAction}, now on ${r.url}`);
+        await context.close();
+    }
 }
 
 // ------------------------------------------------------------------
@@ -1313,7 +1392,7 @@ async function exerciseNavigation(browser, origin) {
         }
         await page.click('#themeToggle');
         const flipped = await page.evaluate(() => ({
-            light: document.body.classList.contains('light-mode'),
+            light: document.documentElement.classList.contains('light-mode'),
             chrome: document.querySelector('meta[name="theme-color"]').content,
             name: document.getElementById('themeToggle').getAttribute('aria-label')
         }));
@@ -2416,8 +2495,8 @@ const AXE_VIEWS = [];
 
 // The pages whose script swaps in a different layout, so the one a reader
 // without JavaScript gets is checked as well. (With its scripts blocked the
-// homepage still takes its theme from mks.theme, inline at the top of
-// <body>; carbon-ai.css follows the system's setting by itself.)
+// homepage still takes its theme from mks.theme, inline in its <head>;
+// carbon-ai.css follows the system's setting by itself.)
 const AXE_NO_SCRIPT = ['index.html', 'carbon-ai.html'];
 
 // What the player offers once Moses has recorded his introduction (see
@@ -2641,7 +2720,7 @@ async function exerciseShell(browser, origin) {
 
         await follow(page, '.ca-nav-links a[href="index.html"]');
         await page.waitForFunction(() => !document.getElementById('themeToggle').hidden, null, { timeout: 8000 });
-        const home = await page.evaluate(() => document.body.classList.contains('light-mode'));
+        const home = await page.evaluate(() => document.documentElement.classList.contains('light-mode'));
         if (home) ok('theme: ...and to the homepage, which reads the same stored choice');
         else bad('theme: the homepage opened dark after light was chosen on another page');
 
@@ -2669,13 +2748,16 @@ async function exerciseShell(browser, origin) {
         if (r.theme === 'light' && r.bg === LIGHT_BG && stored === null) ok('theme: a system set to light gets light on stats.html, and nothing is stored for it');
         else bad(`theme: with a light system and nothing stored, stats.html is ${JSON.stringify(r)} (stored: ${stored})`);
 
-        // The homepage too, from its first frame: what the body is in when
-        // the first frame that has a body is drawn, recorded before any of
-        // the page's scripts run.
+        // The homepage too, from its first frame: what the page is in, and
+        // the colour its body is painted, when the first frame that has a
+        // body is drawn, recorded before any of the page's scripts run.
+        // (With the theme set at the top of <body>, after the stylesheet,
+        // about one run in ten drew that frame dark.)
         await context.addInitScript(() => {
             const seen = () => {
                 if (!document.body) return requestAnimationFrame(seen);
-                window.__firstFrame = document.body.classList.contains('light-mode') ? 'light' : 'dark';
+                window.__firstFrame = document.documentElement.classList.contains('light-mode')
+                    && getComputedStyle(document.body).backgroundColor !== 'rgb(10, 10, 10)' ? 'light' : 'dark';
             };
             requestAnimationFrame(seen);
         });
@@ -2683,7 +2765,7 @@ async function exerciseShell(browser, origin) {
         await page.waitForFunction(() => window.__firstFrame && !document.getElementById('themeToggle').hidden, null, { timeout: 8000 }).catch(() => null);
         const home = await page.evaluate(() => ({
             first: window.__firstFrame,
-            now: document.body.classList.contains('light-mode') ? 'light' : 'dark',
+            now: document.documentElement.classList.contains('light-mode') ? 'light' : 'dark',
             name: document.getElementById('themeToggle').getAttribute('aria-label'),
             bar: document.querySelector('meta[name="theme-color"]').content,
             stored: localStorage.getItem('theme')
@@ -3021,6 +3103,16 @@ async function exerciseCpu(browser, origin) {
             await context.close();
             return;
         }
+        // "Left alone" starts once the hero's figures have counted up. They
+        // are on the first screen, so the count starts at load; timed from
+        // the clock, it is over 1.8 s after it starts, however slow the
+        // frames. (Counted in frames, it ran on under a busy runner into
+        // the window below, and the reading went over at random.)
+        const counted = await page.waitForFunction(() => !document.querySelector('.hero-stat-number[aria-hidden]')
+            && [...document.querySelectorAll('.hero-stat-number')].every(c => c.textContent === c.dataset.target), null, { timeout: 4000 })
+            .then(() => true, () => false);
+        if (counted) ok('the hero figures have counted up to their exact values within 4 s of load');
+        else bad(`the hero figures are still counting 4 s after load: ${await page.evaluate(() => [...document.querySelectorAll('.hero-stat-number')].map(c => c.textContent).join('/'))}`);
         const cdp = await context.newCDPSession(page);
         await cdp.send('Performance.enable');
         await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });

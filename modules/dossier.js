@@ -71,10 +71,8 @@
     // ===================================
     // SEVEN IN TEN — site the borehole, and keep score against the records
     // ===================================
-    // One widget where there were two: the game is the play, and the waffle
-    // (once a slider of its own) is the scoreboard: your holes beside the
-    // field records' 7 in 10 and blind drilling's ~3 in 10, which has no
-    // recorded source and is labelled illustrative wherever it appears.
+    // One widget where there were two; build-content.js (WIDGET_HOSTS) says
+    // why, and why blind drilling's ~3 in 10 is labelled illustrative.
     (() => {
         const host = document.querySelector('[data-widget="borehole"]');
         const stage = document.getElementById('boreholeStage');
@@ -147,7 +145,7 @@
             // curve panel
             title = el('text', { x: 10, y: 30, class: 'bh-label' });
             sideLabels = [
-                el('text', { x: 10, y: CURVE_TOP + 8, class: 'bh-label bh-label-dim' }),
+                el('text', { x: 10, y: CURVE_TOP - 3, class: 'bh-label bh-label-dim' }),
                 el('text', { x: 10, y: CURVE_BOT, class: 'bh-label bh-label-dim' })
             ];
             sideLabels[0].textContent = 'high';
@@ -161,8 +159,6 @@
             for (let x = 10; x <= W; x += 10) gd += ` L ${x} ${surfaceY(x).toFixed(1)}`;
             el('path', { d: gd + ` L ${W} ${H} L 0 ${H} Z`, class: 'bh-ground' });
             el('path', { d: gd, class: 'bh-surface' });
-            el('text', { x: W - 12, y: SURFACE + 26, 'text-anchor': 'end', class: 'bh-label bh-label-dim' }).textContent = 'weathered regolith';
-            el('text', { x: W - 12, y: 300, 'text-anchor': 'end', class: 'bh-label bh-label-dim' }).textContent = 'gabbro bedrock';
             el('line', { x1: 0, y1: 250, x2: W, y2: 250, class: 'bh-strata' });
 
             revealEl = el('g', {});
@@ -175,6 +171,9 @@
             el('line', { x1: -9, y1: -28, x2: 9, y2: -28, class: 'bh-rig-mast' }, rigEl);
             el('line', { x1: -5, y1: -46, x2: 5, y2: -46, class: 'bh-rig-mast' }, rigEl);
             placeRig(rigX);
+
+            el('text', { x: W - 12, y: SURFACE + 30, 'text-anchor': 'end', class: 'bh-label bh-label-dim bh-label-ground' }).textContent = 'weathered regolith';
+            el('text', { x: W - 12, y: 300, 'text-anchor': 'end', class: 'bh-label bh-label-dim bh-label-ground' }).textContent = 'gabbro bedrock';
             if (fit) fit(); else fit = fitLabels(stage, W, roomFor);
         };
 

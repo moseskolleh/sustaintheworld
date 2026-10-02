@@ -299,6 +299,30 @@ const text = (el) => (el ? el.textContent.replace(/\s+/g, ' ').trim() : '');
     const fixed = (moduleCss.match(/\.(?:bh|fl)-[\w-]+[^{]*\{[^}]*font-size:\s*[\d.]+px\s*;/g) || []);
     assert(fixed.length === 0, `Labels: no drawing label has a fixed size in drawing units (${fixed.join(' | ') || 'none'})`);
     assert(/\.dw-label,\s*\.flood-ticks,\s*\.strike-row-label\s*\{[^}]*font-size:\s*0\.72rem/.test(moduleCss), 'Labels: the labels around the drawings are 0.72rem, 11.5px');
+
+    // The strata's names were drawn first, so every hole drilled near the
+    // right edge (40% of the drawing on a phone), the clay or water found
+    // and the rig itself were drawn through the letters. And "high", beside
+    // the curve's start, had the line through it at every desktop width.
+    const drilled = boot({ width: 290, reduced: true });
+    const dsvg = drilled.doc.querySelector('#boreholeStage svg');
+    const stage = drilled.doc.getElementById('boreholeStage');
+    for (let i = 0; i < 12; i++) key(drilled.window, stage, 'ArrowRight');
+    click(drilled.window, drilled.doc.getElementById('drillBtn'));
+    const kids = Array.from(dsvg.children);
+    const strata = kids.filter(t => /regolith|bedrock/.test(t.textContent));
+    const lastDrawn = Math.max(...['.bh-hole', '.bh-reveal-water, .bh-reveal-clay, .bh-water-col', '.bh-rig']
+        .map(sel => dsvg.querySelector(sel)).filter(Boolean).map(el => kids.indexOf(el.closest('svg > *'))));
+    assert(strata.length === 2 && !!dsvg.querySelector('.bh-hole') && strata.every(t => kids.indexOf(t) > lastDrawn && t.classList.contains('bh-label-ground')),
+        'Labels: the strata\'s names are drawn over the holes, what they found and the rig, in their halo');
+    const tint = (moduleCss.match(/\.bh-ground\s*\{[^}]*color-mix\(in srgb, var\(--primary-green\) (\d+)%, transparent\)/) || [])[1];
+    const halo = (moduleCss.match(/\.bh-label-ground\s*\{([^}]*)\}/) || [])[1] || '';
+    assert(!!tint && /paint-order:\s*stroke/.test(halo) && halo.includes(`color-mix(in srgb, var(--primary-green) ${tint}%, var(--card-bg))`),
+        `Labels: the halo, under the letters (paint-order), is the ground's own colour (${tint}% green on the card)`);
+    const high = Array.from(boot({ width: 760 }).doc.querySelectorAll('#boreholeStage svg text')).find(t => t.textContent === 'high');
+    const CURVE_TOP = +((moduleJs.match(/CURVE_TOP = (\d+)/) || [])[1]);
+    assert(!!high && CURVE_TOP > 0 && +high.getAttribute('y') < CURVE_TOP,
+        `Labels: "high" stands above the highest the curve can reach (its baseline at ${high && high.getAttribute('y')}, the curve no higher than ${CURVE_TOP})`);
 }
 
 // ===================================================================
