@@ -20,15 +20,15 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 - **[Case studies](case-studies.html), evidence-first**: the same six projects as **problem → method → artifact → result**. Every result carries the basis it rests on and says plainly whether you can check it from outside; every artifact says whether it is public, available on request, or held by the client. See [Content pipeline](#content-pipeline)
 - **Role-specific lenses**: `case-studies.html?lens=water`, `?lens=climate-risk`, `?lens=sustainable-ai` — shareable views that reframe the portfolio for one kind of role. They **reorder and frame, they never filter**: every case study stays on the page in every view, because a view that hides inconvenient work is a CV that lies by omission. Without JavaScript the switcher steps aside and every case study shows in the default view
 - **No dead ends**: every page but the homepage shares one small nav (Home, Case studies, Research, CV, Contact, with the page you are on marked) and ends with a way to reach Moses: his address, the contact form and the CV. The pages built on `carbon-ai.css` have the homepage's light theme and its switch, and keep the reader's choice from page to page (`theme.js`, before the first paint); with nothing chosen they follow the system's setting, with or without JavaScript. The homepage follows it only with JavaScript: without, it stays dark, because following the system there would put a second copy of every light-theme rule in its first view. The text-only field report and the 404 page take the nav and the call to action as plain lines, and no script
-- **[Research outputs](research.html)**: theses, reports, datasets, code and tools, each labelled public / on request / held by the client. No DOI, journal or conference is named anywhere, because none of this work has one — and a test fails the build if one ever appears without proof
+- **[Research outputs](research.html)**: theses, reports, datasets, code and tools, grouped by whether you can open them: public, on request, or held by the client. The public ones lead with Moses's own repositories on GitHub (a groundwater toolkit, the GAIA Green AI framework, a CMIP6 extremes pipeline, an A/B test in SQL and Python, the sustainable-AI prototypes and the maintained EcoPrompt Coach), each described only as far as the repository itself shows. No DOI, journal or conference is named anywhere, because none of this work has one — and a test fails the build if one ever appears without proof
 - **[Open counts](stats.html)**: what the site's own cookieless counter has counted, rebuilt weekly — the five numbers that say whether the site works, page views by page, lens and window width, referrers, features used and bytes per page view, in whole weeks. Every count under 5 reads `<5`, a figure that would let one be worked out by subtraction reads `held`, and the page prints the exact payload a page view sends. See [Open counts](#open-counts)
 - **Borehole core-log experience timeline**: career history logged the way a geologist logs a core — depth is time, every layer is a chapter. Each role is a short card (dates, role, organisation, one line), the rest a press away
-- **"AI, Weighed"**: one chart from the EcoPrompt Coach research on the homepage — guess how the energy of one AI answer grows with model size, then see the published estimates. The calculator (model × grid × tokens → energy, carbon, water) and Anatomy of a Prompt are on [`carbon-ai.html`](carbon-ai.html)
-- **Evidence-first skills**: no invented percentages — every tool links to the project where it earned its place; the 164 water points are itemized in About
+- **EcoPrompt Coach**: one name for one tool. The homepage's section 05 is its teaser, one chart: guess how the energy of one AI answer grows with model size, then see the published estimates. This site's edition of the coach (model × grid × tokens → energy, carbon, water, with an evidence ledger) and Anatomy of a Prompt are on [`carbon-ai.html`](carbon-ai.html), which says how old its figures are; the maintained version, with newer models (their figures extrapolated, as it says), is the [EcoPrompt Coach app](https://moseskolleh.github.io/promptcoach/) ([code](https://github.com/moseskolleh/promptcoach))
+- **Evidence-first skills**: no invented percentages — every tool's proof is public work, a repository on GitHub or a case study with one; machine learning, shown only by a certificate, says so and links nowhere. The 164 water points are itemized in About
 - **The Assay**: under the contact form, behind one button, paste a job ad and get an honest fit, graded in the browser; the ad itself is never sent (the page view's count carries the grade, see [The visit counter and privacy](#the-visit-counter-and-privacy)). It lists matched evidence with links, and gaps (languages, years of experience, named tools, consulting-firm or director-level experience, financial modelling, a PhD or a law degree), first when they cap the grade; right to work, visa, clearance, driving licence, relocation and the level of English are named as things to confirm with Moses, never guessed. General skills (stakeholders, data, delivery, international work, research) count towards a grade but never make one: an ad with nothing from his own field is "Different field" Its facts about him come from `content/profile.json`
 - **Field Notes**: short essays connecting boreholes, scenario storytelling and sustainable AI, under About
 - **Modern design**: dark theme with vibrant green accents, light mode (the reader's choice, shared by every page, or with none the system's, from the first paint), responsive layout, full SEO/social metadata (Open Graph, JSON-LD, sitemap)
-- **Seven sections**: journey, about (with the CV download and the field notes), experience, six project cards leading to the case studies, AI, Weighed, skills and education, contact form
+- **Seven sections**: journey, about (with the CV download and the field notes), experience, six project cards leading to the case studies, the EcoPrompt Coach's chart, skills and education, contact form
 
 ## Technologies Used
 
@@ -64,12 +64,12 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 - The two games that used to sit in the dossiers are on the case studies they illustrate: "Seven in ten" on groundwater, "Don't let it become a boat" on Wuppertal
 - So are the dossiers' 25 field photos, with their captions word for word: a row under each case study, folded under one line until asked for (nothing is fetched until then), each photo a link to the full one. With JavaScript they open in a lightbox that steps through that case study's photos: previous and next, the arrow keys, "2 of 5", Escape
 
-### ⚡ AI, Weighed
-- You Draw It, the homepage's one chart from the EcoPrompt Coach research, with a link to the coach. It is drawn as wide as it is shown, so every label is 11px or more on a phone (they were about 5px)
+### ⚡ EcoPrompt Coach
+- You Draw It, the homepage's one chart from the EcoPrompt Coach research, with a link to the coach on `carbon-ai.html` and to the maintained app and its code. It is drawn as wide as it is shown, so every label is 11px or more on a phone (they were about 5px)
 - The calculator and Anatomy of a Prompt (where one query lands on a CSRD report) are on `carbon-ai.html`; Anatomy is drawn from the calculator's own numbers and fetched only as its section comes near
 
 ### 🛠️ Skills & Education
-- Evidence-first: every tool links to the project where it earned its place, with real field numbers instead of percentages
+- Evidence-first: every tool's proof is public work, a repository or a case study with one, or it says there is none; real field numbers instead of percentages
 - Areas of expertise, and ESG frameworks and standards (SBTi, CDP, GHG Protocol, TCFD, TNFD, etc.)
 - Master's degrees in Environmental Sciences and Industrial Engineering, and a Bachelor's in Geology, each with its dates, institution and what it held
 - Professional certifications (ESG Specialist, Google Data Analytics, etc.), each with its issuer, date and what it covered
@@ -249,7 +249,7 @@ npm run voice -- --clone path/to/sample # make a voice model (add --sections to 
 
 The API key is used only there, on your machine; it never reaches the browser.
 Fish Audio bills 1 credit per UTF-8 byte of text, so the cost is known before
-anything is sent: the eight sections are ~8,300 credits today (8,347 on
+anything is sent: the eight sections are ~8,300 credits today (8,324 on
 2026-10-03), and the dry run
 prints the exact figure. Scripts are hashed, so fixing one sentence re-renders
 one file. `scripts/lib/voice-signature.js` is
@@ -601,6 +601,11 @@ should fail the build rather than ship. `scripts/lib/content.js` refuses:
 - **A venue that implies peer review without a DOI.** Three theses were written
   and defended; none is published in a journal, and nothing on the site says
   otherwise.
+- **A role view with nothing a reader can open.** Every lens in
+  `content/lenses.json` needs at least one public artifact or research output
+  beyond this site's own pages, through its case studies or an output's own
+  `lenses`. The water view had two games here and nothing else until the
+  groundwater toolkit's repository joined it.
 
 `tests/portfolio.test.js` feeds each of those rules deliberately bad data and
 fails if the validator lets it through — the rules are only worth having if
@@ -845,10 +850,10 @@ did.
 | Recorded narration: Moses's introduction (sized for his 60–90 s take) | 0 KB | 800 KB |
 | Text-only field report, the HTML file (the size the footer quotes) | ~9 KB | 11 KB |
 | Text-only field report, over the wire (with its visit counter) | ~6 KB | 8 KB |
-| Case studies page, over the wire (fonts included) | ~104 KB | 109 KB |
-| Open counts page, over the wire (fonts included; sized for a full page) | ~95 KB | 103 KB |
-| Research outputs page, over the wire (fonts included) | ~94 KB | 99 KB |
-| AI, Weighed (`carbon-ai.html`), over the wire (fonts included) | ~110 KB | 111 KB |
+| Case studies page, over the wire (fonts included) | ~105 KB | 109 KB |
+| Open counts page, over the wire (fonts included; sized for a full page) | ~96 KB | 103 KB |
+| Research outputs page, over the wire (fonts included) | ~96 KB | 99 KB |
+| EcoPrompt Coach (`carbon-ai.html`), over the wire (fonts included) | ~110 KB | 111 KB |
 <!-- BUDGET-TABLE:END -->
 
 **What the estimate used to miss.** An earlier version of this table said

@@ -220,7 +220,7 @@ function assert(cond, msg) {
 }
 
 // --- Bug 8: the calculator spends the split it is given ---
-// The homepage's "AI, Weighed" presets were spent at a 50/50 mix whatever
+// The homepage's coach presets were spent at a 50/50 mix whatever
 // their labels said, so a "1,000 in / 8,000 out" reasoning run came out a
 // third too light. That calculator did the same job as the one on
 // carbon-ai.html and has been merged into it, where the split is typed in;

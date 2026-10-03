@@ -68,16 +68,6 @@ const prose = (s) => esc(s)
 
 const slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
-// Group headings on research.html. Appending an "s" gave "MSc thesiss" and
-// "Codes"; these are the rules the output types actually need.
-const UNCOUNTABLE = new Set(['Code']);
-const plural = (type) => {
-    if (UNCOUNTABLE.has(type)) return type;
-    if (/is$/.test(type)) return type.slice(0, -2) + 'es';   // thesis → theses
-    if (/s$/.test(type)) return type;                          // already plural: Essays
-    return type + 's';
-};
-
 /** Pulls named <symbol> definitions out of the sprite index.html already ships. */
 function sprite(ids) {
     const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
@@ -742,26 +732,36 @@ ${LIGHTBOX_SCRIPT}    </script>`;
 // research.html
 // ------------------------------------------------------------------
 function renderResearch(data) {
-    const { research } = data;
+    const { research, lenses } = data;
+    const lensName = Object.fromEntries(lenses.lenses.map(l => [l.id, l.shortLabel || l.label]));
 
-    const byType = {};
-    research.outputs.forEach((o) => {
-        (byType[o.type] = byType[o.type] || []).push(o);
-    });
-
-    const counts = content.STATUSES
-        .map(s => ({ status: s, n: research.outputs.filter(o => o.status === s).length }))
-        .filter(c => c.n);
+    // Grouped by what a reader can do with each output (open it, ask for it,
+    // or know who holds it), the question the page is here to answer.
+    // Grouped by type, eleven outputs took eight headings, most of them over
+    // one entry; the type is on each entry's first line.
+    const groups = content.STATUSES
+        .map(s => ({ status: s, outputs: research.outputs.filter(o => o.status === s) }))
+        .filter(g => g.outputs.length);
 
     const summary = `
         <ul class="rs-summary">
-            ${counts.map(c => `<li><strong>${c.n}</strong> ${esc(STATUS_LABEL[c.status].toLowerCase())}</li>`).join('')}
+            ${groups.map(g => `<li><strong>${g.outputs.length}</strong> ${esc(STATUS_LABEL[g.status].toLowerCase())}</li>`).join('')}
         </ul>`;
+
+    // Where an output sits in the portfolio, its case study or else the role
+    // view it is in, at the end of its note rather than on a line of its own.
+    const place = (o) => {
+        if (o.caseStudy) return `<a class="rs-link" href="case-studies.html#${esc(o.caseStudy)}">Read the case study &rarr;</a>`;
+        const lens = (o.lenses || [])[0];
+        return lens ? `<a class="rs-link" href="case-studies.html?lens=${esc(lens)}">The ${esc(lensName[lens])} view &rarr;</a>` : '';
+    };
+    const note = (o) => [o.note && prose(o.note), o.heldBy && `Held by ${prose(o.heldBy)}.`, place(o)].filter(Boolean).join(' ');
 
     const entry = (o) => {
         const title = o.status === 'public' && o.url
             ? `<a href="${esc(o.url)}">${prose(o.title)}</a>`
             : prose(o.title);
+        const after = note(o);
         return `
                 <article class="rs-item" id="${esc(o.id)}">
                     <div class="rs-item-head">
@@ -775,26 +775,29 @@ function renderResearch(data) {
                     ${o.methods && o.methods.length
                         ? `<p class="rs-methods"><span class="mono-label">Methods</span> ${o.methods.map(prose).join(' &middot; ')}</p>`
                         : ''}
-                    ${o.note ? `<p class="rs-note">${prose(o.note)}</p>` : ''}
-                    ${o.heldBy ? `<p class="rs-note">Held by ${prose(o.heldBy)}.</p>` : ''}
-                    ${o.caseStudy ? `<p class="rs-link"><a href="case-studies.html#${esc(o.caseStudy)}">Read the case study &rarr;</a></p>` : ''}
+                    ${after ? `<p class="rs-note">${after}</p>` : ''}
                 </article>`;
     };
 
-    const sections = Object.keys(byType).map(type => `
-            <section class="rs-group">
-                <h2>${esc(byType[type].length > 1 ? plural(type) : type)}</h2>
-                ${byType[type].map(entry).join('\n')}
+    const sections = groups.map(g => `
+            <section class="rs-group" id="rs-${esc(g.status)}">
+                <h2>${esc(STATUS_LABEL[g.status])}</h2>
+                ${g.outputs.map(entry).join('\n')}
             </section>`).join('\n');
 
+    // Folded under its heading: it is for whoever means to run the code, and
+    // open it was a screen of a phone that made room for the repositories.
     const repro = research.reproducibility;
     const reproSection = `
         <section class="rs-repro">
             <h2>${esc(repro.heading)}</h2>
-            <p>${prose(repro.body)}</p>
-            <dl class="rs-commands">
-                ${repro.commands.map(c => `<dt><code>${esc(c.command)}</code></dt><dd>${prose(c.does)}</dd>`).join('\n                ')}
-            </dl>
+            <details>
+                <summary>How, and the commands to run</summary>
+                <p>${prose(repro.body)}</p>
+                <dl class="rs-commands">
+                    ${repro.commands.map(c => `<dt><code>${esc(c.command)}</code></dt><dd>${prose(c.does)}</dd>`).join('\n                    ')}
+                </dl>
+            </details>
         </section>`;
 
     const main = `
@@ -802,10 +805,10 @@ function renderResearch(data) {
             <p>${prose(research.intro)}</p>
             ${summary}
             <p class="rs-key">
-                <strong>Public</strong> means you can open it right now.
-                <strong>On request</strong> means it exists and I hold it &mdash; ask.
-                <strong>Held by the client</strong> means it belongs to the organisation it was made for.
-                No entry on this page names a journal, a conference or a DOI, because none of this work has one.
+                <strong>Public</strong>: open it now.
+                <strong>On request</strong>: it exists and I hold it &mdash; ask.
+                <strong>Held by the client</strong>: it belongs to the organisation it was made for.
+                No entry names a journal, a conference or a DOI, because none of this work has one.
             </p>
         </section>
 ${sections}
@@ -817,7 +820,7 @@ ${reproSection}`;
         canonical: `${SITE}research.html`,
         heroTag: 'WHAT EXISTS &middot; WHERE IT IS &middot; WHO HOLDS IT',
         heroTitle: 'Research <span class="ca-accent">outputs</span>',
-        heroLead: 'Three degrees of research, a consultancy, an internship and a working tool. Some of it is public, some belongs to the organisations it was done for, and the rest is a PDF I will happily send you.',
+        heroLead: 'Three degrees of research, a consultancy, an internship and code on GitHub: some of it public, some held by the organisations it was done for, the rest a PDF I will happily send you.',
         main,
         current: 'research.html',
         profile: data.profile
@@ -876,7 +879,7 @@ const PAGE_NAMES = {
     'index': 'Homepage',
     'case-studies': 'Case studies',
     'research': 'Research outputs',
-    'carbon-ai': 'AI, Weighed',
+    'carbon-ai': 'EcoPrompt Coach',
     'field-report': 'Field report (text only)',
     'stats': 'Open counts (this page)',
     '404': 'Page not found (404)'

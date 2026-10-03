@@ -337,7 +337,7 @@ async function visit(context, page, rel, origin) {
     await exerciseStatsPage(browser, origin);
 
     // The top nav at every desktop width: one line per item, nothing past the
-    // right edge. It used to wrap "Case studies" and "AI, Weighed" at every
+    // right edge. It used to wrap "Case studies" and the coach's link at every
     // width and clip Contact off-screen up to 1373px — and body's
     // overflow-x:hidden meant nothing else would ever have noticed.
     {
@@ -1721,7 +1721,7 @@ async function exerciseNavigation(browser, origin) {
     // project cards' links), the toolkit's proof links. The experience
     // cards' More buttons are new, and the Assay's open button (its sample
     // chips are folded away until it is pressed).
-    const GUARDED = ['.hero-availability', '.hero-cta .btn', '.corelog-more', '#ydiReveal', '.assay-open', '.project-link', '.toolkit-proof',
+    const GUARDED = ['.hero-availability', '.hero-cta .btn', '.corelog-more', '#ydiReveal', '.assay-open', '.project-link', 'a.toolkit-proof',
         '.btn-submit', '.carbon-badge', '.receipt-btn', '.footer-fieldreport a', '.eco-mode-toggle', '.terminal-toggle'];
     const covered = [];
     let passes = 0;
@@ -2029,7 +2029,7 @@ async function exerciseHomepage(page, r, origin) {
     const li = await loadedNow();
     if (li.interactives) ok('interactives loaded as section 05 came into range'); else bad('interactives did not load near section 05');
     const dots = await page.$$eval('#ydiSvg .ydi-guess-dot', (d) => d.length);
-    if (dots > 0) ok(`"AI, Weighed": You Draw It drawn (${dots} points to guess)`); else bad('"AI, Weighed": You Draw It is empty');
+    if (dots > 0) ok(`EcoPrompt Coach teaser: You Draw It drawn (${dots} points to guess)`); else bad('EcoPrompt Coach teaser: You Draw It is empty');
 
     // The backtick opens the terminal.
     await page.keyboard.press('`');

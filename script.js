@@ -1213,7 +1213,7 @@ document.querySelectorAll('.current-year').forEach(el => {
 // ===================================
 // INTERACTIVES — the trigger
 // ===================================
-// You Draw It in "AI, Weighed", The Assay and The Receipt
+// You Draw It in section 05, The Assay and The Receipt
 // (modules/interactives.js, with ai-carbon-data.js behind them) load when
 // any of their homes comes within about a screen of the viewport, so they
 // are drawn by the time the visitor arrives — and on the first press of one

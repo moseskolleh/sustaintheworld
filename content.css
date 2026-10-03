@@ -173,16 +173,21 @@ html:not(.js) .cs-lenses { display: none; }
     gap: 12px;
 }
 
+/* The kind and the availability sit at the top right, beside the name
+   rather than on a line of their own: a line an artifact, sixteen of them,
+   when the repositories joined the case studies. */
 .cs-artifact {
+    display: flow-root;
     padding: 12px 14px;
     border: 1px solid var(--border);
     border-radius: 6px;
 }
 .cs-artifact-head {
+    float: right;
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 6px;
+    margin: 0 0 4px 12px;
 }
 .cs-artifact-kind { color: var(--text-dim); }
 .cs-artifact-name { line-height: 1.5; }
@@ -514,9 +519,9 @@ html.lightbox-open { overflow: hidden; }
     color: var(--text-secondary);
 }
 .rs-methods .mono-label { margin-right: 4px; }
-.rs-link { margin: 10px 0 0; font-size: 0.85rem; }
-.rs-link a { color: var(--primary-green); text-decoration: none; }
-.rs-link a:hover { text-decoration: underline; }
+/* The case study or role view, at the end of the note: underlined, as a
+   link in a run of text has to be told apart by more than its colour. */
+.rs-link { white-space: nowrap; color: var(--primary-green); text-underline-offset: 3px; }
 
 .rs-repro {
     margin-top: 40px;
@@ -526,7 +531,9 @@ html.lightbox-open { overflow: hidden; }
     border-radius: 8px;
 }
 .rs-repro h2 { margin: 0 0 12px; font-size: 1.1rem; color: var(--primary-green); }
-.rs-repro > p { margin: 0 0 16px; line-height: 1.7; font-size: 0.92rem; }
+.rs-repro summary { cursor: pointer; font-size: 0.92rem; color: var(--text-secondary); }
+.rs-repro summary:hover { color: var(--primary-green); }
+.rs-repro details > p { margin: 12px 0 16px; line-height: 1.7; font-size: 0.92rem; }
 
 .rs-commands { margin: 0; }
 .rs-commands dt { margin-top: 10px; }
@@ -551,7 +558,10 @@ html.lightbox-open { overflow: hidden; }
     .cs-card { padding: 20px 18px; }
     .cs-card-head h3 { font-size: 1.25rem; }
     .cs-lens-panel { padding: 16px 18px; }
-    .rs-item { padding: 16px 16px; }
+    .cs-artifacts { gap: 8px; }
+    .cs-artifact { padding: 10px 12px; }
+    .rs-item { padding: 12px 14px; margin-bottom: 10px; }
+    .rs-intro, .rs-group { margin-bottom: 24px; }
     .rs-repro, .cs-footnote { padding: 18px 18px; }
 }
 /* Low-energy and reduced-motion visitors get no transitions to pay for. */

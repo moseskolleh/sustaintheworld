@@ -93,18 +93,32 @@
 
       "artifacts": [
         {
-          "name": "EcoPrompt Coach — web tool",
+          "name": "EcoPrompt Coach — this site's edition",
           "kind": "tool",
           "status": "public",
           "url": "carbon-ai.html",
           "note": "Energy, water and carbon per LLM query across named models and grids, with every emission factor's source, range and review date shown in an evidence ledger."
         },
         {
-          "name": "promptcoach — the research prototype it mirrors",
+          "name": "EcoPrompt Coach — the maintained tool (promptcoach)",
           "kind": "code",
           "status": "public",
           "url": "https://github.com/moseskolleh/promptcoach",
-          "note": "The Digital Society School prototype. The web tool reproduces its calculation model."
+          "note": "Version 2 of the Digital Society School prototype: a JavaScript engine, web app and Chrome extension (unpacked, in no store), with its own method and newer models."
+        },
+        {
+          "name": "Sustainable AI Prototypes",
+          "kind": "code",
+          "status": "public",
+          "url": "https://github.com/moseskolleh/SustainableAIPrototypes",
+          "note": "Browser prototypes and a Chrome extension v1.0 from the November 2025 team project; its README lists my role as SCRUM Master & Integration Lead. Its success metrics are targets, not results."
+        },
+        {
+          "name": "GAIA Framework — Green AI Assessment",
+          "kind": "framework",
+          "status": "public",
+          "url": "https://github.com/moseskolleh/GAIA-Framework-",
+          "note": "A framework, workbook and web estimator for the footprint of an organisation's AI use. It maps outputs to GRI, ESRS E1/E3, IFRS S2, CDP and SBTi lines; a mapping, not a certification."
         },
         {
           "name": "Sustainability assessment framework for AI use cases",
@@ -478,6 +492,13 @@
           "kind": "dataset",
           "status": "on-request",
           "note": "Produced during the dissertation and used in subsequent siting work."
+        },
+        {
+          "name": "Groundwater Investigation Toolkit",
+          "kind": "code",
+          "status": "public",
+          "url": "https://github.com/moseskolleh/WaterProject",
+          "note": "Python and browser code: field data in; figures, designs and .docx reports out. It dates from 2026, years after this work: a toolkit, not this project's deliverables. Its examples are partly illustrative."
         },
         {
           "name": "Site the borehole — interactive resistivity profile",

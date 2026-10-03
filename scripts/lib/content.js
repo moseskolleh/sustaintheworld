@@ -639,6 +639,32 @@ function checkStats(stats) {
 }
 
 /**
+ * What a reader of one role view can open: the public artifacts of its case
+ * studies, and the public research outputs that belong to it, through their
+ * case study or their own `lenses`. Each as { name, url }. Every lens needs
+ * one that is not a page of this site (checkLensWork).
+ */
+function publicWorkFor(lensId, projects, research) {
+    const ids = projects.caseStudies.filter(cs => (cs.lenses || []).includes(lensId)).map(cs => cs.id);
+    const artifacts = projects.caseStudies.filter(cs => ids.includes(cs.id))
+        .flatMap(cs => (cs.artifacts || []).filter(a => a.status === 'public').map(a => ({ name: a.name, url: a.url })));
+    const outputs = research.outputs.filter(o => o.status === 'public' && (ids.includes(o.caseStudy) || (o.lenses || []).includes(lensId)))
+        .map(o => ({ name: o.title, url: o.url }));
+    return artifacts.concat(outputs);
+}
+
+/**
+ * A lens whose work a reader can open none of is a claim to take on trust.
+ * This site's own pages do not count: the water lens had two games here and
+ * nothing else a reader could open. Returns problems, like the rest.
+ */
+function checkLensWork(lensList, projects, research) {
+    return lensList
+        .filter(l => !publicWorkFor(l.id, projects, research).some(w => localPath(w.url) === null))
+        .map(l => `lens "${l.id}": no public work beyond this site's own pages belongs to it — a lens needs an artifact or research output a reader can open elsewhere`);
+}
+
+/**
  * Reads everything and returns it validated, or throws with every problem
  * listed at once — one run of the build should tell you all of them.
  */
@@ -716,6 +742,14 @@ function loadAll() {
         if (o.caseStudy && !caseStudyIds.includes(o.caseStudy)) {
             problems.push(`${at}: references unknown case study "${o.caseStudy}"`);
         }
+        // An output with no case study of its own can still belong to a role
+        // view; one that has a case study takes the case study's.
+        if (o.lenses !== undefined && (!Array.isArray(o.lenses) || !o.lenses.length || o.caseStudy)) {
+            problems.push(`${at}: lenses must be a list of lens ids, and only on an output with no case study`);
+        }
+        (Array.isArray(o.lenses) ? o.lenses : []).forEach((l) => {
+            if (!lensIds.includes(l)) problems.push(`${at}: unknown lens "${l}"`);
+        });
 
         // A venue that looks like a journal without a DOI is the exact shape
         // of an overclaim, so anything asserting peer review has to prove it.
@@ -736,6 +770,7 @@ function loadAll() {
         const matching = projects.caseStudies.filter(cs => (cs.lenses || []).includes(l.id));
         if (!matching.length) problems.push(`${at}: no case study belongs to it`);
     });
+    problems.push(...checkLensWork(lenses.lenses, projects, research));
 
     // --- narration ---------------------------------------------------------
     narration.scripts.forEach((s) => {
@@ -797,5 +832,7 @@ module.exports = {
     glanceLanguages,
     checkStats,
     peel,
-    orderForLens
+    orderForLens,
+    publicWorkFor,
+    checkLensWork
 };

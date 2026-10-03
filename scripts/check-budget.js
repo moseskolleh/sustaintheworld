@@ -156,15 +156,15 @@ const BUDGETS = {
         max: 99 * KB,
         readme: 'Research outputs page, over the wire (fonts included)'
     },
-    // "AI, Weighed" carries its calculator and the emission-factor data on
-    // arrival, so it is the heaviest page after the homepage and it went
+    // The EcoPrompt Coach's page carries its calculator and the emission-factor
+    // data on arrival, so it is the heaviest page after the homepage and it went
     // unbudgeted until a real browser measured it at 106 KB. The ceiling is
     // that measurement plus 5%, not the usual headroom: budgets only ratchet
     // down, and this one starts where the page already is.
     carbonAiWire: {
-        label: 'AI, Weighed (carbon-ai.html), over the wire (with fonts)',
+        label: 'EcoPrompt Coach (carbon-ai.html), over the wire (with fonts)',
         max: 111 * KB,
-        readme: 'AI, Weighed (`carbon-ai.html`), over the wire (fonts included)'
+        readme: 'EcoPrompt Coach (`carbon-ai.html`), over the wire (fonts included)'
     }
 };
 

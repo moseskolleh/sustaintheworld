@@ -390,7 +390,7 @@ limits allow.
       for it. That addition is the site's wording, not yours yet: confirm
       it, or correct it. The same words open the hero's "Open to …" line
       and the closing call to action on the case studies, research, open
-      counts and AI, Weighed pages ("Open to …: write to me at …"). The
+      counts and EcoPrompt Coach pages ("Open to …: write to me at …"). The
       homepage's Contact section says the same in its own words, written
       by hand in `index.html` ("Open to roles & consulting in
       sustainability, climate risk, ESG and sustainable AI"), and so does

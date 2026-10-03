@@ -1,7 +1,7 @@
 // ===================================================================
-// ECOPROMPT COACH — web companion
-// Mirrors the calculation model of github.com/moseskolleh/promptcoach
-// (Digital Society School). Energy, water, and carbon per LLM query.
+// ECOPROMPT COACH — this site's edition
+// Energy, water, and carbon per LLM query. The maintained tool, with its
+// own method and data, is github.com/moseskolleh/promptcoach.
 //
 // Model benchmarks adapted from:
 //   Jegham, Abedin, Ali, et al. (2025) "How Hungry is AI? Benchmarking

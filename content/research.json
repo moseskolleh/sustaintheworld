@@ -17,7 +17,15 @@
     "  planned    — intended, not yet done. Says so, so it cannot read as done.",
     "",
     "tests/content.test.js fails the build if a `public` entry has no url, if a",
-    "url does not resolve, or if a non-public entry carries one anyway."
+    "url does not resolve, or if a non-public entry carries one anyway.",
+    "",
+    "THE REPOSITORIES. Each entry with a github.com url says only what that",
+    "repository itself shows: no result its README states as a target, no",
+    "standard it maps to called 'compliance', and no client or partner it names.",
+    "`lenses` places an output with no case study of its own in a role view",
+    "(content/lenses.json ids); every lens must have at least one public piece",
+    "of work beyond this site's own pages, here or among its case studies'",
+    "artifacts (scripts/lib/content.js, checkLensWork)."
   ],
 
   "intro": "This page says which is which — because a portfolio that lists outputs without saying whether anyone can read them is a list of assertions.",
@@ -99,22 +107,79 @@
       "note": "Produced for national policy use."
     },
     {
-      "id": "promptcoach",
-      "title": "promptcoach — energy, water and carbon of LLM inference",
+      "id": "waterproject",
+      "title": "Groundwater Investigation Toolkit",
       "type": "Code",
-      "venue": "Digital Society School",
+      "year": "2026",
+      "status": "public",
+      "url": "https://github.com/moseskolleh/WaterProject",
+      "caseStudy": "groundwater",
+      "summary": "Python and browser code for rural borehole projects in Sierra Leone: resistivity soundings, drilling logs, pumping tests and water quality in; figures, borehole designs and .docx reports out. The repo links a browser app.",
+      "methods": [],
+      "note": "A toolkit dated 2026, not the records of my 2018–19 fieldwork. Its worked examples are partly illustrative or synthetic, as the repo says."
+    },
+    {
+      "id": "gaia-framework",
+      "title": "GAIA Framework 2.2 — Green AI Assessment",
+      "type": "Framework",
+      "year": "2026",
+      "status": "public",
+      "url": "https://github.com/moseskolleh/GAIA-Framework-",
+      "caseStudy": "sustainable-ai",
+      "summary": "An open (MIT) framework, Excel workbook and web estimator for the energy, carbon and water footprint of an organisation's AI use, with uncertainty tiers. It maps its outputs to disclosure lines in GRI, ESRS E1 and E3, IFRS S2, CDP and SBTi.",
+      "methods": [],
+      "note": "A mapping to disclosure line items, not a claim of compliance. Its estimator weighs workloads typed into it and cannot read actual usage."
+    },
+    {
+      "id": "climatematch-pipeline",
+      "title": "climatematch-pipeline — climate extremes for West Africa",
+      "type": "Code",
+      "year": "2026",
+      "status": "public",
+      "url": "https://github.com/moseskolleh/climatematch-pipeline",
+      "lenses": ["climate-risk"],
+      "summary": "A Python starter pipeline that pulls historical CMIP6 runs (1980–2014) and observed temperature and precipitation for West Africa, computes monthly-based extreme indices, fits GEV 20-year return levels and builds a graph of which models behave alike.",
+      "methods": [],
+      "note": "Built for the Climatematch Academy course. Historical runs only; code on GitHub, with no licence file."
+    },
+    {
+      "id": "globox-ab-test",
+      "title": "GloBox A/B test analysis",
+      "type": "Analysis",
+      "year": "2023",
+      "status": "public",
+      "url": "https://github.com/moseskolleh/A-B-Testing-at-Globox",
+      "summary": "SQL queries and a Python notebook (t-tests, confidence intervals, power analysis) on whether a new banner on GloBox's mobile website paid off, from a Masterschool data-analytics sprint. The README links a Tableau Public dashboard.",
+      "methods": [],
+      "note": "Coursework. Conversion rose with the banner and spending did not, so the advice was to hold off."
+    },
+    {
+      "id": "sustainable-ai-prototypes",
+      "title": "Sustainable AI Prototypes",
+      "type": "Code",
       "year": "2025",
+      "status": "public",
+      "url": "https://github.com/moseskolleh/SustainableAIPrototypes",
+      "caseStudy": "sustainable-ai",
+      "summary": "Browser prototypes that make generative AI's energy and carbon use visible: a prompt coach and dashboard, a department display, a Tetris-style usage visual, a digital forest and a Chrome extension (v1.0). A November 2025 team project, revised after partner feedback.",
+      "methods": [],
+      "note": "My role, as its README records it: SCRUM Master & Integration Lead. The README's success metrics are targets, not results."
+    },
+    {
+      "id": "promptcoach",
+      "title": "EcoPrompt Coach — the maintained tool (promptcoach)",
+      "type": "Code",
+      "year": "2026",
       "status": "public",
       "url": "https://github.com/moseskolleh/promptcoach",
       "caseStudy": "sustainable-ai",
-      "summary": "The research prototype behind EcoPrompt Coach. Calculates per-query energy, water and carbon across models, grid regions and cooling profiles.",
-      "methods": ["Inference energy modelling", "Grid-intensity and WUE accounting"],
-      "reproducible": true,
-      "note": "Open repository. The web tool on this site reproduces its calculation model."
+      "summary": "A JavaScript engine, web app and Chrome extension that estimate the energy, water and carbon of an LLM prompt from published benchmarks, in everyday terms. Version 2's 22 models are current to September 2026; the repo links the web app.",
+      "methods": [],
+      "note": "Began as a Digital Society School prototype. Its 2026 models are extrapolated, as no lab has published a figure for one; the extension runs unpacked, in no store."
     },
     {
       "id": "ecoprompt-web",
-      "title": "EcoPrompt Coach — web tool and evidence ledger",
+      "title": "EcoPrompt Coach — this site's edition, with its evidence ledger",
       "type": "Tool",
       "venue": "sustaintheworld",
       "year": "2026",
@@ -124,7 +189,7 @@
       "summary": "Interactive per-query footprint calculator, with an evidence ledger giving every emission factor a source, publication date, vintage, uncertainty range and review date. Input and output tokens are priced separately, because decode costs several times what prefill does.",
       "methods": ["Published inference benchmarks", "Ember grid intensities", "Disclosed provider PUE/WUE"],
       "reproducible": true,
-      "note": "Every factor is auditable from the page itself — no reading the source required."
+      "note": "Every factor is auditable from the page itself. Its code and data are its own, separate from the maintained tool's."
     },
     {
       "id": "carbon-data",
@@ -169,7 +234,7 @@
 
   "reproducibility": {
     "heading": "Reproducing what is here",
-    "body": "Everything public on this page runs from one clone with no build step and no API key. The EcoPrompt Coach and the homepage's energy chart read one factor set, so they cannot disagree about a model. The chart shows each model's published figure for a 1,000-token answer; the coach multiplies it by data-centre overhead (PUE, 1.2 unless you change it), so for the same answer it prints 1.2 times the chart's figure. The map regenerates byte-identically from pinned dependencies. The narration is content-addressed, so re-rendering unchanged text costs nothing.",
+    "body": "The outputs that are part of this site run from its one clone, with no build step and no API key; each repository above says how to run it. The EcoPrompt Coach and the homepage's energy chart read one factor set, so they cannot disagree about a model. The chart shows each model's published figure for a 1,000-token answer; the coach multiplies it by data-centre overhead (PUE, 1.2 unless you change it), so for the same answer it prints 1.2 times the chart's figure. The map regenerates byte-identically from pinned dependencies. The narration is content-addressed, so re-rendering unchanged text costs nothing.",
     "commands": [
       { "command": "npm install && npm test", "does": "runs every suite, the map check and the asset-weight budgets" },
       { "command": "npm run map:build", "does": "regenerates the journey map from Natural Earth data" },

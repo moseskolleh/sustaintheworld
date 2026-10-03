@@ -1946,7 +1946,7 @@ html.js .timeline-date { padding-right: 64px; }
     transition: var(--transition);
 }
 
-.toolkit-proof:hover {
+a.toolkit-proof:hover {
     color: var(--primary-green);
 }
 
@@ -3046,7 +3046,7 @@ html.light-mode .journey-map-readout {
 }
 
 /* ===================================
-   AI, WEIGHED (You Draw It, and the way on to the coach)
+   SECTION 05 (You Draw It, and the way on to the coach)
    =================================== */
 .ecoprompt {
     background: var(--darker-bg);

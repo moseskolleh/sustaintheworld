@@ -116,6 +116,17 @@ const { projects, research, lenses } = data;
     assert(content.checkAvailability('t', { status: 'public', url: 'https://github.com/moseskolleh/promptcoach' }).length === 0, 'Guard: accepts a public entry on a trusted host');
     assert(content.checkAvailability('t', { status: 'on-request' }).length === 0, 'Guard: accepts an on-request entry with no link');
     assert(content.checkAvailability('t', { status: 'internal', heldBy: 'UNDRR' }).length === 0, 'Guard: accepts an internal entry that names its holder');
+
+    // A role view needs public work a reader can open beyond this site: a
+    // game on one of its pages is not enough, a repository is, and so is
+    // an output placed in the view by its own `lenses`.
+    const lens = [{ id: 'x' }];
+    const game = { caseStudies: [{ id: 'g', lenses: ['x'], artifacts: [{ name: 'A game', status: 'public', url: 'case-studies.html#play-borehole' }] }] };
+    const repo = { status: 'public', title: 'Code', url: 'https://github.com/moseskolleh/WaterProject' };
+    assert(content.checkLensWork(lens, game, { outputs: [] }).length === 1, 'Guard: rejects a lens whose only public work is a page of this site');
+    assert(content.checkLensWork(lens, game, { outputs: [{ ...repo, lenses: ['x'] }] }).length === 0, 'Guard: accepts a lens with a repository placed in it by its own lenses');
+    assert(content.checkLensWork(lens, game, { outputs: [{ ...repo, caseStudy: 'g' }] }).length === 0, 'Guard: accepts a lens with a repository through one of its case studies');
+    assert(content.checkLensWork(lens, game, { outputs: [{ ...repo, status: 'on-request', url: undefined, caseStudy: 'g' }] }).length === 1, 'Guard: work on request does not count');
 }
 
 // --- research outputs -----------------------------------------------------
@@ -319,10 +330,28 @@ function dom(file) {
 
     assert(doc.querySelectorAll('.rs-commands dt').length > 0, 'Research page: the reproduction commands are listed');
 
-    // Group headings are plurals a person would write: not "MSc thesiss".
-    const headings = Array.from(doc.querySelectorAll('.rs-group h2')).map(h => h.textContent.trim());
-    const misspelt = headings.filter(h => /(iss|sss|Codes)$/.test(h));
-    assert(misspelt.length === 0, `Research page: group headings are real plurals (${headings.join(', ')})`);
+    // Grouped by what a reader can do with each output, public first: by
+    // type, eleven outputs took eight headings. Each group holds only its own.
+    const groups = Array.from(doc.querySelectorAll('.rs-group'));
+    const order = content.STATUSES.filter(s => research.outputs.some(o => o.status === s));
+    const byId = Object.fromEntries(research.outputs.map(o => [o.id, o]));
+    assert(groups.map(g => g.id).join() === order.map(s => `rs-${s}`).join() &&
+        groups.every(g => Array.from(g.querySelectorAll('.rs-item')).every(it => `rs-${byId[it.id].status}` === g.id)),
+        `Research page: grouped by availability, public first (${groups.map(g => g.querySelector('h2').textContent.trim()).join(', ')})`);
+
+    // Each output says where it sits, at the end of its note: its case
+    // study, or the role view of an output with none.
+    const placed = research.outputs.filter((o) => {
+        const link = doc.querySelector(`#${o.id} .rs-note a.rs-link`);
+        const want = o.caseStudy ? `case-studies.html#${o.caseStudy}` : (o.lenses ? `case-studies.html?lens=${o.lenses[0]}` : null);
+        return want ? !!link && link.getAttribute('href') === want : !link;
+    });
+    assert(placed.length === research.outputs.length, `Research page: each output links its case study or role view, and only those (${placed.length}/${research.outputs.length})`);
+
+    // How to reproduce it is a press away, not a screen of the page.
+    const repro = doc.querySelector('.rs-repro');
+    assert(!!repro && !!repro.querySelector('details:not([open]) > summary') && !!repro.querySelector('details .rs-commands dt') && !!repro.querySelector('h2'),
+        'Research page: the reproduction notes and commands are folded under their heading');
 
     // The intro follows the hero lead; it should not say the same thing again.
     // Compared on runs of three words, so a light rewording still counts.

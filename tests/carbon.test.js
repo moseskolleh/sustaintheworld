@@ -725,9 +725,9 @@ const ROUNDED_TO_NOTHING = /^0(\.0+)?$|\b0\.0+ /;
         const { window, errors } = run('dark');
         const home = window.document;
         const section = home.getElementById('ecoprompt');
-        assert(errors.length === 0, `Homepage: "AI, Weighed" renders without errors (${errors.map(String).join('; ') || 'none'})`);
+        assert(errors.length === 0, `Homepage: the EcoPrompt Coach teaser renders without errors (${errors.map(String).join('; ') || 'none'})`);
         assert(!!section.querySelector('#ydi #ydiSvg .ydi-hit') && !section.querySelector('select, #anatomy, .eco-widget'),
-            'Homepage: "AI, Weighed" is You Draw It alone, with no calculator and no Anatomy');
+            'Homepage: the EcoPrompt Coach teaser is You Draw It alone, with no calculator and no Anatomy');
         assert(!!section.querySelector('a[href="carbon-ai.html"]') && !home.getElementById('anatomy'),
             'Homepage: it links to the EcoPrompt Coach, where the calculator and Anatomy are');
         const toAnatomy = Array.from(home.querySelectorAll('a[href*="#anatomy"]')).map(a => a.getAttribute('href'));

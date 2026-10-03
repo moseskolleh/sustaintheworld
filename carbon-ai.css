@@ -358,6 +358,7 @@ html { scroll-padding-top: 90px; }
     margin: 0 0 24px;
 }
 .ca-hero p a { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.ca-hero .ca-vintage { margin-top: -14px; font-size: 0.85rem; }
 
 .ca-presets {
     display: flex;
