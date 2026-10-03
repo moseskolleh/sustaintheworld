@@ -1334,27 +1334,45 @@ async function exerciseJourneyAndChart(browser, origin) {
             const r = await page.evaluate(() => {
                 const shown = (t) => { for (let e = t; e && e.tagName !== 'svg'; e = e.parentElement) if (parseFloat(getComputedStyle(e).opacity) < 0.1) return false; return true; };
                 const frame = document.getElementById('journeyMapFrame').getBoundingClientRect();
-                // The glyphs' band, not the line box around them.
-                const box = (t) => { const b = t.getBoundingClientRect(); return { l: b.left, r: b.right, t: b.top + b.height * 0.2, b: b.bottom - b.height * 0.15, name: t.textContent, you: t.classList.contains('map-you-label') }; };
+                // The map's box on screen over its viewBox (the flight is a
+                // CSS transform), for the names and the route alike.
+                const svg = document.querySelector('#journeyMapFrame svg');
+                const R = svg.getBoundingClientRect(), vb = svg.viewBox.baseVal;
+                const sx = (x) => R.left + (x - vb.x) * R.width / vb.width;
+                const sy = (y) => R.top + (y - vb.y) * R.height / vb.height;
+                // A name's glyphs, from its box in map units: Firefox's
+                // getBoundingClientRect takes in the halo stroke drawn under
+                // it, Chromium's does not. Then the glyphs' band, not the
+                // line box around them.
+                const box = (t) => {
+                    let l, r, top, bottom;
+                    try {
+                        const g = t.getBBox();
+                        [l, r, top, bottom] = [sx(g.x), sx(g.x + g.width), sy(g.y), sy(g.y + g.height)];
+                    } catch (e) {
+                        const g = t.getBoundingClientRect();
+                        [l, r, top, bottom] = [g.left, g.right, g.top, g.bottom];
+                    }
+                    const h = bottom - top;
+                    return { l, r, t: top + h * 0.2, b: bottom - h * 0.15, name: t.textContent, you: t.classList.contains('map-you-label') };
+                };
+                const at = (n) => `${Math.round(n.l)}-${Math.round(n.r)}x${Math.round(n.t)}-${Math.round(n.b)}`;
                 // The names in the frame (Freetown's is still drawn, a map away).
                 const names = Array.from(document.querySelectorAll('#journeyMapFrame text')).filter(shown).map(box)
                     .filter(n => n.r > frame.left && n.l < frame.right && n.b > frame.top && n.t < frame.bottom);
                 const out = [];
                 names.forEach((a, k) => names.slice(k + 1).forEach((b) => {
-                    if (a.l < b.r && b.l < a.r && a.t < b.b && b.t < a.b) out.push(`"${a.name}" on "${b.name}"`);
+                    if (a.l < b.r && b.l < a.r && a.t < b.b && b.t < a.b) out.push(`"${a.name}" (${at(a)}) on "${b.name}" (${at(b)})`);
                 }));
                 names.filter(n => n.l < frame.left || n.r > frame.right || n.t < frame.top || n.b > frame.bottom).forEach(n => out.push(`"${n.name}" cut by the frame`));
-                // The legs flown so far, as points on screen: the map's box on
-                // screen over its viewBox (the flight is a CSS transform).
-                const svg = document.querySelector('#journeyMapFrame svg');
-                const R = svg.getBoundingClientRect(), vb = svg.viewBox.baseVal;
+                // The legs flown so far, as points on screen.
                 document.querySelectorAll('#journeyMapFrame .map-arc.drawn').forEach((arc) => {
                     const len = arc.getTotalLength();
                     for (let k = 0; k <= 400; k++) {
                         const q = arc.getPointAtLength(len * k / 400);
-                        const p = { x: R.left + (q.x - vb.x) * R.width / vb.width, y: R.top + (q.y - vb.y) * R.height / vb.height };
+                        const p = { x: sx(q.x), y: sy(q.y) };
                         const on = names.find(n => !n.you && p.x > n.l && p.x < n.r && p.y > n.t && p.y < n.b);
-                        if (on) { out.push(`"${on.name}" across the route (${arc.id})`); break; }
+                        if (on) { out.push(`"${on.name}" (${at(on)}) across the route (${arc.id}, at ${Math.round(p.x)},${Math.round(p.y)})`); break; }
                     }
                 });
                 return { count: names.length, out };

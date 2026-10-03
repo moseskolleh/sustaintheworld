@@ -151,9 +151,7 @@ document.addEventListener('keydown', (e) => {
 // in section 05 and the footer receipt. Each lives in modules/ and is
 // fetched the moment it is first needed: a "listen" press, the backtick
 // key, section 05 coming into range. What every visit pays for is what
-// every visit uses. (The two project games, modules/dossier.js, moved to
-// the case studies they illustrate, which load them the same way without
-// this file.)
+// every visit uses.
 //
 // Modules are classic scripts sharing the page's global scope. They declare
 // nothing at the top level (a second `const safeStorage` would be a
@@ -831,10 +829,11 @@ if (statsSection && 'IntersectionObserver' in window) {
             const b = you.getBBox();
             return !taken.some(o => b.x < o.x + o.width && o.x < b.x + b.width && b.y < o.y + o.height && o.y < b.y + b.height);
         };
+        // Firefox throws for a box not laid out: skip that box, not the search.
+        taken = Array.from(svg.querySelectorAll('.map-stop-dot, .active text, .visited text')).flatMap((el) => { try { return [el.getBBox()]; } catch (e) { return []; } });
         try {
-            taken = Array.from(svg.querySelectorAll('.map-stop-dot, .active text, .visited text'), el => el.getBBox());
             if (!corners.some(tryCorner)) tryCorner(corners[0]);
-        } catch (e) { /* not laid out (Firefox throws): the first corner */ }
+        } catch (e) { /* the mark not laid out: its first corner */ }
     };
 
     const setActive = (index) => {
