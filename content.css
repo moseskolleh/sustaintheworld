@@ -482,6 +482,10 @@ html.lightbox-open { overflow: hidden; }
 }
 .cs-footnote h2 { margin: 0 0 12px; font-size: 1.1rem; color: var(--primary-green); }
 .cs-footnote p { margin: 0 0 10px; line-height: 1.7; font-size: 0.9rem; }
+/* Folded, as research.html's reproduction notes are: the case studies'
+   phone length (scripts/check-budget.js) had no room left once the
+   repositories, the GAIA case and every case study's findings joined. */
+.cs-footnote details > p:first-of-type { margin-top: 12px; }
 .cs-footnote code {
     background: var(--darker-bg);
     padding: 2px 6px;
@@ -588,8 +592,10 @@ html.lightbox-open { overflow: hidden; }
     border-radius: 8px;
 }
 .rs-repro h2 { margin: 0 0 12px; font-size: 1.1rem; color: var(--primary-green); }
-.rs-repro summary { cursor: pointer; font-size: 0.92rem; color: var(--text-secondary); }
-.rs-repro summary:hover { color: var(--primary-green); }
+.rs-repro summary,
+.cs-footnote summary { cursor: pointer; font-size: 0.92rem; color: var(--text-secondary); }
+.rs-repro summary:hover,
+.cs-footnote summary:hover { color: var(--primary-green); }
 .rs-repro details > p { margin: 12px 0 16px; line-height: 1.7; font-size: 0.92rem; }
 
 .rs-commands { margin: 0; }
@@ -624,7 +630,7 @@ html.lightbox-open { overflow: hidden; }
     .cs-card-head h3 { font-size: 1.25rem; }
     .cs-lens-panel { padding: 16px 18px; }
     /* research.html likewise: sixteen outputs to fit under its own */
-    .rs-item { padding: 12px 14px; margin-bottom: 10px; }
+    .rs-item { padding: 12px 14px; margin-bottom: 8px; }
     .rs-intro, .rs-group { margin-bottom: 24px; }
     .rs-repro, .cs-footnote { padding: 18px 18px; }
 }

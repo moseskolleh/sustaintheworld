@@ -53,6 +53,9 @@ function assert(cond, msg) {
     // are words, and nothing where there are none.
     assert(text.length > 3000 && /[a-z]{4} [a-z]{4}/.test(text), `Reader: the PDF's text comes back as words (${text.length} characters)`);
     assert(!/�|\u0000/.test(text), 'Reader: no character comes back unmapped');
+    // A field one entry leaves out (GAIA has no location) prints as nothing,
+    // not as the word a template makes of it.
+    assert(!/\b(?:undefined|null|NaN)\b/.test(text), `Reader: no field missing from content/ is printed as "undefined" (${(text.match(/.{0,40}\b(?:undefined|null|NaN)\b/) || ['none'])[0]})`);
 
     // --- Shape -----------------------------------------------------------
     assert(pdf.pages.length === cv.PAGES, `Shape: the CV is ${cv.PAGES} pages (${pdf.pages.length})`);

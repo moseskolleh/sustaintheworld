@@ -716,10 +716,11 @@ says in words that no entry backs, and a numeral on any page that is
 neither marked nor a year, a date, a section number, a standard's name, a
 place's coordinates, the phone number or another kind listed in
 `scripts/lib/claims.js` (`EXEMPT`). The numbers the calculators work out in
-the browser (the EcoPrompt Coach, the homepage's chart, the footer's receipt) are
-model outputs, not claims: their hosts are skipped by name, must hold no
-figure in the HTML, and their inputs are entries where the pages print
-them. The open counts on `stats.html` are the counter's own.
+the browser (the coach on `carbon-ai.html`, the homepage's chart, the
+footer's receipt) are model outputs, not claims: their hosts are skipped
+by name, must hold no figure in the HTML, and their inputs are entries
+where the pages print them. The open counts on `stats.html` are the
+counter's own.
 
 To add a figure: give it an entry, mark it on the page (`npm run
 build:content` marks it in generated pages), and run `npm test`; an
@@ -967,7 +968,8 @@ did.
 | Case studies page, over the wire (fonts included) | ~109 KB | 109 KB |
 | Open counts page, over the wire (fonts included; sized for a full page) | ~96 KB | 103 KB |
 | Research outputs page, over the wire (fonts included) | ~96 KB | 99 KB |
-| EcoPrompt Coach (`carbon-ai.html`), over the wire (fonts included) | ~110 KB | 111 KB |
+| Check my numbers (`claims.html`), over the wire (fonts included) | ~97 KB | 101 KB |
+| EcoPrompt Coach (`carbon-ai.html`), over the wire (fonts included) | ~111 KB | 111 KB |
 <!-- BUDGET-TABLE:END -->
 
 **What the estimate used to miss.** An earlier version of this table said
@@ -1046,7 +1048,7 @@ weekly Action will commit).
 | `index.html` | 9.79 screens | 17.09 screens |
 | `case-studies.html` | 11.85 screens | 19.78 screens |
 | `carbon-ai.html` | 7.07 screens | 13.38 screens |
-| `claims.html` | 6.03 screens | 10.65 screens |
+| `claims.html` | 6.57 screens | 11.54 screens |
 | `research.html` | 5.86 screens | 8.99 screens |
 | `stats.html` | 10.97 screens | 16.25 screens |
 | `field-report.html` | 4.4 screens | 7.44 screens |

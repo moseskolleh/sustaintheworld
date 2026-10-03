@@ -82,6 +82,11 @@
                     <p class="cl-basis"><span class="mono-label">Basis</span> <a href="case-studies.html#coastal">Coastal Water Pollution Dynamics</a>, &ldquo;<span data-claim="sub-basins">10,226</span> sub-basins modelled&rdquo;: The sub-basin count of the MARINA-Multi model configuration used &mdash; a property of the model domain, not an estimate.</p>
                     <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span>: <a href="case-studies.html#coastal">Case studies</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html#journey">Home</a> &middot; <a href="case-studies.html">Case studies</a> &middot; <a href="research.html#msc-wur">Research</a> &middot; <a href="field-report.html">Field report</a> &middot; the narration</span></p>
                 </li>
+                <li class="cl-item" id="claim-gaia-checks">
+                    <p class="cl-figure"><span class="cl-value" data-claim="gaia-checks">3,984</span> cross-engine checks passing in GAIA: its workbook, web estimator and reference code giving the same answers</p>
+                    <p class="cl-basis"><span class="mono-label">Basis</span> <a href="case-studies.html#gaia">GAIA &mdash; Green AI Assessment</a>, &ldquo;The workbook, the web estimator and the reference code give the same answers: <span data-claim="gaia-checks">3,984</span> cross-engine checks pass&rdquo;: tests/test_engine.py, in the repository, runs the three on the same cases and fails if any disagrees; its roadmap records <span data-claim="gaia-checks">3,984</span> passing at version 2.2.0. An engineering fact, not a result for any organisation.</p>
+                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span>: <a href="case-studies.html#gaia">Case studies</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="case-studies.html#gaia">Case studies</a></span></p>
+                </li>
                 <li class="cl-item" id="claim-first-view">
                     <p class="cl-figure"><span class="cl-value" data-claim="first-view">276</span> KB over the wire: the homepage's first view, fonts included</p>
                     <p class="cl-basis"><span class="mono-label">Basis</span> The budget &ldquo;First view of the homepage, over the wire (fonts included)&rdquo;, measured by <code>npm run budget</code> on every build. The build fails if the homepage outgrows its ceiling or a page quotes another figure, and a real browser checks the estimate in CI.</p>
@@ -112,35 +117,45 @@
                     <p class="cl-basis"><span class="mono-label">Basis</span> <a href="https://httparchive.org/reports/page-weight">HTTP Archive, page weight report</a>.</p>
                     <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span>: <a href="https://httparchive.org/reports/page-weight">httparchive.org</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html">Home</a></span></p>
                 </li>
+                <li class="cl-item" id="claim-gaia-modelled">
+                    <p class="cl-figure"><span class="cl-value" data-claim="gaia-modelled">117</span> of the current models in GAIA's database whose figures are modelled, not measured</p>
+                    <p class="cl-basis"><span class="mono-label">Basis</span> <a href="https://github.com/moseskolleh/GAIA-Framework-/blob/main/ROADMAP.md">GAIA Framework's roadmap, section 0, “Where GAIA stands”, at version 2.2.0</a>.</p>
+                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span>: <a href="https://github.com/moseskolleh/GAIA-Framework-/blob/main/ROADMAP.md">github.com</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="case-studies.html#gaia">Case studies</a></span></p>
+                </li>
+                <li class="cl-item" id="claim-gaia-models">
+                    <p class="cl-figure"><span class="cl-value" data-claim="gaia-models">119</span> current models in GAIA's database</p>
+                    <p class="cl-basis"><span class="mono-label">Basis</span> <a href="https://github.com/moseskolleh/GAIA-Framework-/blob/main/ROADMAP.md">GAIA Framework's roadmap, section 0, “Where GAIA stands”, at version 2.2.0</a>.</p>
+                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span>: <a href="https://github.com/moseskolleh/GAIA-Framework-/blob/main/ROADMAP.md">github.com</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="case-studies.html#gaia">Case studies</a></span></p>
+                </li>
                 <li class="cl-item" id="claim-answer-tokens">
                     <p class="cl-figure"><span class="cl-value" data-claim="answer-tokens">1,000</span> tokens in the answer the homepage chart prices each model at</p>
                     <p class="cl-basis"><span class="mono-label">Basis</span> Each model's published energy is per thousand tokens, adapted from Jegham et al. (2025); the chart quotes it as it is. <span class="cl-file">One of the calculator&rsquo;s inputs, in <code>ai-carbon-data.js</code>.</span></p>
-                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span>: <a href="carbon-ai.html#evidence">AI, Weighed</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html#ecoprompt">Home</a> &middot; <a href="research.html">Research</a></span></p>
+                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span>: <a href="carbon-ai.html#evidence">EcoPrompt Coach</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html#ecoprompt">Home</a> &middot; <a href="research.html">Research</a></span></p>
                 </li>
                 <li class="cl-item" id="claim-output-weight">
                     <p class="cl-figure"><span class="cl-value" data-claim="output-weight">4</span> input tokens' worth of energy the calculator charges for each output token</p>
-                    <p class="cl-basis"><span class="mono-label">Basis</span> Luccioni, Viguier &amp; Ligozat (2023), &quot;Power Hungry Processing: Watts Driving the Cost of AI Deployment?&quot;. The middle of the range below. <span class="cl-file">One of the calculator&rsquo;s inputs, in <code>ai-carbon-data.js</code>.</span></p>
-                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span>: <a href="carbon-ai.html#evidence">AI, Weighed</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="carbon-ai.html">AI, Weighed</a></span></p>
+                    <p class="cl-basis"><span class="mono-label">Basis</span> Luccioni, Jernite &amp; Strubell (2023), &quot;Power Hungry Processing: Watts Driving the Cost of AI Deployment?&quot;. The middle of the range below. <span class="cl-file">One of the calculator&rsquo;s inputs, in <code>ai-carbon-data.js</code>.</span></p>
+                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span>: <a href="carbon-ai.html#evidence">EcoPrompt Coach</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="carbon-ai.html">EcoPrompt Coach</a></span></p>
                 </li>
                 <li class="cl-item" id="claim-output-weight-range">
                     <p class="cl-figure"><span class="cl-value" data-claim="output-weight-range">2–8×</span> the plausible range for that charge, in input tokens</p>
-                    <p class="cl-basis"><span class="mono-label">Basis</span> Luccioni, Viguier &amp; Ligozat (2023), &quot;Power Hungry Processing: Watts Driving the Cost of AI Deployment?&quot;. <span class="cl-file">One of the calculator&rsquo;s inputs, in <code>ai-carbon-data.js</code>.</span></p>
-                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span>: <a href="carbon-ai.html#evidence">AI, Weighed</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="carbon-ai.html">AI, Weighed</a></span></p>
+                    <p class="cl-basis"><span class="mono-label">Basis</span> Luccioni, Jernite &amp; Strubell (2023), &quot;Power Hungry Processing: Watts Driving the Cost of AI Deployment?&quot;. <span class="cl-file">One of the calculator&rsquo;s inputs, in <code>ai-carbon-data.js</code>.</span></p>
+                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span>: <a href="carbon-ai.html#evidence">EcoPrompt Coach</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="carbon-ai.html">EcoPrompt Coach</a></span></p>
                 </li>
                 <li class="cl-item" id="claim-reference-mix">
                     <p class="cl-figure"><span class="cl-value" data-claim="reference-mix">50/50</span> split of input and output tokens at which the calculator reproduces the published per-1k-token figures</p>
-                    <p class="cl-basis"><span class="mono-label">Basis</span> Luccioni, Viguier &amp; Ligozat (2023), &quot;Power Hungry Processing: Watts Driving the Cost of AI Deployment?&quot;. <span class="cl-file">One of the calculator&rsquo;s inputs, in <code>ai-carbon-data.js</code>.</span></p>
-                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span>: <a href="carbon-ai.html#evidence">AI, Weighed</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="carbon-ai.html">AI, Weighed</a></span></p>
+                    <p class="cl-basis"><span class="mono-label">Basis</span> Luccioni, Jernite &amp; Strubell (2023), &quot;Power Hungry Processing: Watts Driving the Cost of AI Deployment?&quot;. <span class="cl-file">One of the calculator&rsquo;s inputs, in <code>ai-carbon-data.js</code>.</span></p>
+                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span>: <a href="carbon-ai.html#evidence">EcoPrompt Coach</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="carbon-ai.html">EcoPrompt Coach</a></span></p>
                 </li>
                 <li class="cl-item" id="claim-bottle">
                     <p class="cl-figure"><span class="cl-value" data-claim="bottle">500</span> mL: the water bottle the calculator counts water in</p>
                     <p class="cl-basis"><span class="mono-label">Basis</span> A definition, not an estimate. <span class="cl-file">One of the calculator&rsquo;s inputs, in <code>ai-carbon-data.js</code>.</span></p>
-                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span>: <a href="carbon-ai.html#evidence">AI, Weighed</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="carbon-ai.html">AI, Weighed</a></span></p>
+                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span>: <a href="carbon-ai.html#evidence">EcoPrompt Coach</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="carbon-ai.html">EcoPrompt Coach</a></span></p>
                 </li>
                 <li class="cl-item" id="claim-default-pue">
                     <p class="cl-figure"><span class="cl-value" data-claim="default-pue">1.2</span> data-centre overhead (PUE) the calculator assumes until you change it</p>
                     <p class="cl-basis"><span class="mono-label">Basis</span> Uptime Institute, Global Data Center Survey. <span class="cl-file">One of the calculator&rsquo;s inputs, in <code>ai-carbon-data.js</code>.</span></p>
-                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span>: <a href="carbon-ai.html#evidence">AI, Weighed</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="research.html">Research</a></span></p>
+                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span>: <a href="carbon-ai.html#evidence">EcoPrompt Coach</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="research.html">Research</a></span></p>
                 </li>
             </ul>
         </section>
@@ -234,7 +249,7 @@
             <p>
                 Years and dates, section numbers, the names of standards such as Scope 2 or SDG 13, places&rsquo;
                 coordinates and my phone number are numerals, not claims. The figures the calculators work out in
-                your browser, on <a href="carbon-ai.html">AI, Weighed</a>, in the chart on the homepage and on the
+                your browser, in the <a href="carbon-ai.html">EcoPrompt Coach</a>, in the chart on the homepage and on the
                 footer&rsquo;s receipt, are model outputs: their inputs are above, and every factor behind them is in
                 the calculator&rsquo;s <a href="carbon-ai.html#evidence">evidence ledger</a>. The
                 <a href="stats.html">open counts</a> are the visit counter&rsquo;s own, rewritten each week.

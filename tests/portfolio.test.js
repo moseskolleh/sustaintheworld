@@ -206,8 +206,16 @@ function dom(file) {
     assert(stageCounts.every(n => n === 5), `Page: every card shows all five stages (${stageCounts.join(', ')})`);
     const folds = Array.from(cards).map(c => c.querySelector(':scope > details.cs-method-fold'));
     assert(folds.every((d, i) => d && !d.open && d.querySelector('summary h4') && d.querySelectorAll('.cs-method li').length === projects.caseStudies[i].method.length &&
-            d.querySelector('summary').textContent.includes(`${projects.caseStudies[i].method.length} steps`)),
+            d.querySelector('summary').textContent.includes(`${['one', 'two', 'three', 'four', 'five', 'six'][projects.caseStudies[i].method.length - 1]} step`)),
         'Page: each method is folded under its heading, which says how many steps it has, with every step inside');
+    // The page's own note on its layout is folded under its heading too: the
+    // phone length had no room for it once the wave's repositories, the GAIA
+    // case and every case study's findings were in.
+    const why = doc.querySelector('.cs-footnote');
+    const whyFold = why && why.querySelector(':scope > details');
+    assert(!!whyFold && !whyFold.open && /Why it is laid out like this/.test(why.querySelector(':scope > h2').textContent) &&
+            whyFold.querySelectorAll(':scope > p').length === 2 && /vouched for/.test(whyFold.textContent),
+        'Page: the note on why it is laid out like this keeps its heading in view and folds its two paragraphs');
     const open = Array.from(cards).map(c => Array.from(c.querySelectorAll(':scope > .cs-stage h4')).map(h => h.textContent.replace(/\s+/g, ' ').trim()));
     assert(open.every(hs => hs.length === 5 && /^05 Findings & recommendations$/.test(hs[4])), `Page: the fifth stage is the findings (${open[0].join(' | ')})`);
 

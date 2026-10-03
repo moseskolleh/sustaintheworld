@@ -45,7 +45,7 @@
     "           or not-checkable (it rests on records held elsewhere). A",
     "           result's comes from the case study.",
     "",
-    "Numbers the calculators work out in the browser (AI, Weighed, the",
+    "Numbers the calculators work out in the browser (the coach on carbon-ai.html, the",
     "homepage chart, the footer's receipt) are model outputs, not claims:",
     "their inputs are entries here, where the pages print them, and every",
     "factor is in the evidence ledger on carbon-ai.html. The open counts on",
@@ -111,6 +111,12 @@
       "value": "25%",
       "unit": "more regional and hazard-type coverage in UNDRR's catalogue of those systems",
       "basis": { "result": "un-disaster" }
+    },
+    {
+      "id": "gaia-checks",
+      "value": "3,984",
+      "unit": "cross-engine checks passing in GAIA: its workbook, web estimator and reference code giving the same answers",
+      "basis": { "result": "gaia" }
     },
     {
       "id": "masters-degrees",
@@ -209,6 +215,22 @@
       "basis": { "source": "HTTP Archive, page weight report", "url": "https://httparchive.org/reports/page-weight" },
       "checkable": "public",
       "check": "https://httparchive.org/reports/page-weight"
+    },
+    {
+      "id": "gaia-modelled",
+      "value": "117",
+      "unit": "of the current models in GAIA's database whose figures are modelled, not measured",
+      "basis": { "source": "GAIA Framework's roadmap, section 0, “Where GAIA stands”, at version 2.2.0", "url": "https://github.com/moseskolleh/GAIA-Framework-/blob/main/ROADMAP.md" },
+      "checkable": "public",
+      "check": "https://github.com/moseskolleh/GAIA-Framework-/blob/main/ROADMAP.md"
+    },
+    {
+      "id": "gaia-models",
+      "value": "119",
+      "unit": "current models in GAIA's database",
+      "basis": { "source": "GAIA Framework's roadmap, section 0, “Where GAIA stands”, at version 2.2.0", "url": "https://github.com/moseskolleh/GAIA-Framework-/blob/main/ROADMAP.md" },
+      "checkable": "public",
+      "check": "https://github.com/moseskolleh/GAIA-Framework-/blob/main/ROADMAP.md"
     },
     {
       "id": "answer-tokens",

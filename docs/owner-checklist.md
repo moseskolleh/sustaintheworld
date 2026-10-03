@@ -627,7 +627,7 @@ drawn from the GAIA repository or from what the site already said.
   `caseStudies[i].findings`; one to four each, and `npm test` refuses a
   figure without a basis.
 - [ ] **G4. The method, folded.** Each case study's method now opens on a
-  press ("02 Method, 4 steps"), to make room for the findings and the
+  press ("02 Method, four steps"), to make room for the findings and the
   seventh case under the page's length ceiling. Open, the seven methods add
   about 3.3 screens on a phone and 1.2 on a desktop, past the ceiling, so
   something of equal length would have to come off first.

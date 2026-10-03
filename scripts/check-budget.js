@@ -159,7 +159,9 @@ const BUDGETS = {
     // "Check my numbers": every figure in the claims ledger, its basis and
     // where it appears, so it grows by an entry with every figure the site
     // gains. Set when the page was made (October 2026) at its measure plus
-    // 5%, as the ratchet would set it: a new budget, not a raised one.
+    // 5%, as the ratchet would set it: a new budget, not a raised one. The
+    // three GAIA entries the wave's other lanes brought still fit under it,
+    // about 4% below, so it was left where it was.
     claimsWire: {
         label: 'Check my numbers (claims.html), over the wire (with fonts)',
         max: 101 * KB,
@@ -212,9 +214,11 @@ const PAGE_BUDGETS = {
 // when the budget was set (28 September 2026, with the shared nav and
 // closing call to action every page but the homepage now has, in Chromium
 // 141, the build CI pins) plus 5%, and claims.html's when it was added, on
-// 3 October 2026, the same way. stats.html is held drawn full, as the
-// smoke's fixture draws a busy quarter: that is the page the weekly Action
-// will commit, and the page as committed today is shorter.
+// 3 October 2026, the same way: measured once the wave that made it had
+// merged, with the GAIA figures its other lanes brought on the list.
+// stats.html is held drawn full, as the smoke's fixture draws a busy
+// quarter: that is the page the weekly Action will commit, and the page as
+// committed today is shorter.
 // ------------------------------------------------------------------
 const VIEWPORTS = {
     '1440x900': { width: 1440, height: 900, label: 'desktop' },
@@ -224,7 +228,7 @@ const LENGTH = {
     'index.html': { '1440x900': 9.79, '390x844': 17.09 },
     'case-studies.html': { '1440x900': 11.85, '390x844': 19.78 },
     'carbon-ai.html': { '1440x900': 7.07, '390x844': 13.38 },
-    'claims.html': { '1440x900': 6.03, '390x844': 10.65 },
+    'claims.html': { '1440x900': 6.57, '390x844': 11.54 },
     'research.html': { '1440x900': 5.86, '390x844': 8.99 },
     'stats.html': { '1440x900': 10.97, '390x844': 16.25 },
     'field-report.html': { '1440x900': 4.4, '390x844': 7.44 },

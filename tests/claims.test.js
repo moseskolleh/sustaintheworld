@@ -199,6 +199,16 @@ function numerals(doc, root, skip) {
     assert(JSON.stringify(found) === '["23","4.2"]', `Scan: catches the unmarked figures in a test page and nothing else (${found.join(', ')})`);
 }
 
+// The names a numeral can be part of without being a figure, which the
+// GAIA case and the repositories brought (a version, a GRI disclosure, a
+// span of scopes, a return period, a section, an ISO date), are let through,
+// and only as names: the same numbers counting something are caught.
+{
+    const doc = new JSDOM('<main><p>GAIA 1.0 and version 2 map to GRI 302/303/305, and GRI 302, 303 and 305, over Scope 1 to 3 and Scope 2 and 3, with 20-year return levels (section 8; Field note 03, reviewed 2026-08-05).</p><p>It found 302 sites, 2 versions of 20 models and 8 sections.</p></main>').window.document;
+    const found = numerals(doc, doc.body, SKIP).filter(n => !n.why).map(n => n.numeral);
+    assert(JSON.stringify(found) === '["302","2","20","8"]', `Scan: lets through a version, a GRI line, a span of scopes, a return period, a section and an ISO date as names, and catches the same numbers as counts (${found.join(', ')})`);
+}
+
 PAGES.forEach((page) => {
     const doc = docs[page];
     const runtime = RUNTIME[page] || [];

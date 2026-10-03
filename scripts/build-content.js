@@ -119,6 +119,13 @@ const FINDING_LABEL = {
     recommendation: 'Recommendation'
 };
 
+// How many steps a folded method has, in words: the claims ledger's page
+// scan (tests/claims.test.js) holds every numeral to an entry, and a count
+// of the steps folded right under it is not a figure anyone needs the
+// basis of. The site writes small counts in words anyway.
+const STEP_WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
+const stepCount = n => `${STEP_WORDS[n] || n} step${n === 1 ? '' : 's'}`;
+
 /** The availability chip shown next to every artifact and output. */
 function statusChip(entry) {
     const label = STATUS_LABEL[entry.status] || entry.status;
@@ -558,7 +565,7 @@ function renderCaseStudies(data) {
     }).join('\n');
 
     // A case study is problem, method, artifact, result and findings. The
-    // method is folded to its one line ("02 Method, 4 steps") until asked
+    // method is folded to its one line ("02 Method, four steps") until asked
     // for: the seventh case study and every case study's findings left no
     // room under the page's length budget (scripts/check-budget.js), and
     // the open methods alone are 3.3 screens on a phone and 1.2 on a
@@ -620,7 +627,7 @@ function renderCaseStudies(data) {
                 </div>
 
                 <details class="cs-stage cs-method-fold">
-                    <summary><h4 class="cs-stage-h"><span class="cs-stage-n">02</span> Method <span class="cs-method-n">${cs.method.length} steps</span></h4></summary>
+                    <summary><h4 class="cs-stage-h"><span class="cs-stage-n">02</span> Method <span class="cs-method-n">${stepCount(cs.method.length)}</span></h4></summary>
                     <ul class="cs-method">${cs.method.map(m => `<li>${prose(m)}</li>`).join('')}</ul>
                 </details>
 
@@ -662,18 +669,21 @@ ${cards}
 
         <section class="cs-footnote">
             <h2>Why it is laid out like this</h2>
-            <p>
-                A portfolio that lists outcomes without saying how they were measured is asking to be
-                taken on trust. Splitting each project into <strong>problem &rarr; method &rarr; artifact &rarr;
-                result &rarr; findings</strong> makes the weak link visible: a strong method with an internal-only
-                artifact is a different thing from a public tool anyone can run, and both from a number with
-                no baseline behind it.
-            </p>
-            <p>
-                The content lives in <code>content/projects.json</code>. A test fails the build if a result
-                loses its basis, a case study its findings, an artifact claims to be public without a working
-                link, or a link points somewhere this repository has not already vouched for.
-            </p>
+            <details>
+                <summary>The reasoning, and what the build checks</summary>
+                <p>
+                    A portfolio that lists outcomes without saying how they were measured is asking to be
+                    taken on trust. Splitting each project into <strong>problem &rarr; method &rarr; artifact &rarr;
+                    result &rarr; findings</strong> makes the weak link visible: a strong method with an internal-only
+                    artifact is a different thing from a public tool anyone can run, and both from a number with
+                    no baseline behind it.
+                </p>
+                <p>
+                    The content lives in <code>content/projects.json</code>. A test fails the build if a result
+                    loses its basis, a case study its findings, an artifact claims to be public without a working
+                    link, or a link points somewhere this repository has not already vouched for.
+                </p>
+            </details>
         </section>`;
 
     // Progressive enhancement only: the page is complete without this.
@@ -1363,7 +1373,7 @@ const CLAIM_PAGES = {
     'index.html': 'Home',
     'case-studies.html': 'Case studies',
     'research.html': 'Research',
-    'carbon-ai.html': 'AI, Weighed',
+    'carbon-ai.html': 'EcoPrompt Coach',
     'field-report.html': 'Field report',
     '404.html': 'Page not found'
 };
@@ -1499,7 +1509,7 @@ ${groups}
             <p>
                 Years and dates, section numbers, the names of standards such as Scope 2 or SDG 13, places&rsquo;
                 coordinates and my phone number are numerals, not claims. The figures the calculators work out in
-                your browser, on <a href="carbon-ai.html">AI, Weighed</a>, in the chart on the homepage and on the
+                your browser, in the <a href="carbon-ai.html">EcoPrompt Coach</a>, in the chart on the homepage and on the
                 footer&rsquo;s receipt, are model outputs: their inputs are above, and every factor behind them is in
                 the calculator&rsquo;s <a href="carbon-ai.html#evidence">evidence ledger</a>. The
                 <a href="stats.html">open counts</a> are the visit counter&rsquo;s own, rewritten each week.

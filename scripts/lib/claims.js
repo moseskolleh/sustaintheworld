@@ -158,9 +158,12 @@ const MONTH = '(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*\\.
 const EXEMPT = [
     { why: 'a year', re: /(?<![\d.,])(?:19|20)\d{2}(?![\d%×]|[.,]\d)/g },
     { why: 'a date', re: new RegExp(`(?<![\\d.,])\\d{1,2} ${MONTH}`, 'g') },
-    { why: 'a section or step number, zero-padded', re: /(?<![\d.,])0\d(?![\d.,%])/g },
+    { why: 'a date, written as the ISO standard writes it', re: /\b(?:19|20)\d{2}-[01]\d-[0-3]\d\b/g },
+    { why: 'a section or step number, zero-padded', re: /(?<![\d.,])0\d(?![\d%]|[.,]\d)/g },
+    { why: 'a section number, named as one', re: /\b[Ss]ection \d+(?:\.\d+)*\b/g },
     { why: 'a list ordinal', re: /\[\d{1,2}\]/g },
-    { why: 'the name of a standard or a reporting line', re: /\b(?:Scopes? \d(?:\s*[–-]\s*\d)?|category \d+|SDGs? \d+(?:\s*(?:&|and)\s*\d+)?|ISO \d+|IFRS S\d(?:\s*[&/]\s*S\d)?|E\d(?:-\d+)?)\b/g },
+    { why: 'the name of a standard or a reporting line', re: /\b(?:Scopes? \d(?:\s*(?:[–-]|to|and)\s*\d)?|category \d+|SDGs? \d+(?:\s*(?:&|and)\s*\d+)?|ISO \d+|IFRS S\d(?:\s*[&/]\s*S\d)?|E\d(?:-\d+)?|GRI \d{3}(?:(?:\s*[/,]\s*|,? and )\d{3})*)\b/g },
+    { why: 'the name of a statistic (a 20-year return level)', re: /\b\d+-year return (?:levels?|periods?)\b/g },
     { why: 'the name of a cohort', re: /\bCohort \d+\b/g },
     { why: 'a place\'s coordinates', re: /\d+(?:\.\d+)?° ?[NSEW]\b/g },
     { why: 'a phone number', re: /\+\d{1,3}(?:[  ]\d{2,4}){2,4}/g },
@@ -168,6 +171,7 @@ const EXEMPT = [
     { why: 'a unit: per thousand tokens', re: /\bper[- ]1k\b/g },
     { why: 'a dataset\'s name (Natural Earth\'s 1:50m coastlines)', re: /\bNatural Earth \d+ ?m\b/g },
     { why: 'a version number', re: /\bv?\d+\.\d+\.\d+\b/g },
+    { why: 'a version, named as one (version 2, GAIA 1.0)', re: /\b(?:[Vv]ersion|GAIA(?: Framework)?) \d+(?:\.\d+)*\b/g },
     { why: 'a CSS length', re: /\b\d+(?:\.\d+)?(?:px|rem|em|vh|vw|dvh|ms)\b/g }
 ];
 

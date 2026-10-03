@@ -138,7 +138,8 @@ function cvModel(data, indexHtml) {
             return {
                 title: cs.title,
                 href: `${site}case-studies.html#${cs.id}`,
-                when: `${cs.period} · ${cs.location}`,
+                // GAIA, the method-and-tooling case, has no place to name.
+                when: [cs.period, cs.location].filter(Boolean).join(' · '),
                 claim: head.claim,
                 brief: head.brief || '',
                 check: head.verifiable ? 'Checkable from outside' : 'Not checkable from outside'

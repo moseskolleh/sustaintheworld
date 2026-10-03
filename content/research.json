@@ -116,7 +116,7 @@
       "caseStudy": "groundwater",
       "summary": "Python and browser code for rural borehole projects in Sierra Leone: resistivity soundings, drilling logs, pumping tests and water quality in; figures, borehole designs and .docx reports out. The repo links a browser app.",
       "methods": [],
-      "note": "A toolkit dated 2026, not the records of my 2018–19 fieldwork. Its worked examples are partly illustrative or synthetic, as the repo says."
+      "note": "A toolkit dated 2026, not the records of my 2018–2019 fieldwork. Its worked examples are partly illustrative or synthetic, as the repo says."
     },
     {
       "id": "gaia-framework",
@@ -173,7 +173,7 @@
       "status": "public",
       "url": "https://github.com/moseskolleh/promptcoach",
       "caseStudy": "sustainable-ai",
-      "summary": "A JavaScript engine, web app and Chrome extension that estimate the energy, water and carbon of an LLM prompt from published benchmarks, in everyday terms. Version 2's 22 models are current to September 2026; the repo links the web app.",
+      "summary": "A JavaScript engine, web app and Chrome extension that estimate the energy, water and carbon of an LLM prompt from published benchmarks, in everyday terms. Version 2's list of models runs to September 2026; the repo links the web app.",
       "methods": [],
       "note": "Began as a Digital Society School prototype. Its 2026 models are extrapolated, as no lab has published a figure for one; the extension runs unpacked, in no store."
     },
