@@ -746,10 +746,13 @@ function checkCertifications(certifications) {
 // source is accepted, and an entry without one is refused. The homepage
 // shows them only when there is at least one, and it is held to a length
 // (LENGTH in scripts/check-budget.js), so each quote is an excerpt of at
-// most 200 characters. Measured in Chromium on the October 2026 homepage,
-// two at that length add 0.40 of a 1440x900 screen and 0.77 of a 390x844
-// one, against 0.43 and 0.78 to spare; a third (0.46 and 1.30 at 280
-// characters) needs room made first, and smoke.js's length check says so.
+// most 200 characters. Measured in Chromium on the homepage before the rest
+// of wave 4, two at that length added 0.40 of a 1440x900 screen and 0.77 of
+// a 390x844 one, against 0.43 and 0.78 to spare. With wave 4 merged the
+// homepage is 9.42 and 16.46 screens, and stand-ins at that length take it
+// to 9.80 and 16.86 with one quote, 9.80 and 17.18 with two, over the 9.79
+// and 17.09 ceilings: room has to be made first, and smoke.js's length
+// check says so.
 // ------------------------------------------------------------------
 const TESTIMONIAL_KEYS = ['quote', 'name', 'role', 'relationship', 'source'];
 const TESTIMONIAL_LIMITS = { entries: 3, quote: 200 };

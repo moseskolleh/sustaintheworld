@@ -21,6 +21,8 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 - **Role-specific lenses**: `case-studies.html?lens=water`, `?lens=climate-risk`, `?lens=sustainable-ai`, `?lens=esg-csrd` — shareable views that reframe the portfolio for one kind of role. They **reorder and frame, they never filter**: every case study stays on the page in every view, because a view that hides inconvenient work is a CV that lies by omission. Without JavaScript the switcher steps aside and every case study shows in the default view
 - **No dead ends**: every page but the homepage shares one small nav (Home, Case studies, Research, CV, Contact, with the page you are on marked) and ends with a way to reach Moses: his address, the contact form and the CV. The pages built on `carbon-ai.css` have the homepage's light theme and its switch, and keep the reader's choice from page to page (`theme.js`, before the first paint); with nothing chosen they follow the system's setting, with or without JavaScript. The homepage follows it only with JavaScript: without, it stays dark, because following the system there would put a second copy of every light-theme rule in its first view. The text-only field report and the 404 page take the nav and the call to action as plain lines, and no script
 - **[Research outputs](research.html)**: theses, reports, datasets, code and tools, grouped by whether you can open them: public, on request, or held by the client. The public ones lead with Moses's own repositories on GitHub (a groundwater toolkit, the GAIA Green AI framework, a CMIP6 extremes pipeline, an A/B test in SQL and Python, the sustainable-AI prototypes and the maintained EcoPrompt Coach), each described only as far as the repository itself shows. No DOI, journal or conference is named anywhere, because none of this work has one — and a test fails the build if one ever appears without proof
+- **[Check my numbers](claims.html)**: every figure the site prints, from the hero's 164 water points to the first view's weight, with what it counts, the one basis it rests on and whether a reader can check it (public, with where; on request; or not checkable from outside). Each figure on a page is marked with its entry in `content/claims.json`, and `npm test` fails on a figure the ledger does not hold. See [Every number has a basis](#every-number-has-a-basis-the-claims-ledger)
+- **A CV printed from the same facts**: `npm run cv` prints `assets/Moses_Kolleh_Sesay_CV.pdf` from `content/` and the homepage's own words, so it says what the site says, and a test fails once it falls behind them. See [The CV](#the-cv)
 - **[Open counts](stats.html)**: what the site's own cookieless counter has counted, rebuilt weekly — the five numbers that say whether the site works, page views by page, lens and window width, referrers, features used and bytes per page view, in whole weeks. Every count under 5 reads `<5`, a figure that would let one be worked out by subtraction reads `held`, and the page prints the exact payload a page view sends. See [Open counts](#open-counts)
 - **Borehole core-log experience timeline**: career history logged the way a geologist logs a core — depth is time, every layer is a chapter. Each role is a short card (dates, role, organisation, one line), the rest a press away
 - **EcoPrompt Coach**: one name for one tool. The homepage's section 05 is its teaser, one chart: guess how the energy of one AI answer grows with model size, then see the published estimates. This site's edition of the coach (model × grid × tokens → energy, carbon, water, with an evidence ledger) and Anatomy of a Prompt are on [`carbon-ai.html`](carbon-ai.html), which says how old its figures are; the maintained version, with newer models (their figures extrapolated, as it says), is the [EcoPrompt Coach app](https://moseskolleh.github.io/promptcoach/) ([code](https://github.com/moseskolleh/promptcoach))
@@ -596,8 +598,8 @@ Everything derived now comes from `content/`:
 | Source | Feeds |
 |---|---|
 | `content/profile.json` | JSON-LD, `sitemap.xml`, the homepage's at-a-glance strip, its certificates and its core log's depths, the Assay's facts block in `modules/interactives.js`, the shared shell's call to action on every page but the homepage, the CV, the facts `content.test.js` holds every page to |
-| `content/projects.json` | `case-studies.html` (with each case study's photos and game), and the homepage's six project cards (every case study not marked `homepageCard: false`) |
-| `content/lenses.json` | the role-specific views |
+| `content/projects.json` | `case-studies.html` (with each case study's photos, game and findings), the homepage's six project cards (every case study not marked `homepageCard: false`), and each case study's headline result on the CV |
+| `content/lenses.json` | the role-specific views (`water`, `climate-risk`, `sustainable-ai`, `esg-csrd`) |
 | `content/research.json` | `research.html`, the CV's public work |
 | `content/testimonials.json` | the homepage's testimonials, once there is one |
 | `content/claims.json` | `claims.html` ("Check my numbers"), and the `data-claim` mark on every figure a generated page prints from `content/` |
@@ -733,6 +735,13 @@ confirmed the open-ended facts (the "Present" role in particular) were still
 true. When that goes stale the test prints a notice rather than failing — a
 suite that goes red on a calendar date is one people learn to ignore.
 
+It is also the surface of the core log: the depths are measured from it, not
+from the day of the build (which would make `npm run build:content` give a
+different page each month), and the log's head says "LOGGED" and its month.
+The CV ends "Facts last verified" and the same day. So after changing it, run
+`npm run build:content` and then `npm run cv`, and commit the redrawn
+`index.html` with the new PDF and `assets/cv.hash`.
+
 ### Open counts
 
 `stats.html` is built from `content/stats.json`, which only
@@ -821,10 +830,10 @@ same page view. This is the whole of one, exactly as `count.js` sends it:
 | Key | What it holds |
 |---|---|
 | `v` | `1`, the version of this format |
-| `page` | the page's file name without `.html` (`index`, `case-studies`, `research`, `carbon-ai`, `field-report`, `stats`), or `404` |
+| `page` | the page's file name without `.html` (`index`, `case-studies`, `research`, `claims`, `carbon-ai`, `field-report`, `stats`), or `404` |
 | `lens` | the `?lens=` the page view arrived with, or `""` |
 | `deepest` | the id of the furthest top-level part of `<main>` that came on screen: on the homepage one of its seven sections, from `journey` to `contact`; `csGrid` on the case studies; `""` on the pages that have no such part |
-| `features` | up to 20 distinct names of things used: the site's `data-analytics` hooks (34 today, such as `cv-download-hero` and `receipt-open`), `cv-download` once for a view that used any CV link (the CV-downloads figure counts page views), `cv-download-terminal` when the field terminal's `cv` command fetches the CV, `module-<name>` for each on-demand module fetched, `contact-form-submit`, and the Assay's grade (`assay-high`, `assay-workable`, `assay-marginal`) |
+| `features` | up to 20 distinct names of things used: the site's `data-analytics` hooks (37 today, such as `cv-download-hero` and `receipt-open`), `cv-download` once for a view that used any CV link (the CV-downloads figure counts page views), `cv-download-terminal` when the field terminal's `cv` command fetches the CV, `module-<name>` for each on-demand module fetched, `contact-form-submit`, and the Assay's grade (`assay-high`, `assay-workable`, `assay-marginal`) |
 | `ref` | the referring site's host only (`www.linkedin.com`); `""` if there was none, or it was this site |
 | `vp` | the browser window's width as a class: `s` under 600 px, `m` under 1024 px, `l` wider |
 | `kb` | whole KB this page view transferred, from the browser's Resource Timing API, so a cached revisit counts as the near-zero it is |
@@ -1179,9 +1188,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [ ] Multi-language support (English, Dutch)
 - [x] Project detail pages (case studies, with a teaser card for each on the homepage)
 - [x] Interactive data visualizations (journey map, AI cost widget, impact charts)
-- [x] PDF resume download
+- [x] PDF resume download (printed from `content/` by `npm run cv`)
 - [ ] Newsletter subscription
-- [ ] Testimonials section
+- [ ] Testimonials (the block and its rules are built; it shows once someone has agreed to be quoted)
 - [ ] Custom domain
 
 ---

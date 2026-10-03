@@ -13,8 +13,8 @@
 //
 // GENERATED (do not hand-edit — the header on each file says so):
 //
-//   case-studies.html   problem → method → artifact → result, per project,
-//                       with role lenses
+//   case-studies.html   problem → method → artifact → result → findings,
+//                       per case study, with role lenses
 //   research.html       research outputs and how to reproduce them
 //   stats.html          what the visit counter has counted, suppressed
 //                       below 5, and exactly what it sends (content/stats.json,
@@ -144,7 +144,7 @@ function statusChip(entry) {
 // CV) and, where the page is long, a link back to the top. The generated
 // pages get it from pageShell; carbon-ai.html, field-report.html and
 // 404.html are hand-authored and take the same markup between SHELL-*
-// markers (injectShell, below), so --check holds all six to one shell.
+// markers (injectShell, below), so --check holds all seven to one shell.
 // The address, the CV and the roles come from content/profile.json.
 // ------------------------------------------------------------------
 

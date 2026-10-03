@@ -24,8 +24,10 @@
     "",
     "`relationship` says how they know his work (\"managed me at ...\").",
     "At most three entries, each quote an excerpt of at most 200 characters.",
-    "The homepage has a length budget: two such quotes fit it today, a third",
-    "needs room made first (checkTestimonials says what each one costs).",
+    "The homepage has a length budget, and since wave 4 it has no room for",
+    "even one quote of 200 characters on a desktop (9.80 screens against a",
+    "9.79 ceiling); two also go over on a phone. Make room first: npm run",
+    "smoke measures it (scripts/lib/content.js has the figures, above checkTestimonials).",
     "npm run build:content draws them under the experience section."
   ],
   "testimonials": []
