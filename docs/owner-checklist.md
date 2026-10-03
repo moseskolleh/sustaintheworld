@@ -672,16 +672,38 @@ drawn from the GAIA repository or from what the site already said.
 
 ## Documents
 
-- [ ] **D1. Update or regenerate the CV PDF.**
-  - *Why:* `assets/Moses_Kolleh_Sesay_CV.pdf` was made on 2025-11-17. It still
-    says "10,000+ beneficiaries", "95% project completion rate", "efficiency
-    by 15%" and "directly informing national policy", all of which the site
-    removed or restated in wave 1 (see E2, E3, E5).
-  - *Where:* replace the file at the same path (`content/profile.json` →
-    `links.cv` points at it). Phase 3.7 will generate it from `content/`
-    instead.
-  - *Check:* the PDF carries none of those four phrases unless E2, E3 or E5
-    has given it a basis.
+- [ ] **D1. Read the generated CV, and say what it should add.**
+  - *Why:* the CV made on 2025-11-17 still said "10,000+ beneficiaries", "95%
+    project completion rate", "efficiency by 15%", "3+ years" and Power BI.
+    Since wave 4, `npm run cv` prints `assets/Moses_Kolleh_Sesay_CV.pdf` from
+    `content/` and the homepage, so it says only what the site says, and the
+    tests fail if it falls behind. Three things on the old one are not on it,
+    because the site does not say them: your phone number, the Ministry of
+    Finance as the partner (D2), and the relevant courses under each degree.
+  - *Where:* anything you want on it goes on the site first (`content/profile.json`
+    or the homepage), then `npm run cv`. A phone number would need a new
+    `person.phone` field: say if you want one published.
+  - *Check:* `npm test` passes (`tests/cv.test.js`), and the PDF reads as you
+    would want a recruiter to read it.
+- [ ] **D2. May the CV and the site name the Ministry of Finance as the partner?**
+  - *Why:* the site names it today (`currentRole.partner`, the experience card,
+    the sustainable-AI case study, the hero tag on `carbon-ai.html`), and the
+    old CV did. The new CV leaves it off until you confirm the ministry has
+    agreed to be named; no page adds a new mention meanwhile.
+  - *Where:* tell us yes or no. No means the existing mentions should come off too.
+- [ ] **D3. A verification link for each certificate** (Phase 3.8).
+  - *Why:* four certificates are listed with nothing a reader can check them
+    against. Each can link the issuer's own page for it, on the homepage and
+    the CV, as "Verify".
+  - *Where:* `content/profile.json` → `certifications[i].verifyUrl`, one https
+    address each, then `npm run build:content && npm run cv`. Leave the field
+    out where there is none (never `null` or "TBC"; the build refuses them).
+    Coursera (`coursera.org/verify/...` or `coursera.org/account/accomplishments/...`)
+    and CFI's `credentials.corporatefinanceinstitute.com` are already
+    accepted. Masterschool's and the UN System Staff College's hosts are not
+    known yet: send the link, and its host is added to `VERIFY_HOSTS` and
+    `TRUSTED_HOSTS` in `scripts/lib/content.js` once someone has opened it.
+  - *Check:* `npm test` passes, and each Verify link opens the certificate.
 
 ---
 
@@ -689,7 +711,11 @@ drawn from the GAIA repository or from what the site already said.
 
 - [ ] **L1. Two or three testimonials, with permission** (Phase 3.5). Each
   with a LinkedIn recommendation URL, or "on request" and the date permission
-  was given; they go in `content/testimonials.json`, which Phase 3.5 creates.
+  was given; they go in `content/testimonials.json` (its comment gives the
+  shape), as an excerpt of at most 200 characters with the person's name,
+  role and how they know your work. Until one is there the homepage shows
+  nothing. Two fit the homepage's length budget today; a third needs room
+  made, and `npm run smoke` will say so.
 - [ ] **L2. One Field Note a month** (Phase 5.2), starting with the six topics
   in the plan.
 - [ ] **L3. A custom domain, and a decision on `moseskolleh.github.io`**

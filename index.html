@@ -414,13 +414,14 @@
                 <h2 class="section-title">Professional <span class="highlight">Experience</span></h2>
                 <p class="section-description">Logged the way a geologist logs a borehole: depth is time, every layer is a chapter. Drill down.</p>
             </div>
+            <!-- Depths and date: build-content.js, from profile.json -->
             <div class="corelog">
                 <div class="corelog-head mono-label" aria-hidden="true">
-                    <span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-ruler-vertical"></use></svg> CORE LOG MKS-01 · SURFACE = TODAY</span>
-                    <span>SCALE ≈ 10 m / YEAR</span>
+                    <span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-ruler-vertical"></use></svg> CORE LOG MKS-01 · LOGGED AUG 2026</span>
+                    <span>SCALE 10 m / YEAR</span>
                 </div>
                 <div class="corelog-item reveal">
-                    <div class="corelog-depth mono-label"><strong>0 m</strong><span>surface</span></div>
+                    <div class="corelog-depth mono-label"><strong>0–9 m</strong><span>2025</span></div>
                     <div class="corelog-strata strata-synthetic" aria-hidden="true"></div>
                     <div class="timeline-content">
                         <div class="timeline-date">Sept 2025 — Present</div>
@@ -444,7 +445,7 @@
                 </div>
 
                 <div class="corelog-item reveal">
-                    <div class="corelog-depth mono-label"><strong>8 m</strong><span>2025</span></div>
+                    <div class="corelog-depth mono-label"><strong>13–14 m</strong><span>2025</span></div>
                     <div class="corelog-strata strata-accel" aria-hidden="true"></div>
                     <div class="timeline-content">
                         <div class="timeline-date">Mar 2025 — Apr 2025</div>
@@ -466,7 +467,7 @@
                 </div>
 
                 <div class="corelog-item reveal">
-                    <div class="corelog-depth mono-label"><strong>24 m</strong><span>2023</span></div>
+                    <div class="corelog-depth mono-label"><strong>28–32 m</strong><span>2023</span></div>
                     <div class="corelog-strata strata-alluvium" aria-hidden="true"></div>
                     <div class="timeline-content">
                         <div class="timeline-date">Jun 2023 — Oct 2023</div>
@@ -488,7 +489,7 @@
                 </div>
 
                 <div class="corelog-item reveal">
-                    <div class="corelog-depth mono-label"><strong>63 m</strong><span>2019</span></div>
+                    <div class="corelog-depth mono-label"><strong>68–73 m</strong><span>2019</span></div>
                     <div class="corelog-strata strata-laterite" aria-hidden="true"></div>
                     <div class="timeline-content">
                         <div class="timeline-date">May 2019 — Sept 2019</div>
@@ -511,7 +512,7 @@
                 </div>
 
                 <div class="corelog-item reveal">
-                    <div class="corelog-depth mono-label"><strong>70 m</strong><span>2018</span></div>
+                    <div class="corelog-depth mono-label"><strong>73–79 m</strong><span>2018</span></div>
                     <div class="corelog-strata strata-granite" aria-hidden="true"></div>
                     <div class="timeline-content">
                         <div class="timeline-date">Sept 2018 — Apr 2019</div>
@@ -533,6 +534,8 @@
                 </div>
                 <div class="corelog-foot mono-label" aria-hidden="true">▼ BEDROCK · 2013 — 2017 · BSc GEOLOGY, FIRST CLASS — WHERE THE STORY STARTS</div>
             </div>
+            <!-- TESTIMONIALS -->
+            <!-- /TESTIMONIALS -->
         </div>
     </section>
 
@@ -756,8 +759,8 @@
                     </ul>
                 </div>
                 <!-- Each degree is its dates, name and institution, then one run
-                     of what it held; each certificate its name, issuer and date,
-                     then what it covered. -->
+                     of what it held; the certificates are profile.json's,
+                     written by build-content.js. -->
                 <div class="skills-panel education reveal" id="education">
                     <p class="panel-label mono-label"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-graduation-cap"></use></svg> Education</p>
                     <div class="education-grid">
@@ -794,6 +797,7 @@
                         </div>
                     </div>
                     <h3 class="cert-heading mono-label">Certificates</h3>
+                    <!-- CERTIFICATES -->
                     <div class="cert-grid">
                         <div class="education-card certification">
                             <h4 class="cert-title">ESG Specialist Program</h4>
@@ -816,6 +820,7 @@
                             <p class="cert-line">Disaster risk reduction and adaptation, jointly; Sendai Framework in practice</p>
                         </div>
                     </div>
+                    <!-- /CERTIFICATES -->
                 </div>
             </div>
         </div>
@@ -961,7 +966,7 @@
                     (&asymp;0.36&nbsp;g CO&#8322;e per MB, global average grid). Comparison point: the median web page ships &asymp;2.5&nbsp;MB
                     (<a href="https://httparchive.org/reports/page-weight" target="_blank" rel="noopener">HTTP Archive</a>).
                     A leading &ldquo;+&rdquo; means a request to another site couldn&rsquo;t be measured (the visit count or a message, both sent to the site&rsquo;s Apps Script), so the true figure is a touch higher &mdash; never lower.
-                    Before this redesign, this page shipped ~25&nbsp;MB of images. A first view now costs about 275&nbsp;KB over the wire, fonts included &mdash; text compressed, one hero image, everything else loaded only if you go looking for it. That figure is a budget the test suite enforces, not a claim in a README.
+                    Before this redesign, this page shipped ~25&nbsp;MB of images. A first view now costs about 276&nbsp;KB over the wire, fonts included &mdash; text compressed, one hero image, everything else loaded only if you go looking for it. That figure is a budget the test suite enforces, not a claim in a README.
                     Want the logical extreme? The <a href="field-report.html">text-only field report</a> is the whole portfolio in 9&nbsp;KB.</p>
                 </div>
 

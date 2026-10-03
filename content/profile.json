@@ -165,31 +165,47 @@
     }
   ],
 
+  "$certifications": [
+    "The homepage's certificates (between the CERTIFICATES markers in",
+    "index.html) and the CV are printed from this list: name, issuer, date and",
+    "`covered`, one line on what it covered.",
+    "",
+    "verifyUrl is optional and absent until Moses supplies it: the issuer's",
+    "own page for this certificate (Coursera's for the Google one, CFI's",
+    "credential site for theirs). With one, the homepage and the CV link it",
+    "as 'Verify'. Leave the field out rather than writing null or 'TBC' —",
+    "the build refuses a placeholder, and an address that is not https or",
+    "not on an issuer's host (VERIFY_HOSTS in scripts/lib/content.js)."
+  ],
   "certifications": [
     {
       "name": "ESG Specialist Program",
       "issuer": "Corporate Finance Institute",
       "displayDate": "Sep 2024",
-      "year": "2024"
+      "year": "2024",
+      "covered": "ESG investing, financial strategy and reporting; risk and opportunity analysis"
     },
     {
       "name": "Google Advanced Data Analytics",
       "issuer": "Google — Coursera",
       "displayDate": "Jan 2024",
-      "year": "2024"
+      "year": "2024",
+      "covered": "Machine learning and regression models; statistical methods and visualisation"
     },
     {
       "name": "Data Analytics Training",
       "issuer": "Masterschool",
       "displayDate": "Dec 2023",
-      "year": "2023"
+      "year": "2023",
+      "covered": "SQL, Python, Excel, Tableau; real-world business cases"
     },
     {
       "$comment": "Was on field-report.html only until this file forced the two to agree.",
       "name": "Synergizing DRR & Climate Change Adaptation",
       "issuer": "UN System Staff College",
       "displayDate": "2023",
-      "year": "2023"
+      "year": "2023",
+      "covered": "Disaster risk reduction and adaptation, jointly; Sendai Framework in practice"
     }
   ],
 

@@ -616,8 +616,8 @@ the steps below.
    every listed skill has a project behind it (Life Cycle Assessment, Carbon
    Markets and Circular Economy have none), and the contact narration says
    "Amsterdam and the E.U.", as the page does.
-   Left: the CV PDF still carries four of the removed claims (✗ Moses, or
-   Phase 3.7). ✗ Sources for the 30%, a people-reached count and a method for
+   The CV is printed from content/ since wave 4 (Phase 3.7) and carries none
+   of them. ✗ Sources for the 30%, a people-reached count and a method for
    95% and 15%, if they exist.
 5. ✓ **Contradictions resolved**: embodied carbon excluded on both pages,
    and Anatomy names whose report its Scope 2 and capital-goods lines are

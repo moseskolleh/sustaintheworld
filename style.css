@@ -1495,6 +1495,7 @@ html.light-mode .hero-photo-caption {
     display: block;
     color: var(--primary-green);
     font-size: 0.95rem;
+    white-space: nowrap;    /* "68–73 m"; smoke.js keeps it off the core */
 }
 
 .corelog-depth span {
@@ -1702,7 +1703,7 @@ html.js .timeline-date { padding-right: 64px; }
         display: none;
     }
 
-    /* .corelog > : the tablet columns (46px 20px 1fr) come later in the file. */
+    /* .corelog > : the tablet columns (60px 20px 1fr) come later in the file. */
     .corelog > .corelog-item {
         grid-template-columns: 8px minmax(0, 1fr);
         gap: 0 12px;
@@ -2706,7 +2707,7 @@ html.js .nojs-note { display: none; }
     }
 
     .corelog-item {
-        grid-template-columns: 46px 20px 1fr;
+        grid-template-columns: 60px 20px 1fr;
         gap: 0 12px;
     }
 
@@ -3112,7 +3113,9 @@ html.light-mode .journey-map-readout {
 
 .ecoprompt .section-description a,
 .eco-footnote a,
-.fieldnote-body a {
+.fieldnote-body a,
+.cert-meta a,
+.testimonial a {
     color: var(--primary-green);
 }
 

@@ -16,7 +16,7 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 - **"Don't let it become a boat" flood scene**: a schematic Wupper cross-section on the [Wuppertal case study](case-studies.html#play-flood) — slide the river from a calm day to July 2021 and watch the margin under the Schwebebahn's hanging cars shrink. Both games load only when a reader scrolls near them, and without JavaScript each is a note that it needs JavaScript and one line of summary
 - **Field terminal**: press <code>`</code> anywhere (or the footer button) for a hidden green-on-black terminal — try `journey`, `drill`, `co2`, `voice`, `kushe`, `help`
 - **The spoken page**: one `Listen` control in the nav reads the section in view with the browser's own speech engine, which transfers **zero bytes**. The one recording on the site is Moses introducing himself in his own voice, offered once he has recorded it, fetched only on click and labelled with exactly what it transfers (see [Narration](#narration-the-spoken-page)). Nothing ever autoplays
-- **Carbon-aware by construction**: images ship as optimized WebP, the three typefaces are self-hosted subsets, and a first view costs about **275 KB over the wire, fonts included**, against a 288 KB ceiling `npm test` enforces — a budget, not a number in a README, and one that `npm run smoke` checks against a real browser (see [Performance](#performance)). Everything a visit does not reach — the narration player, the field terminal, the section-05 interactives, the case studies' two games — is fetched only when it is used. Nothing is loaded from any other origin, and only two things are ever sent to one, both to the site's own Apps Script endpoint: a contact message, and one cookieless visit count per page view (never under Do Not Track or Global Privacy Control; see [The visit counter and privacy](#the-visit-counter-and-privacy)). A live footer badge weighs each visit in the browser (Resource Timing API × Sustainable Web Design model), counting network transfer only. A low-energy mode pauses all animation and honours `prefers-reduced-motion`
+- **Carbon-aware by construction**: images ship as optimized WebP, the three typefaces are self-hosted subsets, and a first view costs about **276 KB over the wire, fonts included**, against a 288 KB ceiling `npm test` enforces — a budget, not a number in a README, and one that `npm run smoke` checks against a real browser (see [Performance](#performance)). Everything a visit does not reach — the narration player, the field terminal, the section-05 interactives, the case studies' two games — is fetched only when it is used. Nothing is loaded from any other origin, and only two things are ever sent to one, both to the site's own Apps Script endpoint: a contact message, and one cookieless visit count per page view (never under Do Not Track or Global Privacy Control; see [The visit counter and privacy](#the-visit-counter-and-privacy)). A live footer badge weighs each visit in the browser (Resource Timing API × Sustainable Web Design model), counting network transfer only. A low-energy mode pauses all animation and honours `prefers-reduced-motion`
 - **[Case studies](case-studies.html), evidence-first**: the homepage's six projects and a seventh, GAIA, an open method and tool for reporting an organisation's AI footprint on the lines of a sustainability report, each as **problem → method → artifact → result → findings**. Every result carries the basis it rests on and says plainly whether you can check it from outside; every artifact says whether it is public, available on request, or held by the client; every case study says what the work found or recommends, with its basis. The method is folded to one line until asked for. See [Content pipeline](#content-pipeline)
 - **Role-specific lenses**: `case-studies.html?lens=water`, `?lens=climate-risk`, `?lens=sustainable-ai`, `?lens=esg-csrd` — shareable views that reframe the portfolio for one kind of role. They **reorder and frame, they never filter**: every case study stays on the page in every view, because a view that hides inconvenient work is a CV that lies by omission. Without JavaScript the switcher steps aside and every case study shows in the default view
 - **No dead ends**: every page but the homepage shares one small nav (Home, Case studies, Research, CV, Contact, with the page you are on marked) and ends with a way to reach Moses: his address, the contact form and the CV. The pages built on `carbon-ai.css` have the homepage's light theme and its switch, and keep the reader's choice from page to page (`theme.js`, before the first paint); with nothing chosen they follow the system's setting, with or without JavaScript. The homepage follows it only with JavaScript: without, it stays dark, because following the system there would put a second copy of every light-theme rule in its first view. The text-only field report and the 404 page take the nav and the call to action as plain lines, and no script
@@ -56,7 +56,8 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 - The three Field Notes, each its title until opened
 
 ### 💼 Experience
-- The borehole core-log timeline: depth is time, every layer a chapter, technology tags for each
+- The borehole core-log timeline: depth is time, every layer a chapter, technology tags for each. Each layer's depths (10 m a year, its top where the role ended, its base where it began) are worked out by `npm run build:content` from the roles' dates in `content/profile.json`, measured from `meta.verifiedOn`, the day the facts were last checked; the head says when the log was logged
+- Testimonials under the log, from `content/testimonials.json`, each with who said it and where a reader can check it; none yet, so nothing is shown
 - Short cards at every width: dates, role, organisation and the first line, with the rest and the tags behind a More button named for its role; on a desktop a shut card is one row
 
 ### 🔬 Projects
@@ -72,7 +73,7 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 - Evidence-first: every tool's proof is public work, a repository or a case study with one, or it says there is none; real field numbers instead of percentages
 - Areas of expertise, and ESG frameworks and standards (SBTi, CDP, GHG Protocol, TCFD, TNFD, etc.)
 - Master's degrees in Environmental Sciences and Industrial Engineering, and a Bachelor's in Geology, each with its dates, institution and what it held
-- Professional certifications (ESG Specialist, Google Data Analytics, etc.), each with its issuer, date and what it covered
+- Professional certifications (ESG Specialist, Google Data Analytics, etc.), each with its issuer, date and what it covered, written from `content/profile.json`; a certificate links its issuer's verification page as soon as its `verifyUrl` is filled in
 
 ### 📧 Contact
 - Direct contact details, social links and the contact form (Google Apps Script backend, honeypot, rate limits; works without JavaScript by posting to the same endpoint), with The Assay below the form as the optional step: its question and promise in view, its box behind a "Grade a job description" button
@@ -316,7 +317,7 @@ CI uses Node 22.
 | `npm run build:check` | every generated page still matches `content/` |
 | `npm run fonts:check` | the committed fonts still hash to their manifest and every stylesheet's `@font-face` block is current |
 | `npm run lint:html` | every page is valid HTML ([html-validate](https://html-validate.org/)'s recommended rules; the two relaxations are explained in `.htmlvalidate.cjs`) |
-| `npm run test:unit` | every `tests/*.test.js`, side by side, one process per suite, so a new suite runs the day it exists: the twenty-three listed below, and it ends by counting the assertions that passed, so no figure for them is kept here to go stale |
+| `npm run test:unit` | every `tests/*.test.js`, side by side, one process per suite, so a new suite runs the day it exists: the twenty-seven listed below, and it ends by counting the assertions that passed, so no figure for them is kept here to go stale |
 | `npm run map:check` | the committed `journey-map.svg` still matches its generator |
 | `npm run budget` | the weights this README quotes, and that its budget tables still say what the script measures (see [Performance](#performance)) |
 | `npm run smoke` | every page in a real browser: no errors, no failed or off-origin requests, every on-demand module arrives when used, no axe-core violation at 1440×900 or 390×844 in either theme, and each budgeted page's measured first view no heavier than the budget claims, and every page no longer than its length budget at both sizes once it has settled; every page again with JavaScript off, and the homepage with `script.js` blocked and late; the skip link, Back, the theme switch (followed from page to page, and the system's setting with nothing chosen), back to top and the nav bar at every width, and every other page's shared nav and call to action at 320px, links to a game, a case study or Anatomy of a Prompt landing clear of that nav, and the nav not moving as its theme switch appears; the first screen's figures, caption, strip and primary action, as the strip is today and with every fact at the longest the validator accepts; the journey map pinned over none of its stop's text on a phone, and its delta's names clear of each other on a desktop; the listen control and its player; the Assay; the case studies' two games, photo rows and lightbox; every drawing label at 11px or more on a phone, and inside its drawing; where jumps land while sections are drawn on demand, that reading back up after skipping ahead moves nothing, find-in-page and printing, which loops run, and how busy the idle page keeps the main thread at 4× CPU slowdown; the carbon-ai page's dropdowns and numbers; and the visit counter's one request, taken apart: exactly the documented fields, no cookie, no Referer, once per page view, and nothing under Do Not Track or Global Privacy Control or with JavaScript off (its own CI job; needs Chromium — `-- --browser firefox` runs it in Firefox, which CI also does) |
@@ -414,6 +415,27 @@ The suites, and the failure each one exists to prevent:
   project cards say what their case studies say (title, headline result,
   basis, checkability, lenses), link to them, and carry one lazy photo whose
   declared size is the file's own; no dossier id or link is left behind.
+- **`cv.test.js`** — the CV, read back from the committed PDF without a
+  browser: two A4 pages, printed by Chromium with every font embedded as
+  TrueType; the name, the address, the links, the current role and every
+  role with its organisation and dates, every degree and certificate, every
+  case study's headline result with its checkability, and every public
+  output; none of the claims the site dropped, no name the owner has not
+  cleared, no number content/ does not have; and `assets/cv.hash` matching
+  what content/ and the homepage say today and the PDF itself.
+- **`corelog.test.js`** — the core log's depths, worked out by hand for the
+  roles as they are and a year later, a role ending in the month it was
+  logged, and one starting after it; the page shows what the dates give, and
+  a role added or reordered on one side only stops the build.
+- **`credentials.test.js`** — a certificate's `verifyUrl` is absent or an
+  https page on an issuer's host (`VERIFY_HOSTS`, all on the link allowlist):
+  not null, not a placeholder, not GitHub or LinkedIn; the homepage's cards
+  are profile.json's, with a named Verify link exactly where there is one.
+- **`testimonials.test.js`** — a quote without a source, a "LinkedIn" source
+  that is not a linkedin.com profile or recommendations address, or an
+  on-request one without the date permission was given, is refused, as is a
+  fourth entry or a quote over 200 characters; with none, the homepage shows
+  nothing, and with one, the quote, who said it and the source.
 - **`widgets.test.js`** — the case studies' two games: nothing fetched until
   a host is within a screen of view, then the stylesheet before the script;
   the module runs without `script.js` (and with storage refused), wires a
@@ -561,10 +583,11 @@ Everything derived now comes from `content/`:
 
 | Source | Feeds |
 |---|---|
-| `content/profile.json` | JSON-LD, `sitemap.xml`, the homepage's at-a-glance strip, the Assay's facts block in `modules/interactives.js`, the shared shell's call to action on every page but the homepage, the facts `content.test.js` holds every page to |
+| `content/profile.json` | JSON-LD, `sitemap.xml`, the homepage's at-a-glance strip, its certificates and its core log's depths, the Assay's facts block in `modules/interactives.js`, the shared shell's call to action on every page but the homepage, the CV, the facts `content.test.js` holds every page to |
 | `content/projects.json` | `case-studies.html` (with each case study's photos and game), and the homepage's six project cards (every case study not marked `homepageCard: false`) |
 | `content/lenses.json` | the role-specific views |
-| `content/research.json` | `research.html` |
+| `content/research.json` | `research.html`, the CV's public work |
+| `content/testimonials.json` | the homepage's testimonials, once there is one |
 | `content/narration.json` | `voice-scripts.js` |
 | `content/stats.json` | `stats.html`, the open counts (written weekly by `scripts/fetch-stats.js`) |
 
@@ -577,8 +600,9 @@ npm run build:check       # fail if a generated file is out of date (runs in CI)
 editorial pages, and templating over their hand-tuned markup to remove
 duplication a test already catches would trade a small problem for a large one.
 The exceptions are regions the generator writes between markers: in
-`index.html` the JSON-LD block, the at-a-glance strip and the six project
-cards.
+`index.html` the JSON-LD block, the at-a-glance strip, the six project
+cards, the certificates and the testimonials, and in place, each core-log
+layer's depths and the date in the log's head.
 `content.test.js` holds them to `content/` instead. `carbon-ai.html` and
 `404.html` are hand-authored too, bar the shared shell: the generator writes
 the nav and the call to action into them and the field report, between
@@ -615,10 +639,35 @@ should fail the build rather than ship. `scripts/lib/content.js` refuses:
   beyond this site's own pages, through its case studies or an output's own
   `lenses`. The water view had two games here and nothing else until the
   groundwater toolkit's repository joined it.
+- **A testimonial without a source** (`content/testimonials.json`): a
+  LinkedIn recommendation's address on linkedin.com, or "on request" with
+  the date permission was given.
+- **A certificate's verification link off an issuer's host**: `verifyUrl` is
+  left out until there is one, never written as a placeholder.
 
 `tests/portfolio.test.js` feeds each of those rules deliberately bad data and
 fails if the validator lets it through — the rules are only worth having if
 they still fire on content nobody has written yet.
+
+### The CV
+
+`assets/Moses_Kolleh_Sesay_CV.pdf` is printed, not exported:
+
+```bash
+npm run cv      # print the CV with the smoke test's Chromium; writes the PDF and assets/cv.hash
+```
+
+`scripts/build-cv.js` builds it from `content/profile.json` (contact, roles,
+degrees, certificates), `content/projects.json` (each case study's headline
+result and the line of its basis), `content/research.json` (the public work)
+and the homepage's own words (the hero's two sentences, each role's and
+degree's lines, the toolkit with its proof), into the layout and headings of
+`scripts/cv.html`, with the site's fonts inline: nothing is fetched. It is not
+a page of the site: the PDF is what a recruiter downloads, and the homepage
+already says everything in it. `tests/cv.test.js` reads the PDF back and fails
+if it leaves out a role, a degree or a certificate, carries a figure
+`content/` does not have, or was printed from anything but what `content/`
+says now (`assets/cv.hash`): change a fact, run `npm run cv`, commit both.
 
 ### Keeping the profile honest over time
 
@@ -852,7 +901,7 @@ did.
 <!-- BUDGET-TABLE:START — generated by scripts/check-budget.js (npm run budget -- --readme). Do not edit by hand. -->
 | Budget | Measured | Ceiling |
 |---|---|---|
-| First view of the homepage, over the wire (fonts included) | ~275 KB | 288 KB |
+| First view of the homepage, over the wire (fonts included) | ~276 KB | 288 KB |
 | Everything a full visit adds on demand (modules, scripts, map) | ~72 KB | 72 KB |
 | Largest single image | ~200 KB | 210 KB |
 | Every image in the repository | ~3.36 MB | 3.5 MB |

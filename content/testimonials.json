@@ -1,0 +1,32 @@
+{
+  "$comment": [
+    "TESTIMONIALS — what people Moses has worked with say, each with where",
+    "a reader can check it.",
+    "",
+    "Empty until someone has agreed to be quoted. While it is empty the",
+    "homepage shows nothing at all: no heading, no 'coming soon'.",
+    "",
+    "THE RULE (scripts/lib/content.js, checkTestimonials, fails the build):",
+    "a quote without a source is not shown, because anyone can write a kind",
+    "sentence and put a name under it. Each entry is",
+    "",
+    "  { \"quote\": \"...\", \"name\": \"...\", \"role\": \"...\",",
+    "    \"relationship\": \"...\", \"source\": { ... } }",
+    "",
+    "and the source is one of",
+    "",
+    "  { \"type\": \"linkedin\", \"url\": \"https://www.linkedin.com/in/.../details/recommendations/\" }",
+    "      the recommendation as LinkedIn shows it: a linkedin.com profile",
+    "      or recommendations address, nothing else",
+    "  { \"type\": \"on-request\", \"permissionDate\": \"YYYY-MM-DD\" }",
+    "      not public; Moses holds it and will put a reader in touch. The date",
+    "      is the day the person agreed to be quoted on this site",
+    "",
+    "`relationship` says how they know his work (\"managed me at ...\").",
+    "At most three entries, each quote an excerpt of at most 200 characters.",
+    "The homepage has a length budget: two such quotes fit it today, a third",
+    "needs room made first (checkTestimonials says what each one costs).",
+    "npm run build:content draws them under the experience section."
+  ],
+  "testimonials": []
+}

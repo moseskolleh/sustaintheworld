@@ -39,11 +39,25 @@ const TRUSTED_HOSTS = [
     'moseskolleh.github.io',
     'linkedin.com',
     'www.linkedin.com',
+    // Where two issuers publish a certificate's verification page (see
+    // VERIFY_HOSTS below): Coursera for the Google certificate, and the
+    // Corporate Finance Institute's own credential site.
+    'coursera.org',
+    'www.coursera.org',
+    'credentials.corporatefinanceinstitute.com',
     'sustainablewebdesign.org',
     'httparchive.org'
 ];
 
 const STATUSES = ['public', 'on-request', 'internal', 'planned'];
+
+// A certification's verifyUrl (content/profile.json) has to be the issuer's
+// own page for that certificate, which a reader can trust where they would
+// not trust a screenshot. A trusted host is not enough: a GitHub or LinkedIn
+// page is Moses saying so, not the issuer. Masterschool's and the UN System
+// Staff College's hosts join this list with the first URL from them, once
+// someone has opened it.
+const VERIFY_HOSTS = ['coursera.org', 'www.coursera.org', 'credentials.corporatefinanceinstitute.com'];
 
 function load(name) {
     const file = path.join(CONTENT_DIR, `${name}.json`);
@@ -687,6 +701,100 @@ function checkStats(stats) {
     return problems;
 }
 
+// ------------------------------------------------------------------
+// profile.certifications — each with what it covered, and optionally
+// where the issuer says so
+//
+// The homepage and the CV print every certificate from here (npm run
+// build:content, npm run cv). `verifyUrl` is the issuer's page for this
+// certificate. It is absent until Moses supplies one: not null, not "TBC",
+// because a placeholder link reads as a link. Present, it must be an https
+// address on one of VERIFY_HOSTS.
+// ------------------------------------------------------------------
+const CERT_FIELDS = ['name', 'issuer', 'displayDate', 'year', 'covered'];
+
+function checkCertifications(certifications) {
+    if (!Array.isArray(certifications) || !certifications.length) return ['profile: certifications must be a list'];
+    const problems = [];
+    certifications.forEach((entry, i) => {
+        const c = entry && typeof entry === 'object' ? entry : {};
+        const at = `profile: certification ${i + 1}${c.name ? ` ("${c.name}")` : ''}`;
+        CERT_FIELDS.forEach((k) => {
+            if (!(typeof c[k] === 'string' && c[k].trim()) || PLACEHOLDER.test(c[k])) problems.push(`${at}: no ${k}`);
+        });
+        if (!('verifyUrl' in c)) return;
+        let url = null;
+        try { url = new URL(c.verifyUrl); } catch (e) { /* reported below */ }
+        if (!url || url.protocol !== 'https:') {
+            problems.push(`${at}: verifyUrl ${JSON.stringify(c.verifyUrl)} is not an https address — leave the field out until there is one`);
+        } else if (!VERIFY_HOSTS.includes(url.host) || !TRUSTED_HOSTS.includes(url.host)) {
+            problems.push(`${at}: verifyUrl points at ${url.host}, which is not an issuer's verification host — ` +
+                'add it to VERIFY_HOSTS and TRUSTED_HOSTS in scripts/lib/content.js only once you have opened the page yourself');
+        }
+    });
+    return problems;
+}
+
+// ------------------------------------------------------------------
+// content/testimonials.json — a quote with no source is a claim
+//
+// Anyone can write a kind sentence and put a name under it. Each entry
+// therefore says where a reader can check it: a LinkedIn recommendation (a
+// profile or recommendations address on linkedin.com), or "on request",
+// with the date the person gave permission to be quoted. No other kind of
+// source is accepted, and an entry without one is refused. The homepage
+// shows them only when there is at least one, and it is held to a length
+// (LENGTH in scripts/check-budget.js), so each quote is an excerpt of at
+// most 200 characters. Measured in Chromium on the October 2026 homepage,
+// two at that length add 0.40 of a 1440x900 screen and 0.77 of a 390x844
+// one, against 0.43 and 0.78 to spare; a third (0.46 and 1.30 at 280
+// characters) needs room made first, and smoke.js's length check says so.
+// ------------------------------------------------------------------
+const TESTIMONIAL_KEYS = ['quote', 'name', 'role', 'relationship', 'source'];
+const TESTIMONIAL_LIMITS = { entries: 3, quote: 200 };
+const LINKEDIN_HOSTS = ['linkedin.com', 'www.linkedin.com'];
+const LINKEDIN_PATH = /^\/in\/[A-Za-z0-9_%-]+(?:\/details\/recommendations)?\/?$/;
+const ISO_DAY = /^(\d{4})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
+const realDay = (d) => ISO_DAY.test(d) && new Date(`${d}T00:00:00Z`).toISOString().slice(0, 10) === d;
+
+function checkTestimonials(file) {
+    if (!file || !Array.isArray(file.testimonials)) return ['testimonials: content/testimonials.json needs a "testimonials" list (empty is fine)'];
+    const list = file.testimonials;
+    const problems = [];
+    if (list.length > TESTIMONIAL_LIMITS.entries) {
+        problems.push(`testimonials: ${list.length} entries; the homepage has room for ${TESTIMONIAL_LIMITS.entries}`);
+    }
+    list.forEach((t, i) => {
+        const at = `testimonial ${i + 1}${t && t.name ? ` (${t.name})` : ''}`;
+        if (!t || typeof t !== 'object') { problems.push(`${at}: is not an object`); return; }
+        Object.keys(t).filter(k => !TESTIMONIAL_KEYS.includes(k)).forEach(k => problems.push(`${at}: unknown field "${k}"`));
+        ['quote', 'name', 'role', 'relationship'].forEach((k) => {
+            if (!(typeof t[k] === 'string' && t[k].trim()) || PLACEHOLDER.test(t[k])) problems.push(`${at}: no ${k}`);
+        });
+        if (typeof t.quote === 'string' && t.quote.length > TESTIMONIAL_LIMITS.quote) {
+            problems.push(`${at}: the quote is ${t.quote.length} characters; at most ${TESTIMONIAL_LIMITS.quote}`);
+        }
+        const s = t.source;
+        if (!s || typeof s !== 'object') { problems.push(`${at}: no source — say where a reader can check it, or leave the quote out`); return; }
+        if (s.type === 'linkedin') {
+            Object.keys(s).filter(k => !['type', 'url'].includes(k)).forEach(k => problems.push(`${at}: a LinkedIn source has no field "${k}"`));
+            let url = null;
+            try { url = new URL(s.url); } catch (e) { /* reported below */ }
+            if (!url || url.protocol !== 'https:' || !LINKEDIN_HOSTS.includes(url.host) || !LINKEDIN_PATH.test(url.pathname) || url.hash) {
+                problems.push(`${at}: a LinkedIn source needs the https address of a linkedin.com profile or its recommendations (got ${JSON.stringify(s.url)})`);
+            }
+        } else if (s.type === 'on-request') {
+            Object.keys(s).filter(k => !['type', 'permissionDate'].includes(k)).forEach(k => problems.push(`${at}: an on-request source has no field "${k}"`));
+            if (!realDay(String(s.permissionDate))) {
+                problems.push(`${at}: an on-request source needs the date permission was given, as YYYY-MM-DD (got ${JSON.stringify(s.permissionDate)})`);
+            }
+        } else {
+            problems.push(`${at}: source type ${JSON.stringify(s.type)} is not "linkedin" or "on-request"`);
+        }
+    });
+    return problems;
+}
+
 /**
  * What a reader of one role view can open: the public artifacts of its case
  * studies, and the public research outputs that belong to it, through their
@@ -724,6 +832,7 @@ function loadAll() {
     const lenses = load('lenses');
     const narration = load('narration');
     const stats = load('stats');
+    const testimonials = load('testimonials');
 
     const problems = checkStats(stats);
     const lensIds = lenses.lenses.map(l => l.id);
@@ -859,11 +968,15 @@ function loadAll() {
     // --- the at-a-glance strip -------------------------------------------
     problems.push(...checkAtAGlance(profile.atAGlance, profile.languages));
 
+    // --- certificates and testimonials: what a reader can check ----------
+    problems.push(...checkCertifications(profile.certifications));
+    problems.push(...checkTestimonials(testimonials));
+
     if (problems.length) {
         throw new Error(`content failed validation:\n  - ${problems.join('\n  - ')}`);
     }
 
-    return { profile, projects, research, lenses, narration, stats, lensIds };
+    return { profile, projects, research, lenses, narration, stats, testimonials, lensIds };
 }
 
 /**
@@ -906,5 +1019,9 @@ module.exports = {
     peel,
     orderForLens,
     publicWorkFor,
-    checkLensWork
+    checkLensWork,
+    VERIFY_HOSTS,
+    checkCertifications,
+    TESTIMONIAL_LIMITS,
+    checkTestimonials
 };

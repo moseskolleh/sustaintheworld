@@ -54,7 +54,8 @@
 //     button, or a recording fetched unasked
 //   - an Assay that grades a mismatched ad well, or sends anything; one
 //     whose box is not folded behind a named button, by pointer and keys
-//   - an experience card that is not short, or whose More sits on its text
+//   - an experience card that is not short, or whose More sits on its text;
+//     a core-log layer whose depths wrap or run onto the core
 //   - a case-study game fetched before a reader nears it, that will not
 //     play, whose labels are under 11px on a phone or run past its edge,
 //     that moves the page under a reader when it arrives above them, or
@@ -1907,7 +1908,7 @@ async function exerciseStatsPage(browser, origin) {
 // disclosure shows may wait on a transition.
 async function exerciseSections(browser, origin) {
     console.log('  index.html — experience as short cards, the Assay under the form');
-    for (const [width, height] of [[320, 700], [390, 844], [1280, 800]]) {
+    for (const [width, height] of [[320, 700], [390, 844], [700, 900], [1280, 800]]) {
         const ctx = await browser.newContext({ viewport: { width, height }, reducedMotion: 'reduce' });
         const page = await ctx.newPage();
         await page.goto(`${origin}/index.html`, { waitUntil: 'load' });
@@ -1943,6 +1944,14 @@ async function exerciseSections(browser, origin) {
                 tags: cards.filter(c => shown(c.querySelector('.tags'))).length,
                 buttons: cards.filter(c => shown(c.querySelector('.corelog-more'))).length,
                 depths: Array.from(document.querySelectorAll('#experience .corelog-depth')).filter(shown).length,
+                // Each layer's interval ("68–73 m", build-content.js) on one
+                // line, and clear of the core drawn beside it.
+                crowded: Array.from(document.querySelectorAll('#experience .corelog-depth strong')).filter(shown).filter((s) => {
+                    const r = document.createRange();
+                    r.selectNodeContents(s);
+                    const lines = new Set(Array.from(r.getClientRects()).map(t => Math.round(t.top))).size;
+                    return lines > 1 || r.getBoundingClientRect().right > s.closest('.corelog-item').querySelector('.corelog-strata').getBoundingClientRect().left;
+                }).map(s => s.textContent),
                 off: cards.filter(c => c.getBoundingClientRect().right > innerWidth + 0.5 || c.getBoundingClientRect().left < -0.5).length,
                 screens: +(document.getElementById('experience').getBoundingClientRect().height / innerHeight).toFixed(2),
                 small,
@@ -1959,6 +1968,8 @@ async function exerciseSections(browser, origin) {
         else ok(`${tag}: each More button in its card's corner, over none of its text`);
         if (width < 600 ? x.depths === 0 : x.depths === x.n) ok(`${tag}: ${width < 600 ? 'the depth column gives its width to the text' : 'the core log keeps its depths'}`);
         else bad(`${tag}: ${x.depths} depth labels shown`);
+        if (x.crowded.length) bad(`${tag}: a layer's depths wrap or run onto the core (${x.crowded.join(', ')})`);
+        else if (width >= 600) ok(`${tag}: each layer's depths on one line, clear of the core`);
         const ceiling = { 390: 2.5, 1280: 1.6 }[width];
         if (ceiling && x.screens > ceiling) bad(`${tag}: ${x.screens} screens tall; short cards should keep it under ${ceiling} (5.3 and 2.6 as the full log)`);
         // One card opened and closed again, by its button.

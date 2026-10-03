@@ -23,7 +23,9 @@
 //   voice-scripts.js    the narration module, from content/narration.json
 //   index.html          the JSON-LD block, the hero's at-a-glance strip
 //                       and the six project cards, each between its
-//                       markers
+//                       markers; the certificates and the testimonials
+//                       (none yet), between short ones; and in place, the
+//                       core log's depths and the date it was logged
 //   modules/interactives.js   the Assay's facts block only, between its
 //                       markers: what the fit-check may say about Moses
 //   carbon-ai.html, field-report.html, 404.html
@@ -1647,6 +1649,132 @@ function injectProjectCards(data, html) {
 }
 
 // ------------------------------------------------------------------
+// index.html — the core log's depths, rewritten in place
+//
+// The experience section logs each role as a layer of a borehole core:
+// depth is time, 10 m a year. The depths were typed in by hand around
+// September 2025, and a year later every one was out by about ten metres.
+// Each layer's interval now comes from its role's dates in profile.json:
+// its top is where the role ended (an open role reaches the surface, 0 m)
+// and its base where it began, so a short role is a thin layer and a gap
+// between roles is a gap in the core. The surface is meta.verifiedOn, the
+// day the facts were last checked, not the day of the build: --check
+// compares bytes, so nothing here may read the clock, and a "Present" role
+// is only known to be current up to that day. Confirming the facts and
+// bumping verifiedOn redraws the log; the head says when it was logged.
+//
+// The cards stay hand-authored. Only each layer's depth label and the
+// head's date are written here, matched to the roles in order and by
+// title, so a role added to one and not the other stops the build.
+// ------------------------------------------------------------------
+const METRES_PER_YEAR = 10;
+const monthIndex = (ym) => { const [y, m] = ym.split('-').map(Number); return y * 12 + m - 1; };
+
+function corelogDepths(profile) {
+    const surface = monthIndex(profile.meta.verifiedOn.slice(0, 7));
+    const metres = (months) => Math.round(months * METRES_PER_YEAR / 12);
+    return profile.experience.map((r) => {
+        if (monthIndex(r.start) > surface) throw new Error(`profile.json: "${r.title}" starts after meta.verifiedOn, the core log's surface`);
+        // A role runs to the end of its last month; one that ended in the
+        // month the facts were checked is still at the surface.
+        const top = r.end === null ? 0 : Math.max(0, metres(surface - monthIndex(r.end) - 1));
+        const base = metres(surface - monthIndex(r.start));
+        return { title: r.title, top, base, year: r.start.slice(0, 4) };
+    });
+}
+
+const depthLabel = (d) => `<strong>${d.top === d.base ? d.top : `${d.top}–${d.base}`} m</strong><span>${d.year}</span>`;
+const DEPTH = /(<div class="corelog-depth mono-label">)[\s\S]*?(<\/div>)/g;
+const decodeTitle = (s) => s.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').trim();
+
+function injectCorelog(data, html) {
+    const { profile } = data;
+    const depths = corelogDepths(profile);
+    const [y, m] = profile.meta.verifiedOn.split('-');
+    const HEAD = /(CORE LOG MKS-01 · )[^<]*(<\/span>\s*<span>)[^<]*(<\/span>)/;
+    if (!HEAD.test(html)) throw new Error('index.html: the core log has no "CORE LOG MKS-01 · …" head to date');
+    let next = html.replace(HEAD, `$1LOGGED ${MONTHS[+m - 1].toUpperCase()} ${y}$2SCALE ${METRES_PER_YEAR} m / YEAR$3`);
+    let i = 0;
+    next = next.replace(DEPTH, (whole, open, close, at) => {
+        const d = depths[i++];
+        const title = (next.slice(at).match(/<h3>([\s\S]*?)<\/h3>/) || [])[1];
+        if (!d || decodeTitle(title || '') !== d.title) {
+            throw new Error(`index.html: core-log layer ${i} is "${decodeTitle(title || '?')}", but profile.json's role ${i} is "${d ? d.title : 'missing'}" — keep the two in the same order`);
+        }
+        return open + depthLabel(d) + close;
+    });
+    if (i !== depths.length) throw new Error(`index.html: the core log has ${i} layers for profile.json's ${depths.length} roles`);
+    return next;
+}
+
+// ------------------------------------------------------------------
+// index.html — the certificates and the testimonials, between markers
+//
+// The certificates were typed into index.html, so a verification link
+// added to profile.json would have had to be typed in a second time. Now
+// each comes from profile.certifications, with "Verify" linking the
+// issuer's page once there is one (the CV prints the same list). The
+// testimonials come from content/testimonials.json, each with who said it
+// and where to check it, and are drawn only when there is at least one:
+// with none, the markers stand empty and the page shows nothing. Short
+// markers, like the shell's: they sit in the homepage's first-view bytes.
+// ------------------------------------------------------------------
+function renderCertificates(profile) {
+    const cards = profile.certifications.map((c) => {
+        const verify = c.verifyUrl
+            ? ` &middot; <a href="${esc(c.verifyUrl)}" target="_blank" rel="noopener">Verify<span class="sr-only"> the ${esc(c.name)} certificate with ${esc(new URL(c.verifyUrl).host.replace(/^www\./, ''))}</span></a>`
+            : '';
+        return [
+            '    <div class="education-card certification">',
+            `        <h4 class="cert-title">${esc(c.name)}</h4>`,
+            `        <p class="cert-meta">${esc(c.issuer)} &middot; <span class="mono-label">${esc(c.displayDate)}</span>${verify}</p>`,
+            `        <p class="cert-line">${esc(c.covered)}</p>`,
+            '    </div>'
+        ].join('\n');
+    });
+    return ['<div class="cert-grid">', ...cards, '</div>'].join('\n');
+}
+
+const dayName = (d) => { const [y, m, day] = d.split('-'); return `${+day} ${MONTHS[+m - 1]} ${y}`; };
+
+function renderTestimonials(file) {
+    const list = file.testimonials;
+    if (!list.length) return '';
+    const figures = list.map((t) => {
+        const source = t.source.type === 'linkedin'
+            ? `<a href="${esc(t.source.url)}" target="_blank" rel="noopener">Recommendation on LinkedIn<span class="sr-only">, from ${esc(t.name)}</span></a>`
+            : `Quoted with permission given <time datetime="${esc(t.source.permissionDate)}">${dayName(t.source.permissionDate)}</time>; the original on request`;
+        return [
+            '        <figure class="testimonial skills-panel">',
+            `            <blockquote><p>${esc(t.quote)}</p></blockquote>`,
+            `            <figcaption class="cert-line"><strong>${esc(t.name)}</strong>, ${esc(t.role)} &middot; ${esc(t.relationship)} &middot; ${source}</figcaption>`,
+            '        </figure>'
+        ].join('\n');
+    });
+    // Dressed in classes the page already styles (the field notes' block
+    // and grid, a skills card, a certificate's line), so the homepage
+    // carries no stylesheet rules for a block it does not draw yet.
+    return [
+        '<div class="fieldnotes testimonials">',
+        '    <p class="panel-label mono-label">What people I have worked with say</p>',
+        '    <div class="fieldnotes-grid">',
+        ...figures,
+        '    </div>',
+        '</div>'
+    ].join('\n');
+}
+
+const homeRegions = (data) => ({
+    CERTIFICATES: renderCertificates(data.profile),
+    TESTIMONIALS: renderTestimonials(data.testimonials)
+});
+
+function injectHomeRegions(data, html) {
+    Object.entries(homeRegions(data)).forEach(([name, block]) => { html = fillRegion(html, 'index.html', name, block); });
+    return html;
+}
+
+// ------------------------------------------------------------------
 // carbon-ai.html, field-report.html, 404.html — the shared shell only
 //
 // Hand-authored, each for a reason of its own: a calculator, a page held to
@@ -1674,17 +1802,22 @@ function shellRegions(page, facts) {
     return { 'SHELL-NAV': shellNav(facts, { plain: true, base }), 'SHELL-CTA': shellCta(facts, { plain: true, base }) };
 }
 
+// One region between short markers; an empty block leaves them adjacent.
+function fillRegion(html, page, name, block) {
+    const [START, END] = shellMarkers(name);
+    const start = html.indexOf(START);
+    const end = html.indexOf(END);
+    if (start === -1 || end < start) throw new Error(`${page} is missing the ${START} / ${END} markers`);
+    // The block takes the END marker's indent, which has to open its line.
+    const indent = html.slice(html.lastIndexOf('\n', end) + 1, end);
+    if (!/^[ \t]*$/.test(indent)) throw new Error(`${page}: ${END} must start a line of its own`);
+    return html.slice(0, start + START.length) + '\n' + (block ? indentBlock(block, indent) + '\n' : '') + indent + html.slice(end);
+}
+
 function injectShell(data, page) {
     let html = fs.readFileSync(path.join(ROOT, page), 'utf8');
     Object.entries(shellRegions(page, shellFacts(data.profile))).forEach(([name, block]) => {
-        const [START, END] = shellMarkers(name);
-        const start = html.indexOf(START);
-        const end = html.indexOf(END);
-        if (start === -1 || end < start) throw new Error(`${page} is missing the ${START} / ${END} markers`);
-        // The block takes the END marker's indent, which has to open its line.
-        const indent = html.slice(html.lastIndexOf('\n', end) + 1, end);
-        if (!/^[ \t]*$/.test(indent)) throw new Error(`${page}: ${END} must start a line of its own`);
-        html = html.slice(0, start + START.length) + '\n' + indentBlock(block, indent) + '\n' + indent + html.slice(end);
+        html = fillRegion(html, page, name, block);
     });
     return html;
 }
@@ -1707,7 +1840,7 @@ function main() {
         ['stats.html', renderStats(data)],
         ['sitemap.xml', renderSitemap(data)],
         ['voice-scripts.js', renderVoiceScripts(data)],
-        ['index.html', injectProjectCards(data, injectAtAGlance(data, injectJsonLd(data)))],
+        ['index.html', injectHomeRegions(data, injectCorelog(data, injectProjectCards(data, injectAtAGlance(data, injectJsonLd(data)))))],
         ['modules/interactives.js', injectAssayFacts(data)],
         ['carbon-ai.html', injectShell(data, 'carbon-ai.html')],
         ['field-report.html', injectShell(data, 'field-report.html')],
@@ -1747,4 +1880,5 @@ function main() {
 // shell from fixtures without writing anything.
 if (require.main === module) main();
 
-module.exports = { renderStats, EXAMPLE_PAYLOAD, renderAtAGlance, shellFacts, shellRegions, shellMarkers };
+module.exports = { renderStats, EXAMPLE_PAYLOAD, renderAtAGlance, shellFacts, shellRegions, shellMarkers,
+    corelogDepths, injectCorelog, renderCertificates, renderTestimonials, homeRegions, fillRegion };
