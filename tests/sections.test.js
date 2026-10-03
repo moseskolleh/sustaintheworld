@@ -338,6 +338,51 @@ const profile = JSON.parse(read('content/profile.json'));
             `Narration: Contact's "${sentence.slice(0, 48)}…" is in the section (${!entry ? 'no entry says where' : missing.length ? `the section no longer says "${missing.join('", "')}"` : 'it is'})`);
     });
 
+    // The projects script, held the same way. It opened with the section's
+    // promise, "each with its headline result and how I know it", and then
+    // read the dossier-era descriptions: no card's result, and not one of
+    // the bases ("Not checkable from outside…") that make the cards honest.
+    const cards = text(bare.getElementById('projects'));
+    const PROJECTS_SAID = [
+        [/^Six projects, each with its headline result and how I know it\.$/, ['Six projects, each with its headline result and how I know it.']],
+        [/^One, the sustainable A\.I\. framework: a working decision-support prototype, not a slide deck\.$/,
+            ['Sustainable AI Framework', 'A working decision-support prototype, not a slide deck']],
+        [/^You can check that: the EcoPrompt Coach prototype is public and runnable, and every factor it uses carries its source\.$/,
+            ['Checkable from outside The EcoPrompt Coach prototype is public and runnable, and every factor it uses carries its source.']],
+        [/^Two, coastal water pollution dynamics: ten thousand two hundred and twenty-six sub-basins modelled\.$/,
+            ['Coastal Water Pollution Dynamics', '10,226 sub-basins modelled']],
+        [/^You can check that too: it is a property of the model domain used, not an estimate\.$/,
+            ['Checkable from outside A property of the model domain used, not an estimate.']],
+        [/^Three, a flood-resilient Wuppertal: a complete flood-risk management framework, delivered to the municipality\.$/,
+            ['Flood-Resilient Wuppertal', 'A complete flood-risk management framework delivered to the municipality']],
+        [/^You cannot check that from outside: the client holds the deliverable, and nothing here claims it was implemented\.$/,
+            ['Not checkable from outside The deliverable is held by the client; nothing here claims it was implemented.']],
+        [/^Four, disaster risk reduction with the United Nations in Bonn: fifty-four global hazard information systems, identified and documented\.$/,
+            ['UN Disaster Risk Reduction', 'Bonn, DE', '54 global hazard information systems identified and documented']],
+        [/^You cannot check that either: it is a count recorded in the deliverable, which the United Nations office holds\.$/,
+            ['Not checkable from outside A count recorded in the deliverable, which UNDRR holds.']],
+        [/^Five, soft path water management: successfully defended at Hunan University, in May twenty twenty-one\.$/,
+            ['Soft Path Water Management', 'Successfully defended at Hunan University, May 2021']],
+        [/^You can check that: the degree was awarded, a master's in industrial engineering\.$/,
+            ['Checkable from outside Degree awarded: MSc Industrial Engineering, 2021.']],
+        [/^And six, groundwater potential mapping: a seventy per cent aquifer strike rate in the drilling that followed\.$/,
+            ['Groundwater Potential Mapping', '70% aquifer strike rate in subsequent drilling']],
+        [/^You cannot check that either: it comes from the field records of the boreholes sited with the survey, not a controlled trial\.$/,
+            ['Not checkable from outside From the field records of the boreholes sited with the survey, not a controlled trial.']],
+        [/^The whole of each is in the case studies, and two of them you can play with there: site a borehole, or flood a river\.$/,
+            ['The whole of each, with the basis for every number, is in the case studies']]
+    ];
+    const projectSentences = byId.projects.text.split(/(?<=[.!?])\s+(?=[A-Z])/);
+    projectSentences.forEach((sentence) => {
+        const entry = PROJECTS_SAID.find(([re]) => re.test(sentence));
+        const missing = entry ? entry[1].filter(words => !cards.includes(words)) : null;
+        assert(!!entry && !missing.length,
+            `Narration: Projects' "${sentence.slice(0, 48)}…" is in the section (${!entry ? 'no entry says where' : missing.length ? `the section no longer says "${missing.join('", "')}"` : 'it is'})`);
+    });
+    const cardCount = bare.querySelectorAll('#projects .project-card').length;
+    const basesRead = projectSentences.filter(s => /check/.test(s)).length;
+    assert(cardCount === 6 && basesRead === cardCount, `Narration: Projects reads every card's basis, one for each of its ${cardCount} cards (${basesRead})`);
+
     // The chart's script offers the calculator as the page does, and no more:
     // it said "any model, any electricity grid" of a tool with ten models
     // and thirteen grids, and a caveat that newer models are left out.

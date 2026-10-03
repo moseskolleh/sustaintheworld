@@ -7,16 +7,18 @@
          If script.js fails to load (its onerror) or has not taken over in 4 s,
          the class comes off and the page shows as it would without it. -->
     <script>document.documentElement.classList.add('js');setTimeout(function(){if(!(window.mks||{}).ready)document.documentElement.classList.remove('js')},4000)</script>
-    <!-- The stored theme, else the system's, as theme.js does: before the
-         stylesheet, which a later script waits for, so on <html>. -->
-    <script>(window.mks=window.mks||{}).theme=function(t){try{t=localStorage.getItem('theme')}catch(e){}document.documentElement.classList.toggle('light-mode',t=='light'||t!='dark'&&!!window.matchMedia&&matchMedia('(prefers-color-scheme: light)').matches)};mks.theme()</script>
+    <meta name="theme-color" content="#0a0a0a">
+    <!-- The stored theme (or one the switch passes), else the system's, as
+         theme.js does: before the stylesheet, which a later script waits
+         for, so on <html>; and the browser's bar with it, which waited for
+         script.js at the foot of the page, dark over a light page. -->
+    <script>(window.mks=window.mks||{}).theme=function(t){if(!t)try{t=localStorage.getItem('theme')}catch(e){}t=document.documentElement.classList.toggle('light-mode',t=='light'||t!='dark'&&!!window.matchMedia&&matchMedia('(prefers-color-scheme: light)').matches);document.querySelector('meta[name=theme-color]').content=t?'#f4f6f0':'#0a0a0a'};mks.theme()</script>
     <meta name="description" content="Moses Kolleh Sesay — Sustainability &amp; Climate Analyst. From mapping groundwater in Freetown to building sustainable AI frameworks in Amsterdam.">
     <meta name="author" content="Moses Kolleh Sesay">
     <title>Moses Kolleh Sesay | Sustainability &amp; Climate Analyst</title>
     <link rel="canonical" href="https://moseskolleh.github.io/sustaintheworld/">
     <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
     <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
-    <meta name="theme-color" content="#0a0a0a">
 
     <!-- Open Graph / social sharing -->
     <meta property="og:type" content="website">
@@ -684,7 +686,7 @@
                  the coach as well. -->
             <div class="eco-actions">
                 <a class="btn btn-secondary btn-small" href="carbon-ai.html" data-analytics="ecoprompt-coach"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-bolt"></use></svg> Open the EcoPrompt Coach</a>
-                <p class="eco-footnote">The full calculator, and where one answer lands on a CSRD report, are there.<span class="needs-js"> The chart's figures are published estimates for a 1,000-token answer (Jegham et&nbsp;al. 2025), good to an order of magnitude, inference only.</span> The engine behind the coach is <a href="https://github.com/moseskolleh/promptcoach" target="_blank" rel="noopener">promptcoach</a>, on GitHub.</p>
+                <p class="eco-footnote">The full calculator, and where one answer lands on a CSRD report, are there.<span class="needs-js"> The chart's figures are published estimates for a 1,000-token answer (Jegham et&nbsp;al. 2025), good to an order of magnitude, inference only, before the data-centre overhead the coach adds.</span> The engine behind the coach is <a href="https://github.com/moseskolleh/promptcoach" target="_blank" rel="noopener">promptcoach</a>, on GitHub.</p>
             </div>
         </div>
     </section>

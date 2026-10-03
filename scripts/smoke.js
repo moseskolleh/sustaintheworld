@@ -680,8 +680,29 @@ async function exerciseCarbonTool(page, r) {
 // 1366x768 laptop leaves about 1366x657, and the figures sat wholly below
 // it; at 1280x720 the fold cut through the digits. And two windows 1,024px
 // wide, either side of the short-window rule (880px tall), where the
-// scroll cue was drawn through the hero's words.
-const FIRST_VIEWS = [[1440, 900], [390, 844], [1366, 657], [1280, 720], [1024, 768], [1024, 881]];
+// scroll cue was drawn through the hero's words. And two small phones,
+// 375x667 and 360x640, where the fold cut through the second row of
+// figures or left it below.
+const SMALL_PHONES = [[375, 667], [360, 640]];
+const FIRST_VIEWS = [[1440, 900], [390, 844], [1366, 657], [1280, 720], [1024, 768], [1024, 881]].concat(SMALL_PHONES);
+
+// Every link or button on the first screen drawn filled in the primary
+// green, by its words. Run in the page. The hero has one primary button,
+// but the nav's Contact was filled the same way from 900px wide: two
+// identical green buttons on the first screen, going to different places,
+// which counting .btn-primary inside the hero never saw.
+function filledControls() {
+    const probe = document.body.appendChild(document.createElement('i'));
+    probe.style.background = 'var(--primary-green)';
+    const green = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    return Array.from(document.querySelectorAll('a, button')).filter((el) => {
+        const b = el.getBoundingClientRect();
+        const look = getComputedStyle(el);
+        return b.width > 0 && b.bottom > 0 && b.top < innerHeight && b.right > 0 && b.left < innerWidth &&
+            look.visibility !== 'hidden' && +look.opacity > 0 && look.backgroundColor === green;
+    }).map(el => (el.matches('#home .btn-primary') ? 'hero primary: ' : '') + (el.textContent.trim() || el.getAttribute('aria-label')));
+}
 
 // The words in the hero the scroll cue is drawn across, if it is shown:
 // centred at the hero's foot, it ran through the description's last line
@@ -753,13 +774,30 @@ async function exerciseFirstView(browser, origin) {
         await context.close();
     }
 
+    // One filled button on the first screen, in either theme: the hero's.
+    for (const [width, height, colorScheme] of [[1440, 900, 'dark'], [1440, 900, 'light'], [1024, 768, 'dark'], [390, 844, 'dark']]) {
+        const context = await browser.newContext({ viewport: { width, height }, colorScheme });
+        await context.addInitScript((t) => { try { localStorage.setItem('theme', t); } catch (e) { /* blocked */ } }, colorScheme);
+        const page = await context.newPage();
+        await page.goto(`${origin}/index.html`, { waitUntil: 'load' });
+        await page.evaluate(() => document.fonts.ready);
+        await page.waitForFunction(() => !document.getElementById('preloader'), null, { timeout: 5000 }).catch(() => null);
+        const filled = await page.evaluate(filledControls);
+        const at = `at ${width}x${height}, ${colorScheme}`;
+        if (filled.length === 1 && /^hero primary: /.test(filled[0])) ok(`first view ${at}: one filled button on the first screen, the hero's "${filled[0].slice(14)}"`);
+        else bad(`first view ${at}: ${filled.length} filled buttons on the first screen (${filled.join('; ') || 'none'}), not the hero's one`);
+        await context.close();
+    }
+
     // The caption now sits over the eyebrow's corner, and the slideshow
     // swaps in longer ones: each must stay clear of the eyebrow and the
-    // name, down to a 320px phone, where the longest takes two lines.
+    // name, down to a 320px phone, where the longest takes two lines, and
+    // at 360px, the narrowest where the eyebrow sits up close to fit the
+    // figures in (style.css), so the longest must take one.
     const captions = (fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8')
         .match(/heroSlideCaptions = \[([^\]]*)\]/) || ['', ''])[1].match(/'[^']+'/g) || [];
     if (!captions.length) bad('first view: could not read the slideshow\'s captions from script.js');
-    for (const [width, height] of [[320, 568], [390, 844], [1440, 900]]) {
+    for (const [width, height] of [[320, 568], [360, 640], [390, 844], [1440, 900]]) {
         const context = await browser.newContext({ viewport: { width, height } });
         const page = await context.newPage();
         await page.goto(`${origin}/index.html`, { waitUntil: 'load' });
@@ -789,7 +827,9 @@ async function exerciseFirstView(browser, origin) {
 // build-content.js's own renderer from a fixture profile with every fact
 // at the longest content.js accepts, served in place of index.html's, and
 // the first view is checked again. The values are fixtures: none of them
-// reaches a page.
+// reaches a page. Not on the small phones: every fact at its longest, the
+// strip and the action alone fill a 640-667px screen (they end at 630px),
+// and the figures follow below; with the strip as it is, they fit (above).
 async function exerciseLongestStrip(browser, origin) {
     console.log('  index.html — the first view, every at-a-glance fact at its longest');
     const { GLANCE_LIMITS: L, glanceLanguages, checkAtAGlance } = require('./lib/content.js');
@@ -821,7 +861,7 @@ async function exerciseLongestStrip(browser, origin) {
     const START = '            <!-- AT-A-GLANCE:START', END = '<!-- AT-A-GLANCE:END -->';
     const page0 = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
     const html = page0.slice(0, page0.indexOf(START)) + renderAtAGlance(profile) + page0.slice(page0.indexOf(END) + END.length);
-    for (const [width, height] of FIRST_VIEWS) {
+    for (const [width, height] of FIRST_VIEWS.filter(v => !SMALL_PHONES.includes(v))) {
         const context = await browser.newContext({ viewport: { width, height } });
         await context.route(`${origin}/index.html`, (route) => route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: html }));
         const page = await context.newPage();
@@ -857,6 +897,23 @@ async function exerciseLongestStrip(browser, origin) {
 // in the first view. Played here once each, as a reader would, and their
 // labels measured on a phone, where a 12px label in an 800-unit drawing
 // used to come out at about 5px.
+// A slider's own keys, pressed on one: each must move it and none may
+// scroll the page. Home and End on You Draw It and the rig, and Up and
+// Down on the rig, scrolled the page to its top or footer and left focus
+// on a control out of sight. Returns what was wrong, if anything.
+async function sliderKeys(page, sel) {
+    await page.focus(sel);
+    const wrong = [];
+    for (const k of ['End', 'PageDown', 'Home', 'PageUp', 'ArrowUp', 'ArrowDown']) {
+        const before = await page.evaluate((s) => ({ y: scrollY, v: document.querySelector(s).getAttribute('aria-valuenow') }), sel);
+        await page.keyboard.press(k);
+        const after = await page.evaluate((s) => ({ y: scrollY, v: document.querySelector(s).getAttribute('aria-valuenow') }), sel);
+        if (Math.abs(after.y - before.y) > 1) wrong.push(`${k} scrolled the page ${Math.round(after.y - before.y)}px`);
+        if (after.v === before.v && k !== 'End') wrong.push(`${k} left it at ${after.v}`);
+    }
+    return wrong;
+}
+
 async function playGames(page) {
     await page.evaluate(() => document.getElementById('play-flood').scrollIntoView({ block: 'center' }));
     await page.waitForFunction(() => window.mks && window.mks.loaded && window.mks.loaded.dossier &&
@@ -907,6 +964,9 @@ async function exerciseCaseStudyGames(page, r) {
     }));
     if (/[1-9]\d* of \d+ struck water/.test(played.score) && played.yours > 0) ok(`reading the curve to its deepest dip strikes water, and the game keeps score ("${played.score}")`);
     else bad(`the borehole game: score "${played.score}", ${played.yours} holes on the board`);
+    const rig = await sliderKeys(page, '#boreholeStage');
+    if (rig.length) bad(`the rig's slider keys: ${rig.join('; ')}`);
+    else ok('the rig takes a slider\'s keys (Home, End, Page Up/Down, Up/Down), and none scrolls the page');
     if (played.level === 'July 2021' && played.water < 200) ok(`the flood slider raises the Wupper to July 2021 (water line at ${played.water})`);
     else bad(`the flood slider: level "${played.level}", water line at ${played.water}`);
 
@@ -1319,6 +1379,9 @@ async function exerciseJourneyAndChart(browser, origin) {
         await page.waitForFunction(() => document.querySelector('#ydiSvg .ydi-hit'), null, { timeout: 8000 }).catch(() => null);
         await page.evaluate(() => document.getElementById('ydi').scrollIntoView({ block: 'center', behavior: 'instant' }));
         await page.focus('#ydiSvg .ydi-hit').catch(() => null);
+        const keys = await sliderKeys(page, '#ydiSvg .ydi-hit').catch(e => [String(e.message || e).split('\n')[0]]);
+        if (keys.length) bad(`You Draw It at ${width}x${height}, its slider keys: ${keys.join('; ')}`);
+        else ok(`You Draw It at ${width}x${height}: Home, End, Page Up/Down and the arrows move the guess, and none scrolls the page`);
         await page.keyboard.press('ArrowUp');
         await page.keyboard.press('Enter');
         await page.waitForTimeout(200);
@@ -1577,9 +1640,34 @@ async function exerciseNavigation(browser, origin) {
         if (r.at !== to || !r.there) lost.push(`/#${id} ended on ${r.at}${r.there ? '' : ' (no such id)'}`);
         await pg.close();
     }
-    await fwd.close();
     if (lost.length) bad(`moved features: ${lost.join('; ')}`);
     else ok(`moved features: ${moved.map(([id]) => `/#${id}`).join(', ')} each go on to the page the feature is on now`);
+
+    // Reached on the page as well as on arrival: an address typed or
+    // followed while the homepage is open (hashchange), and Back to one
+    // (popstate). Only arrival was checked, and the forward on the other
+    // two could be deleted with every suite still green.
+    const onPage = [
+        ['a hash set on the page', '/case-studies.html#play-borehole', (pg) => pg.evaluate(() => { location.hash = '#strikeWidget'; })],
+        ['Back to one', '/case-studies.html#play-flood', (pg) => pg.evaluate(() => {
+            history.pushState(null, '', '#floodSim');
+            history.pushState(null, '', '#about');
+            history.back();
+        })]
+    ];
+    const stayed = [];
+    for (const [how, to, act] of onPage) {
+        const pg = await fwd.newPage();
+        await pg.goto(`${origin}/index.html`, { waitUntil: 'load' });
+        await act(pg);
+        await pg.waitForURL((u) => `${u.pathname}${u.hash}` === to, { timeout: 5000 }).catch(() => null);
+        const at = await pg.evaluate(() => location.pathname + location.hash);
+        if (at !== to) stayed.push(`${how} ended on ${at}, not ${to}`);
+        await pg.close();
+    }
+    await fwd.close();
+    if (stayed.length) bad(`moved features on the page: ${stayed.join('; ')}`);
+    else ok(`moved features: ${onPage.map(([how]) => how).join(' and ')} go on as well`);
 
     // Without script the switch could not switch anything, so it must not show.
     const noScript = await browser.newContext({ viewport: { width: 390, height: 800 }, javaScriptEnabled: false });
@@ -2760,6 +2848,22 @@ async function axeHomepageStates(page, view, note, attempt) {
         await page.evaluate(() => { document.activeElement.blur(); scrollTo(0, 0); });
     });
 
+    // The field notes, open. Note 03's link had no colour of its own: the
+    // browser's blue, 1.85:1 on the dark card, and off the palette in the
+    // light theme. axe never saw it while every note was shut, and its
+    // contrast rule cannot see the second, so any link with words still in
+    // a browser's default colours fails here too.
+    await attempt(`${rel}: axe with the field notes open`, async () => {
+        await page.evaluate(() => document.querySelectorAll('details.fieldnote').forEach((d) => { d.open = true; }));
+        await page.waitForTimeout(100);
+        note(rel, 'the field notes open', view, await axeRun(page, '.fieldnotes'));
+        const plain = await page.evaluate(() => Array.from(document.querySelectorAll('a[href]'))
+            .filter(a => a.getClientRects().length && a.textContent.trim() && ['rgb(0, 0, 238)', 'rgb(85, 26, 139)'].includes(getComputedStyle(a).color))
+            .map(a => a.textContent.trim().slice(0, 30)));
+        await page.evaluate(() => document.querySelectorAll('details.fieldnote').forEach((d) => { d.open = false; }));
+        if (plain.length) throw new Error(`links in the browser's default colours: ${plain.join(', ')}`);
+    });
+
     // The Assay's verdict, with rows for what matched and for the gaps.
     await attempt(`${rel}: axe on the Assay's verdict`, async () => {
         await page.click('#assay .assay-open', within);
@@ -3446,6 +3550,30 @@ async function exerciseCounter(openContext, origin, arrivalBytes) {
         }
         if (wrong.length) wrong.forEach(w => bad(`the count from ${w}`));
         else ok(`every page counts itself once, by name, with the documented keys, and the server accepts each: ${everyPage.map(([, n]) => n).join(', ')}`);
+    }
+
+    // An old homepage address, shared on LinkedIn, goes on to where its
+    // feature is now. The next page's referrer is the homepage, so the visit
+    // was counted as direct: the homepage passes LinkedIn on as ?via=,
+    // which leaves the address, and the homepage it passed through is not
+    // counted at all.
+    {
+        const p = await context.newPage();
+        p.on('pageerror', (e) => errors.push(e.message));
+        const before = sent.length;
+        await p.goto(`${origin}/index.html#anatomy`, { waitUntil: 'load', referer: 'https://www.linkedin.com/feed/' });
+        await p.waitForURL((u) => u.pathname.endsWith('/carbon-ai.html'), { timeout: 5000 }).catch(() => null);
+        await p.waitForLoadState('load');
+        const at = await p.evaluate(() => location.pathname + location.search + location.hash);
+        await leave(p);
+        await settle(p, before + 1);
+        const got = sent.slice(before).map((s) => { try { return JSON.parse(s.body); } catch (e) { return s.body; } });
+        if (got.length === 1 && got[0].page === 'carbon-ai' && got[0].ref === 'www.linkedin.com' && at === '/carbon-ai.html#anatomy') {
+            ok('an old homepage address from LinkedIn: one count, on the page it went on to, with LinkedIn as the referrer, and ?via= gone from the address');
+        } else {
+            bad(`an old homepage address from LinkedIn ended on ${at} and sent ${got.length} count(s): ${JSON.stringify(got)}`);
+        }
+        await p.close();   // its count has gone, so closing cannot send another
     }
 
     for (const [label, prop, value] of [['Do Not Track', 'doNotTrack', '1'], ['Global Privacy Control', 'globalPrivacyControl', true]]) {

@@ -561,16 +561,19 @@ if (typeof document !== 'undefined') {
 
         // Anatomy of a Prompt (modules/anatomy.css, then .js) is fetched as
         // its section comes near: a visit that stays with the calculator
-        // never pays for it. Without the observer it stays as text.
+        // never pays for it. Without the observer it stays as text, and if
+        // either file fails to arrive, its note comes back to say why there
+        // is no drawing.
         const anatomy = document.getElementById('anatomy');
         if (anatomy && typeof IntersectionObserver === 'function') {
             let asked = false;
+            const failed = () => { anatomy.querySelector('.nojs-note').style.display = 'block'; };
             const io = new IntersectionObserver((entries) => {
                 if (asked || !entries.some(e => e.isIntersecting)) return;
                 asked = true;
                 io.disconnect();
-                const css = Object.assign(document.createElement('link'), { rel: 'stylesheet', href: 'modules/anatomy.css' });
-                css.onload = () => document.head.appendChild(Object.assign(document.createElement('script'), { src: 'modules/anatomy.js' }));
+                const css = Object.assign(document.createElement('link'), { rel: 'stylesheet', href: 'modules/anatomy.css', onerror: failed });
+                css.onload = () => document.head.appendChild(Object.assign(document.createElement('script'), { src: 'modules/anatomy.js', onerror: failed }));
                 document.head.appendChild(css);
                 // Named as the homepage names its modules, for count.js.
                 if (window.mks && typeof window.mks.track === 'function') window.mks.track('module-anatomy');

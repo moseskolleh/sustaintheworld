@@ -44,7 +44,7 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 ### 🏠 Home (Hero)
 - Name, role and a one-line value proposition over a rotating set of fieldwork photographs (the rotation only runs while the hero is on screen and the tab is visible)
 - An at-a-glance strip written from `content/profile.json` by `npm run build:content`: the roles he is open to and where he is today; seniority, start date, languages and right to work appear once Moses states them, and a fact that is `null` is simply not shown
-- One primary action (**See the evidence**, to the case studies), **Get in touch** second, and a quieter CV link; the figures below and the photo's caption sit inside the first screen at 1440×900 and 390×844, and in a laptop's shorter browser window (1366×657, 1280×720), where the description follows the figures as it does on a phone
+- One primary action (**See the evidence**, to the case studies), **Get in touch** second, and a quieter CV link; it is the one filled button on the first screen (the nav's Contact is an outline there, filled on hover). The figures below and the photo's caption sit inside the first screen at 1440×900 and 390×844, in a laptop's shorter browser window (1366×657, 1280×720), where the description follows the figures as it does on a phone, and on a small phone (375×667, 360×640)
 - A six-link nav: Work, About, Experience, Research, CV and Contact, with the one `Listen` control and the theme switch beside them. The index of the five interactive features sits just before Contact
 - Four exact figures (164 water points, 54 hazard systems, 3 continents, 2 master's degrees), written into the HTML so they read correctly without JavaScript; with it they count up to the same values, with nothing appended, and stay still under reduced motion or low-energy mode
 
@@ -249,8 +249,8 @@ npm run voice -- --clone path/to/sample # make a voice model (add --sections to 
 
 The API key is used only there, on your machine; it never reaches the browser.
 Fish Audio bills 1 credit per UTF-8 byte of text, so the cost is known before
-anything is sent: the eight sections are ~7,800 credits today (7,781 on
-2026-10-02), and the dry run
+anything is sent: the eight sections are ~8,300 credits today (8,347 on
+2026-10-03), and the dry run
 prints the exact figure. Scripts are hashed, so fixing one sentence re-renders
 one file. `scripts/lib/voice-signature.js` is
 the one definition of "has this track already been rendered?", shared by the
@@ -846,7 +846,7 @@ did.
 | Text-only field report, the HTML file (the size the footer quotes) | ~9 KB | 11 KB |
 | Text-only field report, over the wire (with its visit counter) | ~6 KB | 8 KB |
 | Case studies page, over the wire (fonts included) | ~104 KB | 109 KB |
-| Open counts page, over the wire (fonts included; sized for a full page) | ~95 KB | 105 KB |
+| Open counts page, over the wire (fonts included; sized for a full page) | ~95 KB | 103 KB |
 | Research outputs page, over the wire (fonts included) | ~94 KB | 99 KB |
 | AI, Weighed (`carbon-ai.html`), over the wire (fonts included) | ~110 KB | 111 KB |
 <!-- BUDGET-TABLE:END -->
@@ -905,7 +905,9 @@ speak; the first press fetches the player, its stylesheet and its scripts.
 Run `npm run budget` to see the current numbers, asset by asset. To make
 room under a ceiling, remove something of equal weight rather than raise it
 ([docs/plan.md](docs/plan.md), "Stop doing"). The report ends by naming every
-budget with more than 10% headroom: "you could lower … from X to Y".
+budget whose ceiling could come down: more than 10% headroom, and a ratchet
+target (measured plus 5%, at least 1 KB or a tenth of a screen over it) below
+the ceiling: "you could lower … from X to Y".
 
 **Length is a budget too.** A long page costs a busy reader what a heavy one
 costs the network, so every page is also held to a length: its scroll height

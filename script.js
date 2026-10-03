@@ -6,13 +6,9 @@
 // Chrome with third-party cookies disabled inside an iframe, Firefox with
 // dom.storage.enabled off, Safari in Lockdown Mode, a corporate policy, or
 // simply a full quota. The exception is a SecurityError, and an uncaught one
-// at module scope stops the rest of this file from ever running.
-//
-// That is exactly what happened here: `localStorage.getItem('theme')` sat at
-// top level, so a visitor with storage blocked lost the theme toggle, the
-// low-energy mode, the narration player, the terminal — everything defined
-// below the throw. A preference that cannot be saved should cost the
-// preference, not the page.
+// at module scope stops the rest of this file from ever running (what that
+// once cost this page is in tests/resilience.test.js). A preference that
+// cannot be saved should cost the preference, not the page.
 //
 // Every read and write in this file goes through here. Preferences then last
 // for the session in memory and are forgotten on reload, which is the correct
@@ -152,13 +148,12 @@ document.addEventListener('keydown', (e) => {
 // ===================================
 // Roughly two thirds of this site's JavaScript serves features most visits
 // never reach: the narration player, the field terminal, the interactives
-// in section 05 and the footer receipt. They used to ship in this file,
-// parsed and executed on every visit — including the ones that read the
-// hero and left. Now each lives in modules/ and is fetched the moment it is
-// first needed: a "listen" press, the backtick key, section 05 coming into
-// range. What every visit pays for is what every visit uses. (The two
-// project games, modules/dossier.js, moved to the case studies they
-// illustrate, which load them the same way without this file.)
+// in section 05 and the footer receipt. Each lives in modules/ and is
+// fetched the moment it is first needed: a "listen" press, the backtick
+// key, section 05 coming into range. What every visit pays for is what
+// every visit uses. (The two project games, modules/dossier.js, moved to
+// the case studies they illustrate, which load them the same way without
+// this file.)
 //
 // Modules are classic scripts sharing the page's global scope. They declare
 // nothing at the top level (a second `const safeStorage` would be a
@@ -293,13 +288,10 @@ const initBackgroundSlideshow = () => {
     let currentSlide = 0;
 
     // The first slide is fetched now; the rest only when the rotation is
-    // about to show them. Slide two used to be fetched "on idle" for every
-    // visit that was not in low-energy mode — 150 KB for a picture that only
-    // appears eight seconds in, paid by every visit that never stayed that
-    // long. Measured in a real browser, it was the single largest item in a
-    // first view. Now a slide is fetched a moment before it is due, and only
-    // while the rotation is actually running: hero on screen, tab visible,
-    // nobody having asked for calm.
+    // about to show them (150 KB each, for a picture eight seconds in: see
+    // check-budget.js on what the first view once paid for slide two), and
+    // only while it is running: hero on screen, tab visible, nobody having
+    // asked for calm.
     const loadSlide = (index) => {
         const slide = slides[index];
         if (!slide || slide.dataset.loaded) return;
@@ -476,7 +468,8 @@ inPageLinks.forEach((anchor, index) => {
 
 // Links already shared to what Phase 2 moved off this page (the games,
 // Anatomy of a Prompt) opened it at its top, with no sign of what they
-// were for. They go on to where it is now.
+// were for. They go on to where it is now, with the site that linked to
+// them as ?via=: count.js would otherwise take this page for the referrer.
 const MOVED = new Map([
     ['anatomy', 'carbon-ai.html#anatomy'],
     ['boreholeGame', 'case-studies.html#play-borehole'],
@@ -486,7 +479,9 @@ const MOVED = new Map([
 const forwardMoved = () => {
     const id = location.hash.slice(1), to = MOVED.get(id);
     if (!to || document.getElementById(id)) return false;
-    location.replace(to);
+    let via = '';
+    try { via = new URL(document.referrer).host; } catch (e) { /* none */ }
+    location.replace(via && via !== location.host ? to.replace('#', `?via=${encodeURIComponent(via)}#`) : to);
     return true;
 };
 
@@ -1107,7 +1102,6 @@ if (contactForm) {
 const initThemeToggle = () => {
     const toggle = document.getElementById('themeToggle');
     const sync = () => {
-        syncThemeColor();
         if (!toggle) return;
         const isLightMode = document.documentElement.classList.contains('light-mode');
         const use = toggle.querySelector('use');
@@ -1122,27 +1116,18 @@ const initThemeToggle = () => {
     if (!toggle) return;
     toggle.hidden = false;
 
+    // mks.theme puts the theme on <html> and the browser's bar (the address
+    // bar on a phone) with it: told which, it needs no storage to do so.
     toggle.addEventListener('click', () => {
-        const isLightMode = document.documentElement.classList.toggle('light-mode');
-        safeStorage.local.set('theme', isLightMode ? 'light' : 'dark');
+        const next = document.documentElement.classList.contains('light-mode') ? 'dark' : 'light';
+        safeStorage.local.set('theme', next);
+        mks.theme(next);
         sync();
     });
 };
 
-// The browser chrome (address bar on phones, title bar as an installed app)
-// takes its colour from <meta name="theme-color">, which was hardcoded to
-// the dark background — so light mode sat under a black bar.
-const themeColorMeta = document.querySelector('meta[name="theme-color"]');
-const syncThemeColor = () => {
-    if (!themeColorMeta) return;
-    const light = document.documentElement.classList.contains('light-mode');
-    themeColorMeta.setAttribute('content', light ? THEME_COLOR_LIGHT : THEME_COLOR_DARK);
-};
-const THEME_COLOR_DARK = '#0a0a0a';
-const THEME_COLOR_LIGHT = '#f4f6f0';
-
 // The theme is on the page already (mks.theme, in index.html's <head>, on
-// <html>); the switch and the browser bar follow it.
+// <html>, and the bar); the switch follows it.
 initThemeToggle();
 
 // ===================================
@@ -1585,9 +1570,7 @@ mks.ready = true;
 // ===================================
 // The counting itself is count.js, on every page: it keeps this visit's list
 // of features used, counts every [data-analytics] click into it, and sends
-// the list once as the page is left (never under Do Not Track or GPC). It
-// used to be a dispatcher into Plausible or gtag, neither of which was ever
-// switched on, so nothing had been counted at all.
+// the list once as the page is left (never under Do Not Track or GPC).
 //
 // This adds the one conversion that is not a click on a hook: the contact
 // form being sent, by its button or by Enter. count.js is deferred and runs
@@ -1608,10 +1591,8 @@ mks.ready = true;
 // it reads) is about 16 KB gzipped that only a visitor who presses Listen
 // needs. So the core only decides whether to show the button; the first
 // press fetches the player, which reads the section in view and moves
-// between sections itself.
-//
-// There used to be ten of these, one in every section header: eight-plus
-// extra Tab stops for a feature most visits never use. One is enough.
+// between sections itself. One control, not one per section (eight-plus
+// Tab stops for a feature most visits never use).
 //
 // The button stays hidden unless something can actually speak. A speech
 // engine that reports no voices (headless browsers, Linux without

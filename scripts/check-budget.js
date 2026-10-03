@@ -136,13 +136,18 @@ const BUDGETS = {
         max: 109 * KB,
         readme: 'Case studies page, over the wire (fonts included)'
     },
-    // Sized for the page once it is full, not for today's empty state (about
-    // 88 KB), so the weekly Action cannot turn red just because counting
-    // started: twelve weeks of lines, fifteen referrers and every feature the
-    // site names came to about 90 KB from a fixture.
+    // Sized for the page once it is full, not for today's empty state (95 KB
+    // in October 2026), so the weekly Action cannot turn red just because
+    // counting started. Every list on it is capped (twelve weeks, fifteen
+    // referrers and "other", the features, lenses and sections the site
+    // names), and drawn with all of them full, by smoke.js's busy quarter or
+    // tests/stats.test.js's twenty weeks, it comes to 97.8 KB: the ceiling is
+    // that plus 5%, as the ratchet would set it. The hold keeps the ratchet
+    // from measuring the committed, empty page instead; stats.test.js holds
+    // the full one to the ceiling.
     statsWire: {
         label: 'Open counts page, over the wire (with fonts)',
-        max: 105 * KB,
+        max: 103 * KB,
         readme: 'Open counts page, over the wire (fonts included; sized for a full page)',
         hold: "sized for the page full of counts, not for today's"
     },
@@ -223,7 +228,9 @@ const heldLength = (m) => (m ? Math.max(m.screens, m.full ? m.full.screens : 0) 
 // least a small floor above it, so a small page is not held to within a
 // few bytes of today. Byte ceilings round up to a whole KB, lengths to a
 // hundredth of a screen. `--ratchet` moves each ceiling down to that and
-// never up; the report names every budget with more than 10% headroom.
+// never up; the report names every budget whose ceiling could come down:
+// more than 10% headroom, and a ratchet target below the ceiling (a small
+// budget can have the first and not the second, the floor being 1 KB).
 // ------------------------------------------------------------------
 const RATCHET = { share: 0.05, floorBytes: 1 * KB, floorScreens: 0.1, hintAbove: 0.10 };
 

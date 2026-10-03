@@ -126,9 +126,9 @@
     // Output is decode: one token at a time, each pass reloading the weights
     // for a single token, which is far less efficient per token.
     //
-    // Treating them as interchangeable — which this tool used to do — makes a
-    // long prompt with a short answer look as expensive as a short prompt with
-    // a long answer. They are not close.
+    // Treating them as interchangeable makes a long prompt with a short
+    // answer look as expensive as a short prompt with a long answer. They
+    // are not close.
     //
     // So: an output token is modelled as OUTPUT_MULTIPLIER input tokens, and
     // the per-1k figure is calibrated against a reference mix so that the
@@ -275,13 +275,9 @@
     // ---------------------------------------------------------------
     // Water Usage Effectiveness — litres of water per kWh of IT energy.
     //
-    // This is where two files used to disagree: the data called 0.5 L/kWh
-    // "Google", while the methodology page cited Google's own 2024 report at
-    // ≈1.1 L/kWh. Both numbers are real, but they describe different things —
-    // 0.5 is what a good individual site achieves, 1.1 is Google's fleet
-    // average. The labels now say which is which, and the fleet figure has
-    // its own profile so nobody has to pick the wrong one to represent a
-    // hyperscaler.
+    // 0.5 L/kWh is what a good individual site achieves; ≈1.1 is Google's
+    // fleet average (its 2024 report). Both are real, so each label says
+    // which it is (tests/carbon.test.js tells how they were once confused).
     //
     // On-site cooling water only. Water used to generate the electricity
     // itself (thermoelectric cooling, hydropower evaporation) is a larger and
@@ -374,11 +370,9 @@
     // ---------------------------------------------------------------
     // Number formatting — the one formatter both pages print through.
     //
-    // The tool's own fell back to exponents, so a default query drove a car
-    // "9.46e-4 km", and a value under its displayed precision printed as
-    // "0.0 smartphone charges", which reads as free. Now: never an exponent;
-    // below 1, two significant figures up to `maxDigits` decimals and "<"
-    // past that; thousands grouped and millions in words.
+    // Never an exponent ("9.46e-4 km" of driving); below 1, two significant
+    // figures up to `maxDigits` decimals and "<" past that, as "0.0" reads as
+    // free; thousands grouped and millions in words.
     // ---------------------------------------------------------------
     const BIG = new Intl.NumberFormat('en-US', { notation: 'compact', compactDisplay: 'long', maximumFractionDigits: 1 });
 

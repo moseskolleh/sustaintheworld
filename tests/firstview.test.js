@@ -213,6 +213,14 @@ const facts = (d) => Array.from(d.querySelectorAll('.glance-fact')).map(f => [te
     assert(links.every(a => !/\d/.test(text(a))), 'Nav: no numbers in the labels');
     const filled = links.filter(a => a.classList.contains('contact-btn'));
     assert(filled.length === 1 && filled[0].getAttribute('href') === '#contact', 'Nav: Contact is the one button in it');
+    // Drawn in outline, filled only on hover: filled, it was a second green
+    // button on the first screen beside the hero's primary one, going
+    // elsewhere (smoke.js counts every filled control there, in both themes).
+    const navCss = fs.readFileSync(path.join(ROOT, 'style.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    const resting = (navCss.match(/(?:^|\n)\s*(?:html\.light-mode )?\.nav-link\.contact-btn\s*\{[^}]*\}/g) || []);
+    assert(resting.length > 0 && resting.every(r => !/background/.test(r)) &&
+        /\.nav-link\.contact-btn:hover\s*\{[^}]*background: var\(--primary-green\)/.test(navCss),
+        `Nav: Contact is an outline at rest, filled only on hover, so the hero's is the one filled button (${resting.map(r => r.trim().replace(/\s+/g, ' ')).join(' | ')})`);
     const bar = doc.querySelector('.nav-container');
     assert(!!bar.querySelector(':scope > #themeToggle') && !!bar.querySelector(':scope > .nav-listen #listenBtn'),
         'Nav: the theme switch and the one Listen control stay in the bar');

@@ -320,7 +320,7 @@ const WIDGET_HOSTS = {
         noun: 'drilling game',
         live: `
                         <p class="dw-intro">This is a resistivity profile like the ones we walked across the Freetown Complex. Low resistivity &mdash; the dips in the curve &mdash; can mean water-bearing fractures. Or clay. Move the rig, pick your spot, drill.</p>
-                        <div class="borehole-stage" id="boreholeStage" tabindex="0" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-label="Drilling rig position along the resistivity profile. Left and right arrow keys move the rig, Enter drills."></div>
+                        <div class="borehole-stage" id="boreholeStage" tabindex="0" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-label="Drilling rig position along the resistivity profile. The arrow keys move the rig (Page Up/Down further, Home and End to the ends), Enter drills."></div>
                         <div class="borehole-hud">
                             <button class="dw-btn dw-btn-primary" id="drillBtn" type="button">Drill here</button>
                             <button class="dw-btn" id="drillResetBtn" type="button">Survey a new site</button>
@@ -1203,7 +1203,7 @@ ${table('Kilobytes transferred per page view', cols('Per page view'), [
                     Assay graded a job ad, the grade it gave. Never the ad itself.
                 </dd>
                 <dt><code>ref</code></dt>
-                <dd>The host name of the site you came from; empty if there was none, or if it was this site.</dd>
+                <dd>The host name of the site you came from; empty if there was none, or if it was this site. An old homepage address for something that has since moved sends you on to its new page with that host name, so the visit is not counted as direct.</dd>
                 <dt><code>vp</code></dt>
                 <dd>The browser window&rsquo;s width as one of three classes: <code>s</code> under 600 px, <code>m</code> up to 1023 px, <code>l</code> wider.</dd>
                 <dt><code>kb</code></dt>
@@ -1364,18 +1364,17 @@ ${SPLIT_SENTENCES}
 // generator replaced — rewriting it would have quietly changed how the
 // narration is chunked, and tests/bugs.test.js exists because that has bitten
 // this repository before.
+//
+// Splitting naively on "." mangles these scripts, which are full of
+// spelled-out initialisms — A.I., E.S.G., Q.G.I.S., Arc.G.I.S. Those are
+// parked behind a sentinel before the split and restored after, so
+// "sustainable A.I. — making sure…" stays a single sentence. The sentinel is
+// deliberately non-numeric: the scripts are also full of real numbers (164
+// water points) that must survive the round trip untouched; bugs.test.js
+// asserts exactly that. Why is said here, as the scripts' rules are in
+// narration.json, rather than in every listener's download.
 const SPLIT_SENTENCES = String.raw`    // Sentence splitting, shared by the player (for utterances and captions)
-    // and available to the generator.
-    //
-    // Splitting naively on "." mangles these scripts, which are full of
-    // spelled-out initialisms — A.I., E.S.G., Q.G.I.S., Arc.G.I.S. Those are
-    // parked behind a sentinel before the split and restored after, so
-    // "sustainable A.I. — making sure…" stays a single sentence.
-    //
-    // The sentinel is deliberately non-numeric: the scripts are also full of
-    // real numbers (164 water points) that must survive the round trip
-    // untouched. tests/bugs.test.js asserts exactly that.
-    // ---------------------------------------------------------------
+    // and the generator, which says why it parks initialisms (A.I.) first.
     const INITIALISM = /[A-Za-z]+(?:\.[A-Za-z])+\./g;
 
     function splitSentences(text) {

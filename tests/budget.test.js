@@ -123,6 +123,15 @@ try {
         assert(budget.couldLowerTo(9, 10, 'screens') === null && budget.couldLowerTo(8.9, 10, 'screens') === 9.35,
             `Hints: the same for a length (${budget.couldLowerTo(9, 10, 'screens')}, ${budget.couldLowerTo(8.9, 10, 'screens')})`);
         assert(budget.couldLowerTo(0, 800 * KB, 'bytes', 'held') === null, 'Hints: never for a budget held for later');
+        // Past 10% is not enough on its own: the field report's wire budget
+        // (6.0 KB of 8 KB, 24% headroom) earns 8 KB with the 1 KB floor, so it
+        // is not named, and the README says so rather than "every budget
+        // with more than 10% headroom".
+        assert(budget.couldLowerTo(6188, 8 * KB, 'bytes') === null && budget.couldLowerTo(5000, 8 * KB, 'bytes') === 6 * KB,
+            `Hints: only where the ratchet's target is below the ceiling (${budget.couldLowerTo(6188, 8 * KB, 'bytes')}, ${budget.couldLowerTo(5000, 8 * KB, 'bytes')})`);
+        const readmeSays = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8').replace(/\s+/g, ' ');
+        assert(/naming every budget whose ceiling could come down: more than 10% headroom, and a ratchet target/.test(readmeSays) &&
+            !/naming every budget with more than 10% headroom/.test(readmeSays), 'Hints: the README describes both conditions');
     }
 
     // --- The ratchet never raises a ceiling -----------------------------------

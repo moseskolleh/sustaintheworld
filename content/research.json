@@ -169,7 +169,7 @@
 
   "reproducibility": {
     "heading": "Reproducing what is here",
-    "body": "Everything public on this page runs from one clone with no build step and no API key. The EcoPrompt Coach and the homepage's energy chart read one factor set, so they cannot quote different numbers. The map regenerates byte-identically from pinned dependencies. The narration is content-addressed, so re-rendering unchanged text costs nothing.",
+    "body": "Everything public on this page runs from one clone with no build step and no API key. The EcoPrompt Coach and the homepage's energy chart read one factor set, so they cannot disagree about a model. The chart shows each model's published figure for a 1,000-token answer; the coach multiplies it by data-centre overhead (PUE, 1.2 unless you change it), so for the same answer it prints 1.2 times the chart's figure. The map regenerates byte-identically from pinned dependencies. The narration is content-addressed, so re-rendering unchanged text costs nothing.",
     "commands": [
       { "command": "npm install && npm test", "does": "runs every suite, the map check and the asset-weight budgets" },
       { "command": "npm run map:build", "does": "regenerates the journey map from Natural Earth data" },

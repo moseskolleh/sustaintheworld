@@ -242,10 +242,13 @@ before anything runs:
 npm run voice -- --sections --dry-run
 ```
 
-The full page is **~7,800 credits** for its eight sections (the dry run above
-prints the exact figure: 7,781 on 2026-10-02). The free plan grants **8,000 per
-cycle**, so one complete render uses about 97% of a free month and leaves almost
-nothing for corrections. Check your balance and per-call limit first — ask the Fish Audio
+The full page is **~8,300 credits** for its eight sections (the dry run above
+prints the exact figure: 8,347 on 2026-10-03). The projects script grew when it
+began reading each card's basis, and the free plan grants **8,000 per cycle**,
+so one complete render uses about 104% of a free month: more than a cycle
+grants. Render the sections you need with `--only` (for example
+`--sections --only hero,projects`), and the rest in the next cycle.
+Check your balance and per-call limit first — ask the Fish Audio
 connector for `get_credit_balance`, or look at the dashboard.
 
 Two things follow from that:

@@ -69,7 +69,7 @@ used, is in the repository's README, under "The visit counter and privacy".
 | `lens` | the `?lens=` the visit arrived with, or `""` |
 | `deepest` | the id of the furthest top-level part of `<main>` that came on screen, or `""` |
 | `features` | up to 20 distinct names: `data-analytics` hooks clicked, modules fetched on demand (`module-terminal`), `contact-form-submit` |
-| `ref` | the referring site's host only (`www.linkedin.com`), `""` if none or this site |
+| `ref` | the referring site's host only (`www.linkedin.com`), `""` if none or this site; for an old homepage address forwarded to where its feature moved, the host that linked to it (passed on as `?via=`, believed only from this site) |
 | `vp` | viewport class: `s` under 600 px, `m` under 1024 px, `l` wider |
 | `kb` | whole KB this visit transferred (Resource Timing `transferSize`), so a cached revisit counts as the near-zero it is |
 

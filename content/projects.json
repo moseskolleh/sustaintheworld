@@ -264,7 +264,7 @@
           "kind": "tool",
           "status": "public",
           "url": "case-studies.html#play-flood",
-          "note": "A schematic Wupper cross-section, below, drawn in your browser with JavaScript on: slide the river from a calm day to July 2021 and watch the clearance under the Schwebebahn's hanging cars shrink."
+          "note": "A schematic Wupper cross-section, below (it needs JavaScript): slide the river from a calm day to July 2021 and watch the clearance under the Schwebebahn's hanging cars shrink."
         }
       ],
 
@@ -484,7 +484,7 @@
           "kind": "tool",
           "status": "public",
           "url": "case-studies.html#play-borehole",
-          "note": "A playable version of the reading the method depends on, below, run in your browser with JavaScript on: read the curve, place the rig, drill, and set your strike rate beside the field records."
+          "note": "A playable version of the reading the method depends on. Play it below (it needs JavaScript): read the resistivity curve, place the rig, drill, and set your strike rate beside the field records."
         }
       ],
 

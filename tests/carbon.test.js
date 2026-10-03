@@ -307,6 +307,29 @@ function checkResult(label, params) {
     );
 }
 
+// --- What research.html says about the coach and the chart ---------------
+// It said the two "cannot quote different numbers", but the chart quotes a
+// model's published figure and the coach multiplies it by data-centre
+// overhead: at its defaults, GPT-4o was 0.6 Wh on the coach and 0.5 on the
+// chart. The sentence now says by how much they differ; this holds it to
+// calculate() at the coach's own defaults, read from carbon-ai.html.
+{
+    const fs = require('fs');
+    const path = require('path');
+    const { JSDOM } = require('jsdom');
+    const doc = new JSDOM(fs.readFileSync(path.join(__dirname, '..', 'carbon-ai.html'), 'utf8')).window.document;
+    const field = (id) => Number(doc.getElementById(id).getAttribute('value'));
+    const pue = field('pue');
+    const coach = calculate({ ...BASE, modelKey: 'gpt-4o', inputTokens: field('inputTokens'), outputTokens: field('outputTokens'), pue });
+    const chart = MODELS['gpt-4o'].energyPer1kTokens_Wh;
+    const said = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'content', 'research.json'), 'utf8')).reproducibility.body;
+    const m = said.match(/PUE, ([\d.]+) unless you change it\), so for the same answer it prints ([\d.]+) times the chart's figure/);
+    assert(field('inputTokens') + field('outputTokens') === 1000 && Math.abs(coach.energyPerQuery_Wh / chart - pue) < 1e-9,
+        `Research: at its defaults (${field('inputTokens')} in, ${field('outputTokens')} out) the coach prints the chart's 1,000-token figure times its PUE (${coach.energyPerQuery_Wh} Wh against ${chart} Wh)`);
+    assert(!!m && +m[1] === pue && +m[2] === pue && !/cannot quote different numbers/.test(said),
+        `Research: the page says so, with the coach's own default PUE (${m ? `${m[1]}, ${m[2]}` : 'no such sentence'} against ${pue})`);
+}
+
 // --- The tool page, end to end ------------------------------------------
 // Everything above tests the model. This tests that a visitor typing a
 // negative number into the real page sees the real correction.
@@ -553,6 +576,25 @@ const ROUNDED_TO_NOTHING = /^0(\.0+)?$|\b0\.0+ /;
         assert(css.length === 1 && !asked('script[src="modules/anatomy.js"]') && io.off, `Anatomy: its stylesheet is asked for once, as the section nears (${css.length}), and watching stops`);
         css[0].onload();
         assert(asked('script[src="modules/anatomy.js"]') === 1, 'Anatomy: its script follows once the stylesheet is in');
+
+        // Without the drawing, the section said "This is where…" over
+        // nothing. A note says why there is none and where the words are:
+        // shown without JavaScript (carbon-ai.css), and brought back when
+        // either file fails to arrive.
+        const note = doc.querySelector('#anatomy > .nojs-note');
+        const intro = doc.querySelector('#anatomy > p').textContent.replace(/\s+/g, ' ').trim();
+        assert(!!note && /needs JavaScript/.test(note.textContent) && /paragraph below says in words/.test(note.textContent) &&
+            !/This is where/.test(intro) && /\bBelow\b/.test(intro),
+            `Anatomy: without its drawing, a note says it needs JavaScript and that the paragraph below gives it in words; the intro points below ("${intro.slice(0, 60)}…")`);
+        assert(note.style.display === '', 'Anatomy: while the drawing comes, the note stays as html.js leaves it (hidden)');
+        doc.head.querySelector('script[src="modules/anatomy.js"]').onerror();
+        assert(note.style.display === 'block', 'Anatomy: its script failing to arrive brings the note back');
+        const again = boot();
+        const io2 = again.observers.find(o => o.els.includes(again.doc.getElementById('anatomy')));
+        io2.cb([{ target: again.doc.getElementById('anatomy'), isIntersecting: true }]);
+        again.doc.head.querySelector('link[href="modules/anatomy.css"]').onerror();
+        assert(again.doc.querySelector('#anatomy > .nojs-note').style.display === 'block' && !again.doc.head.querySelector('script[src="modules/anatomy.js"]'),
+            'Anatomy: so does its stylesheet failing, and no script is asked for to draw unstyled');
         assert(/^\d+px 0px$/.test(io.opts.rootMargin || ''), `Anatomy: fetched a little before it is on screen (rootMargin ${io.opts.rootMargin})`);
 
         const { criticalAssets, onDemandAssets } = require('../scripts/check-budget.js');

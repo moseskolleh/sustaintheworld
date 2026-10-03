@@ -173,6 +173,19 @@ const text = (el) => (el ? el.textContent.replace(/\s+/g, ' ').trim() : '');
     assert(rows.every(r => r.querySelector('.strike-waffle').getAttribute('aria-hidden') === 'true'), 'Scoreboard: the cells are decoration; each label carries its numbers');
     assert(cells(rows[0], 'water') + cells(rows[0], 'dry') === 0 && /drill to fill this row/.test(text(score)), 'Scoreboard: your row starts empty and says how to fill it');
 
+    // A slider's keys, each kept from the page: ArrowUp/Down scrolled it
+    // 40px, and Home and End to its top and its footer, while the rig sat.
+    const at = () => +stage.getAttribute('aria-valuenow');
+    const pressed = (k) => {
+        const ev = new window.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true });
+        stage.dispatchEvent(ev);
+        return ev.defaultPrevented ? at() : null;
+    };
+    const walk = ['End', 'ArrowDown', 'PageDown', 'Home', 'ArrowUp', 'PageUp'].map(k => [k, pressed(k)]);
+    const [end, down, pgDown, home, up, pgUp] = walk.map(([, v]) => v);
+    assert(end === 100 && down < end && pgDown < down - 4 && home === 0 && up > home && pgUp > up + 4 && /Home and End/.test(stage.getAttribute('aria-label')),
+        `Rig: End and Home take it to the profile's ends, Up and Down step it like Right and Left, the Page keys further, and the name says so (${walk.map(([k, v]) => `${k} ${v}`).join(', ')})`);
+
     // One round: walk the rig along the profile, drilling, until water.
     for (let i = 0; i < 80; i++) key(window, stage, 'ArrowLeft');
     let struck = false, holes = 0;

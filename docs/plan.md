@@ -556,7 +556,7 @@ rule makes that cheap.
 ## Progress
 
 What branch `claude/plan-implementation-soh954` implements so far, step by step,
-checked against the code and the test runs on 2026-10-03 (`npm test`: 1,998
+checked against the code and the test runs on 2026-10-03 (`npm test`: 2,033
 passing in twenty-three suites, the figure the runner prints at the end;
 `npm run smoke` in Chromium: passes). Waves 1
 and 2 are on `main` (pull requests #48 and #49, merged by 2026-09-27, where
@@ -719,8 +719,9 @@ fixed, and what they changed is folded into the steps below and 6.6-6.7.
    none). ✗ Whether the grade should be counted at all (S4).
 4. ◐ **`stats.html`, public.** Built: in the sitemap, linked from the
    footers of the homepage, case studies, research, AI, Weighed and itself,
-   and from the field report and the 404 page, under a 105 KB budget (95 KB
-   today), with a privacy note that prints a literal example payload and
+   and from the field report and the 404 page, under a 103 KB budget (95 KB
+   today; 97.8 KB drawn full, every list at its cap, and the ceiling is that
+   plus 5%), with a privacy note that prints a literal example payload and
    lists what is never collected. The weekly Action
    (`.github/workflows/stats.yml`, Mondays 04:17 UTC) reads the daily totals
    from `?action=stats`, which answers only the `STATS_TOKEN` token (the
@@ -763,7 +764,7 @@ fixed, and what they changed is folded into the steps below and 6.6-6.7.
 not done as a phase: the at-a-glance strip still lacks the four facts only
 Moses can give (2.1), and none of it is live until the wave's pull request
 is merged, which is his call (S7). Measured in Chromium once the page has
-settled: the homepage is 9.36 screens at 1440×900 and 16.29 at 390×844,
+settled: the homepage is 9.36 screens at 1440×900 and 16.31 at 390×844,
 from 19.4 and 32.7 when this plan was written (18.78 and 32.18 when the wave
 began); `index.html` is 84 KB on disk (21 KB gzipped), from 134 KB; the
 homepage's first view is 275 KB over the wire, from 282 KB.
@@ -796,14 +797,29 @@ live).
    575px; 623px and 635px with every fact at its longest). There the
    scroll cue goes, as it ran through the description from 900 to 1,030px
    wide; where it shows, the hero keeps its 70px clear of the figures
-   (smoke checks both at 1024×768 and 1024×881). The value line ends at
+   (smoke checks both at 1024×768 and 1024×881). A small phone's window is
+   short too: at 375×667 the fold cut through the second row of figures and
+   at 360×640 left it below, so below 700px tall a phone's hero closes up
+   (a smaller name, tighter margins), from 360px the eyebrow no longer steps
+   down for a two-line caption (every caption fits on one line there), and
+   under 380px the two buttons share a line; the figures end at 618px at
+   both, and smoke checks them. With every fact at its longest, though, the
+   strip and the action alone fill those screens (they end at 630px) and the
+   figures follow below; smoke holds that check to the larger windows, and
+   a 320×568 phone does not fit them either way. The value line ends at
    "decisions leaders can act on": "from the field to the boardroom"
    claimed an audience no case study shows. ✗
    Seniority, available from, languages with the Dutch level, and right to
    work (owner checklist F1–F3).
 2. ✓ **One primary action.** "See the evidence" (to the case studies, in
    their default view) is the one primary button; "Get in touch" is second
-   and the CV a quieter link. The play index sits just before Contact. The
+   and the CV a quieter link. It is the one filled button on the first
+   screen: the nav's Contact, filled to be "the one filled button" in the
+   bar, made two identical green buttons there from 900px wide, going to
+   different places, so on the homepage it is an outline, filled on hover
+   (the other pages, which have no hero, keep theirs filled). Smoke counts
+   every filled control on the first screen, in both themes, not only the
+   hero's `.btn-primary`. The play index sits just before Contact. The
    nav has six links and no numbers (Work, About, Experience, Research, CV,
    Contact), beside Listen and the theme switch; the menu button takes over
    below 900px, and Work lights up while the reader is in the homepage's
@@ -819,10 +835,16 @@ live).
    and Anatomy of a Prompt moved to `carbon-ai.html`, fetched as its
    section nears. A link already shared to one of them on the homepage
    (`#anatomy`, `#boreholeGame`, `#strikeWidget`, `#floodSim`) goes on to
-   where it is now rather than opening the homepage at its top. The games
+   where it is now rather than opening the homepage at its top, on arrival,
+   on a hash set on the page and on Back (smoke checks all three), and
+   passes on the site that linked to it as `?via=`, so the count does not
+   take the visit for a direct one (`count.js` believes it only from this
+   site and takes it out of the address). The games
    keep a keyboard reader's focus: "Drill here" is marked busy while a hole
    goes down rather than disabled, and Back after a link to a game leaves
-   the case studies where they are (smoke checks both). Experience is short cards at every width, not only on a
+   the case studies where they are (smoke checks both), and the rig and
+   You Draw It, both sliders, take a slider's keys: Home, End and the Page
+   keys (and the rig's Up and Down) had scrolled the page away from them. Experience is short cards at every width, not only on a
    phone, each opened by a More button named for its role. The Assay sits
    below the contact form, its question and promise in view and its box
    behind one "Grade a job description" button. To reach the targets
@@ -1006,8 +1028,9 @@ move to `content/brief.json`. 4.2 and 4.4 not started.
    shows what main's was (read from the branch's copy, both sides had the
    branch's, and a moved ceiling never showed; `receipt.test.js` now runs
    it on a checkout whose copy differs). `check-budget.js` ends its report
-   with "you could lower X from A to B" wherever there is more than 10%
-   headroom, and writes the README's budget and length tables, its quoted
+   with "you could lower X from A to B" wherever a ceiling could come down:
+   more than 10% headroom, and a ratchet target (measured plus 5%, at least
+   1 KB or a tenth of a screen over it) below the ceiling, and writes the README's budget and length tables, its quoted
    first-view ceiling and the core script's weight (typed by hand, it had
    gone stale);
    `npm test` fails while they are stale, and the weekly open-counts Action

@@ -328,6 +328,22 @@ function assert(cond, msg) {
     const right = said();
     assert(agrees(up) && +up.now > +before.now && agrees(right) && right.text !== up.text,
         `YDI: raising the guess and moving to the next model each change what it says ("${up.text}", then "${right.text}")`);
+    // The keys a slider promises. Home, End and the Page keys fell through
+    // to the page, which scrolled to its top or its footer and left focus on
+    // a chart out of sight, its guess still moving with the next arrow.
+    const max = hit.getAttribute('aria-valuemax');
+    const taken = (k) => {
+        const ev = new window.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true });
+        hit.dispatchEvent(ev);
+        return { k, kept: ev.defaultPrevented, now: said().now };
+    };
+    const home = taken('Home'), pgUp = taken('PageUp'), arrow = taken('ArrowUp'), end = taken('End'), pgDown = taken('PageDown');
+    const keys = [home, pgUp, end, pgDown];
+    assert(keys.every(x => x.kept) && +home.now === 0 && (+pgUp.now - +home.now) > 3 * (+arrow.now - +pgUp.now) &&
+        end.now === Number(max).toFixed(2) && +pgDown.now < +end.now && agrees(said()) && /Home, End/.test(hit.getAttribute('aria-label')),
+        `YDI: Home and End set the guess to the axis's ends, the Page keys move it four arrow steps, none scrolls the page, and the name says so (${keys.map(x => `${x.k} ${x.now}`).join(', ')})`);
+    const other = taken('Tab');
+    assert(!other.kept, 'YDI: any other key, Tab among them, is left to the browser');
     // An image's content is not read, so it may hold no control (axe:
     // nested-interactive): the chart is a group, and its drawn words are
     // hidden, as the data table says them.

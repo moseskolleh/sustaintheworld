@@ -369,6 +369,23 @@ const state = (doc) => {
             `Homepage: mks.theme is inline in <head>, before the stylesheet, so nothing holds it back from the first frame (script at ${at}, stylesheet at ${sheet})`);
         assert(/documentElement\.classList\.toggle\('light-mode'/.test(themeHome) && !/document\.body\b/.test(themeHome),
             'Homepage: it marks <html>, which exists in <head>, not <body>, which does not yet');
+
+        // The browser's bar with it. Only script.js set it, a 76 KB script at
+        // the foot of the page: a light page sat under a dark bar until it
+        // ran, and for good if it failed. Here mks.theme runs alone, before
+        // the stylesheet and with no script.js, as a browser runs it in <head>.
+        const bar = head.search(/<meta name="theme-color"/);
+        assert(bar > -1 && bar < at, `Homepage: the theme-color meta comes before mks.theme, which sets it (meta at ${bar}, script at ${at})`);
+        const alone = (stored, scheme) => {
+            const w = new JSDOM(html, { runScripts: 'outside-only', url: 'https://example.test/' }).window;
+            if (stored) w.localStorage.setItem('theme', stored);
+            w.matchMedia = (q) => ({ matches: q === '(prefers-color-scheme: light)' && scheme === 'light' });
+            w.eval(themeHome);
+            return w.document.querySelector('meta[name="theme-color"]').getAttribute('content');
+        };
+        const bars = [alone(null, 'light'), alone(null, 'dark'), alone('dark', 'light'), alone('light', 'dark')];
+        assert(JSON.stringify(bars) === JSON.stringify(['#f4f6f0', '#0a0a0a', '#0a0a0a', '#f4f6f0']),
+            `Homepage: mks.theme on its own sets the bar to the theme it chose, stored or the system's, before script.js (${bars.join(', ')})`);
         const homeCss = read('style.css').replace(/\/\*[\s\S]*?\*\//g, '');
         const bodyKeyed = (homeCss.match(/body\.light-mode[^{]*/g) || []).concat((read('modules/dispatch.css').match(/body\.light-mode[^{]*/g) || []));
         assert(bodyKeyed.length === 0 && /html\.light-mode\s*{/.test(homeCss),
@@ -437,7 +454,7 @@ const state = (doc) => {
         const differ = Object.entries(same).filter(([mine, theirs]) => explicit[mine] !== home[theirs])
             .map(([mine, theirs]) => `${mine} ${explicit[mine]} vs ${theirs} ${home[theirs]}`);
         assert(differ.length === 0, `Palette: the light colours are the homepage's (${differ.join(', ') || 'all match'})`);
-        const bar = (read('script.js').match(/THEME_COLOR_LIGHT = '([^']+)'/) || [])[1];
+        const bar = (themeHome.match(/content=t\?'([^']+)'/) || [])[1];
         assert(explicit['--darker-bg'] === bar && themeJs.includes(`'${bar}'`),
             `Palette: the light page is the colour of the homepage's light browser bar, and theme.js sets that bar (${bar})`);
 

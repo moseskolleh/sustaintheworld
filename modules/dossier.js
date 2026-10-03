@@ -315,10 +315,13 @@
             if (dragging && !drilling) placeRig(toViewX(e.clientX));
         });
         stage.addEventListener('pointerup', () => { dragging = false; });
+        // Every key a slider promises (some scrolled the page).
+        const STEP = { ArrowLeft: -14, ArrowDown: -14, ArrowRight: 14, ArrowUp: 14, PageDown: -70, PageUp: 70, Home: -W, End: W };
         stage.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowLeft') { placeRig(rigX - 14); e.preventDefault(); }
-            else if (e.key === 'ArrowRight') { placeRig(rigX + 14); e.preventDefault(); }
-            else if (e.key === 'Enter' || e.key === ' ') { drill(); e.preventDefault(); }
+            if (STEP.hasOwnProperty(e.key)) placeRig(rigX + STEP[e.key]);
+            else if (e.key === 'Enter' || e.key === ' ') drill();
+            else return;
+            e.preventDefault();
         });
         drillBtn.addEventListener('click', drill);
         resetBtn.addEventListener('click', reset);

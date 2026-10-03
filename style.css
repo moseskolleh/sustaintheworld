@@ -384,11 +384,12 @@ html {
     width: 100%;
 }
 
-/* The one filled button in the bar; its text as on .btn-primary. */
+/* The one button in the bar, in outline: filled, it was a second green
+   button on the first screen beside the hero's primary one. Filled on
+   hover, its text then as on .btn-primary. */
 .nav-link.contact-btn {
     border: 1px solid var(--primary-green);
-    background: var(--primary-green);
-    color: #051000;
+    color: var(--primary-green);
     padding: 9px 22px;
     border-radius: 999px;
 }
@@ -396,11 +397,11 @@ html {
 .nav-link.contact-btn::after { display: none; }
 
 .nav-link.contact-btn:hover {
-    background: var(--hover-color);
-    border-color: var(--hover-color);
+    background: var(--primary-green);
+    color: #051000;
 }
 
-html.light-mode .nav-link.contact-btn {
+html.light-mode .nav-link.contact-btn:hover {
     color: #fff;
 }
 
@@ -2830,12 +2831,26 @@ html.js .nojs-note { display: none; }
     }
 }
 
-/* Below 380px the longer captions can take two lines, and the eyebrow
-   steps down to clear them (smoke.js tries each at 320px). */
+/* Below 360px the longer captions can take two lines, and the eyebrow
+   steps down to clear them (smoke.js tries each at 320 and 360px). */
+@media (max-width: 359px) {
+    .hero { padding-top: 136px; }
+}
+
+/* Under 380px the two buttons share a line, the labels keep to two. */
 @media (max-width: 380px) {
-    .hero {
-        padding-top: 136px;
-    }
+    .hero-cta .btn { padding: 14px 10px; letter-spacing: 0.03em; }
+    .hero-stat-label, .hero-photo-caption { letter-spacing: 0; }
+}
+
+/* A small phone's window is short too (smoke.js: 375x667, 360x640), and
+   the fold cut through the figures: the name takes less, the rest closes up. */
+@media (max-width: 480px) and (max-height: 700px) {
+    .hero-title { font-size: 2rem; }
+    .hero-eyebrow, .hero-subtitle, .hero-valueprop { margin-bottom: 6px; }
+    .at-a-glance { margin-bottom: 10px; }
+    .hero-cta { margin-bottom: 12px; }
+    .hero-stats { padding-top: 10px; }
 }
 
 /* In a laptop's window the rest closes up too, enough for the figures to
@@ -3096,7 +3111,8 @@ html.light-mode .journey-map-readout {
 }
 
 .ecoprompt .section-description a,
-.eco-footnote a {
+.eco-footnote a,
+.fieldnote-body a {
     color: var(--primary-green);
 }
 
