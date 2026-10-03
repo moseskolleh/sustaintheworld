@@ -39,24 +39,23 @@ function assert(cond, msg) {
     assert(!threw, 'Bug1: smooth-scroll handler must not throw on href="#"');
 }
 
-// --- Dossiers open from a real button, by keyboard as well as mouse ---
+// --- Project cards: a heading and one named link each, nothing to open ---
+// The six dossiers opened from a button and hid their stories until then.
+// The cards that replaced them hide nothing: each is a heading, its text,
+// and one link to the whole story, named for the project it leads to.
 {
-    const { window } = run('dark');
+    const { window, errors } = run('dark');
     const doc = window.document;
-    const cards = Array.from(doc.querySelectorAll('.project-card'));
-    const toggles = cards.map(c => c.querySelector('h3 > button.project-toggle[type="button"]'));
-    assert(cards.length > 0 && toggles.every(Boolean), `A11y: every dossier title is a button inside its heading (${toggles.filter(Boolean).length}/${cards.length})`);
-    assert(!doc.querySelector('.project-summary[href], a.project-summary'), 'A11y: the summary is no longer one link around the whole card');
-
-    const first = toggles[0];
-    const details = doc.getElementById(first.getAttribute('aria-controls') || '');
-    assert(!!details && details.classList.contains('project-details'), 'A11y: the button controls its dossier');
-    first.click();   // what Enter or Space does to a button
-    assert(first.getAttribute('aria-expanded') === 'true' && cards[0].classList.contains('expanded'), 'A11y: the button opens the dossier and says so');
-
-    cards[1].querySelector('.project-head p').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-    assert(cards[1].classList.contains('expanded') && !cards[0].classList.contains('expanded'), 'Mouse: clicking anywhere on a summary still opens it, and closes the other');
-    assert(first.getAttribute('aria-expanded') === 'false', 'A11y: the closed dossier\'s button says collapsed');
+    const cards = Array.from(doc.querySelectorAll('#projects .project-card'));
+    assert(cards.length === 6 && errors.length === 0, `Cards: six project cards, and the page boots without errors (${cards.length}, ${errors.length} errors)`);
+    const links = cards.map(c => Array.from(c.querySelectorAll('a[href]')));
+    assert(links.every(l => l.length === 1 && /^case-studies\.html#[a-z-]+$/.test(l[0].getAttribute('href'))),
+        'Cards: each has exactly one link, to its case study by id');
+    const names = links.map(l => l[0].textContent.replace(/\s+/g, ' ').trim());
+    assert(names.every((n, i) => n === `Read the case study: ${cards[i].querySelector('h3').textContent.trim()}`),
+        `Cards: each link is named for its project, so six links do not all read the same (${names[0]})`);
+    assert(!doc.querySelector('#projects button, #projects [aria-expanded], #projects [inert]'),
+        'Cards: nothing on a card opens, closes or is held back');
 }
 
 // --- Bug 2: theme-toggle icon must match persisted theme on load ---
@@ -66,8 +65,8 @@ function assert(cond, msg) {
     assert(!!toggle, 'Bug2 setup: theme toggle exists');
     const use = toggle && toggle.querySelector('use');
     const href = use && (use.getAttribute('href') || use.getAttribute('xlink:href'));
-    const isLight = window.document.body.classList.contains('light-mode');
-    assert(isLight, 'Bug2 setup: body is in light-mode from localStorage');
+    const isLight = window.document.documentElement.classList.contains('light-mode');
+    assert(isLight, 'Bug2 setup: the page is in light-mode from localStorage');
     assert(
         href === '#i-sun',
         'Bug2: icon should be the sun symbol when loaded in light mode (was: ' + href + ')'
@@ -75,6 +74,8 @@ function assert(cond, msg) {
 }
 
 // --- Accessibility & contact-form guarantees ---
+// (The photos and their lightbox moved to case-studies.html with the
+// stories they belong to: tests/phone.test.js holds them to theirs.)
 {
     const { window } = run('dark');
     const doc = window.document;
@@ -86,16 +87,6 @@ function assert(cond, msg) {
         toggle.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }));
         assert(toggle.getAttribute('aria-expanded') === 'true', 'A11y: nav toggle aria-expanded follows open state');
     }
-
-    // A real button inside each figure; role=button on the <figure> itself
-    // is not allowed and hides the caption from assistive technology.
-    const item = doc.querySelector('.gallery-item');
-    const open = item && item.querySelector('button.gallery-open');
-    assert(
-        !!open && open.getAttribute('type') === 'button' && /^View larger: ./.test(open.getAttribute('aria-label') || '') && !!open.querySelector('img'),
-        'A11y: every gallery photo is inside a named button'
-    );
-    assert(!doc.querySelector('.gallery-item[role], .gallery-item[tabindex]'), 'A11y: the <figure> keeps its own semantics');
 
     assert(!!doc.getElementById('website'), 'Form: honeypot field is present');
     assert(!!doc.getElementById('formStatus'), 'Form: inline status element is present');
@@ -228,42 +219,48 @@ function assert(cond, msg) {
     assert(open.length === 0, 'Bug6: the listen control reports aria-expanded="false" on load');
 }
 
-// --- Bug 8: "AI, Weighed" spends the split each workload's label promises ---
-// Every preset used to be spent at a 50/50 mix whatever its label said, so a
-// "1,000 in / 8,000 out" reasoning run came out a third too light.
+// --- Bug 8: the calculator spends the split it is given ---
+// The homepage's "AI, Weighed" presets were spent at a 50/50 mix whatever
+// their labels said, so a "1,000 in / 8,000 out" reasoning run came out a
+// third too light. That calculator did the same job as the one on
+// carbon-ai.html and has been merged into it, where the split is typed in;
+// this holds that page to it, and the homepage to having no second one.
 {
-    const { window } = run('dark');
-    const doc = window.document;
-    const data = window.AICarbonData;
-    const preset = doc.getElementById('ecoPreset');
-    const model = data.MODELS[data.HOMEPAGE_MODELS[0]];
+    const fs = require('fs');
+    const path = require('path');
+    const { JSDOM } = require('jsdom');
+    const read = (rel) => fs.readFileSync(path.join(__dirname, '..', rel), 'utf8');
 
-    Array.from(preset.options).forEach((opt) => {
-        const nums = (opt.textContent.match(/([\d,]+) in \/ ([\d,]+) out/) || []).slice(1).map(n => Number(n.replace(/,/g, '')));
-        assert(
-            nums.length === 2 && nums[0] === Number(opt.dataset.in) && nums[1] === Number(opt.dataset.out),
-            `Bug8: the "${opt.value}" workload's data matches its label (${nums.join('/')} vs ${opt.dataset.in}/${opt.dataset.out})`
-        );
+    const home = run('dark').window.document;
+    assert(!home.querySelector('#ecoModel, #ecoPreset, .eco-widget'), 'Bug8: the homepage carries no second calculator (it is on carbon-ai.html)');
+
+    const w = new JSDOM(read('carbon-ai.html'), { runScripts: 'outside-only', url: 'https://example.com/carbon-ai.html' }).window;
+    w.eval(read('ai-carbon-data.js'));
+    w.eval(read('carbon-ai.js'));
+    w.document.dispatchEvent(new w.Event('DOMContentLoaded'));
+    const doc = w.document;
+    const data = w.AICarbonData;
+    const set = (id, v) => { const el = doc.getElementById(id); el.value = String(v); el.dispatchEvent(new w.Event('input', { bubbles: true })); };
+
+    set('modelSelect', 'gpt-4o');
+    set('pue', data.PUE);
+    set('inputTokens', 1000);
+    set('outputTokens', 8000);
+    const shown = Number(doc.getElementById('outEnergy').textContent);
+    const expected = data.energyForQuery(data.MODELS['gpt-4o'], 1000, 8000) * data.PUE;
+    assert(Math.abs(shown - expected) / expected < 0.01, `Bug8: a reasoning run is costed at 1,000 in / 8,000 out (${shown} Wh vs ${expected.toFixed(3)})`);
+
+    // Small is not zero: the smallest model's quick question, on every grid.
+    set('modelSelect', 'llama-32-1b');
+    set('inputTokens', 100);
+    set('outputTokens', 300);
+    const cells = [];
+    Array.from(doc.getElementById('regionSelect').options).forEach((g) => {
+        set('regionSelect', g.value);
+        cells.push(...Array.from(doc.querySelectorAll('#outCarbon, #outWater, #outEnergy')).map(e => e.textContent.trim()));
     });
-
-    doc.getElementById('ecoModel').value = '0';
-    preset.value = 'reasoning';
-    preset.dispatchEvent(new window.Event('change'));
-    const shown = Number(doc.getElementById('ecoEnergy').textContent);
-    const expected = data.energyForQuery(model, 1000, 8000) * data.PUE;
-    assert(Math.abs(shown - expected) / expected < 0.05, `Bug8: a reasoning run is costed at 1,000 in / 8,000 out (${shown} Wh vs ${expected.toFixed(2)})`);
-
-    // Small is not zero.
-    const cells = Array.from(doc.querySelectorAll('#ecoCarbon, #ecoWater, #ecoEnergy, .eco-bar-val')).map(e => e.textContent.trim());
-    const grids = doc.getElementById('ecoGrid');
-    Array.from(grids.options).forEach((g) => {
-        grids.value = g.value;
-        preset.value = 'short';
-        grids.dispatchEvent(new window.Event('change'));
-        cells.push(...Array.from(doc.querySelectorAll('#ecoCarbon, .eco-bar-val')).map(e => e.textContent.trim()));
-    });
-    const zeros = cells.filter(t => /^0\.0+( g)?$/.test(t));
-    assert(zeros.length === 0, `Bug8: no non-zero footprint is printed as 0.000 (${[...new Set(zeros)].join(', ') || 'none'})`);
+    const zeros = cells.filter(t => /^0(\.0+)?$/.test(t));
+    assert(cells.length > 30 && zeros.length === 0, `Bug8: no non-zero footprint is printed as 0 (${[...new Set(zeros)].join(', ') || 'none'} in ${cells.length})`);
 }
 
 // --- Bug 10: opening the terminal twice still returns focus on close ---
@@ -282,38 +279,8 @@ function assert(cond, msg) {
 }
 
 // --- Bug 11: re-drilling a struck zone does not farm the score ---
-// Each repeat of a known strike used to count as a new strike, so the score
-// that is meant to converge on "read the curve: 70%" could be pushed to 100%.
-{
-    const { window } = run('dark');
-    const doc = window.document;
-    doc.body.classList.add('eco-mode');   // drilling finishes at once
-    const stage = doc.getElementById('boreholeStage');
-    const drillBtn = doc.getElementById('drillBtn');
-    const result = doc.getElementById('drillResult');
-    const score = doc.getElementById('drillScore');
-    const key = (k) => stage.dispatchEvent(new window.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
-    const drill = () => drillBtn.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-
-    for (let i = 0; i < 80; i++) key('ArrowLeft');
-    let struck = false;
-    for (let i = 0; i < 80 && !struck; i++) {
-        drill();
-        struck = /STRIKE/.test(result.textContent);
-        if (!struck) key('ArrowRight');
-    }
-    assert(struck, 'Bug11 setup: walking the rig along the profile finds water');
-
-    const tally = score.textContent.match(/Strikes: (\d+)\/(\d+)/);
-    drill();
-    drill();
-    const again = score.textContent.match(/Strikes: (\d+)\/(\d+)/);
-    assert(
-        !!tally && !!again && tally[1] === again[1] && tally[2] === again[2],
-        `Bug11: re-drilling the same strike leaves the score alone (${tally && tally[0]} → ${again && again[0]})`
-    );
-    assert(/Already struck/.test(result.textContent), 'Bug11: and says why it did not count');
-}
+// The borehole game moved to the groundwater case study with its fix:
+// tests/widgets.test.js holds it there.
 
 // --- Bug 12: You Draw It hands focus on when the pressed button goes ---
 // Reveal hid itself while focused, and so did "Draw again": focus dropped to
@@ -338,6 +305,52 @@ function assert(cond, msg) {
     hit.focus();
     hit.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
     assert(reveal.hidden && doc.activeElement === hit, 'Bug12: revealing from the chart with Enter leaves focus on the chart');
+}
+
+// --- You Draw It: the guess being drawn is spoken ---
+// The chart was role=application, where a value is not allowed, so the
+// guess each arrow set was dropped and a screen reader heard nothing (axe:
+// aria-allowed-attr, critical, once the chart had focus). It is a slider
+// now, its value the guess at the cursor, kept up to date as it moves.
+{
+    const { window } = run('dark');
+    const doc = window.document;
+    const hit = doc.querySelector('#ydiSvg .ydi-hit');
+    const press = (k) => hit.dispatchEvent(new window.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+    const said = () => ({ now: hit.getAttribute('aria-valuenow'), text: hit.getAttribute('aria-valuetext') || '' });
+    const agrees = (s) => s.now !== null && s.text.includes(`your guess ${s.now} Wh`);
+    const before = said();
+    assert(hit.getAttribute('role') === 'slider' && hit.getAttribute('aria-valuemin') === '0' && +hit.getAttribute('aria-valuemax') > 1 && agrees(before),
+        `YDI: the chart is a slider whose value is the guess at its cursor, before any key (${hit.getAttribute('role')}, ${before.now}, "${before.text}")`);
+    press('ArrowUp');
+    const up = said();
+    press('ArrowRight');
+    const right = said();
+    assert(agrees(up) && +up.now > +before.now && agrees(right) && right.text !== up.text,
+        `YDI: raising the guess and moving to the next model each change what it says ("${up.text}", then "${right.text}")`);
+    // The keys a slider promises. Home, End and the Page keys fell through
+    // to the page, which scrolled to its top or its footer and left focus on
+    // a chart out of sight, its guess still moving with the next arrow.
+    const max = hit.getAttribute('aria-valuemax');
+    const taken = (k) => {
+        const ev = new window.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true });
+        hit.dispatchEvent(ev);
+        return { k, kept: ev.defaultPrevented, now: said().now };
+    };
+    const home = taken('Home'), pgUp = taken('PageUp'), arrow = taken('ArrowUp'), end = taken('End'), pgDown = taken('PageDown');
+    const keys = [home, pgUp, end, pgDown];
+    assert(keys.every(x => x.kept) && +home.now === 0 && (+pgUp.now - +home.now) > 3 * (+arrow.now - +pgUp.now) &&
+        end.now === Number(max).toFixed(2) && +pgDown.now < +end.now && agrees(said()) && /Home, End/.test(hit.getAttribute('aria-label')),
+        `YDI: Home and End set the guess to the axis's ends, the Page keys move it four arrow steps, none scrolls the page, and the name says so (${keys.map(x => `${x.k} ${x.now}`).join(', ')})`);
+    const other = taken('Tab');
+    assert(!other.kept, 'YDI: any other key, Tab among them, is left to the browser');
+    // An image's content is not read, so it may hold no control (axe:
+    // nested-interactive): the chart is a group, and its drawn words are
+    // hidden, as the data table says them.
+    const svg = doc.getElementById('ydiSvg');
+    const loud = Array.from(svg.querySelectorAll('text')).filter(t => t.getAttribute('aria-hidden') !== 'true');
+    assert(svg.getAttribute('role') === 'group' && !!svg.getAttribute('aria-label') && svg.querySelectorAll('text').length > 10 && loud.length === 0,
+        `YDI: the chart is a named group around its slider, its ${svg.querySelectorAll('text').length} drawn words hidden from a screen reader (${loud.length} not)`);
 }
 
 // --- Bug 7: a message the endpoint turns down says why ---
@@ -376,7 +389,10 @@ const formChecks = (async () => {
     // --- Bug 9: a copy button gets its icon back after "Copied ✓" ---
     {
         const { window, clock } = run('dark', { clock: true });
-        const btn = window.document.getElementById('anatomyCopy');
+        // The Assay's copy button: Anatomy's, the first one reported, is on
+        // carbon-ai.html now, with its own copy (tests/carbon.test.js).
+        window.document.querySelector('.assay-sample').click();
+        const btn = window.document.querySelector('.assay-copy');
         const before = btn.innerHTML;
         window.navigator.clipboard = { writeText: async () => {} };
         await window.mks.share.copy('x', btn);

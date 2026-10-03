@@ -598,6 +598,15 @@ const page = (s) => new JSDOM(renderStats({ stats: s, lenses })).window.document
     }
     const doc = page(fetchStats.EMPTY);
     assert(/Counting has not started yet/.test(doc.body.textContent) && !doc.querySelector('.st-values'), 'Empty: rendered from the empty file, it shows no figures');
+
+    // When the redesigned homepage goes live is Moses's call (S7): before
+    // four weeks of counts, or after. The page said "the site measures
+    // itself first and changes second", which only the second makes true.
+    // What it says now holds either way.
+    const why = (Array.from(doc.querySelectorAll('section')).find(s => /Why count at all/.test(s.textContent)) || { textContent: '' }).textContent.replace(/\s+/g, ' ');
+    assert(/The first four weeks of these numbers are the baseline every change after them is judged against\./.test(why) &&
+        !/\bfirst and changes second\b|redesign will be judged/.test(why),
+        'Why: the baseline is for every change after the first four weeks, true whenever the redesign goes live (S7)');
 }
 
 // --- the counting state, from the fixture ----------------------------------------
@@ -719,7 +728,7 @@ const page = (s) => new JSDOM(renderStats({ stats: s, lenses })).window.document
     assert(/vars\.STATS_SOURCE_URL/.test(yml), 'Action: reads STATS_SOURCE_URL from the repository variables');
     const order = ['npm ci', 'node scripts/fetch-stats.js', 'npm run build:content', 'npm test'].map(s => yml.indexOf(s));
     assert(order.every((n, i) => n > -1 && (i === 0 || n > order[i - 1])), 'Action: installs, fetches, rebuilds and tests, in that order');
-    assert(/git add content\/stats\.json stats\.html\s*\n/.test(yml), 'Action: commits content/stats.json and stats.html only');
+    assert(/git add content\/stats\.json stats\.html README\.md\s*\n/.test(yml), 'Action: commits content/stats.json, stats.html and the README\'s budget table only');
     assert(/git diff --cached --quiet/.test(yml), 'Action: commits nothing when nothing changed');
     assert(/github-actions\[bot\]/.test(yml), 'Action: commits as github-actions[bot]');
 }

@@ -21,14 +21,21 @@
 //                       which scripts/fetch-stats.js writes once a week)
 //   sitemap.xml         every page, with a lastmod that is not in the future
 //   voice-scripts.js    the narration module, from content/narration.json
-//   index.html          the JSON-LD block only, between its markers
+//   index.html          the JSON-LD block, the hero's at-a-glance strip
+//                       and the six project cards, each between its
+//                       markers
 //   modules/interactives.js   the Assay's facts block only, between its
 //                       markers: what the fit-check may say about Moses
+//   carbon-ai.html, field-report.html, 404.html
+//                       the shared shell only (the nav, the closing call to
+//                       action), between its markers
 //
-// STILL HAND-AUTHORED: index.html and field-report.html. They are long-form
-// editorial pages, and templating over 130 KB of hand-tuned markup to remove
-// duplication that a test already catches would trade a small problem for a
-// large one. tests/content.test.js holds them to content/ instead.
+// STILL HAND-AUTHORED: index.html, field-report.html, carbon-ai.html and
+// 404.html, bar the regions above. They are long-form editorial pages, a
+// calculator and a page served at any address, and templating over their
+// hand-tuned markup to remove duplication that a test already catches would
+// trade a small problem for a large one. tests/content.test.js holds them to
+// content/ instead.
 //
 // The output is deterministic — no dates, no ordering by filesystem, no
 // randomness — because --check compares bytes.
@@ -104,7 +111,126 @@ function statusChip(entry) {
     return `<span class="cs-status cs-status-${entry.status}" title="${esc(explain + held)}">${esc(label)}</span>`;
 }
 
-function pageShell({ title, description, canonical, heroTag, heroTitle, heroLead, main, bodyEnd = '', icons = ['i-arrow-right'], current = '', styles = [] }) {
+// ------------------------------------------------------------------
+// The shared shell: the nav, the closing call to action, back to top
+//
+// The lens links sent recruiters to case-studies.html, which had one way
+// out, "Back to portfolio", and no way to reach Moses. Every page but the
+// homepage now carries the same small nav (Home, Case studies, Research,
+// CV, Contact), ends with a call to action (the address, a message, the
+// CV) and, where the page is long, a link back to the top. The generated
+// pages get it from pageShell; carbon-ai.html, field-report.html and
+// 404.html are hand-authored and take the same markup between SHELL-*
+// markers (injectShell, below), so --check holds all six to one shell.
+// The address, the CV and the roles come from content/profile.json.
+// ------------------------------------------------------------------
+
+/** What the shell says about Moses: profile.json's own words, never new ones. */
+const shellFacts = (profile) => ({
+    email: profile.person.email,
+    cv: profile.links.cv,
+    roles: profile.atAGlance.targetRoles
+});
+
+// Each link a counter hook of its own, so stats.html can tell the shell's
+// CV link from the homepage's (every CV and email link needs one: see
+// tests/count.test.js). The field report's address and CV keep the names
+// they have always had, so their figures carry on from where they were.
+const SHELL_HOOKS = {
+    nav: { cv: 'cv-download-page-nav', contact: 'contact-page-nav' },
+    cta: { email: 'email-page-cta', contact: 'contact-page-cta', cv: 'cv-download-page-cta' },
+    fieldReport: { email: 'email-fieldreport', contact: 'contact-fieldreport', cv: 'cv-download-fieldreport' }
+};
+
+// A page's own address, or a root-absolute one under `base` for 404.html,
+// which answers at whatever address was missing.
+const shellHref = (href, base) => (base ? base + href.replace(/^index\.html/, '') : href);
+
+// The five places, in this order on every page.
+function shellLinks(facts, base = '') {
+    return [
+        { label: 'Home', href: shellHref('index.html', base), page: 'index.html' },
+        { label: 'Case studies', href: shellHref('case-studies.html', base), page: 'case-studies.html' },
+        { label: 'Research', href: shellHref('research.html', base), page: 'research.html' },
+        { label: 'CV', href: shellHref(facts.cv, base), download: true, hook: SHELL_HOOKS.nav.cv },
+        { label: 'Contact', href: shellHref('index.html#contact', base), hook: SHELL_HOOKS.nav.contact, contact: true }
+    ];
+}
+
+const linkAttrs = (l, current, plain) => [
+    `href="${esc(l.href)}"`,
+    l.contact && !plain ? 'class="ca-nav-contact"' : '',
+    l.page && l.page === current ? 'aria-current="page"' : '',
+    l.download ? 'download' : '',
+    l.hook ? `data-analytics="${l.hook}"` : ''
+].filter(Boolean).join(' ');
+
+/**
+ * The nav, marking the page it sits on. The full flavour is carbon-ai.css's:
+ * the logo, the theme switch (theme.js shows and drives it; it ships hidden)
+ * and the five links, after the page's icon sprite (the switch's two, and
+ * any `icons` the page asks for). The plain flavour is a line of links, for
+ * the two pages that style themselves and run no script but the counter.
+ */
+function shellNav(facts, { current = '', plain = false, base = '', icons = [] } = {}) {
+    const links = shellLinks(facts, base);
+    if (plain) {
+        return `<nav aria-label="Main">${links.map(l => `<a ${linkAttrs(l, current, true)}>${l.label}</a>`).join(' · ')}</nav>`;
+    }
+    return `${sprite(['i-moon', 'i-sun'].concat(icons))}
+<nav class="ca-nav" aria-label="Main">
+    <a href="index.html" class="ca-nav-logo" aria-label="Back to portfolio home">
+        <svg viewBox="0 0 40 40" aria-hidden="true">
+            <circle cx="20" cy="20" r="17" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.35"/>
+            <circle cx="20" cy="20" r="12" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.55"/>
+            <circle cx="20" cy="20" r="7" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.8"/>
+            <circle cx="20" cy="20" r="2.5" fill="currentColor"/>
+        </svg>
+        <span class="ca-nav-name">MK<span class="ca-accent">S</span></span>
+    </a>
+    <button type="button" class="theme-toggle" id="themeToggle" aria-label="Switch to light theme" hidden>
+        <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-moon"></use></svg>
+    </button>
+    <ul class="ca-nav-links">
+${links.map(l => `        <li><a ${linkAttrs(l, current)}>${l.label}</a></li>`).join('\n')}
+    </ul>
+</nav>`;
+}
+
+/**
+ * The closing call to action, the last thing in <main>: the three ways to
+ * reach Moses. The full flavour opens with who he is open to hearing from,
+ * in the words the homepage's hero uses, and ends with a link back to the
+ * top (to <body>, so the next Tab starts again from the skip link). The
+ * plain one is the three ways in a line: on the field report every byte
+ * counts towards the size the homepage quotes.
+ */
+function shellCta(facts, { plain = false, base = '', hooks = SHELL_HOOKS.cta } = {}) {
+    const mail = `<a href="mailto:${esc(facts.email)}" data-analytics="${hooks.email}">${esc(facts.email)}</a>`;
+    if (plain) {
+        return `<p>Email ${mail}, <a href="${esc(shellHref('index.html#contact', base))}" data-analytics="${hooks.contact}">send a message</a> or download <a href="${esc(shellHref(facts.cv, base))}" download data-analytics="${hooks.cv}">my CV</a>.</p>`;
+    }
+    return `<section class="ca-cta" aria-labelledby="ctaTitle">
+    <h2 id="ctaTitle">Get in touch</h2>
+    <p>Open to ${esc(facts.roles)}: write to me at ${mail}.</p>
+    <p class="ca-cta-go">
+        <a class="ca-btn ca-btn-primary" href="index.html#contact" data-analytics="${hooks.contact}">Send a message</a>
+        <a class="ca-btn" href="${esc(facts.cv)}" download data-analytics="${hooks.cv}">Download CV</a>
+    </p>
+</section>
+<p class="ca-top"><a href="#top">Back to top</a></p>`;
+}
+
+// Not deferred, and ahead of the stylesheets: theme.js sets the theme
+// before anything is painted, and a script after a stylesheet would wait
+// for the stylesheet to arrive first.
+const THEME_SCRIPT = '<script src="theme.js"></script>';
+
+/** Every line of a block indented; blank lines stay empty. */
+const indentBlock = (block, indent) => block.split('\n').map(l => (l ? indent + l : l)).join('\n');
+
+function pageShell({ title, description, canonical, heroTag, heroTitle, heroLead, main, bodyEnd = '', icons = [], current = '', styles = [], profile }) {
+    const facts = shellFacts(profile || content.load('profile'));
     // A page that runs a script says so before first paint (html.js), so its
     // stylesheet can offer the controls that script drives and hide them
     // when it cannot run. A page with no script has nothing to announce.
@@ -140,26 +266,15 @@ function pageShell({ title, description, canonical, heroTag, heroTitle, heroLead
     <link rel="preload" as="font" type="font/woff2" href="assets/fonts/space-grotesk-latin.woff2" crossorigin>
     <link rel="preload" as="font" type="font/woff2" href="assets/fonts/inter-latin.woff2" crossorigin>
     <link rel="preload" as="font" type="font/woff2" href="assets/fonts/ibm-plex-mono-latin-400.woff2" crossorigin>
+    ${THEME_SCRIPT}
     <link rel="stylesheet" href="carbon-ai.css">${styles.map(href => `
     <link rel="stylesheet" href="${esc(href)}">`).join('')}
     <link rel="stylesheet" href="content.css">
     <script defer src="count.js"></script>
 </head>
-<body>
+<body id="top">
     <a class="skip-link" href="#main">Skip to content</a>
-    ${sprite(icons)}
-    <nav class="ca-nav" aria-label="Main">
-        <a href="index.html" class="ca-nav-logo" aria-label="Back to portfolio home">
-            <svg viewBox="0 0 40 40" aria-hidden="true">
-                <circle cx="20" cy="20" r="17" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.35"/>
-                <circle cx="20" cy="20" r="12" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.55"/>
-                <circle cx="20" cy="20" r="7" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.8"/>
-                <circle cx="20" cy="20" r="2.5" fill="currentColor"/>
-            </svg>
-            <span class="ca-nav-name">MK<span class="ca-accent">S</span></span>
-        </a>
-        <a href="index.html" class="ca-back"><svg class="icon icon-flip" aria-hidden="true" focusable="false"><use href="#i-arrow-right"></use></svg> Back to portfolio</a>
-    </nav>
+${indentBlock(shellNav(facts, { current, icons }), '    ')}
     <main class="ca-shell" id="main">
         <header class="ca-hero">
             <div class="ca-hero-tag">${heroTag}</div>
@@ -167,6 +282,8 @@ function pageShell({ title, description, canonical, heroTag, heroTitle, heroLead
             <p>${heroLead}</p>
         </header>
 ${main}
+
+${indentBlock(shellCta(facts), '        ')}
     </main>
     <footer class="ca-foot">
         <p><a href="stats.html"${current === 'stats.html' ? ' aria-current="page"' : ''}>Open counts</a>: what this site counts about its visits, and what it never collects.</p>
@@ -180,6 +297,208 @@ ${bodyEnd}
 // ------------------------------------------------------------------
 // case-studies.html
 // ------------------------------------------------------------------
+
+// The two interactives, each hosted by the case study it illustrates
+// (content/projects.json `widget`). They used to sit inside the homepage's
+// dossiers, where most readers never opened them; here they sit under the
+// result they are about. The host is written whole: a heading, the controls
+// modules/dossier.js wires up, and a summary. The controls stay [hidden]
+// until the module has wired them, so without JavaScript, or before the
+// module arrives, or if it never does, the host is its heading and one
+// static line, never a dead widget. For everyone else the line stays as the
+// widget's footnote, which is where its honesty labels live. Without
+// JavaScript a note says why there is no game: the artifact cards above
+// link here, and a heading and a footnote alone read as a broken page.
+const WIDGET_HOSTS = {
+    // "Site the borehole" and "Seven in Ten" were two widgets making one
+    // point. They are one now: the game is the play, and the waffle is its
+    // scoreboard, the reader's holes beside the field records and the
+    // blind-drilling rate, which has no recorded source and so is labelled
+    // illustrative wherever it appears.
+    borehole: {
+        title: 'Seven in ten: what reading the ground is worth',
+        noun: 'drilling game',
+        live: `
+                        <p class="dw-intro">This is a resistivity profile like the ones we walked across the Freetown Complex. Low resistivity &mdash; the dips in the curve &mdash; can mean water-bearing fractures. Or clay. Move the rig, pick your spot, drill.</p>
+                        <div class="borehole-stage" id="boreholeStage" tabindex="0" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-label="Drilling rig position along the resistivity profile. The arrow keys move the rig (Page Up/Down further, Home and End to the ends), Enter drills."></div>
+                        <div class="borehole-hud">
+                            <button class="dw-btn dw-btn-primary" id="drillBtn" type="button">Drill here</button>
+                            <button class="dw-btn" id="drillResetBtn" type="button">Survey a new site</button>
+                        </div>
+                        <p class="borehole-result" id="drillResult" aria-live="polite">Drag the rig (or focus the profile and use the arrow keys), then drill.</p>
+                        <div class="strike-board">
+                            <p class="strike-row"><span class="strike-row-label" id="drillScore">Your holes &middot; drill to fill this row</span><span class="strike-waffle" data-row="you" aria-hidden="true"></span></p>
+                            <p class="strike-row"><span class="strike-row-label">Reading the curve first &middot; 7 in 10, field records</span><span class="strike-waffle" data-row="7" aria-hidden="true"></span></p>
+                            <p class="strike-row"><span class="strike-row-label">Blind drilling &middot; about 3 in 10, illustrative</span><span class="strike-waffle" data-row="3" aria-hidden="true"></span></p>
+                        </div>`,
+        summary: 'Reading the resistivity curve first, the boreholes in the field records struck water 70% of the time; the ~30% for blind drilling is illustrative &mdash; not a measured figure.'
+    },
+    flood: {
+        title: 'Don&rsquo;t let it become a boat',
+        noun: 'river slider',
+        live: `
+                        <p class="dw-intro">The Schwebebahn hangs a few metres above the Wupper. Raise the river and watch the margin shrink &mdash; this is the problem the municipality handed us.</p>
+                        <div class="flood-stage" id="floodStage"></div>
+                        <div class="flood-controls">
+                            <label class="dw-label" for="floodSlider">River level: <span id="floodLevelLabel">normal</span></label>
+                            <input type="range" id="floodSlider" min="0" max="3" step="1" value="0" aria-describedby="floodNote">
+                            <div class="flood-ticks" aria-hidden="true"><span>Normal</span><span>+1 m</span><span>+2 m</span><span>July 2021</span></div>
+                        </div>
+                        <p class="flood-note" id="floodNote" aria-live="polite">A calm day &mdash; the Wupper runs its channel, well below the suspended track.</p>`,
+        summary: 'A schematic, not to scale: the Schwebebahn hangs a few metres above the Wupper, and the July 2021 flood pushed the river towards its hanging cars &mdash; the &ldquo;boat&rdquo; this project set out to prevent.'
+    }
+};
+
+function widgetHost(name) {
+    const w = WIDGET_HOSTS[name];
+    if (!w) throw new Error(`no host markup for widget "${name}"`);
+    return `
+                <div class="cs-play" id="play-${name}" data-widget="${name}">
+                    <h4 class="cs-stage-h">${w.title}</h4>
+                    <p class="nojs-note">This ${w.noun} runs in your browser, so it needs JavaScript switched on. What it shows is in the line below.</p>
+                    <div class="dw-live" hidden>${w.live}
+                    </div>
+                    <p class="cs-play-summary">${w.summary}</p>
+                </div>
+`;
+}
+
+// The photos from the work, back with the story they belong to (the
+// homepage's dossiers carried them until the dossiers became cards): a row
+// under the case study, each photo lazy at its declared size, its caption
+// under it. The row is folded away until asked for. Open, the six rows
+// would add 1,290px (1.4 screens on a desktop, 1.5 on a phone) to a page
+// already over ten, and a reader scrolling it would fetch up to 2.2 MB of
+// photos they did not ask to see; folded, each is one line, and nothing is
+// fetched until it opens (a closed <details> draws nothing, so its lazy
+// photos wait). Each photo is a plain link to the full one, which is all
+// it is without JavaScript; with it, the page's lightbox opens it among its
+// case study's others ([data-lightbox], the script below), with the longer
+// caption the dossier's lightbox showed.
+function photoStrip(cs) {
+    const drawn = (p) => (p.layout === 'wide' ? 213 : 160);   // px, as content.css draws them
+    const photos = cs.gallery.map((p) => {
+        const srcset = p.thumb ? ` srcset="${esc(p.thumb)} 480w, ${esc(p.src)} ${p.width}w" sizes="${drawn(p)}px"` : '';
+        return `
+                        <li><figure class="cs-photo${p.layout ? ` cs-photo-${p.layout}` : ''}">
+                            <a href="${esc(p.src)}" data-lightbox="${esc(cs.id)}" data-caption="${esc(p.fullCaption)}"><img src="${esc(p.src)}"${srcset} alt="${esc(p.alt)}" width="${p.width}" height="${p.height}" loading="lazy" decoding="async"></a>
+                            <figcaption>${esc(p.caption)}</figcaption>
+                        </figure></li>`;
+    }).join('');
+    return `
+                <details class="cs-photos">
+                    <summary>${cs.gallery.length} photo${cs.gallery.length === 1 ? '' : 's'}</summary>
+                    <ul class="cs-photos-list">${photos}
+                    </ul>
+                </details>`;
+}
+
+// The page's lightbox, in its own inline script: case-studies.html has no
+// script.js, and a module fetched on the first press would have to be paid
+// for out of the on-demand budget. It is about 1.3 KB gzipped of this page.
+const LIGHTBOX_SCRIPT = `
+    // The photos. Each is a link to the full photo, and without JavaScript
+    // that is all it is. With it, a press opens the photo here among its
+    // case study's others ([data-lightbox] names the group): previous and
+    // next, the arrow keys, "2 of 5", and Escape or Close to go back. Focus
+    // goes in, goes round the dialog's buttons and nowhere behind them, and
+    // returns to the photo pressed. The dialog is made at the first press,
+    // so a visit that opens no photo carries none of it.
+    (function () {
+        var links = document.querySelectorAll('a[data-lightbox]');
+        if (!links.length) return;
+        var box, img, caption, count, steps, closeBtn, group = [], at = 0, opener = null;
+
+        function show(i) {
+            at = (i + group.length) % group.length;   // past either end, round again
+            var link = group[at], thumb = link.querySelector('img');
+            var text = link.getAttribute('data-caption') || '';
+            // Its own shape before it arrives, from the size the page declares.
+            img.setAttribute('width', thumb.getAttribute('width'));
+            img.setAttribute('height', thumb.getAttribute('height'));
+            img.src = link.getAttribute('href');
+            img.alt = thumb.alt;
+            caption.textContent = text;
+            count.textContent = (at + 1) + ' of ' + group.length;
+            // Named by its caption; a photo without one, by its alt text.
+            if (text) { box.setAttribute('aria-labelledby', 'lightboxCaption'); box.removeAttribute('aria-label'); }
+            else { box.removeAttribute('aria-labelledby'); box.setAttribute('aria-label', thumb.alt || 'Photo'); }
+        }
+
+        function close() {
+            box.hidden = true;
+            document.documentElement.classList.remove('lightbox-open');
+            if (opener) opener.focus();
+            opener = null;
+        }
+
+        function build() {
+            box = document.createElement('div');
+            box.className = 'lightbox';
+            box.id = 'lightbox';
+            box.tabIndex = -1;
+            box.setAttribute('role', 'dialog');
+            box.setAttribute('aria-modal', 'true');
+            box.innerHTML = '<button type="button" class="lightbox-close" aria-label="Close photo">&times;</button>' +
+                '<figure class="lightbox-figure"><img alt=""><figcaption id="lightboxCaption" aria-live="polite"></figcaption></figure>' +
+                '<div class="lightbox-steps"><button type="button" class="lightbox-step" data-step="-1" aria-label="Previous photo">&larr;</button>' +
+                '<p class="lightbox-count" aria-live="polite"></p>' +
+                '<button type="button" class="lightbox-step" data-step="1" aria-label="Next photo">&rarr;</button></div>';
+            // Low-energy mode, as chosen on the homepage: no fade either.
+            try { box.classList.toggle('lightbox-still', localStorage.getItem('eco-mode') === 'on'); } catch (e) { /* storage refused */ }
+            document.body.appendChild(box);
+            img = box.querySelector('img');
+            caption = box.querySelector('figcaption');
+            count = box.querySelector('.lightbox-count');
+            steps = box.querySelector('.lightbox-steps');
+            closeBtn = box.querySelector('.lightbox-close');
+            box.addEventListener('click', function (e) {
+                var step = e.target.closest('[data-step]');
+                if (step) show(at + Number(step.getAttribute('data-step')));
+                else if (e.target === box || e.target === closeBtn) close();
+            });
+            box.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    close();
+                } else if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && group.length > 1) {
+                    e.preventDefault();
+                    show(at + (e.key === 'ArrowRight' ? 1 : -1));
+                } else if (e.key === 'Tab') {
+                    var ring = Array.prototype.filter.call(box.querySelectorAll('button'), function (b) { return !b.closest('[hidden]'); });
+                    var i = ring.indexOf(document.activeElement);
+                    if (i < 0) i = e.shiftKey ? 0 : -1;
+                    e.preventDefault();
+                    ring[(i + (e.shiftKey ? -1 : 1) + ring.length) % ring.length].focus();
+                }
+            });
+        }
+
+        function open(link) {
+            if (!box) build();
+            var name = link.getAttribute('data-lightbox');
+            group = Array.prototype.filter.call(document.querySelectorAll('a[data-lightbox]'), function (a) {
+                return a.getAttribute('data-lightbox') === name && a.querySelector('img');
+            });
+            opener = link;
+            show(group.indexOf(link));
+            steps.hidden = group.length < 2;
+            box.hidden = false;
+            document.documentElement.classList.add('lightbox-open');
+            closeBtn.focus();
+        }
+
+        document.addEventListener('click', function (e) {
+            var link = e.target.closest && e.target.closest('a[data-lightbox]');
+            // With a modifier, a press still opens the photo in a new tab.
+            if (!link || !link.querySelector('img') || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+            e.preventDefault();
+            open(link);
+        });
+        Array.prototype.forEach.call(links, function (a) { a.setAttribute('aria-haspopup', 'dialog'); });
+    })();
+`;
+
 function renderCaseStudies(data) {
     const { projects, lenses } = data;
     const all = [lenses.default].concat(lenses.lenses);
@@ -213,8 +532,12 @@ function renderCaseStudies(data) {
 
     const card = (cs) => {
         const artifacts = cs.artifacts.map((a) => {
+            // An artifact on this page (an interactive below) is linked by its
+            // fragment alone: the full address would reload the page and drop
+            // the lens the reader chose.
+            const href = a.url && a.url.startsWith('case-studies.html#') ? a.url.slice('case-studies.html'.length) : a.url;
             const name = a.status === 'public' && a.url
-                ? `<a href="${esc(a.url)}">${prose(a.name)}</a>`
+                ? `<a href="${esc(href)}">${prose(a.name)}</a>`
                 : prose(a.name);
             return `
                     <li class="cs-artifact">
@@ -267,8 +590,8 @@ function renderCaseStudies(data) {
                     <ul class="cs-results">${results}
                     </ul>
                 </div>
-${cs.caveat ? `
-                <p class="cs-caveat"><span class="mono-label">Caveat</span> ${prose(cs.caveat)}</p>` : ''}
+${cs.widget ? widgetHost(cs.widget) : ''}${cs.caveat ? `
+                <p class="cs-caveat"><span class="mono-label">Caveat</span> ${prose(cs.caveat)}</p>` : ''}${cs.gallery ? photoStrip(cs) : ''}
             </article>`;
     };
 
@@ -333,7 +656,16 @@ ${cards}
                 card.classList.toggle('cs-card-secondary', lens !== 'all' && !owns);
                 (lens === 'all' || owns ? matched : rest).push(card);
             });
-            matched.concat(rest).forEach(function (card) { grid.appendChild(card); });
+            // Moved only when the order changes. Every Back runs this, and
+            // a link to a game, or back to the top, is a step in history:
+            // re-appending a card in place took the focus from the slider
+            // or the photo link in it, so the next Tab went to the top of
+            // the page. When a lens does move the card, focus goes with it.
+            var want = matched.concat(rest);
+            if (want.every(function (card, i) { return grid.children[i] === card; })) return;
+            var had = grid.contains(document.activeElement) ? document.activeElement : null;
+            want.forEach(function (card) { grid.appendChild(card); });
+            if (had && document.activeElement !== had) had.focus({ preventScroll: true });
         }
 
         function fromUrl() {
@@ -355,7 +687,42 @@ ${cards}
 
         apply(fromUrl());
     })();
-    </script>`;
+
+    // The two interactives load on demand: their stylesheet, then their
+    // script (modules/dossier.css and .js), once a host is within a screen
+    // of view. Most visits never scroll that far, so neither is in the
+    // first view. The module needs nothing else on this page; until it has
+    // wired a host, the host shows its summary and hides its controls.
+    (function () {
+        var hosts = document.querySelectorAll('[data-widget]');
+        if (!hosts.length) return;
+        var started = false;
+        function add(el, next) {
+            el.onload = next;
+            document.head.appendChild(el);
+        }
+        function load() {
+            if (started) return;
+            started = true;
+            var css = document.createElement('link');
+            css.rel = 'stylesheet';
+            css.href = 'modules/dossier.css';
+            add(css, function () {
+                var js = document.createElement('script');
+                js.src = 'modules/dossier.js';
+                // A fetched module is a feature someone reached; count.js counts it.
+                add(js, function () { if (window.mks && window.mks.track) window.mks.track('module-dossier'); });
+            });
+        }
+        if (!('IntersectionObserver' in window)) { load(); return; }
+        var io = new IntersectionObserver(function (entries) {
+            for (var i = 0; i < entries.length; i++) {
+                if (entries[i].isIntersecting) { io.disconnect(); load(); return; }
+            }
+        }, { rootMargin: '100% 0px' });
+        for (var i = 0; i < hosts.length; i++) io.observe(hosts[i]);
+    })();
+${LIGHTBOX_SCRIPT}    </script>`;
 
     return pageShell({
         title: 'Case studies — Moses Kolleh Sesay',
@@ -365,7 +732,9 @@ ${cards}
         heroTitle: 'Case <span class="ca-accent">studies</span>',
         heroLead: 'Six projects across four countries, each one traced from the question that started it to what it actually produced &mdash; and to how far you can check the result from where you are sitting.',
         main,
-        bodyEnd: script
+        bodyEnd: script,
+        current: 'case-studies.html',
+        profile: data.profile
     });
 }
 
@@ -449,7 +818,9 @@ ${reproSection}`;
         heroTag: 'WHAT EXISTS &middot; WHERE IT IS &middot; WHO HOLDS IT',
         heroTitle: 'Research <span class="ca-accent">outputs</span>',
         heroLead: 'Three degrees of research, a consultancy, an internship and a working tool. Some of it is public, some belongs to the organisations it was done for, and the rest is a PDF I will happily send you.',
-        main
+        main,
+        current: 'research.html',
+        profile: data.profile
     });
 }
 
@@ -610,9 +981,8 @@ ${five.map((n) => {
             <p>
                 Every change I plan for this site is a bet about what a recruiter does on it: that the evidence
                 should come sooner, that a shorter homepage gets read further, that a link framed for one kind of
-                role lands better than a general one. Without counts none of those bets can be checked, so the site
-                measures itself first and changes second. Four weeks of these numbers are the baseline the homepage
-                redesign will be judged against.
+                role lands better than a general one. Without counts none of those bets can be checked. The first
+                four weeks of these numbers are the baseline every change after them is judged against.
             </p>
             <p>
                 Every figure but the contact messages is a count of page views. With no id there is no way to tell
@@ -833,7 +1203,7 @@ ${table('Kilobytes transferred per page view', cols('Per page view'), [
                     Assay graded a job ad, the grade it gave. Never the ad itself.
                 </dd>
                 <dt><code>ref</code></dt>
-                <dd>The host name of the site you came from; empty if there was none, or if it was this site.</dd>
+                <dd>The host name of the site you came from; empty if there was none, or if it was this site. An old homepage address for something that has since moved sends you on to its new page with that host name, so the visit is not counted as direct.</dd>
                 <dt><code>vp</code></dt>
                 <dd>The browser window&rsquo;s width as one of three classes: <code>s</code> under 600 px, <code>m</code> up to 1023 px, <code>l</code> wider.</dd>
                 <dt><code>kb</code></dt>
@@ -906,7 +1276,8 @@ ${privacy}`;
         heroLead: 'This site counts its own page views, with no cookies, no ids and no analytics service, so each change to it can be judged against what readers actually do. Everything it counts is published here, and so is exactly what it sends.',
         main,
         current: 'stats.html',
-        styles: ['stats.css']
+        styles: ['stats.css'],
+        profile: data.profile
     });
 }
 
@@ -936,8 +1307,6 @@ ${entries}
 // voice-scripts.js
 // ------------------------------------------------------------------
 function renderVoiceScripts(data) {
-    const comment = data.narration.$comment.map(l => (l ? `// ${l}` : '//')).join('\n');
-
     // JSON.stringify gives a correctly escaped JS string literal, which is
     // what keeps the text byte-identical through the round trip — and the
     // narration hashes with it.
@@ -961,8 +1330,8 @@ function renderVoiceScripts(data) {
 // GENERATED by ${GENERATED_BY} from content/narration.json.
 // Do not edit this file — your changes will be overwritten.
 // Edit content/narration.json, then run: npm run build:content
-//
-${comment}
+// How the scripts are written, and why, is the $comment at its top: it
+// stays there rather than in every visitor's download.
 // ===================================================================
 (function (root, factory) {
     const data = factory();
@@ -995,18 +1364,17 @@ ${SPLIT_SENTENCES}
 // generator replaced — rewriting it would have quietly changed how the
 // narration is chunked, and tests/bugs.test.js exists because that has bitten
 // this repository before.
+//
+// Splitting naively on "." mangles these scripts, which are full of
+// spelled-out initialisms — A.I., E.S.G., Q.G.I.S., Arc.G.I.S. Those are
+// parked behind a sentinel before the split and restored after, so
+// "sustainable A.I. — making sure…" stays a single sentence. The sentinel is
+// deliberately non-numeric: the scripts are also full of real numbers (164
+// water points) that must survive the round trip untouched; bugs.test.js
+// asserts exactly that. Why is said here, as the scripts' rules are in
+// narration.json, rather than in every listener's download.
 const SPLIT_SENTENCES = String.raw`    // Sentence splitting, shared by the player (for utterances and captions)
-    // and available to the generator.
-    //
-    // Splitting naively on "." mangles these scripts, which are full of
-    // spelled-out initialisms — A.I., E.S.G., Q.G.I.S., Arc.G.I.S. Those are
-    // parked behind a sentinel before the split and restored after, so
-    // "sustainable A.I. — making sure…" stays a single sentence.
-    //
-    // The sentinel is deliberately non-numeric: the scripts are also full of
-    // real numbers (164 water points) that must survive the round trip
-    // untouched. tests/bugs.test.js asserts exactly that.
-    // ---------------------------------------------------------------
+    // and the generator, which says why it parks initialisms (A.I.) first.
     const INITIALISM = /[A-Za-z]+(?:\.[A-Za-z])+\./g;
 
     function splitSentences(text) {
@@ -1071,7 +1439,7 @@ function injectAssayFacts(data) {
 }
 
 // ------------------------------------------------------------------
-// index.html — the JSON-LD block only
+// index.html — the JSON-LD block
 // ------------------------------------------------------------------
 const LD_START = '    <!-- JSON-LD:START — generated by scripts/build-content.js from content/profile.json. Do not edit by hand. -->';
 const LD_END = '    <!-- JSON-LD:END -->';
@@ -1127,6 +1495,164 @@ function injectJsonLd(data) {
 }
 
 // ------------------------------------------------------------------
+// index.html — the at-a-glance strip, between its markers
+//
+// What a recruiter checks before reading on: the roles he wants, the
+// level, when he can start, his languages, whether he may work here, and
+// where he is. Each comes from content/profile.json, so the hero cannot
+// say one thing and the Assay or the structured data another. A fact that
+// is null is left out entirely — not "TBC", not an empty label: the strip
+// grows as Moses states things, and until then shows only what he has.
+// ------------------------------------------------------------------
+const GLANCE_START = '            <!-- AT-A-GLANCE:START — generated by scripts/build-content.js from content/profile.json. Do not edit by hand. -->';
+const GLANCE_END = '            <!-- AT-A-GLANCE:END -->';
+
+function renderAtAGlance(profile) {
+    const g = profile.atAGlance;
+    const from = g.availableFrom;
+    const when = !from ? null
+        : from === 'now' ? 'Now'
+        : (([y, m, d]) => `<time datetime="${esc(from)}">${d ? `${+d} ` : ''}${MONTHS[+m - 1]} ${y}</time>`)(from.split('-'));
+    const languages = Array.isArray(profile.languages) && profile.languages.length
+        ? profile.languages.map(l => `${esc(l.language)} (${esc(l.level)})`).join(' &middot; ')
+        : null;
+    // Where he would work is a preference, so it goes with what he is open
+    // to, as the contact section says it. Under "Location", "EU" read as
+    // where he is, or may work, beside a right to work not yet stated.
+    const area = g.workArea && g.workArea.length ? ` &mdash; ${g.workArea.map(esc).join(', ')}` : '';
+
+    // In the order a recruiter asks: level, start date, languages, right
+    // to work, place. Values arrive escaped (or built from escaped parts).
+    const facts = [
+        ['Seniority', g.seniority && esc(g.seniority)],
+        ['Available', when],
+        ['Languages', languages],
+        ['Right to work', g.rightToWork && esc(g.rightToWork)],
+        ['Location', esc(`${profile.person.locality}, ${profile.person.country}`)]
+    ].filter(([, value]) => value);
+
+    const lines = [
+        GLANCE_START,
+        '            <div class="at-a-glance">',
+        `                <p class="hero-availability"><span class="blink-dot"></span>Open to ${prose(g.targetRoles)}${area}</p>`
+    ];
+    if (facts.length) {
+        lines.push('                <dl class="glance-facts">');
+        facts.forEach(([label, value]) => lines.push(`                    <div class="glance-fact"><dt class="mono-label">${label}</dt><dd>${value}</dd></div>`));
+        lines.push('                </dl>');
+    }
+    lines.push('            </div>', GLANCE_END);
+    return lines.join('\n');
+}
+
+function injectAtAGlance(data, html) {
+    const start = html.indexOf(GLANCE_START);
+    const end = html.indexOf(GLANCE_END);
+    if (start === -1 || end === -1) {
+        throw new Error('index.html is missing the AT-A-GLANCE:START / AT-A-GLANCE:END markers');
+    }
+    return html.slice(0, start) + renderAtAGlance(data.profile) + html.slice(end + GLANCE_END.length);
+}
+
+// ------------------------------------------------------------------
+// index.html — the six project cards
+// ------------------------------------------------------------------
+// The homepage used to tell each project a second time, by hand: a 45 KB
+// section of dossiers whose years, results and wording could drift from
+// the case studies, and had. Now it shows a teaser per case study, drawn
+// from the same entry: where and when, the headline result with the one
+// line of its basis and whether a reader can check it, the role lenses it
+// belongs to, its tools, and one link to the whole story. The subtitle is
+// the case study's to tell; the photo is a thumbnail beside the title.
+const CARDS_START = '            <!-- PROJECT-CARDS:START — generated by scripts/build-content.js from content/projects.json. Do not edit by hand. -->';
+const CARDS_END = '            <!-- PROJECT-CARDS:END -->';
+
+function renderProjectCards(data) {
+    const { projects, lenses } = data;
+    const lensName = {};
+    lenses.lenses.forEach((l) => { lensName[l.id] = l.shortLabel || l.label; });
+
+    const cards = projects.caseStudies.map((cs) => {
+        const head = cs.results[0];
+        const p = cs.photo;
+        // One photo, lazy, drawn as a thumbnail beside the date and title
+        // (80px, 64px on a phone), so the 480px copy serves 1x and 2x.
+        return `
+                <article class="project-card reveal" data-project="${esc(cs.id)}">
+                    <img class="project-photo" src="${esc(p.src)}" srcset="${esc(p.thumb)} 480w, ${esc(p.src)} ${p.width}w" sizes="80px" alt="${esc(p.alt)}" width="${p.width}" height="${p.height}" loading="lazy" decoding="async">
+                    <div class="project-meta"><span class="mono-label">${esc(cs.period)} &middot; ${esc(cs.location)}</span></div>
+                    <h3>${prose(cs.title)}</h3>
+                    <div class="project-result${head.verifiable ? ' project-result-checkable' : ''}">
+                        <p class="project-claim">${prose(head.claim)}</p>
+                        <p class="project-basis"><span class="mono-label">${head.verifiable ? 'Checkable from outside' : 'Not checkable from outside'}</span> ${prose(head.brief)}</p>
+                    </div>
+                    <div class="project-tags">
+                        <ul class="project-lenses" aria-label="Role lenses">${cs.lenses.map(l => `<li>${esc(lensName[l])}</li>`).join('')}</ul>
+                        <div class="project-tech">${cs.tags.map(t => `<span>${esc(t)}</span>`).join('')}</div>
+                    </div>
+                    <a class="project-link" href="case-studies.html#${esc(cs.id)}" data-analytics="projects-to-case-studies">Read the case study<span class="sr-only">: ${prose(cs.title)}</span> <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-arrow-right"></use></svg></a>
+                </article>`;
+    }).join('');
+
+    return `${CARDS_START}
+            <div class="projects-list">${cards}
+            </div>
+${CARDS_END}`;
+}
+
+function injectProjectCards(data, html) {
+    const start = html.indexOf(CARDS_START);
+    const end = html.indexOf(CARDS_END);
+    if (start === -1 || end === -1) {
+        throw new Error('index.html is missing the PROJECT-CARDS:START / PROJECT-CARDS:END markers');
+    }
+    return html.slice(0, start) + renderProjectCards(data) + html.slice(end + CARDS_END.length);
+}
+
+// ------------------------------------------------------------------
+// carbon-ai.html, field-report.html, 404.html — the shared shell only
+//
+// Hand-authored, each for a reason of its own: a calculator, a page held to
+// a few kilobytes, a page served at whatever address was missing. None of
+// those is a reason to be a dead end, so each takes the shell between
+// markers, in the flavour it can carry. carbon-ai.html has the full one and
+// theme.js in its <head>. The field report and the 404 page style
+// themselves and run no script but the counter: they take the plain nav
+// and a one-line call to action, with no theme switch (nothing there could
+// drive it); the 404 page's links are root-absolute.
+// ------------------------------------------------------------------
+
+// Short markers, because every byte of the field report counts towards the
+// size the homepage quotes; the header of this file says what writes them.
+const shellMarkers = (name) => [`<!-- ${name} -->`, `<!-- /${name} -->`];
+
+function shellRegions(page, facts) {
+    if (page === 'carbon-ai.html') {
+        return { 'SHELL-HEAD': THEME_SCRIPT, 'SHELL-NAV': shellNav(facts), 'SHELL-CTA': shellCta(facts) };
+    }
+    if (page === 'field-report.html') {
+        return { 'SHELL-NAV': shellNav(facts, { plain: true }), 'SHELL-CTA': shellCta(facts, { plain: true, hooks: SHELL_HOOKS.fieldReport }) };
+    }
+    const base = new URL(SITE).pathname;
+    return { 'SHELL-NAV': shellNav(facts, { plain: true, base }), 'SHELL-CTA': shellCta(facts, { plain: true, base }) };
+}
+
+function injectShell(data, page) {
+    let html = fs.readFileSync(path.join(ROOT, page), 'utf8');
+    Object.entries(shellRegions(page, shellFacts(data.profile))).forEach(([name, block]) => {
+        const [START, END] = shellMarkers(name);
+        const start = html.indexOf(START);
+        const end = html.indexOf(END);
+        if (start === -1 || end < start) throw new Error(`${page} is missing the ${START} / ${END} markers`);
+        // The block takes the END marker's indent, which has to open its line.
+        const indent = html.slice(html.lastIndexOf('\n', end) + 1, end);
+        if (!/^[ \t]*$/.test(indent)) throw new Error(`${page}: ${END} must start a line of its own`);
+        html = html.slice(0, start + START.length) + '\n' + indentBlock(block, indent) + '\n' + indent + html.slice(end);
+    });
+    return html;
+}
+
+// ------------------------------------------------------------------
 // Write or check
 // ------------------------------------------------------------------
 function main() {
@@ -1144,8 +1670,11 @@ function main() {
         ['stats.html', renderStats(data)],
         ['sitemap.xml', renderSitemap(data)],
         ['voice-scripts.js', renderVoiceScripts(data)],
-        ['index.html', injectJsonLd(data)],
-        ['modules/interactives.js', injectAssayFacts(data)]
+        ['index.html', injectProjectCards(data, injectAtAGlance(data, injectJsonLd(data)))],
+        ['modules/interactives.js', injectAssayFacts(data)],
+        ['carbon-ai.html', injectShell(data, 'carbon-ai.html')],
+        ['field-report.html', injectShell(data, 'field-report.html')],
+        ['404.html', injectShell(data, '404.html')]
     ];
 
     const stale = [];
@@ -1175,9 +1704,10 @@ function main() {
     console.log(`\n  ${data.projects.caseStudies.length} case studies · ${data.research.outputs.length} research outputs · ${data.lenses.lenses.length} lenses · counts ${data.stats.status}\n`);
 }
 
-// Run as a script it builds; required (by tests/stats.test.js) it only lends
-// its renderers, so a test can draw stats.html from fixture totals without
-// writing anything.
+// Run as a script it builds; required (by tests/stats.test.js,
+// tests/firstview.test.js and tests/shell.test.js) it only lends its
+// renderers, so a test can draw stats.html, the at-a-glance strip or the
+// shell from fixtures without writing anything.
 if (require.main === module) main();
 
-module.exports = { renderStats, EXAMPLE_PAYLOAD };
+module.exports = { renderStats, EXAMPLE_PAYLOAD, renderAtAGlance, shellFacts, shellRegions, shellMarkers };

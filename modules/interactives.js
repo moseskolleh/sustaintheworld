@@ -1,120 +1,15 @@
 // ===================================================================
 // INTERACTIVES — the homepage widgets that respond to the visitor
 // ===================================================================
-// The "AI, Weighed" widget, the share helpers, The Assay, Anatomy of a
-// Prompt, You Draw It and The Receipt: about 81 KB of JavaScript that only
-// matters once someone scrolls to section 05 or opens the footer receipt.
-// Needs ai-carbon-data.js, which the loader fetches first.
+// The share helpers, The Assay, You Draw It and The Receipt: JavaScript
+// that only matters once someone scrolls to section 05, reaches the Assay
+// under the contact form, or opens the footer receipt. You Draw It needs
+// ai-carbon-data.js, which the loader fetches first. The calculator and
+// Anatomy of a Prompt that were here are on carbon-ai.html.
 //
-// Loaded on demand by script.js (mks.load('interactives')) — see the
-// ON-DEMAND MODULES section there for when. This file is a classic script:
-// it shares the page's global scope, so it declares nothing at the top
-// level and talks to the core only through window.mks.
-//
-// tests/harness.js evaluates it after script.js so the jsdom suites see the
-// page fully initialised, the way a visitor who used every feature would.
+// Loaded on demand by script.js (mks.load('interactives')), whose ON-DEMAND
+// MODULES section says when, and why it declares nothing at the top level.
 // ===================================================================
-
-// ===================================
-// ECOPROMPT WIDGET — AI, weighed
-// All numbers come from the shared source of truth (ai-carbon-data.js), the
-// same one the full EcoPrompt Coach tool uses — so they can never disagree.
-// ===================================
-(() => {
-    const modelSel = document.getElementById('ecoModel');
-    const presetSel = document.getElementById('ecoPreset');
-    const gridSel = document.getElementById('ecoGrid');
-    const DATA = (typeof window !== 'undefined') ? window.AICarbonData : null;
-    if (!modelSel || !presetSel || !gridSel || !DATA) return;
-
-    // Compact homepage view, derived from the shared data.
-    const MODELS = DATA.HOMEPAGE_MODELS.map(k => ({
-        key: k, label: DATA.MODELS[k].label, model: DATA.MODELS[k]
-    }));
-    const GRIDS = DATA.HOMEPAGE_REGIONS.map(k => ({
-        key: k,
-        label: `${DATA.REGIONS[k].label} — ${DATA.REGIONS[k].intensity} gCO₂e/kWh`,
-        intensity: DATA.REGIONS[k].intensity
-    }));
-    const PUE = DATA.PUE;                              // data-centre overhead
-    const WUE = DATA.WUE_PROFILES.avg.wue_L_per_kWh;   // L per kWh, typical cooling
-
-    MODELS.forEach((m, i) => modelSel.add(new Option(m.label, i)));
-    GRIDS.forEach((g, i) => gridSel.add(new Option(g.label, i)));
-    modelSel.value = '0';
-    gridSel.value = '2'; // Netherlands — where this research happens
-
-    // The shared formatter the full tool uses (ai-carbon-data.js), so the two
-    // print a number the same way. A small model on a clean grid is tiny,
-    // not free: below a thousandth it says "< 0.001", never "0.000".
-    const fmt = (n) => DATA.formatNumber(n, n >= 100 ? 0 : 1, 3);
-
-    // Each workload is the split its label promises ("1,000 in / 8,000
-    // out"), read from the option itself so the two cannot drift. Generated
-    // tokens cost more than read ones, so spending every preset at a 50/50
-    // mix under-counted a reasoning run by a third and over-counted a
-    // document read by more than half.
-    const workload = () => {
-        const opt = presetSel.options[presetSel.selectedIndex];
-        return { input: Number(opt.dataset.in) || 0, output: Number(opt.dataset.out) || 0 };
-    };
-
-    const footprint = (model, work, grid) => {
-        const wh = DATA.energyForQuery(model.model, work.input, work.output);
-        const kWh = (wh / 1000) * PUE;
-        return {
-            wh: kWh * 1000,
-            carbon: kWh * grid.intensity,
-            water: kWh * WUE * 1000
-        };
-    };
-
-    const render = () => {
-        const model = MODELS[modelSel.value];
-        const grid = GRIDS[gridSel.value];
-        const work = workload();
-        const f = footprint(model, work, grid);
-
-        document.getElementById('ecoEnergy').textContent = fmt(f.wh);
-        document.getElementById('ecoCarbon').textContent = fmt(f.carbon);
-        document.getElementById('ecoWater').textContent = fmt(f.water);
-
-        // The comparisons carry their unit with them, so a tiny answer reads
-        // "1.8 s" and "95 cm" rather than "0.03 min" and "0.95 m".
-        const EQ = DATA.EQUIVALENTS;
-        const ledMin = f.wh * 60 / EQ.LED_BULB_W.value;
-        const carKm = f.carbon / EQ.GASOLINE_KM_GCO2.value;
-        const teaspoons = f.water / 4.93;
-        document.getElementById('ecoEquiv').innerHTML =
-            `One answer &asymp; an LED bulb burning for <strong>${DATA.formatQuantity(ledMin, 'min')}</strong>, ` +
-            `driving a petrol car <strong>${DATA.formatQuantity(carKm, 'km')}</strong>, ` +
-            `and <strong>${DATA.formatNumber(teaspoons, 1, 2)} teaspoons</strong> of cooling water.`;
-
-        const bars = document.getElementById('ecoBars');
-        const results = MODELS.map(m => ({ m, f: footprint(m, work, grid) }))
-            .sort((a, b) => a.f.carbon - b.f.carbon);
-        const max = results[results.length - 1].f.carbon || 1;
-        bars.innerHTML = results.map(({ m, f: mf }) => `
-            <div class="eco-bar-row${m.key === model.key ? ' current' : ''}">
-                <span class="eco-bar-name">${m.label}</span>
-                <span class="eco-bar-track"><span class="eco-bar-fill" data-w="${(mf.carbon / max * 100).toFixed(1)}"></span></span>
-                <span class="eco-bar-val">${fmt(mf.carbon)} g</span>
-            </div>`).join('');
-        requestAnimationFrame(() => {
-            bars.querySelectorAll('.eco-bar-fill').forEach(el => {
-                el.style.width = el.getAttribute('data-w') + '%';
-            });
-        });
-    };
-
-    [modelSel, presetSel, gridSel].forEach(el => el.addEventListener('change', render));
-    render();
-    // Announce changes from here on, not the first fill: that happens as the
-    // section comes within a screen of the viewport, and was read out in the
-    // middle of whatever the visitor was doing further up the page.
-    document.getElementById('ecoEquiv').setAttribute('aria-live', 'polite');
-})();
-
 
 // ===================================
 // SHARE HELPERS — let every interactive result leave with the visitor.
@@ -183,13 +78,11 @@ window.mks.share = (() => {
 // the facts in content/profile.json: no AI, no model download, nothing
 // leaves the browser — that restraint is the argument.
 //
-// It used to count keyword hits, and three made a "High-grade match": an ad
-// asking for "Fluent Dutch · 5+ years Big Four · SAP" scored top marks with
-// no gaps, because nothing looked for what the site cannot show. Now every
-// requirement the site does not evidence is a gap, shown as prominently as a
-// match; a hard gap caps the grade; and the top grade needs broad coverage
-// of the ad. The rules are plain data so Phase 4 can move them into
-// content/brief.json, where the validator can hold them to the case studies.
+// Every requirement the site does not evidence is a gap, shown as
+// prominently as a match; a hard gap caps the grade; and the top grade needs
+// broad coverage of the ad (why: docs/plan.md, Phase 0 step 7). The rules
+// are plain data so Phase 4 can move them into content/brief.json, where the
+// validator can hold them to the case studies.
 // ===================================
 (() => {
     // ASSAY-FACTS:START — generated by scripts/build-content.js from content/profile.json. Do not edit by hand.
@@ -445,16 +338,16 @@ window.mks.share = (() => {
 
     // Where this page shows a tool, best proof first: the skills toolkit
     // (it carries a proof line), then the experience bullets, the project
-    // tags, the courses and the skill chips. Read from the page itself, so a
+    // tags, the courses and the skill lists. Read from the page itself, so a
     // tool the page stops showing stops being matched.
     const clean = (el) => (el ? el.textContent.replace(/\s+/g, ' ').trim() : '');
     const up = (el, sel, inner) => clean(el.closest(sel) && el.closest(sel).querySelector(inner));
     const SOURCES = [
         ['#skills .toolkit-name', '#skills', (el) => `Skills: ${up(el, '.toolkit-item', '.toolkit-proof') || clean(el)}`],
         ['#experience li', '#experience', (el) => clean(el) + (up(el, '.timeline-content', 'h3') ? ` (${up(el, '.timeline-content', 'h3')})` : '')],
-        ['#projects .project-tech span', '#projects', (el) => `Listed as a tool on the ${up(el, '.project-card', 'h3')} dossier`],
-        ['#education li', '#education', (el) => `Covered in ${up(el, '.education-card', 'h3')}: ${clean(el)}`],
-        ['#skills .chip, #skills .framework-card', '#skills', () => 'Listed under Skills & Expertise']
+        ['#projects .project-tech span', '#projects', (el) => `Listed as a tool on the ${up(el, '.project-card', 'h3')} project`],
+        ['#education li, #education .cert-line', '#education', (el) => `Covered in ${up(el, '.education-card', 'h3, .cert-title')}: ${clean(el)}`],
+        ['#skills .skills-checklist li, #skills .frameworks-list li', '#skills', () => 'Listed under Skills & Education']
     ];
     function toolEvidence(tool, doc) {
         for (const [sel, href, say] of (doc ? SOURCES : [])) {
@@ -765,129 +658,6 @@ window.mks.share = (() => {
 
 
 // ===================================
-// ANATOMY OF A PROMPT — one answer, split into Scope 2 / Scope 3 / water,
-// each mapped to its ESRS disclosure line. Hand-drawn SVG flow, no library.
-// ===================================
-(() => {
-    const svg = document.getElementById('anatomySvg');
-    const sel = document.getElementById('anatomyModel');
-    const summary = document.getElementById('anatomySummary');
-    const DATA = (typeof window !== 'undefined') ? window.AICarbonData : null;
-    if (!svg || !sel || !DATA) return;
-
-    const NS = 'http://www.w3.org/2000/svg';
-    const mk = (name, attrs) => {
-        const e = document.createElementNS(NS, name);
-        for (const k in attrs) e.setAttribute(k, attrs[k]);
-        return e;
-    };
-
-    const gridSel = document.getElementById('anatomyGrid');
-    const TOKENS = 1000;                              // everyday-chat workload
-    const PUE = DATA.PUE;
-    const WUE = DATA.WUE_PROFILES.avg.wue_L_per_kWh;
-    // The lines are those of whoever runs the model; a buyer of a hosted one
-    // reports the carbon as its Scope 3, category 1, as the foot and summary
-    // say. For the operator, embodied hardware is Scope 3 (capital goods), so
-    // the line stays on the diagram, but without a number: the 0.05 gCO2e/Wh
-    // once typed here had no source, and the full coach excludes embodied
-    // carbon. A sourced factor in ai-carbon-data.js would bring it back on
-    // both pages at once.
-    const EMBODIED_NOTE = 'not quantified';
-    const ANSWERS_PER_YEAR = 20 * 220;               // 20 prompts/day × 220 working days
-    let scale = 'answer';
-
-    DATA.HOMEPAGE_MODELS.forEach(k => sel.add(new Option(DATA.MODELS[k].label, k)));
-    sel.value = DATA.MODELS['gpt-4o'] ? 'gpt-4o' : DATA.HOMEPAGE_MODELS[0];
-    if (gridSel) {
-        DATA.HOMEPAGE_REGIONS.forEach(k => gridSel.add(new Option(`${DATA.REGIONS[k].label} — ${DATA.REGIONS[k].intensity} gCO₂e/kWh`, k)));
-        gridSel.value = 'nl';
-    }
-    const gridNow = () => (gridSel && DATA.REGIONS[gridSel.value]) || DATA.REGIONS['nl'];
-
-    const compute = (key, grid) => {
-        // Split the workload at the reference mix the per-1k benchmarks are
-        // calibrated against, so this widget and the full tool agree on what
-        // "1000 tokens" costs even though the tool lets you change the split.
-        const mix = DATA.TOKEN_ENERGY.referenceMix;
-        const infWh = DATA.energyForQuery(DATA.MODELS[key], TOKENS * mix.input, TOKENS * mix.output);
-        const wh = infWh * PUE;                                                // facility energy (grid + cooling overhead)
-        const kwh = wh / 1000;
-        return { scope2: kwh * grid.intensity, water: kwh * WUE * 1000 };
-    };
-    // With Scope 2 the only carbon term, its ribbon is scaled against the
-    // dirtiest grid on offer, so switching grids still visibly moves it.
-    const worstIntensity = Math.max(...DATA.HOMEPAGE_REGIONS.map(k => DATA.REGIONS[k].intensity));
-    const fmt = (n) => (n === 0 ? '0' : n >= 1 ? n.toFixed(2) : n >= 0.001 ? n.toFixed(3) : '<0.001');
-
-    const cy = 160, sx = 180, tx = 430, rows = [70, 160, 250];
-    const ribbon = (x1, y1, x2, y2, w) => {
-        const mx = (x1 + x2) / 2, t = w / 2;
-        return `M ${x1} ${y1 - t} C ${mx} ${y1 - t}, ${mx} ${y2 - t}, ${x2} ${y2 - t} L ${x2} ${y2 + t} C ${mx} ${y2 + t}, ${mx} ${y1 + t}, ${x1} ${y1 + t} Z`;
-    };
-
-    const cards = [
-        { t: 'Grid electricity · Scope 2', esrs: 'ESRS E1-6 · Scope 2 emissions', cls: 'r0' },
-        { t: 'Embodied hardware · Scope 3', esrs: 'ESRS E1-6 · Scope 3 (capital goods)', cls: 'r1' },
-        { t: 'Cooling water', esrs: 'ESRS E3-4 · Water consumption', cls: 'r2' }
-    ];
-
-    // static build
-    svg.appendChild(mk('rect', { x: 20, y: cy - 38, width: 160, height: 76, rx: 10, class: 'anatomy-source' }));
-    const st = mk('text', { x: 100, y: cy - 4, 'text-anchor': 'middle', class: 'anatomy-source-t' }); st.textContent = 'One AI answer'; svg.appendChild(st);
-    const ss = mk('text', { x: 100, y: cy + 15, 'text-anchor': 'middle', class: 'anatomy-source-sub' }); ss.textContent = '~1,000 tokens'; svg.appendChild(ss);
-    const ribbons = rows.map((ry, i) => { const p = mk('path', { class: 'anatomy-ribbon ' + cards[i].cls }); svg.appendChild(p); return p; });
-    const vals = rows.map((ry, i) => {
-        const title = mk('text', { x: tx + 10, y: ry - 14, class: 'anatomy-t-title ' + cards[i].cls }); title.textContent = cards[i].t; svg.appendChild(title);
-        const val = mk('text', { x: tx + 10, y: ry + 8, class: 'anatomy-t-val' }); svg.appendChild(val);
-        const esrs = mk('text', { x: tx + 10, y: ry + 28, class: 'anatomy-t-esrs' }); esrs.textContent = cards[i].esrs; svg.appendChild(esrs);
-        return val;
-    });
-
-    const update = () => {
-        const grid = gridNow();
-        const d = compute(sel.value, grid);
-        // Scope 3 keeps a hairline: the flow exists, its size is not claimed.
-        const widths = [8 + (grid.intensity / worstIntensity) * 40, 2, 26];
-        rows.forEach((ry, i) => ribbons[i].setAttribute('d', ribbon(sx, cy, tx, ry, widths[i])));
-        const yr = scale === 'year';
-        const m = yr ? ANSWERS_PER_YEAR : 1;
-        const cDiv = yr ? 1000 : 1;                   // g -> kg, mL -> L
-        const cu = yr ? 'kg' : 'g', wu = yr ? 'L' : 'mL';
-        vals[0].textContent = `${fmt(d.scope2 * m / cDiv)} ${cu} CO₂e`;
-        vals[1].textContent = EMBODIED_NOTE;
-        vals[2].textContent = `${fmt(d.water * m / cDiv)} ${wu} water`;
-        if (summary) {
-            const basis = yr ? `at ~${ANSWERS_PER_YEAR.toLocaleString()} answers/analyst-year (20/day × 220 days)` : 'one everyday answer';
-            summary.innerHTML = `<strong>${DATA.MODELS[sel.value].label}</strong>, ${basis} on the <strong>${grid.label}</strong> grid, for whoever runs the model: <strong>${fmt(d.scope2 * m / cDiv)} ${cu}</strong> Scope 2 and <strong>${fmt(d.water * m / cDiv)} ${wu}</strong> cooling water — two ESRS lines quantified. Scope 3 embodied hardware is a third line, named but ${EMBODIED_NOTE}. A buyer of the hosted model reports the carbon as Scope 3, category 1.`;
-        }
-    };
-
-    update();
-    // A status from here on; the first fill happens before anyone is looking.
-    if (summary) { summary.setAttribute('role', 'status'); summary.setAttribute('aria-live', 'polite'); }
-    sel.addEventListener('change', update);
-    if (gridSel) gridSel.addEventListener('change', update);
-    const copyBtn = document.getElementById('anatomyCopy');
-    if (copyBtn) copyBtn.addEventListener('click', () => {
-        const txt = (summary ? summary.textContent : '') + `\n— Moses Kolleh Sesay · ${window.mks.share ? window.mks.share.site : ''}`;
-        if (window.mks.share) window.mks.share.copy(txt, copyBtn);
-    });
-    document.querySelectorAll('.anatomy-scale-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            scale = btn.getAttribute('data-scale');
-            document.querySelectorAll('.anatomy-scale-btn').forEach(b => {
-                const on = b === btn;
-                b.classList.toggle('is-active', on);
-                b.setAttribute('aria-pressed', String(on));
-            });
-            update();
-        });
-    });
-})();
-
-
-// ===================================
 // YOU DRAW IT — predict AI's hidden energy curve, then reveal the estimates
 // The NYT "you draw it" mechanic, powered by the shared AI carbon data.
 // ===================================
@@ -905,12 +675,13 @@ window.mks.share = (() => {
     if (!svg || !revealBtn || !DATA) return;
     let cardData = null;
 
-    const NS = 'http://www.w3.org/2000/svg';
-    const mk = (name, attrs) => {
-        const e = document.createElementNS(NS, name);
+    const set = (e, attrs) => {
         for (const k in attrs) e.setAttribute(k, attrs[k]);
         return e;
     };
+    // A group, not an image (which may hold no control); its words are for
+    // the eye, the data table reads them.
+    const mk = (name, attrs) => set(document.createElementNS('http://www.w3.org/2000/svg', name), name === 'text' ? { 'aria-hidden': 'true', ...attrs } : attrs);
 
     const KEYS = ['llama-32-1b', 'gpt-4-1-nano', 'gpt-4o-mini', 'gemini-15-flash', 'gemini-20-flash', 'llama-33-70b', 'claude-37-sonnet', 'gpt-4o', 'gemini-15-pro', 'deepseek-r1'];
     const SHORT = { 'llama-32-1b': '1B', 'gpt-4-1-nano': 'nano', 'gpt-4o-mini': '4o-mini', 'gemini-15-flash': '1.5 Flash', 'gemini-20-flash': '2.0 Flash', 'llama-33-70b': '70B', 'claude-37-sonnet': 'Sonnet', 'gpt-4o': 'GPT-4o', 'gemini-15-pro': '1.5 Pro', 'deepseek-r1': 'R1' };
@@ -922,74 +693,64 @@ window.mks.share = (() => {
     if (n < 5) return;
     const KNOWN = 3;
 
-    const W = 640, H = 380;
-    const M = { l: 58, r: 18, t: 26, b: 86 };
-    const plotW = W - M.l - M.r, plotH = H - M.t - M.b;
+    // Drawn 640 units wide and scaled to fit, its labels were 5px tall on a
+    // phone. It is as many units wide as the pixels it is shown in now (to
+    // 640), so 11 units is 11px or more; under 480 it is taller (style.css
+    // holds that shape), the model names steeper into the room below.
     const yMax = 1.6;
+    let W, H, M, plotW, plotH, narrow;
     const xAt = (i) => M.l + (i / (n - 1)) * plotW;
     const yAt = (wh) => M.t + (1 - Math.min(wh, yMax) / yMax) * plotH;
     const whAtY = (y) => Math.max(0, Math.min(yMax, (1 - (y - M.t) / plotH) * yMax));
+    const pts = (whs) => whs.map((wh, i) => `${xAt(i)},${yAt(wh)}`).join(' ');
 
     const guess = models.map((m, i) => (i < KNOWN ? m.wh : models[KNOWN - 1].wh));
     let revealed = false;
     let interacted = false;
+    let cursor = KNOWN;
 
     // --- static layer: gridlines + y labels ---
-    [0, 0.5, 1.0, 1.5].forEach(v => {
-        const y = yAt(v);
-        svg.appendChild(mk('line', { x1: M.l, y1: y, x2: W - M.r, y2: y, class: 'ydi-grid' }));
-        const t = mk('text', { x: M.l - 10, y: y + 4, class: 'ydi-axis-label', 'text-anchor': 'end' });
+    const grid = [0, 0.5, 1.0, 1.5].map(v => {
+        const t = mk('text', { class: 'ydi-axis-label', 'text-anchor': 'end' });
         t.textContent = v.toFixed(1);
-        svg.appendChild(t);
+        return [v, svg.appendChild(mk('line', { class: 'ydi-grid' })), svg.appendChild(t)];
     });
-    const yTitle = mk('text', { x: M.l - 46, y: M.t - 10, class: 'ydi-axis-title', 'text-anchor': 'start' });
+    const yTitle = svg.appendChild(mk('text', { class: 'ydi-axis-title', 'text-anchor': 'start' }));
     yTitle.textContent = 'Wh / answer';
-    svg.appendChild(yTitle);
 
     // x labels
-    models.forEach((m, i) => {
-        const x = xAt(i);
-        const t = mk('text', { x: x, y: H - M.b + 20, class: 'ydi-xlabel' + (i < KNOWN ? ' known' : ''), 'text-anchor': 'end', transform: `rotate(-40 ${x} ${H - M.b + 20})` });
+    const xLabels = models.map((m, i) => {
+        const t = svg.appendChild(mk('text', { class: 'ydi-xlabel' + (i < KNOWN ? ' known' : ''), 'text-anchor': 'end' }));
         t.textContent = m.short;
-        svg.appendChild(t);
+        return t;
     });
 
     // divider + region labels
-    const dividerX = (xAt(KNOWN - 1) + xAt(KNOWN)) / 2;
-    svg.appendChild(mk('line', { x1: dividerX, y1: M.t, x2: dividerX, y2: M.t + plotH, class: 'ydi-divider' }));
-    const pLabel = mk('text', { x: xAt(n - 1), y: M.t - 10, class: 'ydi-region-label predict', 'text-anchor': 'end' });
+    const divider = svg.appendChild(mk('line', { class: 'ydi-divider' }));
+    const pLabel = svg.appendChild(mk('text', { class: 'ydi-region-label predict', 'text-anchor': 'end' }));
     pLabel.textContent = 'you predict →';
-    svg.appendChild(pLabel);
 
     // known line + dots
-    const knownPts = models.slice(0, KNOWN).map((m, i) => `${xAt(i)},${yAt(m.wh)}`).join(' ');
-    svg.appendChild(mk('polyline', { points: knownPts, class: 'ydi-known-line' }));
-    models.slice(0, KNOWN).forEach((m, i) => svg.appendChild(mk('circle', { cx: xAt(i), cy: yAt(m.wh), r: 4, class: 'ydi-known-dot' })));
+    const knownLine = svg.appendChild(mk('polyline', { class: 'ydi-known-line' }));
+    const knownDots = models.slice(0, KNOWN).map(() => svg.appendChild(mk('circle', { r: 4, class: 'ydi-known-dot' })));
 
-    // the illustrative straight-line guess + the published estimates (both revealed later)
-    const intuitLine = mk('polyline', { points: '', class: 'ydi-intuit-line' });
-    svg.appendChild(intuitLine);
-    const realLine = mk('polyline', { points: '', class: 'ydi-real-line' });
-    svg.appendChild(realLine);
-    const realDots = [];
+    // the illustrative straight-line guess + the published estimates (both
+    // revealed later, when the dots and the callout join them)
+    const intuitLine = svg.appendChild(mk('polyline', { class: 'ydi-intuit-line' }));
+    const realLine = svg.appendChild(mk('polyline', { class: 'ydi-real-line' }));
+    const realDots = models.map(() => mk('circle', { r: 4, class: 'ydi-real-dot' }));
+    const callout = mk('text', { class: 'ydi-callout', 'text-anchor': 'end' });
 
     // guess line + draggable dots
-    const guessLine = mk('polyline', { points: '', class: 'ydi-guess-line' });
-    svg.appendChild(guessLine);
-    const guessDots = models.map((m, i) => {
-        if (i < KNOWN) return null;
-        const c = mk('circle', { cx: xAt(i), cy: yAt(guess[i]), r: 5, class: 'ydi-guess-dot' });
-        svg.appendChild(c);
-        return c;
-    });
+    const guessLine = svg.appendChild(mk('polyline', { class: 'ydi-guess-line' }));
+    const guessDots = models.map((m, i) => (i < KNOWN ? null : svg.appendChild(mk('circle', { r: 5, class: 'ydi-guess-dot' }))));
 
     const drawGuess = () => {
-        const pts = [`${xAt(KNOWN - 1)},${yAt(models[KNOWN - 1].wh)}`];
-        for (let i = KNOWN; i < n; i++) pts.push(`${xAt(i)},${yAt(guess[i])}`);
-        guessLine.setAttribute('points', pts.join(' '));
-        for (let i = KNOWN; i < n; i++) guessDots[i].setAttribute('cy', yAt(guess[i]));
+        guessLine.setAttribute('points', pts(guess).split(' ').slice(KNOWN - 1).join(' '));
+        for (let i = KNOWN; i < n; i++) set(guessDots[i], { cx: xAt(i), cy: yAt(guess[i]) });
+        const g = guess[cursor].toFixed(2);
+        set(hit, { 'aria-valuenow': g, 'aria-valuetext': `${models[cursor].short}: your guess ${g} Wh per answer` });
     };
-    drawGuess();
     // Pulse the first predict dot so people know the curve is grabbable.
     if (guessDots[KNOWN]) guessDots[KNOWN].classList.add('ydi-dot-pulse');
     // Device-aware hint: touch users tap or drag; pointer users drag.
@@ -997,14 +758,60 @@ window.mks.share = (() => {
     if (hintEl && coarse) hintEl.textContent = 'tap or drag across to draw';
 
     // --- interaction (pointer + keyboard) ---
-    let cursor = KNOWN;
-    const cursorRing = mk('circle', { class: 'ydi-cursor', r: 9, cx: xAt(cursor), cy: yAt(guess[cursor]) });
-    svg.appendChild(cursorRing);
-    const hit = mk('rect', { x: M.l, y: M.t, width: plotW, height: plotH, class: 'ydi-hit', fill: 'transparent' });
-    hit.setAttribute('tabindex', '0');
-    hit.setAttribute('role', 'application');
-    hit.setAttribute('aria-label', 'Draw your prediction: left/right arrows move between models, up/down arrows raise or lower the guessed energy, Enter reveals the research estimates. The Reveal button and the data table below are equivalent.');
-    svg.appendChild(hit);
+    const cursorRing = svg.appendChild(mk('circle', { class: 'ydi-cursor', r: 9 }));
+    // A slider, its value the guess at the cursor, spoken as it changes
+    // (role=application allows no value: each arrow press was silent).
+    const hit = svg.appendChild(mk('rect', { class: 'ydi-hit', fill: 'transparent', tabindex: 0, role: 'slider', 'aria-valuemin': 0, 'aria-valuemax': yMax,
+        'aria-label': 'Draw your prediction: left/right arrows move between models, up/down arrows (or Page Up/Down, Home, End) raise or lower the guessed energy, Enter reveals the research estimates. The Reveal button and the data table below are equivalent.' }));
+
+    // The published estimates, and a third line: a straight-line guess that
+    // misses the reasoning spike, drawn, not sourced, so the legend and the
+    // data table say illustrative.
+    const drawReveal = () => {
+        const tiny = models[0].wh;
+        realLine.setAttribute('points', pts(models.map(m => m.wh)));
+        realDots.forEach((c, i) => set(c, { cx: xAt(i), cy: yAt(models[i].wh) }));
+        intuitLine.setAttribute('points', pts(models.map((m, i) => tiny + (i / (n - 1)) * (0.55 - tiny))));
+        set(callout, { x: xAt(n - 1) - 8, y: yAt(models[n - 1].wh) - 12 });
+    };
+
+    const place = () => {
+        W = Math.min(640, placedAt) || 640;   // placedAt is 0 before layout (and in jsdom)
+        narrow = W < 480;
+        H = Math.round(narrow ? W * 0.8 : W * 380 / 640);
+        M = narrow ? { l: 36, r: 12, t: 30, b: 64 } : { l: 58, r: 18, t: 26, b: 86 };
+        plotW = W - M.l - M.r;
+        plotH = H - M.t - M.b;
+        svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+        const lift = narrow ? 14 : 10;
+        const ly = H - M.b + (narrow ? 14 : 20);
+        grid.forEach(([v, line, t]) => {
+            set(line, { x1: M.l, y1: yAt(v), x2: W - M.r, y2: yAt(v) });
+            set(t, { x: M.l - (narrow ? 6 : 10), y: yAt(v) + 4 });
+        });
+        set(yTitle, { x: narrow ? 4 : M.l - 46, y: M.t - lift });
+        xLabels.forEach((t, i) => set(t, { x: xAt(i), y: ly, transform: `rotate(${narrow ? -45 : -40} ${xAt(i)} ${ly})` }));
+        const dividerX = (xAt(KNOWN - 1) + xAt(KNOWN)) / 2;
+        set(divider, { x1: dividerX, y1: M.t, x2: dividerX, y2: M.t + plotH });
+        set(pLabel, { x: xAt(n - 1), y: M.t - lift });
+        knownLine.setAttribute('points', pts(models.slice(0, KNOWN).map(m => m.wh)));
+        knownDots.forEach((c, i) => set(c, { cx: xAt(i), cy: yAt(models[i].wh) }));
+        set(hit, { x: M.l, y: M.t, width: plotW, height: plotH });
+        set(cursorRing, { cx: xAt(cursor), cy: yAt(guess[cursor]) });
+        drawGuess();
+        if (revealed) {
+            // A new length for the line: its draw-in dashes go.
+            realLine.style.strokeDasharray = realLine.style.strokeDashoffset = '';
+            drawReveal();
+        }
+    };
+    let placedAt;
+    const fit = () => {
+        const w = Math.round(svg.getBoundingClientRect().width);
+        if (w !== placedAt) { placedAt = w; place(); }
+    };
+    fit();
+    if ('ResizeObserver' in window) new ResizeObserver(fit).observe(svg);
 
     const markInteracted = () => {
         if (interacted) return;
@@ -1036,21 +843,19 @@ window.mks.share = (() => {
     window.addEventListener('pointerup', () => { dragging = false; });
     window.addEventListener('pointercancel', () => { dragging = false; });
 
-    const moveCursor = () => {
-        cursorRing.setAttribute('cx', xAt(cursor));
-        cursorRing.setAttribute('cy', yAt(guess[cursor]));
-        hit.setAttribute('aria-valuetext', `${models[cursor].short}: your guess ${guess[cursor].toFixed(2)} Wh per answer`);
-    };
+    const moveCursor = () => set(cursorRing, { cx: xAt(cursor), cy: yAt(guess[cursor]) });
     hit.addEventListener('focus', () => { svg.classList.add('ydi-kbd'); moveCursor(); });
     hit.addEventListener('blur', () => { svg.classList.remove('ydi-kbd'); });
+    // Every key a slider promises: Home, End and Page keys scrolled the page.
     hit.addEventListener('keydown', (e) => {
         if (revealed) return;
-        const step = yMax / 24;
         const k = e.key;
+        const step = yMax / (/^Page/.test(k) ? 6 : 24);
         if (k === 'ArrowLeft') cursor = Math.max(KNOWN, cursor - 1);
         else if (k === 'ArrowRight') cursor = Math.min(n - 1, cursor + 1);
-        else if (k === 'ArrowUp') guess[cursor] = Math.min(yMax, guess[cursor] + step);
-        else if (k === 'ArrowDown') guess[cursor] = Math.max(0, guess[cursor] - step);
+        else if (k === 'ArrowUp' || k === 'PageUp') guess[cursor] = Math.min(yMax, guess[cursor] + step);
+        else if (k === 'ArrowDown' || k === 'PageDown') guess[cursor] = Math.max(0, guess[cursor] - step);
+        else if (k === 'Home' || k === 'End') guess[cursor] = k === 'End' ? yMax : 0;
         else if (k === 'Enter' || k === ' ') { doReveal(); e.preventDefault(); return; }
         else return;
         e.preventDefault();
@@ -1074,7 +879,7 @@ window.mks.share = (() => {
         if (!interacted) { nudge(); return; }   // draw first — don't grade a guess never made
         revealed = true;
         const reduce = !window.mks.motionOK();
-        realLine.setAttribute('points', models.map((m, i) => `${xAt(i)},${yAt(m.wh)}`).join(' '));
+        drawReveal();
         svg.classList.add('revealed');
         // Draw the published estimates in, left to right.
         if (!reduce && realLine.getTotalLength) {
@@ -1085,11 +890,7 @@ window.mks.share = (() => {
             realLine.style.transition = 'stroke-dashoffset 0.85s ease';
             realLine.style.strokeDashoffset = '0';
         }
-        models.forEach((m, i) => {
-            const c = mk('circle', { cx: xAt(i), cy: yAt(m.wh), r: 4, class: 'ydi-real-dot' });
-            svg.appendChild(c);
-            realDots.push(c);
-        });
+        realDots.forEach(c => svg.appendChild(c));
         if (hintEl) hintEl.style.opacity = '0';
         if (resetBtn) resetBtn.hidden = false;
         if (shareBtn) shareBtn.hidden = false;
@@ -1126,15 +927,9 @@ window.mks.share = (() => {
         else shape = 'You put the peak before the frontier — the reasoning model is the outlier.';
         if (verdictEl) { verdictEl.innerHTML = `<span class="ydi-shape">${shape}</span> ${msg}`; verdictEl.hidden = false; }
         cardData = { shape, factor: factorFrontier, factors };
-        // Third line: a straight-line guess that misses the reasoning spike —
-        // drawn, not sourced, so the legend and the data table say illustrative.
-        const intuitEnd = 0.55;
-        intuitLine.setAttribute('points', models.map((m, i) => `${xAt(i)},${yAt(tiny + (i / (n - 1)) * (intuitEnd - tiny))}`).join(' '));
-        // Callout on the frontier spike.
-        const callout = mk('text', { x: xAt(n - 1) - 8, y: yAt(rWh) - 12, class: 'ydi-callout', 'text-anchor': 'end' });
+        // Callout on the frontier spike, where drawReveal put it.
         callout.textContent = `R1 · ~${factorFrontier}× a 1B model`;
         svg.appendChild(callout);
-        realDots.push(callout);
         if (legendEl) legendEl.hidden = false;
     };
     revealBtn.addEventListener('click', doReveal);
@@ -1196,15 +991,11 @@ window.mks.share = (() => {
     if (resetBtn) {
         resetBtn.addEventListener('click', () => {
             revealed = false;
-            svg.classList.remove('revealed');
-            realLine.setAttribute('points', '');
-            realLine.style.strokeDasharray = '';
-            realLine.style.strokeDashoffset = '';
-            realLine.style.transition = '';
-            intuitLine.setAttribute('points', '');
+            svg.classList.remove('revealed');   // which hides the two lines
+            realLine.style.cssText = '';
             if (legendEl) legendEl.hidden = true;
             realDots.forEach(d => d.remove());
-            realDots.length = 0;
+            callout.remove();
             for (let i = KNOWN; i < n; i++) guess[i] = models[KNOWN - 1].wh;
             drawGuess();
             if (verdictEl) { verdictEl.hidden = true; verdictEl.textContent = ''; }
@@ -1221,7 +1012,7 @@ window.mks.share = (() => {
     // --- accessible, non-visual data table ---
     if (tableEl) {
         const rows = models.map(m => `<tr><td>${m.label}</td><td>${m.wh} Wh</td></tr>`).join('');
-        tableEl.innerHTML = `<table><caption>Estimated energy per 1,000-token answer by model: published estimates, to an order of magnitude. The chart's straight-line guess is illustrative — from no source — so it is not listed here.</caption><thead><tr><th>Model</th><th>Wh per answer</th></tr></thead><tbody>${rows}</tbody></table>`;
+        tableEl.innerHTML = `<table><caption>Estimated energy per 1,000-token answer by model: published estimates, to an order of magnitude, before data-centre overhead. The chart's straight-line guess is illustrative — from no source — so it is not listed here.</caption><thead><tr><th>Model</th><th>Wh per answer</th></tr></thead><tbody>${rows}</tbody></table>`;
     }
 })();
 

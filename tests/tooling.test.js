@@ -33,7 +33,8 @@ function assert(cond, msg) {
     // read a, b, c.
     fs.writeFileSync(path.join(dir, 'a.test.js'), "console.log('a:first'); setTimeout(() => { console.log('a:last'); process.exit(0); }, 300);\n");
     fs.writeFileSync(path.join(dir, 'b.test.js'), "console.error('b:only'); process.exit(1);\n");
-    fs.writeFileSync(path.join(dir, 'c.test.js'), "console.log('c:first'); console.log('c:last');\n");
+    // c also passes two assertions, the second written in two pieces.
+    fs.writeFileSync(path.join(dir, 'c.test.js'), "console.log('c:first'); console.log('PASS: one'); process.stdout.write('not PASS: two\\nPASS: thr'); setTimeout(() => { process.stdout.write('ee\\n'); console.log('c:last'); }, 20);\n");
     fs.writeFileSync(path.join(dir, 'helper.js'), "throw new Error('not a suite');\n");
 
     const runner = (...filters) => spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'run-tests.js'), ...filters], {
@@ -48,6 +49,8 @@ function assert(cond, msg) {
         assert(all.status === 1, `Runner: one failing suite fails the run (exit ${all.status})`);
         assert(/failed: b\.test\.js/.test(out), 'Runner: names the suite that failed');
         assert(/3 suites, 2 passed/.test(out), 'Runner: runs every *.test.js and nothing else');
+        // "PASS: thr" + "ee" arrives in two writes; "not PASS:" is not one.
+        assert(/\n  2 passing assertions\n/.test(out), `Runner: counts the assertions that passed, a line at a time (${(out.match(/\d+ passing assertions?/) || ['no count'])[0]})`);
         const order = ['a:first', 'a:last', 'b:only', 'c:first', 'c:last'].map(s => out.indexOf(s));
         assert(order.every((n, i) => n > -1 && (i === 0 || n > order[i - 1])),
             `Runner: each suite's output is one block, in file order (${order.join(' < ')})`);

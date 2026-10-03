@@ -6,13 +6,9 @@
 // Chrome with third-party cookies disabled inside an iframe, Firefox with
 // dom.storage.enabled off, Safari in Lockdown Mode, a corporate policy, or
 // simply a full quota. The exception is a SecurityError, and an uncaught one
-// at module scope stops the rest of this file from ever running.
-//
-// That is exactly what happened here: `localStorage.getItem('theme')` sat at
-// top level, so a visitor with storage blocked lost the theme toggle, the
-// low-energy mode, the narration player, the terminal — everything defined
-// below the throw. A preference that cannot be saved should cost the
-// preference, not the page.
+// at module scope stops the rest of this file from ever running (what that
+// once cost this page is in tests/resilience.test.js). A preference that
+// cannot be saved should cost the preference, not the page.
 //
 // Every read and write in this file goes through here. Preferences then last
 // for the session in memory and are forgotten on reload, which is the correct
@@ -129,7 +125,7 @@ mks.scrollMotion = scrollMotion;
 // and true means the key is used, so one press closes one layer. A key a
 // control already used is left alone, and a widget's own keys (the games'
 // arrows, a dialog's Tab) stay on the widget.
-const KEY_RANK = Object.freeze({ terminal: 40, lightbox: 30, player: 20, menu: 10, page: 0 });
+const KEY_RANK = Object.freeze({ terminal: 40, player: 20, menu: 10, page: 0 });
 const keyRoutes = {};
 mks.keyRank = KEY_RANK;
 mks.onKey = (keys, handler, rank = KEY_RANK.page) => {
@@ -151,13 +147,11 @@ document.addEventListener('keydown', (e) => {
 // ON-DEMAND MODULES
 // ===================================
 // Roughly two thirds of this site's JavaScript serves features most visits
-// never reach: the narration player, the field terminal, the games inside
-// the project dossiers, the interactives in section 05 and the footer
-// receipt. They used to ship in this file, parsed and executed on every
-// visit — including the ones that read the hero and left. Now each lives in
-// modules/ and is fetched the moment it is first needed: a dossier opening,
-// a "listen" press, the backtick key, section 05 coming into range. What
-// every visit pays for is what every visit uses.
+// never reach: the narration player, the field terminal, the interactives
+// in section 05 and the footer receipt. Each lives in modules/ and is
+// fetched the moment it is first needed: a "listen" press, the backtick
+// key, section 05 coming into range. What every visit pays for is what
+// every visit uses.
 //
 // Modules are classic scripts sharing the page's global scope. They declare
 // nothing at the top level (a second `const safeStorage` would be a
@@ -168,7 +162,6 @@ document.addEventListener('keydown', (e) => {
 // script builds anything it styles.
 const MODULES = {
     interactives: ['ai-carbon-data.js', 'modules/interactives.js'],
-    dossier: ['modules/dossier.js'],
     terminal: ['modules/terminal.js'],
     dispatch: ['modules/dispatch.css', 'voice-scripts.js', 'modules/dispatch.js']
 };
@@ -214,7 +207,7 @@ const mksLoadWarn = (err) => {
 // The parts of the page owned by modules/interactives.js. A deep link or an
 // in-page anchor into one of these loads the module before the page scrolls
 // there, so a shared /#ydi lands on a working widget rather than an empty box.
-const INTERACTIVE_HOSTS = '#ecoprompt, #ydi, #anatomy, #assay, #receiptPanel, #receiptBtn';
+const INTERACTIVE_HOSTS = '#ecoprompt, #ydi, #assay, #receiptPanel, #receiptBtn';
 const mksLoadFor = (target) => {
     if (!target || typeof target.closest !== 'function') return;
     if (target.closest(INTERACTIVE_HOSTS)) mksLoad('interactives').catch(mksLoadWarn);
@@ -293,13 +286,10 @@ const initBackgroundSlideshow = () => {
     let currentSlide = 0;
 
     // The first slide is fetched now; the rest only when the rotation is
-    // about to show them. Slide two used to be fetched "on idle" for every
-    // visit that was not in low-energy mode — 150 KB for a picture that only
-    // appears eight seconds in, paid by every visit that never stayed that
-    // long. Measured in a real browser, it was the single largest item in a
-    // first view. Now a slide is fetched a moment before it is due, and only
-    // while the rotation is actually running: hero on screen, tab visible,
-    // nobody having asked for calm.
+    // about to show them (150 KB each, for a picture eight seconds in: see
+    // check-budget.js on what the first view once paid for slide two), and
+    // only while it is running: hero on screen, tab visible, nobody having
+    // asked for calm.
     const loadSlide = (index) => {
         const slide = slides[index];
         if (!slide || slide.dataset.loaded) return;
@@ -352,7 +342,7 @@ if (document.readyState === 'complete') {
 // The role label is intentionally static. A stable, always-legible identity
 // protects the critical first impression — the old typewriter could be caught
 // mid-deletion on first paint — and keeps first-viewport motion reserved for
-// the signature scroll-driven moments (journey map, core log, borehole).
+// the signature scroll-driven moments (journey map, core log).
 
 // ===================================
 // SMOOTH SCROLLING & NAVIGATION
@@ -360,22 +350,21 @@ if (document.readyState === 'complete') {
 const navToggle = document.getElementById('navToggle');
 const navMenu = document.getElementById('navMenu');
 
-// Expand a collapsed dossier or the receipt panel that contains a deep-link
-// target, so shared links like /#strikeWidget or /#receiptPanel actually reveal
-// the feature instead of landing on a closed accordion.
+// Open the receipt panel when a deep-link target is in it, so a shared
+// /#receiptPanel reveals the receipt instead of landing on a closed panel.
+// The Assay the same: "grade your job description" lands on it open. It
+// grows below its own top, so there is nothing to wait for.
 const revealTarget = (target) => {
     if (!target || !target.closest) return false;
     let expanded = false;
-    const card = target.closest('.project-card');
-    if (card && !card.classList.contains('expanded')) {
-        const toggle = card.querySelector('.project-toggle');
-        if (toggle) { toggle.click(); expanded = true; }
-    }
     const panel = target.id === 'receiptPanel' ? target : target.closest('#receiptPanel');
     if (panel && panel.hasAttribute('hidden')) {
         const rb = document.getElementById('receiptBtn');
         if (rb) { rb.click(); expanded = true; }
     }
+    const assay = target.closest('#assay');
+    const shut = assay && assay.querySelector('.assay-open[aria-expanded="false"]');
+    if (shut) shut.click();
     return expanded;
 };
 
@@ -420,7 +409,7 @@ const hold = (land) => {
     releaseHold = release;
 };
 
-// Fetch what the target needs, open the dossier or receipt around it (and
+// Fetch what the target needs, open the receipt around it (and
 // give that a moment to push things into place), then scroll and focus. A
 // target waiting to fade in is shown at once: it sits 26px low until then.
 const jumpTo = (target, behavior, focus, wait) => {
@@ -475,6 +464,25 @@ inPageLinks.forEach((anchor, index) => {
     });
 });
 
+// Links already shared to what Phase 2 moved off this page (the games,
+// Anatomy of a Prompt) opened it at its top, with no sign of what they
+// were for. They go on to where it is now, with the site that linked to
+// them as ?via=: count.js would otherwise take this page for the referrer.
+const MOVED = new Map([
+    ['anatomy', 'carbon-ai.html#anatomy'],
+    ['boreholeGame', 'case-studies.html#play-borehole'],
+    ['strikeWidget', 'case-studies.html#play-borehole'],
+    ['floodSim', 'case-studies.html#play-flood']
+]);
+const forwardMoved = () => {
+    const id = location.hash.slice(1), to = MOVED.get(id);
+    if (!to || document.getElementById(id)) return false;
+    let via = '';
+    try { via = new URL(document.referrer).host; } catch (e) { /* none */ }
+    location.replace(via && via !== location.host ? to.replace('#', `?via=${encodeURIComponent(via)}#`) : to);
+    return true;
+};
+
 // Direct hits (a shared link, Back and Forward, a typed fragment) land the
 // same way, a task later so the browser's own scroll restoring comes first.
 // A shared link on arrival is not focused: nobody has pressed anything yet.
@@ -496,13 +504,15 @@ const handleHashReveal = (e) => {
         }
         return;
     }
+    if (forwardMoved()) return;
     let target;
     try { target = document.querySelector(location.hash); } catch (err) { return; }
     if (target) jumpTo(target, scrollMotion(), !!e, true);
 };
 window.addEventListener('popstate', handleHashReveal);
 window.addEventListener('hashchange', handleHashReveal);
-if (location.hash) window.addEventListener('load', () => setTimeout(() => handleHashReveal(null), 320));
+// A moved feature's address goes on at once, not after the page has loaded.
+if (location.hash && !forwardMoved()) window.addEventListener('load', () => setTimeout(() => handleHashReveal(null), 320));
 
 const setMenuOpen = (open) => {
     if (!navToggle || !navMenu) return;
@@ -546,6 +556,12 @@ const scrollProgress = document.getElementById('scrollProgress');
 const scrollTopBtn = document.getElementById('scrollTop');
 const sections = Array.from(document.querySelectorAll('section[id], header[id]'));
 const navLinks = Array.from(document.querySelectorAll('.nav-link'));
+// The section each nav link lights for: the one it jumps to or, for a link
+// to another page, its data-spy (Work: this page's projects).
+const navSpies = navLinks.map((link) => {
+    const href = link.getAttribute('href');
+    return [link, link.dataset.spy || (href[0] === '#' ? href.slice(1) : '')];
+});
 
 (() => {
     let sectionTops = [];
@@ -564,8 +580,8 @@ const navLinks = Array.from(document.querySelectorAll('.nav-link'));
         if (navbar) navbar.classList.toggle('scrolled', y > 100);
         if (scrollTopBtn) scrollTopBtn.classList.toggle('visible', y > window.innerHeight && !underfoot.size);
         if (scrollProgress) scrollProgress.style.width = (docHeight > 0 ? (y / docHeight) * 100 : 0) + '%';
-        navLinks.forEach(link => {
-            link.classList.toggle('active', link.getAttribute('href') === `#${current}`);
+        navSpies.forEach(([link, id]) => {
+            link.classList.toggle('active', !!id && id === current);
         });
     };
     let queued = false;   // a frame is on its way
@@ -641,8 +657,8 @@ const navLinks = Array.from(document.querySelectorAll('.nav-link'));
     // A module that has filled in its part of the page, or the Assay's
     // result, announces it: new controls for back to top to keep clear of.
     document.addEventListener('mks:layout', relayout);
-    // A section that changes height moves every offset below it: a dossier
-    // opening, or one drawn for the first time (content-visibility sizes it
+    // A section that changes height moves every offset below it: a module
+    // filling it in, or one drawn for the first time (content-visibility sizes it
     // by estimate until then). Each asks for a measurement.
     if ('ResizeObserver' in window) {
         const sized = new ResizeObserver(() => relayout());
@@ -660,9 +676,9 @@ const navLinks = Array.from(document.querySelectorAll('.nav-link'));
 const counters = Array.from(document.querySelectorAll('.hero-stat-number'));
 const countersMove = () => !lateStart && scrollMotion() === 'smooth';
 
-// The stats sit below the fold, so until a scroll a zeroed counter was all a
-// screen reader, Find or Reader mode met: "0 Master's degrees". While the
-// digits move they are hidden from those, and a still copy is read instead.
+// A counter mid-count told a screen reader, Find or Reader mode "0 Master's
+// degrees" while the stats sat below the fold. While the digits move they
+// are hidden from those, and a still copy is read instead.
 const still = (counter, on) => {
     if (on) {
         counter.setAttribute('aria-hidden', 'true');
@@ -682,14 +698,15 @@ const animateCounters = () => {
             if (counter.textContent !== String(target)) { counter.textContent = String(target); still(counter, false); }
             return;
         }
+        // By the clock, not a step per frame: on a slow device that ran on
+        // well past 1.8 s, the first screen busy all the while.
         const duration = 1800;
-        const increment = target / (duration / 16);
-        let current = 0;
+        const start = performance.now();
 
         const updateCounter = () => {
-            current += increment;
-            if (current < target) {
-                counter.textContent = Math.ceil(current);
+            const progress = Math.min(1, Math.max(0, (performance.now() - start) / duration));
+            if (progress < 1) {
+                counter.textContent = Math.ceil(target * progress);
                 requestAnimationFrame(updateCounter);
             } else {
                 counter.textContent = String(target);
@@ -735,10 +752,19 @@ if (statsSection && 'IntersectionObserver' in window) {
         { x: 120.1, y: 399.4, zoom: 2.4, readout: '8.4657° N, 13.2317° W — Freetown' },
         { x: 901.6, y: 254.1, zoom: 2.4, readout: '28.2282° N, 112.9388° E — Changsha' },
         { x: 279.7, y: 90.1,  zoom: 5.0, readout: '50.7374° N, 7.0982° E — Bonn' },
-        { x: 273.5, y: 81.4,  zoom: 7.5, readout: '51.9692° N, 5.6654° E — Wageningen' },
-        { x: 269.9, y: 78.6,  zoom: 7.5, readout: '52.3676° N, 4.9041° E — Amsterdam' }
+        { x: 273.5, y: 81.4,  zoom: 7.5, close: true, readout: '51.9692° N, 5.6654° E — Wageningen' },
+        { x: 269.9, y: 78.6,  zoom: 7.5, close: true, readout: '52.3676° N, 4.9041° E — Amsterdam' }
     ];
     const VB_W = 1000, VB_H = 726;
+    // Tuned in a desktop's 660px column: screen px per map unit at zoom 1.
+    // A narrower frame keeps every mark its size on screen, and zooms
+    // further in where the stops are close, or a phone had the Rhine
+    // delta's four names in a patch 40px across.
+    const TUNED = 660 / VB_W;
+    // At a close stop the view centres on the middle of the delta's four
+    // names, not on the stop, so that a phone's band holds all of them
+    // (Amsterdam's to Bonn's, in map units: move it if the stops move).
+    const DELTA = [269, 84.4];
     let svg = null;
     let activeIndex = -1;
 
@@ -746,23 +772,31 @@ if (statsSection && 'IntersectionObserver' in window) {
         if (!svg) return;
         const stop = STOPS[index];
         const w = frame.clientWidth;
+        if (!w) return;
         const h = w * (VB_H / VB_W);
-        const s = stop.zoom;
-        const px = stop.x * (w / VB_W);
-        const py = stop.y * (h / VB_H);
+        const fh = frame.clientHeight || h;   // a phone's band shows less than the whole map
+        const z = stop.zoom;
+        const s = stop.close ? z * Math.max(1, TUNED * VB_W / w) : z;
+        const [fx, fy] = stop.close ? DELTA : [stop.x, stop.y];
+        const px = fx * (w / VB_W);
+        const py = fy * (h / VB_H);
         // centre the stop, but never drag the map edge inside the frame
         const tx = Math.min(0, Math.max(w - s * w, w / 2 - s * px));
-        const ty = Math.min(0, Math.max(h - s * h, h / 2 - s * py));
+        const ty = Math.min(0, Math.max(fh - s * h, fh / 2 - s * py));
+        // Low-energy mode and reduced motion: it jumps (style.css).
+        mapBox.classList.toggle('map-still', !motionOK());
         svg.style.transform = `translate(${tx.toFixed(1)}px, ${ty.toFixed(1)}px) scale(${s})`;
 
-        // Markers, labels and strokes live in map units — counter-scale them
-        // so zooming doesn't turn them into blobs. Strokes/fonts shrink as
-        // 1/sqrt(s) (a hint of growth); dots shrink harder (s^-0.7) so the
-        // Rhine-delta cluster stays separable at high zoom; label offsets
-        // shrink as 1/s so labels keep a constant on-screen distance.
-        const comp = 1 / Math.sqrt(s);
-        const dotComp = Math.pow(s, -0.7);
-        const offComp = 2 / s;
+        // Markers, labels and strokes live in map units, so each is sized
+        // here for the screen, as tuned in the desktop column: strokes grow
+        // as sqrt(zoom), dots barely (zoom^0.3, so the delta's stops stay
+        // apart), offsets not at all. Names are 11px on screen or more, and
+        // at most 3px past their base size: at 20px the delta's ran into
+        // each other.
+        const unit = s * w / VB_W;   // screen px per map unit, now
+        const comp = TUNED * Math.sqrt(z) / unit;
+        const dotComp = TUNED * Math.pow(z, 0.3) / unit;
+        const offComp = 2 * TUNED / unit;
         svg.style.setProperty('--zoom-comp', comp.toFixed(3));
         svg.querySelectorAll('.map-stop-dot, .map-you-dot').forEach(el => el.setAttribute('r', (3.2 * dotComp).toFixed(2)));
         svg.querySelectorAll('.map-stop-halo').forEach(el => el.setAttribute('r', (10 * dotComp).toFixed(2)));
@@ -773,12 +807,33 @@ if (statsSection && 'IntersectionObserver' in window) {
         svg.querySelectorAll('.map-stop-label, .map-site-label, .map-you-label').forEach(el => {
             const base = el.classList.contains('map-site-label') ? 9.5 :
                 el.classList.contains('map-you-label') ? 9 : 11;
-            el.style.fontSize = (base * comp).toFixed(2) + 'px';
+            const onScreen = Math.min(base + 3, Math.max(11, base * TUNED * Math.sqrt(z)));
+            el.style.fontSize = (onScreen / unit).toFixed(2) + 'px';
             if (el.dataset.cx) {
                 el.setAttribute('x', (+el.dataset.cx + el.dataset.dx * offComp).toFixed(1));
                 el.setAttribute('y', (+el.dataset.cy + el.dataset.dy * offComp).toFixed(1));
             }
         });
+
+        // The visitor's mark is a guess, so it gives way: over a stop's name
+        // or a site's (a visitor in Brussels, at the delta), it tries the
+        // dot's other corners.
+        const you = svg.querySelector('.map-you-label');
+        if (!you) return;
+        const corners = [[14, -6], [-14, -6], [14, 14], [-14, 14]];
+        let taken = [];
+        const tryCorner = ([dx, dy]) => {
+            you.setAttribute('x', (+you.dataset.cx + dx * offComp).toFixed(1));
+            you.setAttribute('y', (+you.dataset.cy + dy * offComp).toFixed(1));
+            you.setAttribute('text-anchor', dx > 0 ? 'start' : 'end');
+            const b = you.getBBox();
+            return !taken.some(o => b.x < o.x + o.width && o.x < b.x + b.width && b.y < o.y + o.height && o.y < b.y + b.height);
+        };
+        // Firefox throws for a box not laid out: skip that box, not the search.
+        taken = Array.from(svg.querySelectorAll('.map-stop-dot, .active text, .visited text')).flatMap((el) => { try { return [el.getBBox()]; } catch (e) { return []; } });
+        try {
+            if (!corners.some(tryCorner)) tryCorner(corners[0]);
+        } catch (e) { /* the mark not laid out: its first corner */ }
     };
 
     const setActive = (index) => {
@@ -818,23 +873,54 @@ if (statsSection && 'IntersectionObserver' in window) {
             document.dispatchEvent(new CustomEvent('journeymap:ready', { detail: { svg, mapBox, rescale } }));
             setActive(0);
 
-            const stops = document.querySelectorAll('.journey-stop');
-            if ('IntersectionObserver' in window && stops.length) {
-                const mapObserver = new IntersectionObserver((entries) => {
-                    entries.forEach(entry => {
-                        if (entry.isIntersecting) {
-                            const i = parseInt(entry.target.getAttribute('data-stop'), 10);
-                            if (!isNaN(i)) setActive(i);
-                        }
-                    });
-                }, { threshold: 0.6 });
+            // Beside the map, the stop shown is the one nearest a reading
+            // line 45% of the way down the screen. It was any stop 60% in
+            // view, often the next one arriving, so the map ran a stop
+            // ahead. The strip watched is wider than the gap between two
+            // stops.
+            const stops = Array.from(document.querySelectorAll('.journey-stop'));
+            const track = document.querySelector('.journey-track');
+            let mapObserver = null;
+            const watch = () => {
+                if (!('IntersectionObserver' in window) || !stops.length || !track) return;
+                if (mapObserver) mapObserver.disconnect();
+                const m = mapBox.getBoundingClientRect();
+                const t = track.getBoundingClientRect();
+                const css = getComputedStyle(mapBox);
+                const band = css.position === 'sticky' && m.left < t.right && t.left < m.right
+                    ? (parseFloat(css.top) || 0) + m.height : 0;
+                // On a phone the map is a band pinned over the stops: the
+                // stop shown is the first whose name is still below it, or,
+                // until the next name is on screen, the one just passed. By
+                // a reading line a stop stayed shown with its name under the
+                // band, the next stop whole below (by 190px at 360x640).
+                if (band) {
+                    const names = stops.map(s => s.querySelector('h3') || s);
+                    mapObserver = new IntersectionObserver(() => {
+                        const tops = names.map(h => h.getBoundingClientRect().top);
+                        let i = tops.findIndex(top => top >= band - 1);
+                        if (i < 0 || tops[i] >= window.innerHeight) i = Math.max(0, (i < 0 ? stops.length : i) - 1);
+                        setActive(+stops[i].getAttribute('data-stop'));
+                    }, { rootMargin: `${-Math.round(band)}px 0px 0px 0px`, threshold: [0, 1] });
+                    names.forEach(h => mapObserver.observe(h));
+                    return;
+                }
+                const line = window.innerHeight * 0.45;
+                const off = (el) => {
+                    const r = el.getBoundingClientRect();
+                    return Math.max(0, r.top - line, line - r.bottom);
+                };
+                mapObserver = new IntersectionObserver(() => {
+                    setActive(+stops.reduce((a, b) => (off(b) < off(a) ? b : a)).getAttribute('data-stop'));
+                }, { rootMargin: `${Math.round(24 - line)}px 0px ${Math.round(line + 24 - window.innerHeight)}px 0px` });
                 stops.forEach(stop => mapObserver.observe(stop));
-            }
+            };
+            watch();
 
             let resizeTimer;
             window.addEventListener('resize', () => {
                 clearTimeout(resizeTimer);
-                resizeTimer = setTimeout(() => { if (activeIndex >= 0) flyTo(activeIndex); }, 200);
+                resizeTimer = setTimeout(() => { watch(); if (activeIndex >= 0) flyTo(activeIndex); }, 200);
             });
         })
         .catch(() => { mapBox.style.display = 'none'; });
@@ -902,177 +988,6 @@ if (statsSection && 'IntersectionObserver' in window) {
     }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
 
     elements.forEach(el => revealObserver.observe(el));
-})();
-
-// ===================================
-// EXPANDABLE PROJECT DOSSIERS
-// ===================================
-// Each dossier opens from a real <button> around its title: announced as
-// "Sustainable AI Framework, button, collapsed", toggled by Enter or Space,
-// and inside the <h3> so heading navigation still finds it. The summary used
-// to be one <a href="#"> around the whole card — a sixty-word link name, and
-// Space scrolled the page. The rest of the summary stays clickable for a
-// mouse; the click from the button bubbles to the same handler.
-document.querySelectorAll('.project-card').forEach((card, i) => {
-    const summary = card.querySelector('.project-summary');
-    const toggle = card.querySelector('.project-toggle');
-    const details = card.querySelector('.project-details');
-    if (!summary || !toggle || !details) return;
-
-    // Disclosure semantics + keep collapsed content non-interactive. `inert`
-    // (with the CSS visibility:hidden fallback) takes the hidden galleries and
-    // mini-games out of the tab order and the accessibility tree until opened.
-    // The markup says open (aria-expanded="true"), as it is without
-    // JavaScript. It is closed here on a normal start; after a late one the
-    // reader has seen it, maybe mid-dossier, so it stays open, games fetched.
-    if (!details.id) details.id = `project-details-${i + 1}`;
-    toggle.setAttribute('aria-controls', details.id);
-    if (lateStart) {
-        card.classList.add('expanded');
-        details.style.maxHeight = details.scrollHeight + 'px';
-        if (details.querySelector('.dossier-widget, #floodSlider')) mksLoad('dossier').catch(mksLoadWarn);
-    } else {
-        details.inert = true;
-        toggle.setAttribute('aria-expanded', 'false');
-    }
-
-    // What is inside can grow after the dossier opens — a mini-game logs
-    // every drill, late images arrive — and a max-height measured at opening
-    // clipped it, leaving the end of the dossier hidden but still tabbable.
-    // The inner wrapper is not clamped, so its size is the content's; this
-    // also follows a resized window, which had a listener of its own.
-    const inner = details.querySelector('.project-details-inner');
-    if (inner && 'ResizeObserver' in window) {
-        new ResizeObserver(() => {
-            if (card.classList.contains('expanded')) details.style.maxHeight = details.scrollHeight + 'px';
-        }).observe(inner);
-    }
-
-    const collapse = (c) => {
-        const d = c.querySelector('.project-details');
-        const t = c.querySelector('.project-toggle');
-        c.classList.remove('expanded');
-        if (d) { d.style.maxHeight = '0px'; d.inert = true; }
-        if (t) t.setAttribute('aria-expanded', 'false');
-    };
-
-    summary.addEventListener('click', (e) => {
-        // Let real links inside the summary work normally
-        if (e.target.closest('a')) return;
-        e.preventDefault();
-
-        const isExpanded = card.classList.contains('expanded');
-
-        // Opening one closes any other, so the reader keeps their bearings.
-        // Closing one closes just that (after a late start all six are open).
-        if (!isExpanded) {
-            document.querySelectorAll('.project-card.expanded').forEach(open => {
-                if (open !== card) collapse(open);
-            });
-        }
-
-        const remeasure = () => {
-            if (card.classList.contains('expanded')) {
-                details.style.maxHeight = details.scrollHeight + 'px';
-            }
-        };
-
-        if (isExpanded) {
-            collapse(card);
-        } else {
-            card.classList.add('expanded');
-            details.inert = false;
-            details.style.maxHeight = details.scrollHeight + 'px';
-            toggle.setAttribute('aria-expanded', 'true');
-            // The mini-games inside a dossier load on its first opening —
-            // nothing in a collapsed dossier can be seen, so nothing in one
-            // is fetched until now.
-            if (details.querySelector('.dossier-widget, #floodSlider')) {
-                mksLoad('dossier').then(remeasure).catch(mksLoadWarn);
-            }
-            // Once images inside load, the content can grow — re-measure
-            setTimeout(remeasure, 450);
-        }
-    });
-});
-
-// ===================================
-// GALLERY LIGHTBOX
-// ===================================
-(() => {
-    const lightbox = document.getElementById('lightbox');
-    const lightboxImage = document.getElementById('lightboxImage');
-    const lightboxCaption = document.getElementById('lightboxCaption');
-    const lightboxClose = document.getElementById('lightboxClose');
-    if (!lightbox || !lightboxImage) return;
-
-    let lastFocus = null;
-
-    const open = (src, alt, caption) => {
-        lastFocus = document.activeElement;
-        lightboxImage.src = src;
-        lightboxImage.alt = alt || '';
-        if (lightboxCaption) lightboxCaption.textContent = caption || '';
-
-        // The dialog is named by its caption. Not every gallery item has one,
-        // and a dialog with no accessible name is announced as just "dialog",
-        // so the image's alt text stands in when the caption is empty.
-        if (caption) {
-            lightbox.setAttribute('aria-labelledby', 'lightboxCaption');
-            lightbox.removeAttribute('aria-label');
-        } else {
-            lightbox.removeAttribute('aria-labelledby');
-            lightbox.setAttribute('aria-label', alt || 'Enlarged image');
-        }
-
-        lightbox.classList.add('active');
-        lightbox.setAttribute('aria-hidden', 'false');
-        document.body.style.overflow = 'hidden';
-        if (lightboxClose) lightboxClose.focus();
-    };
-
-    const close = () => {
-        lightbox.classList.remove('active');
-        lightbox.setAttribute('aria-hidden', 'true');
-        // Restore rather than assert: 'auto' overrides whatever the stylesheet
-        // had to say about body overflow.
-        document.body.style.overflow = '';
-        if (lastFocus && typeof lastFocus.focus === 'function') lastFocus.focus();
-        lastFocus = null;
-    };
-
-    // The photo sits in a real button. A <figure> cannot take role=button —
-    // the role hides the figure and its caption from assistive technology —
-    // and a button brings Enter, Space and focus with it. A click anywhere on
-    // the figure, caption included, still opens it.
-    document.querySelectorAll('.gallery-item').forEach(item => {
-        const img = item.querySelector('img');
-        if (!img) return;
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'gallery-open';
-        btn.setAttribute('aria-label', 'View larger: ' + (img.alt || 'photo'));
-        img.replaceWith(btn);
-        btn.appendChild(img);
-        item.addEventListener('click', () => open(img.src, img.alt, item.getAttribute('data-caption')));
-    });
-
-    if (lightboxClose) lightboxClose.addEventListener('click', close);
-    lightbox.addEventListener('click', (e) => {
-        if (e.target === lightbox) close();
-    });
-    // The close button is the dialog's only focusable control — keep Tab on it
-    lightbox.addEventListener('keydown', (e) => {
-        if (e.key === 'Tab' && lightboxClose) {
-            e.preventDefault();
-            lightboxClose.focus();
-        }
-    });
-    mks.onKey('Escape', () => {
-        if (!lightbox.classList.contains('active')) return false;
-        close();
-        return true;
-    }, KEY_RANK.lightbox);
 })();
 
 // ===================================
@@ -1185,44 +1100,34 @@ if (contactForm) {
 // says what pressing it does, which also tells the current theme.
 const initThemeToggle = () => {
     const toggle = document.getElementById('themeToggle');
-    if (!toggle) return;
     const sync = () => {
-        const isLightMode = document.body.classList.contains('light-mode');
+        if (!toggle) return;
+        const isLightMode = document.documentElement.classList.contains('light-mode');
         const use = toggle.querySelector('use');
         if (use) use.setAttribute('href', `#i-${isLightMode ? 'sun' : 'moon'}`);
         toggle.setAttribute('aria-label', isLightMode ? 'Switch to dark theme' : 'Switch to light theme');
     };
     sync();
+    // Back to a page kept whole: the choice may have changed elsewhere since.
+    window.addEventListener('pageshow', (e) => {
+        if (e.persisted && mks.theme) { mks.theme(); sync(); }
+    });
+    if (!toggle) return;
     toggle.hidden = false;
 
+    // mks.theme puts the theme on <html> and the browser's bar (the address
+    // bar on a phone) with it: told which, it needs no storage to do so.
     toggle.addEventListener('click', () => {
-        document.body.classList.toggle('light-mode');
-        const isLightMode = document.body.classList.contains('light-mode');
-        safeStorage.local.set('theme', isLightMode ? 'light' : 'dark');
+        const next = document.documentElement.classList.contains('light-mode') ? 'dark' : 'light';
+        safeStorage.local.set('theme', next);
+        mks.theme(next);
         sync();
-        syncThemeColor();
     });
 };
 
-// The browser chrome (address bar on phones, title bar as an installed app)
-// takes its colour from <meta name="theme-color">, which was hardcoded to
-// the dark background — so light mode sat under a black bar.
-const themeColorMeta = document.querySelector('meta[name="theme-color"]');
-const syncThemeColor = () => {
-    if (!themeColorMeta) return;
-    const light = document.body.classList.contains('light-mode');
-    themeColorMeta.setAttribute('content', light ? THEME_COLOR_LIGHT : THEME_COLOR_DARK);
-};
-const THEME_COLOR_DARK = '#0a0a0a';
-const THEME_COLOR_LIGHT = '#f4f6f0';
-
-// Restore saved preference, then mount the toggle
-const currentTheme = safeStorage.local.get('theme', 'dark');
-if (currentTheme === 'light') {
-    document.body.classList.add('light-mode');
-}
+// The theme is on the page already (mks.theme, in index.html's <head>, on
+// <html>, and the bar); the switch follows it.
 initThemeToggle();
-syncThemeColor();
 
 // ===================================
 // KEYBOARD NAVIGATION
@@ -1308,7 +1213,7 @@ document.querySelectorAll('.current-year').forEach(el => {
 // ===================================
 // INTERACTIVES — the trigger
 // ===================================
-// "AI, Weighed", You Draw It, Anatomy of a Prompt, The Assay and The Receipt
+// You Draw It in "AI, Weighed", The Assay and The Receipt
 // (modules/interactives.js, with ai-carbon-data.js behind them) load when
 // any of their homes comes within about a screen of the viewport, so they
 // are drawn by the time the visitor arrives — and on the first press of one
@@ -1335,11 +1240,13 @@ document.querySelectorAll('.current-year').forEach(el => {
     // Presses waiting for the module. A second press on the same button
     // while it is on its way is the same request: replaying both opened the
     // receipt and closed it again.
+    // The Assay's own open button is this file's, not the module's: it asks
+    // for the module itself, and a replay would close it again.
     const waiting = new Set();
     document.addEventListener('click', (e) => {
         if (mks.loaded.interactives) return;
         const btn = e.target && e.target.closest ? e.target.closest('button') : null;
-        if (!btn || !btn.closest(INTERACTIVE_HOSTS)) return;
+        if (!btn || !btn.closest(INTERACTIVE_HOSTS) || btn.classList.contains('assay-open')) return;
         e.preventDefault();
         if (waiting.has(btn)) return;
         waiting.add(btn);
@@ -1348,6 +1255,74 @@ document.querySelectorAll('.current-year').forEach(el => {
             .then(() => btn.click(), mksLoadWarn)
             .then(() => waiting.delete(btn));
     });
+})();
+
+// ===================================
+// EXPERIENCE — short cards
+// ===================================
+// style.css shows each role as its title, organisation, dates and first
+// line, and keeps the rest of the card until it is asked for: the whole
+// log was 5.3 screens on a 390px phone and 2.6 on a desktop. The button
+// that asks is made here, because nothing could press it without this
+// script; without it every card is whole. A late start leaves them open:
+// the reader has seen them whole, and the takeover below puts back the
+// html.js that folds them.
+(() => {
+    document.querySelectorAll('.corelog-item .timeline-content').forEach((card, i) => {
+        const list = card.querySelector('ul');
+        if (!list || (list.children.length < 2 && !card.querySelector('.tags'))) return;
+        if (!list.id) list.id = `corelog-more-${i + 1}`;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'corelog-more';
+        btn.setAttribute('aria-controls', list.id);
+        // Five buttons that all say "More" are one name five times in a
+        // screen reader's list of controls; each is told apart by its role.
+        const word = document.createTextNode('');
+        const role = document.createElement('span');
+        role.className = 'sr-only';
+        role.textContent = ` about ${(card.querySelector('h3') || {}).textContent || 'this role'}`;
+        btn.append(word, role);
+        const show = (open) => {
+            card.classList.toggle('is-open', open);
+            btn.setAttribute('aria-expanded', String(open));
+            word.textContent = open ? 'Less' : 'More';
+        };
+        show(lateStart);
+        btn.addEventListener('click', () => {
+            show(!card.classList.contains('is-open'));
+            document.dispatchEvent(new CustomEvent('mks:layout'));
+        });
+        card.appendChild(btn);
+    });
+})();
+
+// ===================================
+// THE ASSAY — one button under the form
+// ===================================
+// Open, the Assay was 470px of a desktop and 660 of a phone under the
+// contact form, for the few who want it. Its question and its promise
+// stay in view; the box to paste into, the samples and the verdict open
+// from a button that says what it does. Made here, like the experience
+// cards' More: without this script the Assay is not shown at all (it
+// cannot run), and style.css folds the box only once the button exists.
+(() => {
+    const assay = document.getElementById('assay');
+    const body = document.getElementById('assayBody');
+    const head = assay && assay.querySelector('.assay-head');
+    if (!body || !head) return;
+    head.insertAdjacentHTML('afterend', '<button type="button" class="btn btn-secondary btn-small assay-open" data-analytics="assay-open" ' +
+        `aria-controls="${body.id}" aria-expanded="false">Grade a job description ` +
+        '<svg class="icon" aria-hidden="true" focusable="false"><use href="#i-chevron-down"></use></svg></button>');
+    const btn = head.nextElementSibling;
+    btn.addEventListener('click', () => {
+        const open = !assay.classList.contains('is-open');
+        assay.classList.toggle('is-open', open);
+        btn.setAttribute('aria-expanded', String(open));
+        if (open) mksLoad('interactives').catch(mksLoadWarn);
+        document.dispatchEvent(new CustomEvent('mks:layout'));
+    });
+    assay.classList.add('is-folding');
 })();
 
 // ===================================
@@ -1566,7 +1541,7 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
 // ===================================
 // Everything the stylesheet's html.js rules wait on has run, so the <head>
 // failsafe can stand down. On a late start every reveal is marked done
-// first, as the dossiers were kept open: putting the mark back must not hide
+// first: putting the mark back must not hide
 // what the reader has seen, nor move it, though it brings back widgets
 // above them (and estimated heights). The line a third of the way down is
 // put back where it was, and held there while they fill in: that was left
@@ -1594,9 +1569,7 @@ mks.ready = true;
 // ===================================
 // The counting itself is count.js, on every page: it keeps this visit's list
 // of features used, counts every [data-analytics] click into it, and sends
-// the list once as the page is left (never under Do Not Track or GPC). It
-// used to be a dispatcher into Plausible or gtag, neither of which was ever
-// switched on, so nothing had been counted at all.
+// the list once as the page is left (never under Do Not Track or GPC).
 //
 // This adds the one conversion that is not a click on a hook: the contact
 // form being sent, by its button or by Enter. count.js is deferred and runs
@@ -1617,10 +1590,8 @@ mks.ready = true;
 // it reads) is about 16 KB gzipped that only a visitor who presses Listen
 // needs. So the core only decides whether to show the button; the first
 // press fetches the player, which reads the section in view and moves
-// between sections itself.
-//
-// There used to be ten of these, one in every section header: eight-plus
-// extra Tab stops for a feature most visits never use. One is enough.
+// between sections itself. One control, not one per section (eight-plus
+// Tab stops for a feature most visits never use).
 //
 // The button stays hidden unless something can actually speak. A speech
 // engine that reports no voices (headless browsers, Linux without

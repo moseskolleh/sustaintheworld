@@ -12,16 +12,20 @@ check it. A path such as `content/profile.json` → `experience[4].teamSize`
 means that file, then that field (lists count from 0). After editing anything
 in `content/`, run `npm run build:content` and then `npm test`.
 
-Last updated with wave 2 of the plan (Phase 1, the visit counter and open
-counts, and Phase 6 steps 3, 6 and 7), 2026-09-27. Wave 1 covered Phase 0 and
-the narration steps of Phases 2.5 and 4.3.
+Last updated with wave 3 of the plan (Phase 2, the recruiter-first homepage,
+and Phase 6 step 8, the carbon receipt on every pull request), 2026-09-28.
+Wave 1 covered Phase 0 and the narration steps of Phases 2.5 and 4.3; wave 2
+covered Phase 1 (the visit counter and open counts) and Phase 6 steps 3, 6
+and 7. Waves 1 and 2 are on `main` (pull requests #48 and #49, the second
+merged 2026-09-27); wave 3 is the Phase 2 pull request S7 is about.
 
-**Before this branch reaches the live site,** run the one-line check at the
-top of S1, and if you can, do C2 (publish the current `Code.gs`, which now
-includes the visit counter). The site's new visit counter posts to the same
-deployment as the contact form, and the 2025 versions of the script would
-record every page view as a message and email it to you; if the check says
-the live script might be one of those, C2 must come first.
+**Now that wave 2 is on `main`** (and so on the live site once GitHub Pages
+has rebuilt), run the one-line check at the top of S1, and if you can, do C2
+(publish the current `Code.gs`, which includes the visit counter). The
+site's visit counter, on every page since #49 was merged, posts to the same
+deployment as the contact form, and the 2025 versions of
+the script would record every page view as a message and email it to you; if
+the check says the live script might be one of those, do C2 at once.
 
 ---
 
@@ -71,7 +75,7 @@ https://script.google.com/macros/s/AKfycbzgyqRUmu0d2UFjb0WxbYyoDbO8F9jVnlvIQnNAf
     code in the editor does not change the live endpoint; only a new
     deployment version does. One publish of the current file covers all
     three.
-  - *When:* before this branch is merged to `main`, if you can (see S1).
+  - *When:* now: the counter has been on `main` since 2026-09-27 (see S1).
   - *Steps:*
     1. Open `google-apps-script/Code.gs` in this repository (last changed
        2026-09-27, when the visit counter was added), copy all of it, and
@@ -106,10 +110,11 @@ https://script.google.com/macros/s/AKfycbzgyqRUmu0d2UFjb0WxbYyoDbO8F9jVnlvIQnNAf
     land on a plain page titled "Message sent" that says "Thank you" and
     "Response recorded successfully!", with a link back. "Something went
     wrong" or "undefined" means C2 has not taken effect.
-    - This needs wave 1 on the live site. Until this branch is merged and
-      GitHub Pages has rebuilt, the live homepage without JavaScript is still
-      covered by its loading screen. To test the same server path before
-      then, post the form's fields the way the browser would:
+    - This needs wave 1 on the live site. It is on `main` (pull request
+      #48); if the live homepage without JavaScript still shows only its
+      loading screen, GitHub Pages has not rebuilt from `main` yet. To test
+      the same server path without the page, post the form's fields the way
+      the browser would:
 
       ```bash
       curl -L "https://script.google.com/macros/s/AKfycbzgyqRUmu0d2UFjb0WxbYyoDbO8F9jVnlvIQnNAfMU0v8JFpH5KAefy4z9BNoQqd68/exec" \
@@ -145,17 +150,17 @@ README under "The visit counter and privacy".
 
 - [ ] **S1. Give the script a `STATS_TOKEN`, publish the counter, then run
   `testCounter()` once.**
-  - *First, before this branch is merged to `main`:* find out how old the
+  - *First, now (wave 2 reached `main` on 2026-09-27):* find out how old the
     live script is. Run `curl -L "<the URL above>"` (or open that address in
     a browser). If the reply is an HTML page rather than one line of JSON
     (the old page says "Form Response Capture API" and names the
     spreadsheet), the live script is from before 2026-08-05, and may be one
     of the 2025 versions, which record any POST as a contact message and
-    email it to you. Once the site ships `count.js`, that would be one row
-    and one email per page view, so publish (below) before merging. If it prints `{"status":"ok",...}`, the live script is
-    from 2026-08-05 or later: it reads a count as a message with no name and
-    refuses it, recording nothing, so merging first is harmless, and nothing
-    is counted until you publish.
+    email it to you. With `count.js` on the live site, that is one row and
+    one email per page view, so publish (below) at once. If it prints
+    `{"status":"ok",...}`, the live script is from 2026-08-05 or later: it
+    reads a count as a message with no name and refuses it, recording
+    nothing, so no harm is done, and nothing is counted until you publish.
   - *The token:* the daily totals `?action=stats` serves are not suppressed,
     and the web app's address is in `count.js` on every page, so the script
     serves them only to a request carrying `&token=` set to the
@@ -182,7 +187,7 @@ README under "The visit counter and privacy".
   - *Check:* `curl -L "<the URL above>?action=stats&token=<STATS_TOKEN>"`
     prints `{"v":1,"rows":[...]}`, and the same without `&token=...` prints
     `{"status":"refused",...}` and no rows; before the publish both printed
-    the health check. Once the branch is live, open a page of the site in a
+    the health check. Then open a page of the live site in a
     browser with neither Do Not Track nor Global Privacy Control on, switch
     to another tab, and run the first `curl` again: today's `visits` row has
     gone up by one.
@@ -205,12 +210,12 @@ README under "The visit counter and privacy".
   - *Order:* after S1. Before it, `?action=stats` answers with the health
     check, and the Action fails rather than publish that. Without the right
     token it answers `refused`, and the Action fails and says so.
-  - *If `main` is protected:* the Action commits `content/stats.json` and
-    `stats.html` straight to `main` as `github-actions[bot]`. If a branch
-    rule blocks direct pushes, let GitHub Actions bypass it, or the weekly
-    commit fails.
-  - *Check:* the Action runs from `main`, so after this branch is merged:
-    **Actions → Open counts → Run workflow**. Its "Fetch the week's totals"
+  - *If `main` is protected:* the Action commits `content/stats.json`,
+    `stats.html` and the README's budget table straight to `main` as
+    `github-actions[bot]`. If a branch rule blocks direct pushes, let GitHub
+    Actions bypass it, or the weekly commit fails.
+  - *Check:* the Action runs from `main`, where it has been since pull
+    request #49: **Actions → Open counts → Run workflow**. Its "Fetch the week's totals"
     step prints `fetch-stats: N row(s) from script.google.com (json), <first
     day> to <last day> → content/stats.json`, or
     `script.google.com has no daily totals yet` if nothing has been counted,
@@ -300,13 +305,45 @@ README under "The visit counter and privacy".
     its own first four weeks (no before-and-after, but a baseline for every
     later change).
   - *Where:* your merge of the Phase 2 (Wave 3) pull request; note the choice
-    under Phase 1, step 5 in `docs/plan.md` → "Progress".
+    under Phase 1, step 5 in `docs/plan.md` → "Progress". `stats.html` says
+    only that the first four weeks are the baseline for every change after
+    them, which holds whichever you choose; it does not promise a
+    before-and-after.
   - *Check:* the figures in `docs/plan.md` match `content/stats.json` →
     `weeks` for the same four weeks.
 
 ---
 
 ## Facts about you the site cannot state yet
+
+**The at-a-glance strip (Phase 2.1).** Wave 3 put a strip of facts under the
+homepage hero's copy, written by `npm run build:content` from
+`content/profile.json` into `index.html` between the `AT-A-GLANCE` markers.
+Today it shows two: the roles you are open to and your location. The four a
+recruiter checks next are missing, and a missing fact is left out rather
+than shown as "TBC":
+
+| Fact | Where it goes in `content/profile.json` | Today | Item |
+|---|---|---|---|
+| Seniority | `atAGlance.seniority` | `null`, not shown | F3 |
+| Available from | `atAGlance.availableFrom` | `null`, not shown | F3 |
+| Languages, with your Dutch level | a top-level `languages` list | absent, not shown | F1 |
+| Right to work in the NL and the EU (and whether a visa needs sponsoring) | `atAGlance.rightToWork` | `null`, not shown | F2 |
+
+Each is a short phrase, and "short" is a number: `npm test` refuses a
+seniority over 32 characters, a right to work over 48, or languages that
+come to more than 80 as the strip writes them ("English (C2) · Dutch
+(B1)"). On a phone the strip shares the first screen with the buttons and
+the hero's figures, and the limits are what fits.
+
+To check all four at once: after `npm run build:content`, `index.html`
+between `<!-- AT-A-GLANCE:START` and `<!-- AT-A-GLANCE:END -->` has a
+"Seniority", "Available", "Languages" and "Right to work" line above
+"Location", `npm test` passes, and so does `npm run smoke` (the pull
+request's smoke job runs it for you): its "first view at" lines check
+that the figures are still on the first screen at 1440×900 and 390×844,
+and its "longest strip at" lines check the same for the longest strip the
+limits allow.
 
 - [ ] **F1. Languages and levels.**
   - *What:* every language you work in, named in English, with a CEFR level
@@ -317,29 +354,62 @@ README under "The visit counter and privacy".
   - *Unlocks:* the Assay stops treating every non-English language as a gap.
     Today every such requirement reads "Not evidenced on this site. Ask
     Moses.", and an English requirement is listed as "Level of English" to
-    confirm with you; with English in the list it is matched instead. Later, the at-a-glance strip (Phase 2.1) and `knowsLanguage` in
-    the structured data (Phase 5.4).
-  - *Check:* `npm run build:content` copies it into `modules/interactives.js`;
-    `npm test` rejects a level that is not A1–C2 or "native". Paste an ad of
-    20 words or more (shorter text is not graded) that asks for "fluent
-    Dutch" into the Assay: the Dutch row shows your level.
+    confirm with you; with English in the list it is matched instead. The
+    same list fills "Languages" in the homepage's at-a-glance strip (Phase
+    2.1), which leaves the line out until then; later, `knowsLanguage` in the
+    structured data (Phase 5.4).
+  - *Check:* `npm run build:content` copies it into `modules/interactives.js`
+    and into the at-a-glance strip in `index.html`; `npm test` rejects a
+    level that is not A1–C2 or "native". Paste an ad of 20 words or more
+    (shorter text is not graded) that asks for "fluent Dutch" into the
+    Assay: the Dutch row shows your level.
 
 - [ ] **F2. Right to work, visa sponsorship, driving licence, security clearance.**
   - *What:* whether you have the right to work in the Netherlands and the EU,
     whether an employer would need to sponsor a visa, whether you hold a
     driving licence (and where it is valid), and any security clearance. No
     document numbers.
-  - *Where:* no field exists yet. Phase 2.1 adds these to `content/profile.json`
-    with the at-a-glance strip; until then, give them to whoever builds it.
-  - *Unlocks:* the at-a-glance strip. Today the Assay only lists these, and
-    relocation, under "Confirm with Moses — not stated on this site".
-  - *Check:* once the strip is built, it shows them, and the Assay answers
-    instead of asking.
+  - *Where:* right to work and sponsorship: `content/profile.json` →
+    `atAGlance.rightToWork`, one short phrase covering both (it is `null`
+    today). Driving licence and security clearance have no field yet: no
+    page shows them, so give them to whoever next works on the Assay.
+  - *Unlocks:* "Right to work" in the homepage's at-a-glance strip, which
+    leaves the line out while the field is `null`. Today the Assay only
+    lists these, and relocation, under "Confirm with Moses — not stated on
+    this site"; it does not read the strip's facts yet.
+  - *Check:* after `npm run build:content`, the strip under the hero shows
+    it. `npm test` refuses a stand-in such as "TBC" or "n/a": leave the
+    field `null` until you can state it.
 
 - [ ] **F3. Target roles, seniority and available-from date** (Phase 2.1).
-  - *Where:* `content/profile.json`, in the fields Phase 2.1 adds.
-  - *Unlocks:* the first view saying which job you want and when you can start.
-  - *Check:* the at-a-glance strip on the homepage shows them.
+  - *Where:* `content/profile.json` → `atAGlance`:
+    - `targetRoles`: "sustainability, climate-risk, ESG and sustainable-AI
+      roles and consulting". The site's availability line said
+      "sustainability, climate-risk & ESG roles and consulting"; wave 3
+      added sustainable AI, your current field, because plan step 2.1 asks
+      for it. That addition is the site's wording, not yours yet: confirm
+      it, or correct it. The same words open the hero's "Open to …" line
+      and the closing call to action on the case studies, research, open
+      counts and AI, Weighed pages ("Open to …: write to me at …"). The
+      homepage's Contact section says the same in its own words, written
+      by hand in `index.html` ("Open to roles & consulting in
+      sustainability, climate risk, ESG and sustainable AI"), and so does
+      its narration (the `contact` script in `content/narration.json`): if
+      you correct the field, correct those two lines too.
+    - `seniority`: `null` today. One short phrase for the level of role
+      you are looking for.
+    - `availableFrom`: `null` today. `"now"`, or a date as `YYYY-MM` or
+      `YYYY-MM-DD`; the strip shows it as "Now", "Jan 2027" or
+      "15 Jan 2027". A past date does not fail the build (`npm test`
+      prints a notice), so update it when you check `meta.verifiedOn`.
+    - The location line comes from `person.locality` and `person.country`.
+      `atAGlance.workArea` (`["EU", "remote-friendly"]`, as the page already
+      said) follows the roles on the "Open to …" line, where it reads as the
+      preference it is rather than as a right to work.
+  - *Unlocks:* the first view saying which job you want and when you can
+    start. A `null` field is left out of the strip entirely.
+  - *Check:* after `npm run build:content`, the strip under the hero shows
+    each one, and `npm run build:check` passes.
 
 - [ ] **F4. Which roles count as paid professional experience.**
   - *What:* for each role in `content/profile.json` → `experience`, whether it
@@ -374,8 +444,10 @@ README under "The visit counter and privacy".
   - *Where:* `content/projects.json` → the `groundwater` case study →
     `results[0].basis`, which today says no source is recorded.
   - *Unlocks:* the "illustrative — not a measured figure" labels on the Seven
-    in Ten widget and the borehole game can be replaced by the basis. Without
-    one, the labels stay (`tests/content.test.js` requires them).
+    in Ten widget (the borehole game and its scoreboard, on the groundwater
+    case study; its copy is `WIDGET_HOSTS.borehole` in
+    `scripts/build-content.js`) can be replaced by the basis. Without one, the
+    labels stay (`tests/widgets.test.js` requires them).
   - *Check:* the basis names the source; the labels are changed in the same
     commit, and `npm test` passes.
 
@@ -430,9 +502,12 @@ README under "The visit counter and privacy".
     range.
   - *Where:* `ai-carbon-data.js`, with `source`, `range` and a review date like
     every other factor (`tests/carbon.test.js` fails a factor without them).
-  - *Unlocks:* Scope 3 as a number on both `carbon-ai.html` and the homepage's
-    Anatomy of a Prompt at once. Today both name Scope 3 and exclude it.
-  - *Check:* `npm test` passes and both pages show the same figure.
+  - *Unlocks:* Scope 3 as a number in `carbon-ai.html`'s calculator and in
+    its Anatomy of a Prompt at once (Anatomy moved there from the homepage in
+    wave 3, and draws the calculator's own figures). Today both name Scope 3
+    and exclude it.
+  - *Check:* `npm test` passes and the calculator and Anatomy show the same
+    figure.
 
 ---
 
@@ -450,9 +525,10 @@ already on the site; confirm it or give the right value.
 - [ ] **K3. Wuppertal: did you formally lead the six-person team?** The case
   study's role says "Interdisciplinary team of six", and the CV claims
   neither way. Until you say, every page says "Worked in a six-person
-  interdisciplinary team": the homepage badge ("Team of six") and dossier
-  bullet, the field report, and `content/projects.json` → `wuppertal` →
-  `method[0]`. If you led it, all four can say so again.
+  interdisciplinary team": the field report, the case study's `role`, and
+  `content/projects.json` → `wuppertal` → `method[0]`. (The homepage badge
+  and dossier bullet went with the dossiers; the homepage card is drawn from
+  the case study.) If you led it, all three can say so again.
 - [ ] **K4. Thesis periods.** The site now uses, everywhere: coastal thesis
   2023–2024 (Wageningen) and soft-path thesis 2020–2021 (Hunan, defended May
   2021). `content/projects.json` → `coastal.period` and
@@ -465,13 +541,57 @@ already on the site; confirm it or give the right value.
   Ministry of Finance project is still described, in your words, as mapping
   "Scope 2 electricity, Scope 3 hardware, and data-centre water"
   (`content/projects.json` → `sustainable-ai` → `method[0]`, the homepage
-  dossier and experience entry, the field report). If the ministry's own
+  experience entry, the field report). If the ministry's own
   boundary was the hosted-service one, say so and those lines can name it.
 
-*Check for K1, K2 and K4:* change the value in `content/`, run
+- [ ] **K6. The soft-path thesis title.** The site now spells it one way
+  everywhere: "Approach to soft path water management: thinking beyond
+  cement, steel and pipes — Freetown as case study" (`content/research.json`,
+  and in `content/projects.json` → `water-management` the artifact and the
+  defence photo's caption, which said "Approach for"). If the title on the
+  thesis is different, change all three.
+
+*Check for K1, K2, K4 and K6:* change the value in `content/`, run
 `npm run build:content`, and `npm test` names every page that still disagrees.
-K3 has no test behind it: the homepage badge and dossier bullet, the field
-report, and the case study's `method[0]` are changed together, by hand.
+K3 has no test behind it: the field report and the case study's `role` and
+`method[0]` are changed together, by hand.
+
+---
+
+## Confirm two choices wave 3 made (Phase 2)
+
+Wave 3 made two choices you may want the other way. Neither blocks
+anything.
+
+- [ ] **P1. The photo on each project card.**
+  - *What:* each of the homepage's six project cards shows one thumbnail,
+    chosen from the photos its old dossier already used.
+  - *Where:* `content/projects.json` → `caseStudies[i].photo`: `src`,
+    `thumb` (the same picture 480px wide), `width`, `height` and `alt`. Any
+    photo in that case study's `gallery` will do; one without a 480px
+    `thumb` needs one made (`cwebp -resize 480 0 -q 72`), and every image in
+    the repository counts against a 3.5 MB budget with about 140 KB free.
+    Then `npm run build:content`.
+  - *Unlocks:* the cards show the pictures you would pick.
+  - *Check:* `npm test` passes (`tests/portfolio.test.js` holds each card's
+    stated size to its file), and the homepage's Projects section shows them.
+
+- [ ] **P2. The case studies' photo rows: folded or open?**
+  - *What:* the 25 field photos that were in the dossiers are back on their
+    case studies, one row under each, folded behind a line such as
+    "5 photos" until pressed, so nothing is fetched until then.
+  - *Where:* to show them open, add `open` to the `<details class="cs-photos">`
+    in `photoStrip()` in `scripts/build-content.js`, then
+    `npm run build:content`.
+  - *Cost:* open, the six rows make `case-studies.html` about 940px longer
+    than folded at 1440×900 (1,288px against 348px), about a screen, which
+    takes it past its length ceiling (11.28 screens measured, 11.85 allowed),
+    and a reader who only scrolls would fetch up to 2.2 MB of photos.
+    Something of equal length would have to come off the page first, since
+    ceilings are not raised.
+  - *Check:* nothing to check while they stay folded. Opened, each case
+    study shows its photos without a press, and `npm run smoke` passes its
+    length check once something of equal length has gone.
 
 ---
 

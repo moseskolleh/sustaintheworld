@@ -1,0 +1,198 @@
+/* DOSSIER WIDGETS — fetched with dossier.js by case-studies.html as a host
+   nears the screen. Colours come from carbon-ai.css's tokens (fallbacks
+   where it has none) and no rule names a theme, so they follow the page's. */
+.cs-play {
+    --dw-mono: var(--font-mono, 'IBM Plex Mono', 'Courier New', monospace);
+    --dw-panel: var(--card-bg-2, var(--card-bg));
+    --dw-water: #3f9be0;
+}
+
+.cs-play.is-live {
+    padding: 18px 20px 16px;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+}
+
+.dw-intro {
+    margin: 0 0 14px;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    max-width: 68ch;
+}
+
+.cs-play.is-live .cs-play-summary { margin-top: 12px; font-size: 0.8rem; }
+
+.dw-btn {
+    font: 500 0.8rem/1.2 var(--dw-mono);
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--primary-green);
+    background: none;
+    color: var(--primary-green);
+    cursor: pointer;
+}
+.dw-btn-primary { background: var(--primary-green); color: var(--darker-bg); }
+.dw-btn[aria-disabled="true"] { opacity: 0.55; cursor: progress; }
+.dw-btn:focus-visible { outline: 2px solid var(--primary-green); outline-offset: 2px; }
+
+.dw-label,
+.flood-ticks,
+.strike-row-label {
+    font-family: var(--dw-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    color: var(--text-secondary);
+}
+
+/* Sized in drawing units times --k (set by dossier.js), so a label renders
+   at 12px, 11 for the small print, at any width: not ~5px on a phone. */
+.bh-label,
+.fl-label {
+    font-family: var(--dw-mono);
+    font-size: calc(12px * var(--k, 1));
+    fill: var(--text-secondary);
+}
+.bh-label-dim { font-size: calc(11px * var(--k, 1)); opacity: 0.8; }
+/* Over the holes, haloed: under, a shaft struck through them. */
+.bh-label-ground { paint-order: stroke; stroke: color-mix(in srgb, var(--primary-green) 7%, var(--card-bg)); stroke-width: calc(5px * var(--k, 1)); }
+
+/* --- Seven in ten: site the borehole ------------------------------- */
+.borehole-stage {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: crosshair;
+    touch-action: none;
+}
+.borehole-stage:focus-visible { outline: 2px solid var(--primary-green); outline-offset: 2px; }
+
+/* Past this the drawings only grow taller, and the page longer. */
+.borehole-stage,
+.flood-stage,
+.flood-controls { max-width: 600px; }
+
+.borehole-svg,
+.flood-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.bh-curve { fill: none; stroke: var(--primary-green); stroke-width: 1.8; }
+.bh-ground {
+    fill: rgba(124, 252, 0, 0.05);
+    fill: color-mix(in srgb, var(--primary-green) 7%, transparent);
+}
+.bh-surface { fill: none; stroke: var(--text-secondary); stroke-width: 1.4; }
+.bh-strata { stroke: var(--border); stroke-dasharray: 6 8; }
+.bh-rig-base { fill: var(--text-secondary); }
+.bh-rig-mast { fill: none; stroke: var(--text-primary); stroke-width: 2.4; stroke-linecap: round; }
+.bh-hole { stroke: var(--text-secondary); stroke-width: 2.6; opacity: 0.7; }
+.bh-water-col { stroke: var(--dw-water); stroke-width: 2.6; }
+.bh-reveal-water { fill: rgba(63, 155, 224, 0.3); }
+.bh-reveal-clay { fill: rgba(191, 142, 84, 0.3); }
+.bh-gush { fill: none; stroke: var(--dw-water); stroke-width: 2; stroke-linecap: round; }
+.bh-gush-anim { animation: bhGush 0.9s ease-out; }
+
+@keyframes bhGush {
+    0%   { opacity: 0; transform: scale(0.4); transform-origin: center; transform-box: fill-box; }
+    60%  { opacity: 1; }
+    100% { opacity: 1; }
+}
+
+.borehole-hud {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 12px;
+    margin-top: 12px;
+}
+
+.borehole-result {
+    margin: 10px 0 14px;
+    min-height: 3em;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: var(--text-primary);
+}
+
+.strike-board { margin: 0; }
+.strike-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 14px;
+    margin: 0 0 8px;
+}
+.strike-row-label { flex: 0 1 30em; }
+.strike-waffle {
+    flex: 0 0 220px;
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 4px;
+}
+.strike-cell {
+    aspect-ratio: 1;
+    border-radius: 3px;
+    border: 1px solid var(--border);
+    transition: background-color 0.25s ease, border-color 0.25s ease;
+}
+.strike-cell.water { background: var(--dw-water); border-color: var(--dw-water); }
+.strike-cell.dry {
+    background: rgba(176, 176, 176, 0.35);
+    background: color-mix(in srgb, var(--text-secondary) 40%, transparent);
+    border-color: transparent;
+}
+
+/* --- Don't let it become a boat ------------------------------------ */
+.flood-stage {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.fl-bank {
+    fill: rgba(124, 252, 0, 0.07);
+    fill: color-mix(in srgb, var(--primary-green) 9%, transparent);
+}
+.fl-building {
+    fill: rgba(124, 252, 0, 0.1);
+    fill: color-mix(in srgb, var(--primary-green) 13%, transparent);
+    stroke: var(--border);
+}
+.fl-window { fill: var(--dw-panel); }
+.fl-pylon { fill: none; stroke: var(--text-secondary); stroke-width: 5; stroke-linecap: round; }
+.fl-beam { fill: var(--text-secondary); }
+.fl-car { fill: var(--primary-green); opacity: 0.85; }
+.fl-car-window { fill: var(--darker-bg); opacity: 0.8; }
+.fl-water { fill: rgba(63, 155, 224, 0.55); }
+.fl-refline { stroke: var(--dw-water); stroke-width: 1; stroke-dasharray: 5 6; opacity: 0.7; }
+/* The water's blue drawn towards the text colour: a label on a dark page
+   or a light one, where the plain blue is 3:1 on white. */
+.fl-label {
+    fill: var(--dw-water);
+    fill: color-mix(in srgb, var(--dw-water) 65%, var(--text-primary));
+}
+
+.flood-controls { margin-top: 14px; }
+.dw-label { display: block; margin-bottom: 6px; }
+#floodLevelLabel { color: var(--primary-green); }
+.flood-controls input[type="range"] { width: 100%; accent-color: var(--primary-green); }
+.flood-ticks { display: flex; justify-content: space-between; margin-top: 2px; }
+
+.flood-note {
+    margin: 12px 0 0;
+    min-height: 3em;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: var(--text-primary);
+}
+
+@media (max-width: 600px) {
+    .cs-play.is-live { padding: 14px 12px 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .strike-cell { transition: none; }
+}

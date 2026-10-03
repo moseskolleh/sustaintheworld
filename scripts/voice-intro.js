@@ -202,7 +202,15 @@ if (require.main === module) {
         console.log(`  captions: the ${words}-word intro script in content/narration.json.`);
         console.log('  If you changed any words while recording, edit that script to match what you said,');
         console.log('  then run this again, so the captions are what a listener actually hears.');
-        console.log('\n  next: npm test, then commit assets/audio/intro.mp3 and assets/audio/voice-manifest.json\n');
+        // The README's budget table quotes the audio's weight, and npm test
+        // fails while it is out of date.
+        try {
+            require('child_process').execFileSync(process.execPath, [path.join(__dirname, 'check-budget.js'), '--readme'], { stdio: 'ignore' });
+            console.log('  README.md: the budget table now counts it.');
+        } catch (e) {
+            console.log('  README.md: could not rewrite its budget table; run `npm run budget -- --readme`.');
+        }
+        console.log('\n  next: npm test, then commit assets/audio/intro.mp3, assets/audio/voice-manifest.json and README.md\n');
     } catch (err) {
         console.error(`\n  voice:intro: ${err.message}\n`);
         process.exit(1);

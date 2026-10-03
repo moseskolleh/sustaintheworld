@@ -5,18 +5,9 @@
 // its first press loads voice-scripts.js and this file, which opens a
 // compact player just under the nav and reads the section in view.
 //
-// Loaded on demand by script.js (mks.load('dispatch')) — see the
-// ON-DEMAND MODULES section there for when. This file is a classic script:
-// it shares the page's global scope, so it declares nothing at the top
-// level and talks to the core only through window.mks.
-//
-// tests/harness.js evaluates it after script.js so the jsdom suites see the
-// page fully initialised, the way a visitor who used every feature would.
+// Loaded on demand by script.js (mks.load('dispatch')), whose ON-DEMAND
+// MODULES section says when, and why it declares nothing at the top level.
 // ===================================================================
-
-// ===================================
-// FIELD DISPATCH — the spoken page
-// ===================================
 // Two things can speak here, and each says what it costs.
 //
 //   browser voice — window.speechSynthesis reads any section aloud. Zero
@@ -25,11 +16,9 @@
 //                   Offered only when assets/audio/voice-manifest.json lists
 //                   it, fetched only when asked for, labelled with its weight.
 //
-// There used to be ten recorded section tracks in a stock text-to-speech
-// voice. They repeated claims the page no longer makes, every copy edit made
-// them stale and cost credits to re-render, and a synthetic voice reading
-// first-person lines was never Moses. They are gone, and nothing here plays a
-// recording that is not a recording of him. Nothing ever autoplays.
+// Nothing here plays a recording that is not of him, and nothing ever
+// autoplays. Why the ten stock-voice section tracks before it were retired
+// is in README.md, rather than in every visitor's download.
 (() => {
     // The storage adapter is script.js's; a module reaches it through mks.
     const mks = window.mks;

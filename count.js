@@ -1,6 +1,6 @@
 // COUNT: one cookieless POST per page view, as the page is hidden or left, and
 // none under Do Not Track or GPC. Exactly these keys (google-apps-script/README.md):
-// {"v":1,"page":"index","lens":"","deepest":"contact","features":["cv-download-hero","cv-download","module-dossier"],"ref":"www.linkedin.com","vp":"m","kb":284}
+// {"v":1,"page":"index","lens":"","deepest":"contact","features":["cv-download-hero","cv-download","module-interactives"],"ref":"www.linkedin.com","vp":"m","kb":284}
 (() => {
     const ok = (s) => typeof s === 'string' && /^[a-z0-9-]{1,40}$/.test(s);
     const mks = (window.mks = window.mks || {});
@@ -13,11 +13,22 @@
     const me = document.currentScript;
     const page = (me && me.dataset.page) ||
         location.pathname.split('/').pop().replace(/\.html?$/, '').toLowerCase() || 'index';
+    // An old homepage address forwarded here names the site that linked to
+    // it as ?via= (script.js): believed only from this site, and taken out
+    // of the address either way.
+    const query = new URLSearchParams(location.search);
+    const via = query.get('via');
+    if (via !== null) {
+        query.delete('via');
+        const rest = String(query);
+        try { history.replaceState(history.state, '', location.pathname + (rest ? '?' + rest : '') + location.hash); } catch (e) { /* kept */ }
+    }
     if (navigator.doNotTrack === '1' || navigator.globalPrivacyControl === true || !ok(page)) return;
 
-    const lens = new URLSearchParams(location.search).get('lens');
+    const lens = query.get('lens');
     let ref = '';
     try { ref = new URL(document.referrer).host; } catch (e) { /* none */ }
+    if (ref === location.host) ref = via || '';
     if (ref === location.host || !/^[a-z0-9.-]{1,253}(:\d{1,5})?$/.test(ref)) ref = '';
 
     // One observer, no scroll handler: a part reports once, when first seen.

@@ -160,7 +160,7 @@ run the same day, the same rows count up). Over HTTP, the same thing:
 ```bash
 curl -L "YOUR_WEB_APP_URL?action=count&test=1" \
   -H "Content-Type: text/plain;charset=utf-8" \
-  --data '{"v":1,"page":"index","lens":"","deepest":"contact","features":["cv-download-hero","cv-download","module-dossier"],"ref":"www.linkedin.com","vp":"m","kb":284}'
+  --data '{"v":1,"page":"index","lens":"","deepest":"contact","features":["cv-download-hero","cv-download","module-interactives"],"ref":"www.linkedin.com","vp":"m","kb":284}'
 # (an empty reply, whether the payload was accepted or not)
 
 curl -L "YOUR_WEB_APP_URL?action=stats&test=1&token=YOUR_STATS_TOKEN"

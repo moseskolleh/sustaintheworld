@@ -70,7 +70,7 @@
 }
 
 /* Light Mode Variables */
-body.light-mode {
+html.light-mode {
     --primary-green: #1a7a1a;
     --dark-bg: #f5f6f3;
     --darker-bg: #ffffff;
@@ -146,8 +146,11 @@ img {
     padding: 0 24px;
 }
 
+/* One rhythm for every section: 56px above and below on a desktop, 44px
+   on a phone (RESPONSIVE). At 100px the padding alone was two screens of
+   the homepage's length. */
 section {
-    padding: 100px 0;
+    padding: 56px 0;
     position: relative;
 }
 
@@ -176,7 +179,7 @@ h1, h2, h3, h4, h5, h6 {
     z-index: 1;
 }
 
-body.light-mode .contour-layer {
+html.light-mode .contour-layer {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='700' height='700' viewBox='0 0 700 700'%3E%3Cg fill='none' stroke='%23228B22' stroke-opacity='0.09'%3E%3Cpath d='M120 350c0-130 100-220 230-220s230 90 230 220-100 220-230 220-230-90-230-220z'/%3E%3Cpath d='M170 350c0-105 80-180 180-180s180 75 180 180-80 180-180 180-180-75-180-180z'/%3E%3Cpath d='M220 350c0-80 58-140 130-140s130 60 130 140-58 140-130 140-130-60-130-140z'/%3E%3Cpath d='M268 350c0-55 37-95 82-95s82 40 82 95-37 95-82 95-82-40-82-95z'/%3E%3Cpath d='M310 350c0-30 18-50 40-50s40 20 40 50-18 50-40 50-40-20-40-50z'/%3E%3Cpath d='M40 80c60-40 150-30 190 20M620 120c-50-60-140-70-200-30M80 620c30 50 110 70 180 40M660 600c-20 60-100 80-170 50'/%3E%3C/g%3E%3C/svg%3E");
 }
 
@@ -278,7 +281,7 @@ html.js .preloader {
     transition: var(--transition);
 }
 
-body.light-mode .navbar {
+html.light-mode .navbar {
     background-color: rgba(255, 255, 255, 0.88);
 }
 
@@ -293,8 +296,8 @@ html {
 }
 
 .nav-container {
-    /* The logo, the theme switch, ten links, CV and Contact need about
-       1,270px on one line, padding included (see the 1279px query). */
+    /* The logo, Listen, the theme switch and the six links need about
+       810px on one line, padding included (see the 899px query). */
     max-width: 1520px;
     margin: 0 auto;
     padding: 0 24px;
@@ -381,6 +384,9 @@ html {
     width: 100%;
 }
 
+/* The one button in the bar, in outline: filled, it was a second green
+   button on the first screen beside the hero's primary one. Filled on
+   hover, its text then as on .btn-primary. */
 .nav-link.contact-btn {
     border: 1px solid var(--primary-green);
     color: var(--primary-green);
@@ -392,7 +398,11 @@ html {
 
 .nav-link.contact-btn:hover {
     background: var(--primary-green);
-    color: var(--darker-bg);
+    color: #051000;
+}
+
+html.light-mode .nav-link.contact-btn:hover {
+    color: #fff;
 }
 
 .nav-toggle {
@@ -450,6 +460,8 @@ html {
 /* ===================================
    HERO
    =================================== */
+/* Who, what, how to reach him and the figures, all in the first screen
+   (smoke.js checks four sizes): the stats sat at 883px of 900. */
 .hero {
     min-height: 100vh;
     min-height: 100dvh;
@@ -458,7 +470,7 @@ html {
     justify-content: center;
     position: relative;
     overflow: hidden;
-    padding: 130px 0 90px;
+    padding: 104px 0 40px;
 }
 
 .hero-background {
@@ -499,6 +511,7 @@ html {
 .hero-content {
     position: relative;
     z-index: 2;
+    width: 100%;
 }
 
 .hero-eyebrow {
@@ -507,7 +520,7 @@ html {
     letter-spacing: 0.2em;
     text-transform: uppercase;
     color: var(--primary-green);
-    margin-bottom: 22px;
+    margin-bottom: 14px;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -546,11 +559,12 @@ html {
     50% { transform: scale(1); opacity: 0; }
 }
 
+/* By height too: at 6.2rem the name took a quarter of a 900px screen. */
 .hero-title {
-    font-size: clamp(3rem, 9vw, 6.2rem);
+    font-size: clamp(2.3rem, min(7vw, 9.5vh), 5rem);
     text-transform: uppercase;
     letter-spacing: -0.01em;
-    margin-bottom: 18px;
+    margin-bottom: 12px;
 }
 
 .hero-line {
@@ -560,37 +574,37 @@ html {
 .hero-line-accent {
     color: transparent;
     -webkit-text-stroke: 2px var(--primary-green);
-    text-stroke: 2px var(--primary-green);
 }
 
 .hero-subtitle {
     font-family: var(--font-mono);
     font-size: clamp(1rem, 2.4vw, 1.35rem);
     color: var(--text-primary);
-    margin-bottom: 22px;
+    margin-bottom: 12px;
     min-height: 1.6em;
 }
 
 .hero-valueprop {
-    max-width: 640px;
+    max-width: 680px;
     color: var(--text-primary);
-    font-size: clamp(1.05rem, 1.6vw, 1.25rem);
+    font-size: clamp(1rem, 1.6vw, 1.25rem);
     font-weight: 500;
-    line-height: 1.5;
-    margin-bottom: 20px;
+    line-height: 1.45;
+    margin-bottom: 10px;
 }
 
 .hero-description {
-    max-width: 620px;
+    max-width: 700px;
     color: var(--text-secondary);
     font-size: 1.05rem;
-    margin-bottom: 28px;
+    line-height: 1.6;
+    margin-bottom: 20px;
 }
 
 /* Over the fieldwork photos the light theme's green reads at 3.4-4.1:1
    against the lightest pixels behind it; a deeper green clears 5:1. */
-body.light-mode .hero-eyebrow,
-body.light-mode .hero-availability {
+html.light-mode .hero-eyebrow,
+html.light-mode .hero-availability {
     color: #125a12;
 }
 
@@ -606,11 +620,38 @@ body.light-mode .hero-availability {
     border: 1px solid var(--line-color);
     border-radius: 999px;
     padding: 8px 16px;
-    margin-bottom: 32px;
 }
 
-/* Week-1 conversion additions: nav CV link, contact availability, form privacy */
+/* At a glance: written by build-content.js from content/profile.json,
+   and a fact that is null there is not in it at all. */
+.at-a-glance {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 20px;
+    margin-bottom: 24px;
+}
 
+.glance-facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 20px;
+    margin: 0;
+}
+
+.glance-fact {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.glance-fact dd {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+}
+
+/* Week-1 conversion additions: contact availability, form privacy */
 .contact-open {
     display: inline-flex;
     align-items: center;
@@ -628,37 +669,6 @@ body.light-mode .hero-availability {
     margin-bottom: 0;
     font-size: 0.8rem;
     color: var(--text-secondary);
-}
-
-/* Mid-scroll conversion band — catches warm visitors before the very end */
-.cta-band {
-    background: var(--card-bg-alt);
-    border-top: 1px solid var(--line-color);
-    border-bottom: 1px solid var(--line-color);
-    padding: 44px 0;
-}
-
-.cta-band-inner {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 28px;
-    flex-wrap: wrap;
-}
-
-.cta-band-copy p {
-    font-family: var(--font-display);
-    font-size: clamp(1.1rem, 2vw, 1.45rem);
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-top: 6px;
-    max-width: 34ch;
-}
-
-.cta-band-actions {
-    display: flex;
-    gap: 14px;
-    flex-wrap: wrap;
 }
 
 /* The Receipt — the page prints its own itemised carbon bill */
@@ -729,11 +739,19 @@ body.light-mode .hero-availability {
     border: 1px solid var(--line-color);
     border-radius: var(--border-radius);
     padding: 18px 14px 8px;
+    container-type: inline-size;
 }
 
-.ydi-svg { width: 100%; height: auto; display: block; }
+/* touch-action here: on the <rect> inside, Chromium ignores it and took a
+   finger's drag for a scroll. */
+.ydi-svg { width: 100%; height: auto; display: block; touch-action: none; }
 
-.ydi-hit { cursor: crosshair; touch-action: none; pointer-events: all; }
+/* The taller shape interactives.js draws under 480px, held before it runs */
+@container (width < 479.5px) {
+    .ydi-svg { aspect-ratio: 5 / 4; }
+}
+
+.ydi-hit { cursor: crosshair; pointer-events: all; }
 .ydi-hit:focus { outline: none; }
 .ydi-svg.ydi-kbd { outline: 2px solid var(--primary-green); outline-offset: 3px; border-radius: 4px; }
 .ydi-cursor { fill: none; stroke: var(--accent-amber); stroke-width: 2.5; opacity: 0; pointer-events: none; }
@@ -760,15 +778,16 @@ body.light-mode .hero-availability {
 .ydi-grid { stroke: var(--line-soft); stroke-width: 1; }
 .ydi-divider { stroke: var(--line-color); stroke-width: 1; stroke-dasharray: 3 4; }
 
+/* In chart units, never smaller than a pixel (interactives.js): 11px or more */
 .ydi-axis-label, .ydi-axis-title, .ydi-xlabel, .ydi-region-label {
     fill: var(--text-secondary);
     font-family: var(--font-mono);
     font-size: 11px;
 }
-.ydi-axis-title { font-size: 10px; opacity: 0.8; }
-.ydi-xlabel { font-size: 10px; }
-.ydi-xlabel.known { opacity: 0.45; }
-.ydi-region-label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.7; }
+.ydi-axis-title { opacity: 0.8; }
+/* Quieter by colour: at opacity 0.45 they read at 2.1:1 on light. */
+.ydi-xlabel.known { fill: var(--text-dim); }
+.ydi-region-label { letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.7; }
 .ydi-region-label.predict { fill: var(--primary-green); opacity: 1; }
 
 .ydi-known-line { fill: none; stroke: var(--text-secondary); stroke-width: 2.5; }
@@ -796,6 +815,9 @@ body.light-mode .hero-availability {
     padding: 6px 12px;
     border-radius: 999px;
 }
+
+/* Dark's pill, on the white chart, put the hint at 1.9:1. */
+html.light-mode .ydi-hint { background: rgba(255, 255, 255, 0.85); }
 
 .ydi-controls { display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
 
@@ -827,159 +849,40 @@ body.light-mode .hero-availability {
     .ydi-real-line { transition: none; }
 }
 
-/* Seven in Ten — the 70% strike rate as a felt human delta */
-.strike-waffle {
-    display: grid;
-    grid-template-columns: repeat(10, 1fr);
-    gap: 5px;
-    max-width: 360px;
-    margin: 10px 0 16px;
-}
-
-.strike-cell {
-    aspect-ratio: 1;
-    border-radius: 3px;
-    background: var(--card-bg-alt);
-    border: 1px solid var(--line-soft);
-    transition: background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
-}
-
-.strike-cell.water {
-    background: var(--accent-blue);
-    border-color: var(--accent-blue);
-    box-shadow: 0 0 6px rgba(46, 163, 224, 0.45);
-}
-
-.strike-counter {
-    color: var(--text-primary);
-    font-size: 0.95rem;
-    line-height: 1.55;
-    max-width: 52ch;
-    margin-bottom: 10px;
-}
-.strike-counter strong { color: var(--primary-green); }
-
-.strike-control {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    max-width: 440px;
-    margin: 6px 0 12px;
-}
-.strike-control input[type="range"] { flex: 1; accent-color: var(--accent-blue); cursor: pointer; }
-.strike-control label { flex-shrink: 0; }
-.strike-out { color: var(--primary-green); font-family: var(--font-mono); min-width: 3.5ch; }
-
-.strike-anchors {
-    display: flex;
-    justify-content: space-between;
-    max-width: 440px;
-    margin: -4px 0 10px;
-    font-family: var(--font-mono);
-    font-size: 0.68rem;
-    color: var(--text-secondary);
-    letter-spacing: 0.03em;
-}
-.strike-anchor-win { color: var(--accent-blue); }
-
-.strike-foot {
-    font-size: 0.74rem;
-    line-height: 1.5;
-    color: var(--text-secondary);
-    opacity: 0.85;
-    max-width: 60ch;
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .strike-cell { transition: none; }
-}
-
-/* Anatomy of a Prompt — one answer split across the ESRS disclosure lines */
-.anatomy { margin-top: 44px; padding-top: 32px; border-top: 1px solid var(--line-color); }
-.anatomy-head { margin-bottom: 14px; }
-.anatomy-title { font-size: clamp(1.15rem, 2.2vw, 1.55rem); margin: 6px 0 8px; }
-.anatomy-lede { color: var(--text-secondary); max-width: 64ch; }
-
-.anatomy-control { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
-.anatomy-control select {
-    background: var(--card-bg);
-    color: var(--text-primary);
-    border: 1px solid var(--line-color);
-    border-radius: 8px;
-    padding: 8px 12px;
-    font-family: var(--font-mono);
-    font-size: 0.85rem;
-    cursor: pointer;
-}
-.anatomy-scenario { opacity: 0.7; max-width: 64ch; }
-.anatomy-scale { display: inline-flex; border: 1px solid var(--line-color); border-radius: 999px; overflow: hidden; }
-.anatomy-scale-btn {
-    background: none;
-    border: none;
-    color: var(--text-secondary);
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    padding: 7px 13px;
-    cursor: pointer;
-    transition: var(--transition);
-}
-.anatomy-scale-btn.is-active { background: var(--primary-green); color: var(--darker-bg); }
-
-.anatomy-svg { width: 100%; height: auto; display: block; max-width: 760px; margin: 6px 0; }
-.anatomy-source { fill: var(--card-bg-alt); stroke: var(--line-color); }
-.anatomy-source-t { fill: var(--text-primary); font-family: var(--font-display); font-weight: 600; font-size: 15px; }
-.anatomy-source-sub { fill: var(--text-secondary); font-family: var(--font-mono); font-size: 11px; }
-
-.anatomy-ribbon { opacity: 0.5; }
-.anatomy-ribbon.r0 { fill: var(--primary-green); }
-.anatomy-ribbon.r1 { fill: var(--accent-amber); }
-.anatomy-ribbon.r2 { fill: var(--accent-blue); }
-
-.anatomy-t-title { font-family: var(--font-display); font-weight: 600; font-size: 13px; fill: var(--text-primary); }
-.anatomy-t-title.r0 { fill: var(--primary-green); }
-.anatomy-t-title.r1 { fill: var(--accent-amber); }
-.anatomy-t-title.r2 { fill: var(--accent-blue); }
-.anatomy-t-val { font-family: var(--font-mono); font-size: 14px; fill: var(--text-primary); }
-.anatomy-t-esrs { font-family: var(--font-mono); font-size: 10.5px; fill: var(--text-secondary); letter-spacing: 0.03em; }
-
-.anatomy-summary { margin-top: 6px; color: var(--text-primary); font-size: 0.95rem; line-height: 1.55; max-width: 64ch; }
-.anatomy-summary strong { color: var(--primary-green); }
-.anatomy-foot { margin-top: 10px; font-size: 0.74rem; line-height: 1.5; color: var(--text-secondary); opacity: 0.85; max-width: 66ch; }
-.anatomy-svg-wrap { overflow-x: auto; }
-
-/* Contextual "next →" links that chain the features into one narrative */
-.feature-next {
-    display: inline-block;
-    margin-top: 14px;
-    font-family: var(--font-mono);
-    font-size: 0.78rem;
-    color: var(--primary-green);
-    text-decoration: none;
-    border-bottom: 1px dashed var(--line-color);
-    padding-bottom: 2px;
-    transition: var(--transition);
-}
-.feature-next:hover { border-bottom-color: var(--primary-green); }
-
-@media (max-width: 560px) {
-    .anatomy-svg { min-width: 470px; }
-}
-@media (max-width: 400px) {
-    .strike-control { flex-wrap: wrap; }
-    .strike-waffle { gap: 4px; }
-}
-
-/* The Assay — paste a JD, get a client-side fit grade + evidence map */
+/* The Assay — paste a JD, get a client-side fit grade + evidence map.
+   It sits below the contact form and is drawn as the optional step it is:
+   no fill, a dashed edge, a smaller title than the form's section. */
 .assay {
     max-width: 820px;
-    margin: 0 auto 48px;
-    background: var(--card-bg);
-    border: 1px solid var(--line-color);
+    margin: 32px auto 0;
+    border: 1px dashed var(--line-color);
     border-radius: var(--border-radius);
-    padding: 28px;
+    padding: 22px 28px;
 }
-.assay-head { margin-bottom: 16px; }
-.assay-title { font-size: clamp(1.2rem, 2.4vw, 1.6rem); margin: 6px 0 8px; }
+.assay-head { margin-bottom: 14px; }
+
+/* Folded until asked for: the question and the promise show, the box to
+   paste into opens from script.js's button (only once it is there). On a
+   desktop the button sits beside them, the box full width under both. */
+html.js .assay.is-folding:not(.is-open) .assay-body { display: none; }
+.assay-body { margin-top: 18px; }
+.assay-open .icon { transition: transform 0.2s ease; }
+.assay.is-open .assay-open .icon { transform: rotate(180deg); }
+
+@media (min-width: 900px) {
+    .assay.is-folding {
+        max-width: none;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        column-gap: 32px;
+    }
+
+    .assay.is-folding .assay-head { margin: 0; }
+    .assay.is-folding .assay-body { grid-column: 1 / -1; }
+}
+
+.assay-title { font-size: clamp(1.1rem, 2vw, 1.35rem); margin: 6px 0 8px; }
 .assay-lede { color: var(--text-secondary); font-size: 0.95rem; line-height: 1.6; }
 .assay-lede strong { color: var(--primary-green); }
 
@@ -1016,11 +919,11 @@ body.light-mode .hero-availability {
 .assay-sample:hover { border-color: var(--primary-green); color: var(--primary-green); }
 .assay-cta-wrap { margin-top: 18px; }
 .assay-copy-wrap { margin-top: 14px; }
-.anatomy-copy { margin-top: 12px; }
 
-/* Play index — signposts the interactive features (some hidden in dossiers) */
+/* Play index — signposts the interactive features, some on other pages */
 .play-index {
     background: var(--card-bg-alt);
+    border-top: 1px solid var(--line-color);
     border-bottom: 1px solid var(--line-color);
     padding: 15px 24px;
     display: flex;
@@ -1112,9 +1015,38 @@ body.light-mode .hero-availability {
 
 .hero-cta {
     display: flex;
-    gap: 16px;
+    align-items: center;
+    gap: 12px 16px;
     flex-wrap: wrap;
-    margin-bottom: 60px;
+    margin-bottom: 28px;
+}
+
+/* The CV is a third choice, and looks it: a link, not a third button. */
+.hero-cv {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 0 4px;
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 0.85rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    text-decoration: underline;
+    text-decoration-color: var(--line-color);
+    text-underline-offset: 5px;
+    transition: var(--transition);
+}
+
+.hero-cv .icon {
+    color: var(--primary-green);
+}
+
+.hero-cv:hover {
+    color: var(--primary-green);
+    text-decoration-color: currentColor;
 }
 
 .btn {
@@ -1140,7 +1072,7 @@ body.light-mode .hero-availability {
 }
 
 /* Near-black on the light theme's darker green is 3.6:1; white is 5.5:1. */
-body.light-mode .btn-primary {
+html.light-mode .btn-primary {
     color: #fff;
 }
 
@@ -1170,10 +1102,10 @@ body.light-mode .btn-primary {
 .hero-stats {
     display: grid;
     grid-template-columns: repeat(4, auto);
-    gap: 48px;
+    gap: 44px;
     justify-content: start;
     border-top: 1px solid var(--line-soft);
-    padding-top: 30px;
+    padding-top: 22px;
     max-width: 760px;
 }
 
@@ -1185,7 +1117,7 @@ body.light-mode .btn-primary {
 
 .hero-stat-number {
     font-family: var(--font-display);
-    font-size: 2.2rem;
+    font-size: 2rem;
     font-weight: 700;
     color: var(--primary-green);
     line-height: 1;
@@ -1199,10 +1131,12 @@ body.light-mode .btn-primary {
     color: var(--text-secondary);
 }
 
+/* Just under the bar, where the first screen shows it (at the hero's
+   foot it sat below the fold), and clear of the scroll drill. */
 .hero-photo-caption {
     position: absolute;
-    bottom: 26px;
-    right: 26px;
+    top: 86px;
+    right: 44px;
     z-index: 2;
     font-family: var(--font-mono);
     font-size: 0.72rem;
@@ -1216,7 +1150,7 @@ body.light-mode .btn-primary {
     transition: opacity 0.8s ease;
 }
 
-body.light-mode .hero-photo-caption {
+html.light-mode .hero-photo-caption {
     background: rgba(255, 255, 255, 0.55);
 }
 
@@ -1231,12 +1165,19 @@ body.light-mode .hero-photo-caption {
     overflow: hidden;
 }
 
-/* On narrow screens the centred cue ran through the right-anchored photo
-   caption; the caption is the more useful of the two. */
+/* On narrow screens the centred cue would cross the hero's figures, which
+   on a phone reach the foot of the first screen. */
 @media (max-width: 900px) {
     .scroll-indicator {
         display: none;
     }
+}
+
+/* Where it is shown (a short window hides it too, below), the hero keeps
+   the cue's 70px clear of its figures: at 1024x881 the line ran through
+   "Continents studied and worked on". */
+@media (min-width: 901px) and (min-height: 881px) {
+    .hero { padding-bottom: 76px; }
 }
 
 .scroll-indicator-line {
@@ -1256,8 +1197,11 @@ body.light-mode .hero-photo-caption {
 /* ===================================
    SECTION HEADERS
    =================================== */
+/* From 768px the index sits on the title's line, not over it, and the
+   introduction runs to 780px: a line saved in every section, twice where
+   the introduction had wrapped at 640px. */
 .section-header {
-    margin-bottom: 60px;
+    margin-bottom: 32px;
     position: relative;
     z-index: 2;
 }
@@ -1268,7 +1212,7 @@ body.light-mode .hero-photo-caption {
     color: var(--primary-green);
     letter-spacing: 0.25em;
     display: block;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
 }
 
 .section-index::after {
@@ -1276,8 +1220,25 @@ body.light-mode .hero-photo-caption {
     color: var(--line-color);
 }
 
+@media (min-width: 768px) {
+    .section-header {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        align-items: baseline;
+        column-gap: 20px;
+    }
+
+    .section-index {
+        margin: 0;
+    }
+
+    .section-header > :not(.section-index, .section-title) {
+        grid-column: 1 / -1;
+    }
+}
+
 .section-title {
-    font-size: clamp(2rem, 5vw, 3rem);
+    font-size: clamp(1.9rem, 4.4vw, 2.75rem);
     text-transform: uppercase;
     letter-spacing: 0.01em;
 }
@@ -1288,17 +1249,19 @@ body.light-mode .hero-photo-caption {
 
 .section-description {
     color: var(--text-secondary);
-    max-width: 640px;
-    margin-top: 14px;
+    max-width: 780px;
+    margin-top: 12px;
     font-size: 1.05rem;
 }
 
 /* ===================================
    JOURNEY
    =================================== */
+/* clip: hidden would stop the map staying pinned (old browsers keep it) */
 .journey {
     background: var(--darker-bg);
     overflow: hidden;
+    overflow: clip;
 }
 
 .journey-track {
@@ -1399,46 +1362,13 @@ body.light-mode .hero-photo-caption {
     color: var(--text-primary);
 }
 
-/* Desktop: horizontal journey */
-@media (min-width: 980px) {
-    .journey-line {
-        top: 9px;
-        left: 0;
-        right: 0;
-        bottom: auto;
-        width: auto;
-        height: 2px;
-        background: linear-gradient(90deg, var(--line-soft), var(--primary-green), var(--line-soft));
-    }
-
-    .journey-stops {
-        flex-direction: row;
-        gap: 22px;
-        align-items: stretch;
-    }
-
-    .journey-stop {
-        flex-direction: column;
-        gap: 24px;
-        flex: 1;
-    }
-
-    .journey-marker {
-        margin-top: 0;
-    }
-
-    .journey-card:hover {
-        transform: translateY(-6px);
-    }
-}
-
 /* ===================================
    ABOUT
    =================================== */
 .about-grid {
     display: grid;
-    grid-template-columns: 320px 1fr;
-    gap: 50px;
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: 48px;
     align-items: start;
 }
 
@@ -1471,10 +1401,13 @@ body.light-mode .hero-photo-caption {
 
 .portrait-meta {
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
-    margin-top: 14px;
+    gap: 2px 10px;
+    margin: 12px 0 10px;
     padding: 0 4px;
+    white-space: nowrap;
 }
 
 .portrait-location {
@@ -1505,60 +1438,18 @@ body.light-mode .hero-photo-caption {
     color: var(--text-primary);
 }
 
-.about-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 10px;
+/* The 164 water points, itemised under the paragraph that claims them. */
+.about-text .impact-row {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px dashed var(--line-soft);
 }
 
-.chip {
-    font-size: 0.83rem;
-    color: var(--text-primary);
-    background: var(--card-bg);
-    border: 1px solid var(--line-soft);
-    border-radius: 999px;
-    padding: 8px 16px;
-    transition: var(--transition);
-}
-
-.chip:hover {
-    border-color: var(--primary-green);
-    transform: translateY(-2px);
-}
-
-.about-facts {
-    grid-column: 2;
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
-    margin-top: 8px;
-}
-
-.fact-card {
-    display: flex;
-    gap: 16px;
-    align-items: flex-start;
-    background: var(--card-bg);
-    border: 1px solid var(--line-soft);
-    border-radius: var(--border-radius);
-    padding: 20px 22px;
-    transition: var(--transition);
-}
-
-.fact-card:hover {
-    border-color: var(--line-color);
-    transform: translateY(-4px);
-}
-
-.fact-card h3 {
-    font-size: 1rem;
-    margin-bottom: 4px;
-}
-
-.fact-card p {
-    color: var(--text-secondary);
-    font-size: 0.88rem;
+@media (max-width: 599px) {
+    .about-lead {
+        font-size: 1.12rem;
+        margin-bottom: 16px;
+    }
 }
 
 /* ===================================
@@ -1583,7 +1474,7 @@ body.light-mode .hero-photo-caption {
     border: 1px dashed var(--line-color);
     border-radius: 6px;
     padding: 10px 16px;
-    margin-bottom: 26px;
+    margin-bottom: 16px;
     color: var(--primary-green);
 }
 
@@ -1648,7 +1539,7 @@ body.light-mode .hero-photo-caption {
 }
 
 .corelog-item .timeline-content {
-    margin-bottom: 34px;
+    margin-bottom: 12px;
 }
 
 .corelog-item:last-of-type .timeline-content {
@@ -1656,7 +1547,7 @@ body.light-mode .hero-photo-caption {
 }
 
 .corelog-foot {
-    margin-top: 26px;
+    margin-top: 16px;
     text-align: center;
     color: var(--text-secondary);
     border-top: 2px dashed var(--line-color);
@@ -1665,10 +1556,11 @@ body.light-mode .hero-photo-caption {
 }
 
 .timeline-content {
+    position: relative;
     background: var(--card-bg);
     border: 1px solid var(--line-soft);
     border-radius: var(--border-radius);
-    padding: 28px 32px;
+    padding: 18px 24px;
     transition: var(--transition);
 }
 
@@ -1687,26 +1579,26 @@ body.light-mode .hero-photo-caption {
 }
 
 .timeline-content h3 {
-    font-size: 1.2rem;
-    margin-bottom: 4px;
+    font-size: 1.15rem;
+    margin-bottom: 2px;
 }
 
 .timeline-content h4 {
-    font-size: 0.95rem;
+    font-size: 0.92rem;
     font-weight: 500;
     color: var(--text-secondary);
-    margin-bottom: 12px;
+    margin-bottom: 8px;
 }
 
 .timeline-content .partner {
     font-size: 0.85rem;
     color: var(--primary-green);
-    margin-bottom: 12px;
+    margin-bottom: 8px;
 }
 
 .timeline-content ul {
     list-style: none;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
 }
 
 .timeline-content ul li {
@@ -1741,129 +1633,214 @@ body.light-mode .hero-photo-caption {
     padding: 4px 10px;
 }
 
-/* ===================================
-   PROJECTS — EXPANDABLE DOSSIERS
-   =================================== */
-.projects-list {
-    display: flex;
-    flex-direction: column;
-    gap: 22px;
+/* Each layer is a short card: dates, role, organisation and the first
+   line, with the rest and the tags a press away. The whole log was 5.3
+   screens on a 390px phone and 2.6 on a desktop. Only with script.js,
+   which makes the button that opens a card (and leaves them open on a
+   late start): without it every card is shown whole. The button sits at
+   the card's top right, on the dates' line, open or shut. */
+.corelog-more {
+    display: none;
+    position: absolute;
+    top: 12px;
+    right: 14px;
+    background: none;
+    border: 1px dashed var(--line-color);
+    border-radius: 999px;
+    color: var(--primary-green);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    line-height: 1.5;
+    letter-spacing: 0.06em;
+    padding: 4px 12px;
+    cursor: pointer;
 }
 
+.corelog-more:hover { border-color: var(--primary-green); }
+
+html.js .timeline-content:not(.is-open) ul li:nth-child(n+2),
+html.js .timeline-content:not(.is-open) .tags {
+    display: none;
+}
+
+html.js .timeline-content:not(.is-open) ul,
+html.js .timeline-content:not(.is-open) ul li { margin-bottom: 0; }
+html.js .corelog-more { display: inline-block; }
+/* The dates wrap before they reach the button (at 320px they did not fit). */
+html.js .timeline-date { padding-right: 64px; }
+
+/* On a desktop a shut card is one row under its dates: who and where on
+   the left, what the work was on the right. Open, it is the whole card. */
+@media (min-width: 900px) {
+    html.js .timeline-content:not(.is-open) {
+        display: grid;
+        grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+        column-gap: 28px;
+        align-items: start;
+    }
+
+    html.js .timeline-content:not(.is-open) > .timeline-date {
+        grid-column: 1 / -1;
+    }
+
+    html.js .timeline-content:not(.is-open) .timeline-head > :last-child {
+        margin-bottom: 0;
+    }
+}
+
+/* Printed, every card is whole: paper has no More button. */
+@media print {
+    html.js .timeline-content:not(.is-open) { display: block; }
+    html.js .timeline-content:not(.is-open) ul li:nth-child(n+2) { display: list-item; }
+    html.js .timeline-content:not(.is-open) .tags { display: flex; }
+    html.js .corelog-more { display: none; }
+}
+
+@media (max-width: 599px) {
+    .corelog-head,
+    .corelog-depth {
+        display: none;
+    }
+
+    /* .corelog > : the tablet columns (46px 20px 1fr) come later in the file. */
+    .corelog > .corelog-item {
+        grid-template-columns: 8px minmax(0, 1fr);
+        gap: 0 12px;
+    }
+
+    .corelog-item .timeline-content {
+        padding: 16px 18px;
+        margin-bottom: 12px;
+    }
+
+    .timeline-content h3 { font-size: 1.05rem; }
+    .timeline-content h4 { font-size: 0.88rem; }
+}
+
+/* ===================================
+   PROJECTS — SIX TEASER CARDS
+   =================================== */
+/* One card per case study, generated from content/projects.json: where and
+   when, the headline result with its basis, the role lenses and the tools,
+   and one link to the whole story on case-studies.html. Three across on a
+   desktop, two on a tablet and one on a phone, the photo a thumbnail beside
+   the date and title at every width: as a banner it was a fifth of each
+   card's height, and the section 1.9 screens on a desktop. */
+.projects-list {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+}
+
+/* The last row takes what is left, so a row's links line up at its foot. */
 .project-card {
+    display: grid;
+    grid-template-columns: 80px minmax(0, 1fr);
+    grid-template-rows: auto auto auto auto 1fr;
+    align-items: start;
+    gap: 10px 14px;
+    padding: 18px;
     background: var(--card-bg);
     border: 1px solid var(--line-soft);
     border-radius: var(--border-radius);
-    overflow: hidden;
-    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    transition: border-color 0.3s ease;
 }
 
-.project-card:hover {
+.project-card:hover,
+.project-card:focus-within {
     border-color: var(--line-color);
 }
 
-.project-card.expanded {
-    border-color: var(--primary-green);
-    box-shadow: var(--box-shadow);
+.project-card > :not(.project-photo, .project-meta, h3) {
+    grid-column: 1 / -1;
 }
 
-.project-summary {
-    display: grid;
-    grid-template-columns: 200px 1fr 50px;
-    gap: 26px;
-    align-items: center;
-    padding: 22px 26px;
-    text-decoration: none;
-    color: inherit;
-    cursor: pointer;
-}
-
-.project-toggle {
-    font: inherit;
-    color: inherit;
-    letter-spacing: inherit;
-    text-align: left;
-    background: none;
-    border: 0;
-    padding: 0;
-    cursor: pointer;
-}
-
-.project-toggle:focus-visible {
-    outline: 2px solid var(--primary-green);
-    outline-offset: 4px;
-    border-radius: 4px;
-}
-
-.project-thumb {
-    width: 200px;
-    height: 140px;
+.project-photo {
+    grid-row: 1 / span 2;
+    display: block;
+    width: 80px;
+    height: auto;
+    aspect-ratio: 1;
     border-radius: 8px;
-    overflow: hidden;
-    border: 1px solid var(--line-soft);
-}
-
-.project-thumb img {
-    width: 100%;
-    height: 100%;
     object-fit: cover;
-    transition: transform 0.5s ease, filter 0.5s ease;
-    filter: saturate(0.85);
-}
-
-.project-card:hover .project-thumb img {
-    transform: scale(1.06);
-    filter: saturate(1.1);
+    filter: saturate(0.9);
 }
 
 .project-meta {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    flex-wrap: wrap;
-    margin-bottom: 8px;
+    align-self: end;
 }
 
-.project-status {
+/* Tighter than the house label, so "2025 — present · Amsterdam, NL"
+   keeps to one line beside the photo. */
+.project-meta .mono-label {
+    letter-spacing: 0.03em;
+}
+
+.project-card h3 {
+    font-size: 1.12rem;
+    line-height: 1.3;
+}
+
+/* The headline result, ruled green when a reader can check it (as on the
+   case studies), with the one line of its basis under it. */
+.project-result {
+    padding: 10px 12px;
+    background: var(--card-bg-alt);
+    border-left: 3px solid var(--line-color);
+    border-radius: 4px;
+}
+
+.project-result-checkable {
+    border-left-color: var(--primary-green);
+}
+
+.project-claim {
+    font-weight: 600;
+    font-size: 0.95rem;
+    line-height: 1.45;
+}
+
+.project-basis {
+    margin-top: 4px;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    line-height: 1.5;
+}
+
+.project-basis .mono-label {
+    display: block;
+    margin-bottom: 2px;
+    font-size: 0.7rem;
+}
+
+/* The role lenses and the tools, on one run of small type. */
+.project-tags {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 12px;
+}
+
+.project-lenses {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.project-lenses li {
     font-family: var(--font-mono);
-    font-size: 0.68rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--text-secondary);
-    border: 1px solid var(--line-soft);
-    border-radius: 999px;
-    padding: 3px 12px;
-}
-
-.project-status.live {
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
     color: var(--primary-green);
-    border-color: var(--line-color);
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
+    border: 1px solid var(--line-color);
+    border-radius: 999px;
+    padding: 1px 8px;
 }
 
-.project-status.live .blink-dot {
-    width: 6px;
-    height: 6px;
-}
-
-.project-head h3 {
-    font-size: 1.45rem;
-    margin-bottom: 8px;
-}
-
-.project-head > p {
-    color: var(--text-secondary);
-    font-size: 0.96rem;
-    margin-bottom: 14px;
-    max-width: 640px;
-}
-
+/* The tools join the lenses' run (a div has nothing to announce). */
 .project-tech {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
+    display: contents;
 }
 
 .project-tech span {
@@ -1871,275 +1848,62 @@ body.light-mode .hero-photo-caption {
     font-size: 0.7rem;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: var(--primary-green);
-    border: 1px solid var(--line-color);
-    border-radius: 4px;
-    padding: 4px 10px;
+    color: var(--text-dim);
 }
 
-.project-chevron {
-    width: 42px;
-    height: 42px;
-    border-radius: 50%;
-    border: 1px solid var(--line-color);
-    display: flex;
+/* Last in the card and pushed to its foot, so a row's links line up. */
+.project-link {
+    align-self: end;
+    justify-self: start;
+    display: inline-flex;
     align-items: center;
-    justify-content: center;
-    color: var(--primary-green);
-    transition: var(--transition);
-    justify-self: end;
-}
-
-.project-card.expanded .project-chevron {
-    transform: rotate(180deg);
-    background: var(--primary-green);
-    color: var(--darker-bg);
-}
-
-.project-details {
-    overflow: hidden;
-}
-
-/* Collapsed only when JavaScript can open it again; without it, open. */
-html.js .project-details {
-    max-height: 0;
-    /* Collapsed: kept out of the tab order and the screen-reader tree so
-       keyboard users don't land on the hidden galleries and mini-games inside.
-       visibility flips to hidden only after the height finishes animating. */
-    visibility: hidden;
-    transition: max-height 0.6s cubic-bezier(0.4, 0, 0.2, 1), visibility 0s linear 0.6s;
-}
-
-.project-card.expanded .project-details {
-    visibility: visible;
-    transition: max-height 0.6s cubic-bezier(0.4, 0, 0.2, 1), visibility 0s;
-}
-
-.project-details-inner {
-    padding: 10px 30px 36px;
-    border-top: 1px dashed var(--line-color);
-    display: grid;
-    grid-template-columns: 1.1fr 1fr;
-    gap: 40px;
-}
-
-.project-story {
-    padding-top: 24px;
-}
-
-.story-block {
-    margin-bottom: 24px;
-}
-
-.story-block h4 {
-    font-size: 0.85rem;
+    gap: 8px;
     font-family: var(--font-mono);
-    font-weight: 500;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--primary-green);
-    margin-bottom: 10px;
-}
-
-.story-block h4 i {
-    margin-right: 8px;
-}
-
-.story-block p {
-    color: var(--text-secondary);
-    font-size: 0.95rem;
-}
-
-.story-block ul {
-    list-style: none;
-}
-
-.story-block ul li {
-    color: var(--text-secondary);
-    font-size: 0.94rem;
-    padding-left: 20px;
-    position: relative;
-    margin-bottom: 7px;
-}
-
-.story-block ul li::before {
-    content: '▸';
-    position: absolute;
-    left: 0;
-    color: var(--primary-green);
-}
-
-.project-actions {
-    margin-top: 8px;
-}
-
-.project-gallery {
-    padding-top: 24px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    align-content: start;
-}
-
-.gallery-item {
-    margin: 0;
-    border-radius: 8px;
-    overflow: hidden;
-    border: 1px solid var(--line-soft);
-    background: var(--card-bg-alt);
-    cursor: zoom-in;
-    transition: var(--transition);
-}
-
-.gallery-item:hover {
-    border-color: var(--primary-green);
-    transform: translateY(-3px);
-}
-
-.gallery-item:focus-within {
-    border-color: var(--primary-green);
-}
-
-.gallery-open {
-    display: block;
-    width: 100%;
-    padding: 0;
-    border: 0;
-    background: none;
-    cursor: zoom-in;
-    overflow: hidden;
-}
-
-.gallery-open:focus-visible {
-    outline: 2px solid var(--primary-green);
-    outline-offset: -2px;
-}
-
-.gallery-item img {
-    display: block;
-    width: 100%;
-    height: 190px;
-    object-fit: cover;
-    transition: transform 0.5s ease;
-}
-
-.gallery-item:hover img {
-    transform: scale(1.04);
-}
-
-.gallery-item-wide {
-    grid-column: 1 / -1;
-}
-
-.gallery-item-wide img {
-    height: 260px;
-}
-
-.gallery-item-tall img {
-    height: 320px;
-}
-
-.gallery-item figcaption {
     font-size: 0.8rem;
-    color: var(--text-secondary);
-    padding: 12px 14px;
-    line-height: 1.5;
-    border-top: 1px solid var(--line-soft);
+    letter-spacing: 0.04em;
+    color: var(--primary-green);
+    text-decoration: none;
+    border-bottom: 1px dashed var(--line-color);
+    padding-bottom: 2px;
+}
+
+.project-link:hover,
+.project-link:focus-visible {
+    border-bottom-color: var(--primary-green);
 }
 
 /* ===================================
-   LIGHTBOX
+   SKILLS & EDUCATION
    =================================== */
-.lightbox {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.92);
-    z-index: 2500;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    visibility: hidden;
-    /* delay hiding until the fade-out ends; on open, visibility flips
-       instantly so the dialog can receive focus right away */
-    transition: opacity 0.3s ease, visibility 0s linear 0.3s;
-    padding: 40px;
-}
-
-.lightbox.active {
-    opacity: 1;
-    visibility: visible;
-    transition: opacity 0.3s ease, visibility 0s;
-}
-
-.lightbox-figure {
-    max-width: min(1000px, 92vw);
-    text-align: center;
-}
-
-.lightbox-figure img {
-    max-width: 100%;
-    max-height: 76vh;
-    border-radius: 8px;
-    border: 1px solid var(--line-color);
-}
-
-.lightbox-figure figcaption {
-    font-family: var(--font-mono);
-    font-size: 0.85rem;
-    color: #d8d8d8;
-    margin-top: 16px;
-    line-height: 1.6;
-}
-
-.lightbox-close {
-    position: absolute;
-    top: 22px;
-    right: 30px;
-    background: none;
-    border: none;
-    color: #fff;
-    font-size: 2.4rem;
-    cursor: pointer;
-    line-height: 1;
-    /* not var(--transition): an `all` transition would also animate the
-       inherited visibility flip and delay keyboard focus on open */
-    transition: color 0.3s ease, transform 0.3s ease;
-}
-
-.lightbox-close:hover {
-    color: #7CFC00;
-    transform: rotate(90deg);
-}
-
-/* ===================================
-   SKILLS
-   =================================== */
+/* One section, two panels: the tools with their proof, the areas and the
+   frameworks; then the degrees and certificates. */
 .skills {
     background: var(--darker-bg);
 }
 
 .skills-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 26px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 22px;
+    align-items: start;
 }
 
 .skills-panel {
     background: var(--card-bg);
     border: 1px solid var(--line-soft);
     border-radius: var(--border-radius);
-    padding: 32px 34px;
+    padding: 24px 28px;
 }
 
 .skills-panel h3 {
-    font-size: 1.1rem;
-    margin-bottom: 24px;
+    font-size: 1.05rem;
+    margin-bottom: 10px;
 }
 
-.skills-panel h3 i {
+.skills-panel h3 .icon,
+.panel-label .icon {
     color: var(--primary-green);
-    margin-right: 10px;
+    margin-right: 6px;
 }
 
 /* Toolkit with receipts — each tool links to where it earned its place */
@@ -2148,16 +1912,15 @@ html.js .project-details {
 }
 
 .toolkit-item {
-    padding: 13px 0;
+    padding: 8px 0;
     border-bottom: 1px dashed var(--line-soft);
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 1px;
 }
 
 .toolkit-item:last-child {
     border-bottom: none;
-    padding-bottom: 0;
 }
 
 .toolkit-name {
@@ -2187,122 +1950,158 @@ html.js .project-details {
     color: var(--primary-green);
 }
 
-.badge-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-bottom: 30px;
+.skills-panel h3.frameworks-title {
+    margin: 18px 0 8px;
 }
 
-.frameworks-title {
-    margin-top: 6px;
+/* The areas and the frameworks as runs of names, not rows or pills: eight
+   areas were eight rows on a phone, and ten frameworks four more. The dot
+   trails each name, so a line never starts with one. */
+.skills-checklist,
+.frameworks-list {
+    list-style: none;
+    font-size: 0.9rem;
+    line-height: 1.8;
+    color: var(--text-secondary);
 }
 
-.frameworks-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
+.skills-checklist li,
+.frameworks-list li {
+    display: inline;
 }
 
-.framework-card {
+.frameworks-list li {
+    white-space: nowrap;
+}
+
+.frameworks-list {
     font-family: var(--font-mono);
-    font-size: 0.78rem;
-    letter-spacing: 0.06em;
-    color: var(--text-primary);
-    border: 1px solid var(--line-color);
-    border-radius: 6px;
-    padding: 8px 14px;
-    transition: var(--transition);
+    font-size: 0.8rem;
+    letter-spacing: 0.04em;
 }
 
-.framework-card:hover {
-    background: var(--primary-green);
-    color: var(--darker-bg);
-    transform: translateY(-2px);
+.skills-checklist li:not(:last-child)::after,
+.frameworks-list li:not(:last-child)::after {
+    content: '·';
+    margin: 0 10px;
+    color: var(--primary-green);
 }
 
 /* ===================================
    EDUCATION
    =================================== */
-.education-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 22px;
+/* A degree is a row: its name with its dates, the institution, then one
+   run of what it held, green first. A certificate: its name, issuer and
+   date on one line, what it covered under it. */
+.panel-label {
+    color: var(--primary-green);
+    margin-bottom: 4px;
 }
 
 .education-card {
-    background: var(--card-bg);
-    border: 1px solid var(--line-soft);
-    border-radius: var(--border-radius);
-    padding: 28px 30px;
-    transition: var(--transition);
-    position: relative;
-    overflow: hidden;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    column-gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px dashed var(--line-soft);
 }
 
-.education-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 3px;
-    background: linear-gradient(90deg, var(--primary-green), transparent);
-    opacity: 0;
-    transition: var(--transition);
+.education-card > * {
+    grid-column: 1 / -1;
 }
 
-.education-card:hover {
-    border-color: var(--line-color);
-    transform: translateY(-6px);
+.skills-panel .education-card > h3 {
+    grid-column: 1;
+    grid-row: 1;
+    font-size: 1.02rem;
+    margin: 0;
 }
 
-.education-card:hover::before {
-    opacity: 1;
-}
-
-.education-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
-}
-
-.education-card h3 {
-    font-size: 1.1rem;
-    margin-bottom: 6px;
+.education-card > .education-top {
+    grid-column: 2;
+    grid-row: 1;
+    white-space: nowrap;
 }
 
 .education-card h4 {
-    font-size: 0.9rem;
+    font-size: 0.88rem;
     font-weight: 500;
     color: var(--text-secondary);
-    margin-bottom: 10px;
+    margin: 2px 0 4px;
+}
+
+.specialization,
+.education-card ul,
+.education-card ul li {
+    display: inline;
+    font-size: 0.86rem;
+    line-height: 1.6;
 }
 
 .specialization {
-    font-size: 0.85rem;
     color: var(--primary-green);
-    margin-bottom: 12px;
 }
 
 .education-card ul {
     list-style: none;
-}
-
-.education-card ul li {
     color: var(--text-secondary);
-    font-size: 0.88rem;
-    padding-left: 18px;
-    position: relative;
-    margin-bottom: 6px;
 }
 
 .education-card ul li::before {
-    content: '▸';
-    position: absolute;
-    left: 0;
+    content: ' · ';
     color: var(--primary-green);
+}
+
+/* The certificates, under the degrees. */
+.skills-panel .cert-heading {
+    margin: 18px 0 0;
+    color: var(--primary-green);
+    font-size: 0.75rem;
+}
+
+.education-card.certification {
+    display: block;
+    padding: 10px 0;
+}
+
+.education-card:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.education-card .cert-title {
+    display: inline;
+    font-family: var(--font-display);
+    font-size: 0.98rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.cert-meta {
+    display: inline;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+}
+
+.cert-meta::before {
+    content: ' — ';
+}
+
+.cert-meta .mono-label {
+    color: var(--primary-green);
+    white-space: nowrap;
+}
+
+.cert-line {
+    margin-top: 2px;
+    font-size: 0.84rem;
+    line-height: 1.5;
+    color: var(--text-secondary);
+}
+
+@media (max-width: 560px) {
+    .skills-panel { padding: 20px 18px; }
 }
 
 /* ===================================
@@ -2328,7 +2127,7 @@ html.js .project-details {
 .contact-info {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 10px;
 }
 
 .contact-card {
@@ -2338,7 +2137,7 @@ html.js .project-details {
     background: var(--card-bg);
     border: 1px solid var(--line-soft);
     border-radius: var(--border-radius);
-    padding: 22px 26px;
+    padding: 14px 20px;
     text-decoration: none;
     color: inherit;
     transition: var(--transition);
@@ -2371,15 +2170,22 @@ html.js .project-details {
     min-width: 0;
 }
 
+@media (max-width: 599px) {
+    .contact-card {
+        padding: 10px 16px;
+        gap: 14px;
+    }
+}
+
 .social-links {
     display: flex;
     gap: 14px;
-    margin-top: 8px;
+    margin-top: 4px;
 }
 
 .social-links a {
-    width: 52px;
-    height: 52px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     border: 1px solid var(--line-color);
     display: flex;
@@ -2401,12 +2207,29 @@ html.js .project-details {
     background: var(--card-bg);
     border: 1px solid var(--line-soft);
     border-radius: var(--border-radius);
-    padding: 36px;
+    padding: 28px;
 }
 
 .form-group {
     position: relative;
-    margin-bottom: 24px;
+    margin-bottom: 18px;
+}
+
+/* Name and email share a line where there is room for both. */
+@media (min-width: 600px) {
+    .contact-form {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        column-gap: 16px;
+    }
+
+    .contact-form > * {
+        grid-column: 1 / -1;
+    }
+
+    .contact-form > .form-group:nth-child(-n+2) {
+        grid-column: auto;
+    }
 }
 
 .form-group input,
@@ -2496,7 +2319,7 @@ html.js .project-details {
     background: rgba(255, 107, 107, 0.08);
 }
 
-body.light-mode .form-status.error {
+html.light-mode .form-status.error {
     color: #b03030;
     border-color: #b03030;
     background: rgba(176, 48, 48, 0.06);
@@ -2508,30 +2331,35 @@ body.light-mode .form-status.error {
 .footer {
     background: var(--darker-bg);
     border-top: 1px solid var(--line-soft);
-    padding: 50px 0;
+    padding: 36px 0;
     text-align: center;
 }
 
-/* At the very end of the page the floating buttons cannot be scrolled clear,
-   and on narrow screens they sat on the low-energy switch and the terminal
-   button. The footer leaves room for them. */
+/* At the very end of the page back to top cannot be scrolled clear, and on
+   narrow screens it sat on the low-energy switch and the terminal button.
+   The footer leaves room under them for its 80px corner. */
 @media (max-width: 760px) {
     .footer {
-        padding-bottom: 160px;
+        padding-bottom: 100px;
     }
 }
 
+/* The mark and where it is, on one line. */
 .footer-logo {
+    display: inline-block;
+    vertical-align: middle;
     font-family: var(--font-display);
     font-weight: 700;
-    font-size: 1.5rem;
+    font-size: 1.3rem;
     letter-spacing: 0.15em;
-    margin-bottom: 10px;
+    margin: 0 12px 8px 0;
 }
 
 .footer-coords {
+    display: inline-block;
+    vertical-align: middle;
     color: var(--primary-green);
-    margin-bottom: 14px;
+    margin-bottom: 8px;
 }
 
 .footer-content p {
@@ -2539,13 +2367,19 @@ body.light-mode .form-status.error {
     font-size: 0.9rem;
 }
 
-.footer-fieldreport a {
-    color: var(--text-secondary);
+/* The two plain links side by side where they fit, apart where they wrap,
+   on a line of their own. */
+.footer-links {
+    margin-top: 6px;
 }
 
-/* On a phone two in a row read, and tap, as one block without a gap. */
-.footer-fieldreport + .footer-fieldreport {
-    margin-top: 10px;
+.footer-fieldreport {
+    display: inline-block;
+    margin: 4px 10px 0;
+}
+
+.footer-fieldreport a {
+    color: var(--text-secondary);
 }
 
 .footer-fieldreport a:hover {
@@ -2553,7 +2387,7 @@ body.light-mode .form-status.error {
 }
 
 .footer-tagline {
-    margin-top: 6px;
+    margin-top: 2px;
     font-style: italic;
 }
 
@@ -2621,8 +2455,10 @@ html.js .reveal.visible {
     html.js .reveal { opacity: 1; transform: none; }
     /* An anchor jump is not animated across 11,000px either. */
     html { scroll-behavior: auto; }
-    /* At 0.01ms its visibility was still hidden as focus went to Close. */
-    .lightbox.active { transition: none !important; }
+    /* Nor is a change of theme (the switch, or Back to a kept page): body's
+       colour eased from dark's white, and all drawn in that frame kept the
+       white, on light, until next restyled. */
+    body { transition: none !important; }
 }
 
 /* Drawn as it nears the screen, sized by estimate until then (script.js
@@ -2664,11 +2500,7 @@ html:not(.js) .theme-toggle,
 html:not(.js) .listen-btn,
 html:not(.js) .play-index,
 html:not(.js) .journey-map,
-html:not(.js) .dossier-widget,
-html:not(.js) .project-chevron,
 html:not(.js) .ydi,
-html:not(.js) .eco-widget,
-html:not(.js) .anatomy,
 html:not(.js) .assay,
 html:not(.js) .nav-toggle,
 html:not(.js) .carbon-badge,
@@ -2679,14 +2511,9 @@ html:not(.js) .needs-js {
     display: none !important;
 }
 
-/* Every dossier is already open, so its title stops promising a click. */
-html:not(.js) .project-summary,
-html:not(.js) .project-toggle {
-    cursor: auto;
-}
-
 .nojs-note {
     max-width: 640px;
+    margin-bottom: 20px;
     padding: 14px 18px;
     border: 1px dashed var(--line-color);
     border-radius: var(--border-radius);
@@ -2723,9 +2550,9 @@ html.js .nojs-note { display: none; }
 /* ===================================
    RESPONSIVE
    =================================== */
-/* Below 1280px the bar's ~1,270px do not fit on one line, so the
-   hamburger takes over (the theme switch and Listen stay in the bar). */
-@media (max-width: 1279px) {
+/* Below 900px the bar's ~810px leave too little to spare, so the hamburger
+   takes over (the theme switch and Listen stay in the bar). */
+@media (max-width: 899px) {
     .nav-toggle {
         display: flex;
     }
@@ -2762,7 +2589,7 @@ html.js .nojs-note { display: none; }
     }
 }
 
-@media (max-width: 1279px) and (max-height: 700px) {
+@media (max-width: 899px) and (max-height: 700px) {
     .nav-menu {
         padding: 20px 32px;
         gap: 12px;
@@ -2770,9 +2597,9 @@ html.js .nojs-note { display: none; }
 }
 
 /* Without JavaScript the drawer above can never open, and the menu button
-   is gone (it could not open it). So below 1280px the bar stops floating
+   is gone (it could not open it). So below 900px the bar stops floating
    and the links wrap under the logo, every one of them reachable. */
-@media (max-width: 1279px) {
+@media (max-width: 899px) {
     html:not(.js) {
         scroll-padding-top: 0;
     }
@@ -2807,29 +2634,50 @@ html.js .nojs-note { display: none; }
     html:not(.js) .hero {
         padding-top: 56px;
     }
+
+    html:not(.js) .hero-photo-caption {
+        top: 14px;
+    }
 }
 
 @media (max-width: 1024px) {
     .about-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 26px;
     }
 
+    /* The portrait as a thumbnail beside where he is and the CV. Full
+       width it was 513px of a 390px phone before a word of the text. */
     .about-portrait {
         position: static;
-        max-width: 320px;
+        display: grid;
+        grid-template-columns: 112px minmax(0, 1fr);
+        column-gap: 18px;
+        align-items: center;
+        align-content: center;
     }
 
-    .about-facts {
-        grid-column: auto;
+    .portrait-frame {
+        grid-row: 1 / span 2;
     }
 
-    .project-details-inner {
-        grid-template-columns: 1fr;
-        gap: 10px;
+    .portrait-ring {
+        inset: 6px;
+        border-radius: 6px;
     }
 
-    .education-grid {
-        grid-template-columns: repeat(2, 1fr);
+    .portrait-meta {
+        justify-content: flex-start;
+        flex-wrap: wrap;
+        gap: 4px 10px;
+        margin: 0 0 10px;
+        padding: 0;
+        align-self: end;
+    }
+
+    .about-portrait .btn-cv {
+        justify-self: start;
+        align-self: start;
     }
 }
 
@@ -2837,26 +2685,6 @@ html.js .nojs-note { display: none; }
     .skills-grid,
     .contact-content {
         grid-template-columns: minmax(0, 1fr);
-    }
-
-    .project-summary {
-        grid-template-columns: 1fr;
-        gap: 18px;
-    }
-
-    .project-thumb {
-        width: 100%;
-        height: 200px;
-    }
-
-    .project-chevron {
-        position: absolute;
-        top: 22px;
-        right: 22px;
-    }
-
-    .project-card {
-        position: relative;
     }
 
     .hero-stats {
@@ -2867,29 +2695,14 @@ html.js .nojs-note { display: none; }
 
 @media (max-width: 768px) {
     section {
-        padding: 70px 0;
+        padding: 44px 0;
     }
 
     .hero-photo-caption {
+        top: 82px;
         right: 16px;
-        bottom: 14px;
+        max-width: calc(100% - 32px);
         font-size: 0.62rem;
-    }
-
-    .education-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .about-facts {
-        grid-template-columns: 1fr;
-    }
-
-    .project-gallery {
-        grid-template-columns: 1fr;
-    }
-
-    .gallery-item-wide img {
-        height: 200px;
     }
 
     .corelog-item {
@@ -2906,28 +2719,163 @@ html.js .nojs-note { display: none; }
     }
 }
 
+/* On a phone the caption needs a line of its own over the eyebrow, so
+   the rest gives a little: two buttons to a line, figures beside labels. */
+@media (max-width: 640px) {
+    .hero {
+        padding-top: 116px;
+    }
+
+    .hero-photo-caption {
+        top: 80px;
+        padding: 5px 12px;
+        letter-spacing: 0.02em;
+    }
+
+    .hero-eyebrow,
+    .hero-subtitle,
+    .hero-valueprop {
+        margin-bottom: 8px;
+    }
+
+    .hero-description {
+        font-size: 0.9rem;
+        line-height: 1.5;
+        margin-bottom: 14px;
+    }
+
+    .at-a-glance {
+        margin-bottom: 14px;
+    }
+
+    .hero-availability {
+        gap: 8px;
+        padding: 6px 12px;
+        font-size: 0.72rem;
+        letter-spacing: 0;
+    }
+
+    .hero-cta {
+        gap: 8px;
+        margin-bottom: 16px;
+    }
+
+    .hero-cv {
+        min-height: 36px;
+    }
+}
+
+/* Filled in, the strip is five facts, and a line each pushed the figures
+   off a 390x844 screen (smoke.js checks the longest strip content.js
+   accepts); a laptop's window is shorter than its screen, and at 1366x657
+   they sat wholly below it. So there the description follows the figures.
+   The source order, which a screen reader follows, is unchanged. */
+@media (max-width: 480px), (min-width: 900px) and (max-height: 880px) {
+    .hero-content {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .hero-description {
+        order: 1;
+        margin: 20px 0 0;
+    }
+}
+
+/* On a phone the labels get a column too. */
 @media (max-width: 480px) {
+    .at-a-glance {
+        gap: 8px;
+    }
+
+    .hero-availability {
+        padding: 4px 12px;
+        line-height: 1.5;
+    }
+
+    .glance-facts {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        align-items: baseline;
+        gap: 4px 12px;
+    }
+
+    .glance-fact {
+        display: contents;
+    }
+
+    .glance-fact dd {
+        font-size: 0.8rem;
+        line-height: 1.4;
+    }
+
     .hero-cta .btn {
-        width: 100%;
+        flex: 1 1 auto;
         justify-content: center;
+        padding: 14px;
     }
 
     .hero-stats {
-        gap: 18px;
+        gap: 10px 16px;
+        padding-top: 12px;
+    }
+
+    .hero-stat {
+        flex-direction: row;
+        align-items: center;
+        gap: 10px;
     }
 
     .hero-stat-number {
-        font-size: 1.7rem;
+        font-size: 1.6rem;
     }
+}
+
+/* Below 360px the longer captions can take two lines, and the eyebrow
+   steps down to clear them (smoke.js tries each at 320 and 360px). */
+@media (max-width: 359px) {
+    .hero { padding-top: 136px; }
+}
+
+/* Under 380px the two buttons share a line, the labels keep to two. */
+@media (max-width: 380px) {
+    .hero-cta .btn { padding: 14px 10px; letter-spacing: 0.03em; }
+    .hero-stat-label, .hero-photo-caption { letter-spacing: 0; }
+}
+
+/* A small phone's window is short too (smoke.js: 375x667, 360x640), and
+   the fold cut through the figures: the name takes less, the rest closes up. */
+@media (max-width: 480px) and (max-height: 700px) {
+    .hero-title { font-size: 2rem; }
+    .hero-eyebrow, .hero-subtitle, .hero-valueprop { margin-bottom: 6px; }
+    .at-a-glance { margin-bottom: 10px; }
+    .hero-cta { margin-bottom: 12px; }
+    .hero-stats { padding-top: 10px; }
+}
+
+/* In a laptop's window the rest closes up too, enough for the figures to
+   fit with the strip at its longest (smoke.js: 1366x657, 1280x720). The
+   scroll cue goes: it ran through the description, here at the hero's
+   foot, from 900 to 1,030px wide, and the page plainly goes on below. */
+@media (min-width: 900px) and (max-height: 880px) {
+    .scroll-indicator { display: none; }
+    .hero { padding-top: 84px; }
+    .hero-title { font-size: clamp(2.3rem, min(7vw, 8vh), 5rem); }
+    .at-a-glance { margin-bottom: 16px; }
+    .hero-cta { margin-bottom: 20px; }
+    .hero-stats { padding-top: 16px; }
 }
 
 /* ===================================
    JOURNEY MAP (living world map)
    =================================== */
+/* Pinned while the stops scroll past it: beside them on a desktop, and on
+   a phone as a band under the nav bar (below). */
 .journey-map {
-    position: relative;
-    max-width: 980px;
-    margin: 0 auto 56px;
+    position: sticky;
+    top: 72px;
+    z-index: 2;
+    margin: 0 0 28px;
     border: 1px solid var(--line-soft);
     border-radius: var(--border-radius);
     background: var(--card-bg-alt);
@@ -2947,7 +2895,13 @@ html.js .nojs-note { display: none; }
     height: auto;
     transition: transform 1.3s cubic-bezier(0.45, 0, 0.2, 1);
     transform-origin: 0 0;
-    will-change: transform;
+    /* no will-change: a layer kept at the zoom it was first drawn at
+       showed the delta's names and coasts blurred at 7.5x */
+}
+
+/* Low-energy mode or reduced motion: from stop to stop without flying */
+.journey-map.map-still * {
+    transition: none;
 }
 
 .map-graticule {
@@ -2962,7 +2916,7 @@ html.js .nojs-note { display: none; }
     stroke-width: calc(0.6px * var(--zoom-comp, 1));
 }
 
-body.light-mode .map-land {
+html.light-mode .map-land {
     fill: rgba(34, 139, 34, 0.10);
     stroke: rgba(34, 139, 34, 0.45);
 }
@@ -3017,15 +2971,15 @@ body.light-mode .map-land {
     opacity: 0.85;
     paint-order: stroke;
     stroke: var(--darker-bg);
-    stroke-width: 3px;
+    stroke-width: 0.3em;
 }
 
-body.light-mode .map-site-mark {
+html.light-mode .map-site-mark {
     stroke: #7a5f00;
     stroke-width: 1.6px;
 }
 
-body.light-mode .map-site-label {
+html.light-mode .map-site-label {
     fill: #5c4700;
     opacity: 1;
 }
@@ -3049,6 +3003,8 @@ body.light-mode .map-site-label {
     100% { transform: scale(1.6);  opacity: 0; }
 }
 
+/* A name's halo is in ems, as the site's and the visitor's are: 3 map
+   units, zoomed in, were 15px of black over the dots beside it. */
 .map-stop-label {
     font-family: var(--font-mono);
     font-size: 11px;
@@ -3057,7 +3013,7 @@ body.light-mode .map-site-label {
     transition: opacity 0.5s ease;
     paint-order: stroke;
     stroke: var(--darker-bg);
-    stroke-width: 3px;
+    stroke-width: 0.3em;
 }
 
 .map-stop.active .map-stop-label,
@@ -3081,7 +3037,7 @@ body.light-mode .map-site-label {
     pointer-events: none;
 }
 
-body.light-mode .journey-map-readout {
+html.light-mode .journey-map-readout {
     background: rgba(255, 255, 255, 0.7);
 }
 
@@ -3090,7 +3046,7 @@ body.light-mode .journey-map-readout {
 }
 
 /* ===================================
-   ECOPROMPT WIDGET (AI, weighed)
+   AI, WEIGHED (You Draw It, and the way on to the coach)
    =================================== */
 .ecoprompt {
     background: var(--darker-bg);
@@ -3098,181 +3054,71 @@ body.light-mode .journey-map-readout {
     overflow: hidden;
 }
 
-.eco-widget {
-    position: relative;
-    max-width: 900px;
-    margin: 0 auto;
-    background: var(--card-bg);
-    border: 1px solid var(--line-soft);
-    border-radius: var(--border-radius);
-    padding: 34px 36px;
+/* The chart at a reading width, not the container's 1,150px: at full
+   width it alone was over a screen tall on a desktop. */
+.ecoprompt .ydi {
+    max-width: 860px;
+    margin-bottom: 28px;
 }
 
-.eco-widget-controls {
-    display: grid;
-    /* minmax(0, …): a 1fr track still grows to its longest <option>, and
-       the selects pushed out of the card (by 67px on a 320px phone). */
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 18px;
-    margin-bottom: 26px;
+/* On a desktop the question and its buttons sit beside the chart, not
+   over it: stacked, the section was 1.5 screens. The last row takes what the
+   chart leaves, so the buttons stay under the question. */
+@media (min-width: 1024px) {
+    .ecoprompt .ydi {
+        max-width: none;
+        display: grid;
+        grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+        grid-template-rows: auto auto auto auto 1fr;
+        column-gap: 40px;
+        align-items: start;
+    }
+
+    .ecoprompt .ydi > * {
+        grid-column: 1;
+    }
+
+    .ecoprompt .ydi > .ydi-chart {
+        grid-column: 2;
+        grid-row: 1 / -1;
+    }
+
+    .ecoprompt .ydi-legend,
+    .ecoprompt .ydi-controls {
+        margin-top: 0;
+        margin-bottom: 14px;
+    }
+
+    .ecoprompt .ydi-verdict {
+        margin-top: 0;
+    }
 }
 
-.eco-field {
-    display: flex;
-    flex-direction: column;
-    gap: 7px;
-}
-
-.eco-field select {
-    width: 100%;
-    min-width: 0;
-    background: var(--card-bg-alt);
-    color: var(--text-primary);
-    border: 1px solid var(--line-color);
-    border-radius: 8px;
-    padding: 10px 12px;
-    font-family: var(--font-body);
-    font-size: 0.88rem;
-    cursor: pointer;
-}
-
-.eco-field select:focus {
-    outline: 2px solid var(--primary-green);
-    outline-offset: 1px;
-}
-
-.eco-widget-out {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 14px;
-    margin-bottom: 18px;
-}
-
-.eco-stat {
-    text-align: center;
-    border: 1px solid var(--line-soft);
-    border-radius: 10px;
-    padding: 18px 10px 14px;
-    background: var(--card-bg-alt);
-}
-
-.eco-num {
-    display: block;
-    font-family: var(--font-display);
-    font-size: 1.9rem;
-    font-weight: 700;
-    color: var(--primary-green);
-    line-height: 1.1;
-}
-
-.eco-unit {
-    font-family: var(--font-mono);
-    font-size: 0.68rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--text-secondary);
-}
-
-.eco-equiv {
-    text-align: center;
-    color: var(--text-secondary);
-    font-size: 0.98rem;
-    margin-bottom: 26px;
-}
-
-.eco-equiv strong {
-    color: var(--text-primary);
-}
-
-.eco-compare-title {
-    margin-bottom: 12px;
-    color: var(--text-secondary);
-}
-
-.eco-bars {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-bottom: 26px;
-}
-
-.eco-bar-row {
-    display: grid;
-    grid-template-columns: 130px 1fr 64px;
-    align-items: center;
-    gap: 12px;
-    font-size: 0.8rem;
-}
-
-.eco-bar-name {
-    font-family: var(--font-mono);
-    font-size: 0.7rem;
-    color: var(--text-secondary);
-    text-align: right;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.eco-bar-row.current .eco-bar-name {
-    color: var(--primary-green);
-}
-
-.eco-bar-track {
-    height: 10px;
-    background: var(--line-soft);
-    border-radius: 5px;
-    overflow: hidden;
-}
-
-.eco-bar-fill {
-    display: block;
-    height: 100%;
-    width: 0;
-    border-radius: 5px;
-    background: linear-gradient(90deg, var(--primary-green), var(--hover-color));
-    opacity: 0.55;
-    transition: width 0.9s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.eco-bar-row.current .eco-bar-fill {
-    opacity: 1;
-}
-
-.eco-bar-val {
-    font-family: var(--font-mono);
-    font-size: 0.7rem;
-    color: var(--text-secondary);
-}
-
+/* Under You Draw It: the way on to the full calculator, and its sources. */
 .eco-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 14px;
-    justify-content: center;
-    margin-bottom: 18px;
+    align-items: center;
+    gap: 10px 20px;
 }
 
 .eco-footnote {
-    text-align: center;
+    flex: 1 1 360px;
+    max-width: 760px;
     font-size: 0.75rem;
     color: var(--text-secondary);
     opacity: 0.8;
 }
 
+.ecoprompt .section-description a,
+.eco-footnote a,
+.fieldnote-body a {
+    color: var(--primary-green);
+}
+
 /* ===================================
-   IMPACT PANEL (field-tested numbers)
+   IMPACT BAR (the 164 water points, itemised, in About)
    =================================== */
-.impact-panel {
-    grid-column: 1 / -1;
-}
-
-.impact-viz {
-    display: flex;
-    flex-direction: column;
-    gap: 30px;
-}
-
 .impact-row-head {
     display: flex;
     justify-content: space-between;
@@ -3305,23 +3151,17 @@ html.js .reveal:not(.visible) .impact-seg {
     width: 0;
 }
 
-.impact-seg b {
-    font-family: var(--font-mono);
-    font-size: 0.78rem;
-    color: var(--darker-bg);
-}
-
 .impact-seg-a { background: var(--primary-green); }
 .impact-seg-b { background: rgba(124, 252, 0, 0.55); }
 .impact-seg-c { background: rgba(124, 252, 0, 0.28); }
 
-body.light-mode .impact-seg-b { background: rgba(34, 139, 34, 0.55); }
-body.light-mode .impact-seg-c { background: rgba(34, 139, 34, 0.3); }
+html.light-mode .impact-seg-b { background: rgba(34, 139, 34, 0.55); }
+html.light-mode .impact-seg-c { background: rgba(34, 139, 34, 0.3); }
 
 .impact-legend {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px 22px;
+    gap: 4px 18px;
     margin-top: 10px;
     color: var(--text-secondary);
 }
@@ -3334,40 +3174,23 @@ body.light-mode .impact-seg-c { background: rgba(34, 139, 34, 0.3); }
     margin-right: 7px;
 }
 
-.impact-row-inline {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 18px;
-}
-
-.impact-fact {
-    border: 1px dashed var(--line-color);
-    border-radius: 10px;
-    padding: 16px 18px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.impact-fact-num {
-    font-family: var(--font-display);
-    font-size: 1.7rem;
-    font-weight: 700;
-    color: var(--primary-green);
-}
-
 /* ===================================
-   FIELD NOTES
+   FIELD NOTES (in About)
    =================================== */
 .fieldnotes {
-    background: var(--dark-bg);
+    margin-top: 36px;
 }
 
+.fieldnotes .panel-label {
+    margin-bottom: 12px;
+}
+
+/* Three notes in a row on a desktop, each its tag and title until opened;
+   a list of three on a phone. */
 .fieldnotes-grid {
-    max-width: 860px;
-    margin: 0 auto;
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: start;
     gap: 16px;
 }
 
@@ -3387,10 +3210,10 @@ body.light-mode .impact-seg-c { background: rgba(34, 139, 34, 0.3); }
     list-style: none;
     cursor: pointer;
     display: grid;
-    grid-template-columns: 130px 1fr 34px;
+    grid-template-columns: minmax(0, 1fr) 30px;
     align-items: center;
-    gap: 18px;
-    padding: 22px 26px;
+    gap: 4px 14px;
+    padding: 16px 20px;
 }
 
 .fieldnote summary::-webkit-details-marker {
@@ -3402,11 +3225,14 @@ body.light-mode .impact-seg-c { background: rgba(34, 139, 34, 0.3); }
 }
 
 .fieldnote summary h3 {
+    grid-column: 1;
     font-size: 1.05rem;
     font-weight: 600;
 }
 
 .fieldnote-toggle {
+    grid-column: 2;
+    grid-row: 1 / span 2;
     width: 30px;
     height: 30px;
     border-radius: 50%;
@@ -3426,8 +3252,14 @@ body.light-mode .impact-seg-c { background: rgba(34, 139, 34, 0.3); }
 }
 
 .fieldnote-body {
-    padding: 0 26px 26px;
-    max-width: 700px;
+    padding: 0 20px 20px;
+}
+
+@media (max-width: 899px) {
+    .fieldnotes-grid {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 12px;
+    }
 }
 
 .fieldnote-body p {
@@ -3447,7 +3279,7 @@ body.light-mode .impact-seg-c { background: rgba(34, 139, 34, 0.3); }
     display: inline-flex;
     align-items: center;
     gap: 10px;
-    margin-top: 22px;
+    margin-top: 16px;
     border: 1px solid var(--line-color);
     border-radius: 100px;
     padding: 9px 18px;
@@ -3530,44 +3362,10 @@ body.eco-mode .hero-bg-slide:not(.active) {
 }
 
 /* ===================================
-   RESPONSIVE — new components
-   =================================== */
-@media (max-width: 860px) {
-    .eco-widget {
-        padding: 26px 20px;
-    }
-
-    .eco-widget-controls,
-    .eco-widget-out,
-    .impact-row-inline {
-        grid-template-columns: minmax(0, 1fr);
-    }
-
-    .eco-bar-row {
-        grid-template-columns: 92px 1fr 56px;
-    }
-
-    .fieldnote summary {
-        grid-template-columns: 1fr 34px;
-        row-gap: 6px;
-    }
-
-    .fieldnote-tag {
-        grid-column: 1 / -1;
-    }
-}
-
-/* ===================================
-   JOURNEY SCROLLYTELLING (desktop)
+   JOURNEY SCROLLYTELLING
    The map flies while the stops scroll past it
    =================================== */
 @media (min-width: 980px) {
-    /* .journey ships overflow:hidden, which disables position:sticky
-       for descendants — clip crops the same without a scroll container */
-    .journey {
-        overflow: clip;
-    }
-
     .journey-scroller {
         display: grid;
         grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
@@ -3576,287 +3374,64 @@ body.eco-mode .hero-bg-slide:not(.active) {
     }
 
     .journey-map {
-        position: sticky;
         top: 96px;
         margin: 0;
     }
 
-    /* revert the old horizontal journey inside the scroll column */
+    /* a column beside the map, without the line */
     .journey-line {
         display: none;
     }
 
     .journey-stops {
-        flex-direction: column;
         gap: 34px;
     }
 
     .journey-stop {
-        flex-direction: row;
         gap: 22px;
-        flex: none;
     }
 
-    .journey-card:hover {
-        transform: translateX(6px);
+    .journey-marker {
+        margin-top: 0;
     }
 }
 
-/* ===================================
-   DOSSIER WIDGETS (interactive blocks inside project details)
-   =================================== */
-.dossier-widget {
-    grid-column: 1 / -1;
-    margin-top: 10px;
-    padding: 24px 24px 18px;
-    border: 1px dashed var(--line-color);
-    border-radius: var(--border-radius);
-    background: var(--card-bg-alt);
+/* A phone or a tablet: the map sat above the stops and flew out of sight
+   as they came. It is a band now (170px tall at 390px), pinned under the
+   nav bar while they scroll past below it. */
+@media (max-width: 979px) {
+    .journey-map-frame {
+        width: 100%;   /* or max-height would narrow it, through the ratio */
+        aspect-ratio: 2 / 1;
+        max-height: 24vh;
+    }
 }
 
-.dossier-widget h4 {
-    font-size: 0.85rem;
-    font-family: var(--font-mono);
-    font-weight: 500;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--primary-green);
+/* A phone: the stops closer, their text wider (2.25 screens, from 2.7) */
+@media (max-width: 599px) {
+    .journey-stops {
+        gap: 20px;
+    }
+
+    .journey-stop {
+        gap: 14px;
+    }
+
+    .journey-card {
+        padding: 20px 18px;
+    }
+
+    .journey-marker {
+        margin-top: 20px;
+    }
 }
 
-.dossier-widget h4 i {
-    margin-right: 8px;
-}
-
-.dossier-widget-intro {
-    color: var(--text-secondary);
-    font-size: 0.92rem;
-    margin: 10px 0 16px;
-    max-width: 68ch;
-}
-
-/* --- Site the borehole --- */
-.borehole-stage {
-    border: 1px solid var(--line-soft);
-    border-radius: 8px;
-    overflow: hidden;
-    cursor: crosshair;
-    touch-action: none;
-}
-
-.borehole-stage:focus-visible {
-    outline: 2px solid var(--primary-green);
-    outline-offset: 2px;
-}
-
-.borehole-svg {
-    display: block;
-    width: 100%;
-    height: auto;
-}
-
-.bh-label {
-    font-family: var(--font-mono);
-    font-size: 12px;
-    fill: var(--text-secondary);
-}
-
-.bh-label-dim {
-    opacity: 0.55;
-    font-size: 11px;
-}
-
-.bh-curve {
-    fill: none;
-    stroke: var(--primary-green);
-    stroke-width: 1.8;
-}
-
-.bh-ground {
-    fill: rgba(124, 252, 0, 0.05);
-}
-
-body.light-mode .bh-ground {
-    fill: rgba(34, 139, 34, 0.08);
-}
-
-.bh-surface {
-    fill: none;
-    stroke: var(--text-secondary);
-    stroke-width: 1.4;
-}
-
-.bh-strata {
-    stroke: var(--line-soft);
-    stroke-dasharray: 6 8;
-}
-
-.bh-rig-base {
-    fill: var(--text-secondary);
-}
-
-.bh-rig-mast {
-    fill: none;
-    stroke: var(--text-primary);
-    stroke-width: 2.4;
-    stroke-linecap: round;
-}
-
-.bh-hole {
-    stroke: var(--text-secondary);
-    stroke-width: 2.6;
-    opacity: 0.7;
-}
-
-.bh-water-col {
-    stroke: #3f9be0;
-    stroke-width: 2.6;
-}
-
-.bh-reveal-water {
-    fill: rgba(63, 155, 224, 0.30);
-}
-
-.bh-reveal-clay {
-    fill: rgba(191, 142, 84, 0.30);
-}
-
-.bh-gush {
-    fill: none;
-    stroke: #3f9be0;
-    stroke-width: 2;
-    stroke-linecap: round;
-}
-
-.bh-gush-anim {
-    animation: bhGush 0.9s ease-out;
-}
-
-@keyframes bhGush {
-    0%   { opacity: 0; transform: scale(0.4); transform-origin: center; transform-box: fill-box; }
-    60%  { opacity: 1; }
-    100% { opacity: 1; }
-}
-
-.borehole-hud {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 14px;
-    margin-top: 14px;
-}
-
-.borehole-score {
-    color: var(--primary-green);
-}
-
-.borehole-result {
-    margin-top: 10px;
-    color: var(--text-secondary);
-    min-height: 1.4em;
-}
-
-/* --- Don't let it become a boat --- */
-.flood-stage {
-    border: 1px solid var(--line-soft);
-    border-radius: 8px;
-    overflow: hidden;
-}
-
-.flood-svg {
-    display: block;
-    width: 100%;
-    height: auto;
-}
-
-.fl-bank {
-    fill: rgba(124, 252, 0, 0.07);
-}
-
-body.light-mode .fl-bank {
-    fill: rgba(34, 139, 34, 0.10);
-}
-
-.fl-building {
-    fill: rgba(124, 252, 0, 0.10);
-    stroke: var(--line-soft);
-}
-
-body.light-mode .fl-building {
-    fill: rgba(34, 139, 34, 0.14);
-}
-
-.fl-window {
-    fill: var(--card-bg-alt);
-}
-
-.fl-pylon {
-    fill: none;
-    stroke: var(--text-secondary);
-    stroke-width: 5;
-    stroke-linecap: round;
-}
-
-.fl-beam {
-    fill: var(--text-secondary);
-}
-
-.fl-car {
-    fill: var(--primary-green);
-    opacity: 0.85;
-}
-
-.fl-car-window {
-    fill: var(--darker-bg);
-    opacity: 0.8;
-}
-
-.fl-water {
-    fill: rgba(63, 155, 224, 0.55);
-}
-
-.fl-refline {
-    stroke: #3f9be0;
-    stroke-width: 1;
-    stroke-dasharray: 5 6;
-    opacity: 0.7;
-}
-
-.fl-label {
-    font-family: var(--font-mono);
-    font-size: 12px;
-    fill: #3f9be0;
-}
-
-.flood-controls {
-    margin-top: 16px;
-}
-
-.flood-controls label {
-    display: block;
-    margin-bottom: 6px;
-}
-
-.flood-controls #floodLevelLabel {
-    color: var(--primary-green);
-}
-
-.flood-controls input[type="range"] {
-    width: 100%;
-    accent-color: var(--primary-green);
-}
-
-.flood-ticks {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.7rem;
-    color: var(--text-dim);
-    margin-top: 2px;
-}
-
-.flood-note {
-    margin-top: 12px;
-    color: var(--text-secondary);
-    min-height: 2.6em;
+/* A phone on its side has no height to spare for it: it scrolls away. */
+@media (max-width: 979px) and (max-height: 559px) {
+    .journey-map {
+        position: relative;
+        top: 0;
+    }
 }
 
 /* ===================================
@@ -3981,7 +3556,6 @@ body.light-mode .fl-building {
 @media (max-width: 640px) {
     .ft-prompt { display: none; }
     .ft-screen { font-size: 0.76rem; }
-    .dossier-widget { padding: 18px 14px 14px; }
 }
 
 /* --- You are here (journey map visitor mark) --- */
@@ -3996,14 +3570,14 @@ body.light-mode .fl-building {
     opacity: 0.9;
     paint-order: stroke;
     stroke: var(--darker-bg);
-    stroke-width: 3px;
+    stroke-width: 0.3em;
 }
 
-body.light-mode .map-you-label {
+html.light-mode .map-you-label {
     fill: #1f6dab;
 }
 
-body.light-mode .map-you-dot {
+html.light-mode .map-you-dot {
     fill: #1f6dab;
 }
 
@@ -4021,12 +3595,14 @@ body.light-mode .map-you-dot {
     max-width: 46%;
 }
 
-body.light-mode .journey-you-readout {
+html.light-mode .journey-you-readout {
     background: rgba(255, 255, 255, 0.7);
     color: #1f6dab;
 }
 
+/* The band has no room for them; each stop's card gives its coordinates. */
 @media (max-width: 640px) {
+    .journey-map-readout,
     .journey-you-readout { display: none; }
 }
 
@@ -4208,11 +3784,10 @@ body.light-mode .journey-you-readout {
     50%      { opacity: 0.35; }
 }
 
-/* Where room is short — a phone's nav bar, and beside the full menu on a
-   desktop — the word steps aside and the waveform carries it. It is
-   clipped, not removed, so a screen reader still hears "Listen to this
-   page", and the tooltip says it for a mouse. */
-@media (max-width: 480px), (min-width: 1280px) {
+/* On a phone's nav bar the word steps aside and the waveform carries it.
+   It is clipped, not removed, so a screen reader still hears "Listen to
+   this page", and the tooltip says it for a mouse. */
+@media (max-width: 480px) {
     .listen-btn {
         padding: 0;
     }
@@ -4227,32 +3802,39 @@ body.light-mode .journey-you-readout {
     }
 }
 
-/* Beside the full menu every pixel counts: the rest of the bar leaves
-   ~12px of 1280. This control sits closer to the theme switch, and below
-   1330px the links give up 4px a gap (scripts/smoke.js checks it fits at
-   every width). */
-@media (min-width: 1280px) {
-    .nav-listen {
-        margin-right: -8px;
+/* Two across on a tablet; on a phone, one. */
+@media (max-width: 1023px) {
+    .projects-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 
-@media (min-width: 1280px) and (max-width: 1329px) {
-    .nav-menu {
-        gap: 12px;
+@media (max-width: 599px) {
+    .projects-list {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 14px;
+    }
+
+    .project-card {
+        grid-template-columns: 64px minmax(0, 1fr);
+        gap: 8px 14px;
+        padding: 14px 16px;
+    }
+
+    .project-photo {
+        width: 64px;
     }
 }
 
-/* Pointer from the story-shaped dossiers to the evidence-shaped case studies.
-   Two ways into the same six projects, for two different readers. */
+/* Pointer from the teaser cards to the evidence-shaped case studies, and
+   to the same six projects read for one kind of role: the section's one
+   line of introduction, ruled like a result. */
 .section-cta {
-    max-width: 68ch;
-    margin: 14px auto 0;
-    padding: 12px 16px;
+    padding: 10px 16px;
     border-left: 3px solid var(--accent-color);
     background: rgba(124, 252, 0, 0.04);
     border-radius: 4px;
-    font-size: 0.88rem;
+    font-size: 0.95rem;
     line-height: 1.65;
     color: var(--text-secondary);
 }

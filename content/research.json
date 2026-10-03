@@ -135,7 +135,7 @@
       "status": "public",
       "url": "ai-carbon-data.js",
       "caseStudy": "sustainable-ai",
-      "summary": "The machine-readable factor set behind both tools: ten models, thirteen grid regions, four cooling profiles, plus PUE, the token-energy model and everyday equivalents — each with a citation, a vintage and a plausible range.",
+      "summary": "The machine-readable factor set behind the EcoPrompt Coach and the homepage's AI energy chart: ten models, thirteen grid regions, four cooling profiles, plus PUE, the token-energy model and everyday equivalents — each with a citation, a vintage and a plausible range.",
       "methods": ["Literature synthesis", "Provider disclosure review"],
       "reproducible": true,
       "note": "Reusable on its own. A test fails the build if any factor loses its source, range or review date."
@@ -169,7 +169,7 @@
 
   "reproducibility": {
     "heading": "Reproducing what is here",
-    "body": "Everything public on this page runs from one clone with no build step and no API key. The two carbon tools share a single factor set, so they cannot quote different numbers. The map regenerates byte-identically from pinned dependencies. The narration is content-addressed, so re-rendering unchanged text costs nothing.",
+    "body": "Everything public on this page runs from one clone with no build step and no API key. The EcoPrompt Coach and the homepage's energy chart read one factor set, so they cannot disagree about a model. The chart shows each model's published figure for a 1,000-token answer; the coach multiplies it by data-centre overhead (PUE, 1.2 unless you change it), so for the same answer it prints 1.2 times the chart's figure. The map regenerates byte-identically from pinned dependencies. The narration is content-addressed, so re-rendering unchanged text costs nothing.",
     "commands": [
       { "command": "npm install && npm test", "does": "runs every suite, the map check and the asset-weight budgets" },
       { "command": "npm run map:build", "does": "regenerates the journey map from Natural Earth data" },

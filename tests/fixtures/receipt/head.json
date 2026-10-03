@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "viewports": {
+    "1440x900": { "width": 1440, "height": 900, "label": "desktop" },
+    "390x844": { "width": 390, "height": 844, "label": "phone" }
+  },
+  "bytes": {
+    "criticalWire": { "label": "First view of the homepage", "readme": "First view of the homepage, over the wire (fonts included)", "page": "index.html", "unit": "bytes", "measured": 281718, "ceiling": 307200, "headroom": 25482, "hold": null, "couldLowerTo": null },
+    "onDemand": { "label": "On demand", "readme": "Everything a full visit adds on demand (modules, scripts, map)", "page": null, "unit": "bytes", "measured": 75000, "ceiling": 73728, "headroom": -1272, "hold": null, "couldLowerTo": null },
+    "introAudio": { "label": "Recorded narration", "readme": "Recorded narration: Moses's introduction (sized for his 60–90 s take)", "page": null, "unit": "bytes", "measured": 0, "ceiling": 819200, "headroom": 819200, "hold": "sized for his recording, which is not made yet", "couldLowerTo": null },
+    "caseStudiesWire": { "label": "Case studies page", "readme": "Case studies page, over the wire (fonts included)", "page": "case-studies.html", "unit": "bytes", "measured": 86522, "ceiling": 112640, "headroom": 26118, "hold": null, "couldLowerTo": 91136 },
+    "freshWire": { "label": "A page new on this branch", "readme": "A page new on this branch, over the wire", "page": "fresh.html", "unit": "bytes", "measured": 1048576, "ceiling": 2097152, "headroom": 1048576, "hold": null, "couldLowerTo": 1101824 }
+  },
+  "length": {
+    "index.html": {
+      "1440x900": { "unit": "screens", "measured": 9.8, "ceiling": 10, "headroom": 0.2, "couldLowerTo": null },
+      "390x844": { "unit": "screens", "measured": 18.5, "ceiling": 18, "headroom": -0.5, "couldLowerTo": null }
+    },
+    "stats.html": {
+      "1440x900": { "unit": "screens", "measured": 10.06, "ceiling": 10.57, "headroom": 0.51, "couldLowerTo": null },
+      "390x844": { "unit": "screens", "measured": 12, "ceiling": 15.66, "headroom": 3.66, "couldLowerTo": 12.6 }
+    }
+  }
+}

@@ -84,26 +84,46 @@ function rules(css) {
 }
 
 // ===================================================================
-// The dossiers are open without JavaScript, and their titles say so
+// The projects need nothing from JavaScript, and neither do their games
 // ===================================================================
 {
-    // Only script.js collapses a dossier, so the markup's state is the open
-    // one; "collapsed" above content on show misled a screen reader.
-    const toggles = html.match(/<button\b[^>]*class="project-toggle[^"]*"[^>]*>/g) || [];
-    assert(toggles.length === 6 && toggles.every(t => /aria-expanded="true"/.test(t)),
-        `Dossiers: the six title buttons ship aria-expanded="true", as shown without JavaScript (${toggles.filter(t => !/aria-expanded="true"/.test(t)).length} do not)`);
+    // The six dossiers were collapsed by script.js, and their markup had to
+    // say "expanded" for the reader without it. The cards that replaced
+    // them have nothing to open: every word and link is in the HTML.
+    const { JSDOM } = require('jsdom');
+    const doc = new JSDOM(html).window.document;
+    const cards = Array.from(doc.querySelectorAll('#projects .project-card'));
+    assert(cards.length === 6 && cards.every(c => c.querySelector('h3') && c.querySelector('.project-claim') && c.querySelector('a.project-link[href]')),
+        `Projects: six cards, each with its title, headline result and link in the served HTML (${cards.length})`);
+    assert(!doc.querySelector('#projects button, #projects [aria-expanded]'), 'Projects: no control on a card that only a script could work');
+
+    // The games moved to the case studies. Without JavaScript each host is
+    // its heading and a line; the controls ship [hidden], and only the
+    // module that wires them shows them.
+    const cs = new JSDOM(read('case-studies.html')).window.document;
+    const hosts = Array.from(cs.querySelectorAll('[data-widget]'));
+    assert(hosts.length === 2 && hosts.every(h => h.querySelector('.dw-live[hidden]') && h.querySelector('.cs-play-summary').textContent.trim().length > 40),
+        `Games: each host ships its controls hidden and a summary on show (${hosts.map(h => h.id).join(', ')})`);
+    assert(hosts.every(h => Array.from(h.querySelectorAll('button, input, [tabindex]')).every(c => c.closest('[hidden]'))),
+        'Games: no control of theirs is on show before the module has wired it');
 }
 
 // ===================================================================
 // Copy that promises what only JavaScript does hides with it
 // ===================================================================
 {
-    // Without JavaScript every dossier is open already and the section-05
-    // widgets are a note, so "click any one to open" and "the live widget"
-    // described nothing a reader could do.
+    // Without JavaScript the section-05 chart is a note, so copy that
+    // promises what only a script does must go with it. ("Click any one to
+    // open" went with the dossiers; "the live widget on this page" with the
+    // calculator to carbon-ai.html. Neither may come back outside .needs-js.)
     const { JSDOM } = require('jsdom');
     const doc = new JSDOM(html).window.document;
-    ['click any one to open', 'the live widget on this page', 'Watch the route unfold'].forEach((phrase) => {
+    ['click any one to open', 'the live widget on this page'].forEach((phrase) => {
+        const holders = Array.from(doc.querySelectorAll('body *'))
+            .filter(el => Array.from(el.childNodes).some(n => n.nodeType === 3 && n.textContent.includes(phrase)));
+        assert(holders.every(el => el.closest('.needs-js')), `Copy: "${phrase}" is not promised where JavaScript cannot run`);
+    });
+    ['Watch the route unfold'].forEach((phrase) => {
         const holders = Array.from(doc.querySelectorAll('body *'))
             .filter(el => Array.from(el.childNodes).some(n => n.nodeType === 3 && n.textContent.includes(phrase)));
         assert(holders.length > 0 && holders.every(el => el.closest('.needs-js')), `Copy: "${phrase}" is inside .needs-js, so it goes when JavaScript cannot run`);
@@ -132,7 +152,6 @@ function rules(css) {
     const checks = [
         ['.preloader', /position:\s*fixed/, 'the preloader only covers the page when script.js can lift it'],
         ['.reveal', /opacity:\s*0\s*;/, 'reveal blocks are only transparent when script.js can show them'],
-        ['.project-details', /max-height:\s*0\s*;/, 'dossiers are only collapsed when script.js can open them'],
         ['.impact-seg', /width:\s*0\s*;/, 'impact bars are only empty when script.js can grow them']
     ];
     checks.forEach(([cls, decl, what]) => {
@@ -159,12 +178,69 @@ function rules(css) {
     assert(/class="nojs-note"/.test(src), 'carbon-ai.html: a note stands in for the calculator without JavaScript');
     // A calculator whose scripts never arrived showed blank selects and
     // dashes, with the note hidden because JavaScript was on. The visit
-    // counter is not one of the calculator's scripts: a blocker that stops it
-    // must not take the calculator down with it.
-    const tags = (src.match(/<script\b[^>]*\bsrc=[^>]*>/g) || []).filter(t => !/\bsrc=["']count\.js["']/.test(t));
+    // counter and the shell's theme.js are not the calculator's scripts: a
+    // blocker that stops either must not take the calculator down with it.
+    const tags = (src.match(/<script\b[^>]*\bsrc=[^>]*>/g) || []).filter(t => !/\bsrc=["'](count|theme)\.js["']/.test(t));
     assert(tags.length === 2 && tags.every(t => /onerror=["'][^"']*classList\.remove\('js'\)/.test(t)),
         `carbon-ai.html: each script that fails to load brings the note back (onerror on ${tags.filter(t => /onerror/.test(t)).length} of ${tags.length})`);
     assert(/class="nojs-note"/.test(html), 'index.html: a note stands in for the section-05 calculators without JavaScript');
+    // Without JavaScript the note sat flush on the coach's button, and both
+    // led to the same page: two ways on, back to back. And the footnote
+    // cited the sources of a chart that was not there.
+    const { JSDOM } = require('jsdom');
+    const home = new JSDOM(html).window.document;
+    const note = home.querySelector('#ecoprompt .nojs-note');
+    const ways = Array.from(home.querySelectorAll('#ecoprompt a[href="carbon-ai.html"]'));
+    assert(!!note && !note.querySelector('a') && ways.length === 1 && ways[0].closest('.eco-actions'),
+        `index.html: without JavaScript, AI, Weighed has one way on to the coach, its button (${ways.length} links)`);
+    const cite = Array.from(home.querySelectorAll('#ecoprompt .eco-footnote *')).find(el => /Jegham/.test(el.textContent) && !el.querySelector('*:not(a)') );
+    assert(!!cite && !!cite.closest('.needs-js'), 'index.html: the chart\'s sources go with the chart when JavaScript cannot run');
+    const noteRule = rules(read('style.css')).find(r => r.selectors.includes('.nojs-note'));
+    assert(!!noteRule && /margin(?:-bottom)?:\s*[^;]*[1-9]/.test(noteRule.body), 'index.html: the note keeps its distance from what follows it');
+
+    // The note sends a reader without JavaScript to the coach's page, where
+    // they still have none. It promised "the figures behind it, their
+    // sources and their limits"; that page, without script, hides its
+    // evidence ledger (and only script fills it), so neither a figure nor a
+    // source was there. Whatever the note names must be on that page as a
+    // reader without JavaScript gets it.
+    const coach = new JSDOM(read('carbon-ai.html')).window.document;
+    rules(read('carbon-ai.css')).forEach(r => r.selectors.forEach((sel) => {
+        const m = sel.match(/^html:not\(\.js\)\s+(.+)$/);
+        if (m && /display:\s*none/.test(r.body)) coach.querySelectorAll(m[1]).forEach(el => el.remove());
+    }));
+    coach.querySelectorAll('[hidden], script, noscript').forEach(el => el.remove());
+    const shown = coach.body.textContent.replace(/\s+/g, ' ');
+    const promises = [
+        [/\bmethod\b/i, 'the method', /\bMethodology\b/.test(shown)],
+        [/\blimits?\b/i, 'its limits', /Caveat:.*inference only/.test(shown)],
+        [/\bsources?\b/i, 'the sources', /\bSources\b/.test(shown) && /Jegham/.test(shown)],
+        [/\bfigures?\b/i, 'the figures', /\d\s*Wh\b/.test(shown)]
+    ].filter(([said]) => said.test(note.textContent));
+    const unkept = promises.filter(([, , kept]) => !kept).map(([, what]) => what);
+    assert(promises.length >= 2 && unkept.length === 0,
+        `index.html: the no-JS note promises only what carbon-ai.html shows without JavaScript (promised: ${promises.map(p => p[1]).join(', ') || 'nothing'}; not there: ${unkept.join(', ') || 'none'})`);
+}
+// The case studies' two games. Without JavaScript a host was its heading
+// and a footnote, under artifact cards that call it interactive and link
+// to it: nothing said why there was no game.
+{
+    const { JSDOM } = require('jsdom');
+    const doc = new JSDOM(read('case-studies.html')).window.document;
+    const hosts = Array.from(doc.querySelectorAll('[data-widget]'));
+    const bare = hosts.filter(h => !h.querySelector(':scope > .nojs-note') || !/needs JavaScript/.test(h.querySelector(':scope > .nojs-note').textContent))
+        .map(h => h.id);
+    assert(hosts.length === 2 && bare.length === 0,
+        `case-studies.html: each of the ${hosts.length} games says, without JavaScript, that it needs it (${bare.join(', ') || 'all do'})`);
+    const css = stripComments(read('carbon-ai.css'));
+    assert(/html\.js \.nojs-note\s*\{\s*display:\s*none/.test(css) && /<link rel="stylesheet" href="carbon-ai\.css">/.test(read('case-studies.html')),
+        'case-studies.html: the note goes with JavaScript on (carbon-ai.css, which the page loads)');
+    // A card that links to a game says it runs with JavaScript, so the
+    // promise holds for a reader without it too.
+    const { projects } = require('../scripts/lib/content.js').loadAll();
+    const promising = projects.caseStudies.flatMap(p => (p.artifacts || []).filter(a => /#play-/.test(a.url || '')))
+        .filter(a => !/JavaScript/.test(a.note || '')).map(a => a.name);
+    assert(promising.length === 0, `case-studies.html: every artifact that links to a game says it needs JavaScript (${promising.join('; ') || 'all do'})`);
 }
 
 // ===================================================================
@@ -279,27 +355,20 @@ async function takeoverCase(label, markJs) {
     assert(errors.length === 0, `${label}: no errors`);
     assert(window.mks.ready === true, `${label}: script.js reports ready`);
     assert(doc.documentElement.classList.contains('js'), `${label}: the page is marked html.js once script.js has run`);
-    const cards = Array.from(doc.querySelectorAll('.project-card')).map((card) => {
-        const details = card.querySelector('.project-details');
-        return { open: card.classList.contains('expanded'), inert: !!details.inert, said: card.querySelector('.project-toggle').getAttribute('aria-expanded') };
-    });
+    // The experience cards fold under html.js; the takeover puts it back.
+    const cards = Array.from(doc.querySelectorAll('#experience .timeline-content')).filter(c => c.querySelector(':scope > .corelog-more'));
+    const open = cards.filter(c => c.classList.contains('is-open') && c.querySelector('.corelog-more').getAttribute('aria-expanded') === 'true');
     if (markJs) {
         assert(reveals.some(el => !el.classList.contains('visible')), `${label}: reveals still wait to scroll into view`);
-        assert(cards.length === 6 && cards.every(c => !c.open && c.inert && c.said === 'false'),
-            `${label}: every dossier starts closed, inert, and says so (${cards.map(c => `${c.open ? 'open' : 'closed'}/${c.said}`).join(' ')})`);
+        assert(cards.length > 0 && open.length === 0, `${label}: the experience cards start short, each a press from the rest (${open.length} of ${cards.length} open)`);
     } else {
         // A late start: <head> already showed everything. Putting the mark
         // back must not hide any of it again, and the intro must not replay.
         assert(reveals.length > 0 && reveals.every(el => el.classList.contains('visible')), `${label}: every reveal is marked done before the mark goes back (${reveals.filter(el => !el.classList.contains('visible')).length} not)`);
         assert(!doc.getElementById('preloader'), `${label}: the intro does not replay over a page already on screen`);
-        // The six dossiers were open without the mark; html.js collapses any
-        // that is not .expanded. They used to fold shut under the reader.
-        assert(cards.length === 6 && cards.every(c => c.open && !c.inert && c.said === 'true'),
-            `${label}: every dossier the reader was shown stays open, and says so (${cards.map(c => `${c.open ? 'open' : 'closed'}/${c.said}`).join(' ')})`);
-        // Closing one closes that one, not the other five as well.
-        doc.querySelector('.project-toggle').click();
-        const open = Array.from(doc.querySelectorAll('.project-card.expanded')).length;
-        assert(open === 5, `${label}: closing one dossier leaves the other five open (${open} open)`);
+        // They were on screen whole; the mark must not fold them under the reader.
+        assert(cards.length > 0 && open.length === cards.length && cards.every(c => /^Less/.test(c.querySelector('.corelog-more').textContent)),
+            `${label}: every experience card the reader has seen whole stays open, its button offering Less (${open.length} of ${cards.length} open)`);
     }
     await tick(0);   // let the counters' microtask run before the window goes
     window.close();
@@ -334,7 +403,7 @@ async function lateLineCase() {
     const report = () => observers.filter(o => o.on).forEach(o => o.cb([{ target: window.document.body }], o));
 
     assert(errors.length === 0, 'Late start, held line: no errors');
-    lineTop = 1000;   // a dossier above grows to fit its widget, pushing the line down
+    lineTop = 1000;   // a section above grows to fit its widget, pushing the line down
     bodyHeight = 30760;
     report();
     assert(lineTop === 240 && scrolls.length === 1, `Late start, held line: when the page grows above it, the line is put back (at ${lineTop}px after ${scrolls.length} scroll(s))`);
@@ -355,6 +424,42 @@ async function lateLineCase() {
     await counterCase('Counters (reduced motion)', { reduce: true }, false);
     await counterCase('Counters (low-energy mode)', { eco: 'on' }, false);
     await counterCase('Counters (late start)', { markJs: false }, false);
+
+    // The count is timed, not counted in frames. It added a fixed step per
+    // frame, so on a device whose frames ran slow (smoke's own 4x CPU
+    // throttle, a busy runner) it was still running on the first screen
+    // long after its 1.8 s, and smoke's idle main-thread check went over
+    // its ceiling at random. Here the frames and the clock are the test's.
+    for (const [hz, label] of [[3, 'slow frames, 3 a second'], [120, 'fast frames, 120 a second']]) {
+        let observers = [];
+        const frames = [];
+        let t = 1000;
+        const { window, errors } = run('dark', {
+            before(w) {
+                observers = fakes(w);
+                w.requestAnimationFrame = (fn) => { frames.push(fn); return frames.length; };
+                w.performance.now = () => t;
+            }
+        });
+        const doc = window.document;
+        await tick(0);
+        fireStats(window, observers);
+        // A count is running while its digits are hidden from screen readers
+        // (the digits can show the figure a frame early, since they round up).
+        const counting = () => !!doc.querySelector('.hero-stat-number[aria-hidden]');
+        // Every frame due up to `ms` after the count began.
+        const at = (ms) => {
+            while (frames.length && t + 1000 / hz <= 1000 + ms + 1e-6) { t += 1000 / hz; frames.splice(0).forEach(fn => fn(t)); }
+            return counting();
+        };
+        const halfway = at(900);
+        const late = at(1790);
+        const after = at(1800 + 1000 / hz);
+        const shown = Array.from(doc.querySelectorAll('.hero-stat-number')).map(c => c.textContent).join('|');
+        assert(errors.length === 0 && halfway && late && !after && shown === targets(doc) && !doc.querySelector('.hero-stats .sr-only'),
+            `Counters (${label}): still counting 0.9 s and 1.79 s in, done on the first frame after 1.8 s on its exact figures (${halfway}, ${late}, ${after}: ${shown})`);
+        window.close();
+    }
 
     // Low-energy mode switched on after the counters were zeroed but before
     // they came into view: they are put straight back, not counted up.

@@ -255,9 +255,9 @@ const fieldText = plain(fieldReport);
     projects.forEach((cs) => {
         const at = index.indexOf(`data-project="${cs.id}"`);
         const meta = at < 0 ? null : index.slice(at).match(/class="project-meta">\s*<span class="mono-label">([^<]+)</);
-        if (!meta || years(meta[1]) !== years(cs.period)) wrongIndex.push(`${cs.id}: "${meta ? meta[1] : 'no dossier'}" vs "${cs.period}"`);
+        if (!meta || years(meta[1]) !== years(cs.period)) wrongIndex.push(`${cs.id}: "${meta ? meta[1] : 'no card'}" vs "${cs.period}"`);
     });
-    assert(wrongIndex.length === 0, `Figures: every homepage dossier shows its case study's years (wrong: ${wrongIndex.join('; ') || 'none'})`);
+    assert(wrongIndex.length === 0, `Figures: every homepage project card shows its case study's years (wrong: ${wrongIndex.join('; ') || 'none'})`);
 
     // The field report numbers its projects in the case-study order.
     const section = fieldReport.split(/<h2>Projects<\/h2>/)[1] || '';
@@ -372,29 +372,8 @@ const fieldText = plain(fieldReport);
     const doc = window.document;
     const text = (id) => (doc.getElementById(id) || { textContent: '' }).textContent;
 
-    const anchors = doc.querySelector('.strike-anchors');
-    assert(!!anchors && /30%, illustrative/.test(anchors.textContent), `Illustrative: the 30% anchor says so (${anchors && anchors.textContent})`);
-    const foot = doc.querySelector('.strike-foot');
-    assert(!!foot && /illustrative\s+—\s+not a measured figure/.test(foot.textContent), 'Illustrative: the Seven-in-ten footnote says the 30% is not measured');
-
-    const slider = doc.getElementById('strikeSlider');
-    const leaning = [30, 50, 70].filter((rate) => {
-        slider.value = String(rate);
-        slider.dispatchEvent(new window.Event('input', { bubbles: true }));
-        return !/illustrative/.test(text('strikeCounter'));
-    });
-    assert(leaning.length === 0, `Illustrative: every Seven-in-ten message that compares with blind drilling says illustrative (unlabelled at: ${leaning.join(', ') || 'none'})`);
-
-    // Three holes anywhere put the comparison on the score line.
-    doc.body.classList.add('eco-mode');   // drilling finishes at once
-    const stage = doc.getElementById('boreholeStage');
-    const key = (k) => stage.dispatchEvent(new window.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
-    const attempts = () => +((text('drillScore').match(/Strikes: \d+\/(\d+)/) || [])[1] || 0);
-    for (let i = 0; i < 60 && attempts() < 3; i++) {
-        doc.getElementById('drillBtn').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-        for (let k = 0; k < 4; k++) key('ArrowRight');
-    }
-    assert(attempts() >= 3 && /30%, illustrative/.test(text('drillScore')), `Illustrative: the borehole score line labels the 30% (${text('drillScore')})`);
+    // The 30% moved with the borehole game to the groundwater case study,
+    // where tests/widgets.test.js holds every place it is shown to the label.
 
     const legend = doc.querySelector('.ydi-leg-intuit');
     assert(!!legend && /illustrative/.test(legend.textContent), `Illustrative: the You Draw It legend labels the guess line (${legend && legend.textContent})`);
@@ -438,27 +417,16 @@ const fieldText = plain(fieldReport);
     const ydiSrc = read('modules/interactives.js').split('YOU DRAW IT')[1].split('THE RECEIPT')[0];
     assert(!/\bactually\b|really costs|reveal the truth/i.test(ydiSrc), 'Estimates: nothing in You Draw It, the share card included, calls an estimate the true cost');
 
-    // --- One boundary for embodied carbon on both pages ---
+    // --- One boundary for embodied carbon ---
     // Anatomy of a Prompt used to add a Scope 3 figure from a constant with no
-    // source, while the full coach said it excluded embodied carbon.
-    const vals = Array.from(doc.querySelectorAll('#anatomySvg .anatomy-t-val')).map(v => v.textContent);
-    assert(vals.length === 3 && vals[1] === 'not quantified', `Boundary: Anatomy names Scope 3 without a number (${vals.join(' | ')})`);
-    assert(!/\d\s*g\s*<\/strong>\s*Scope 3/.test(doc.getElementById('anatomySummary').innerHTML), 'Boundary: the Anatomy summary gives no Scope 3 figure');
+    // source, while the full coach said it excluded embodied carbon. Both are
+    // on carbon-ai.html now, and tests/carbon.test.js holds them to one
+    // boundary there. Left to hold here: the homepage's teaser states none
+    // of its own that could drift from theirs.
+    const teaser = plain(doc.getElementById('ecoprompt').innerHTML);
+    assert(!/Scope [123]|embodied|capital goods/i.test(teaser) && /inference only/.test(teaser),
+        'Boundary: the homepage teaser says "inference only", as the coach does, and nothing about embodied carbon or scopes');
     const coach = plain(read('carbon-ai.html'));
-    assert(
-        /Embodied carbon of the hardware is excluded, here and in Anatomy of a Prompt/.test(coach)
-            && /which neither page quantifies/.test(indexText),
-        'Boundary: the coach and Anatomy both state that embodied carbon is excluded'
-    );
-    // Scope 2 and capital goods are the lines of whoever runs the model. An
-    // organisation buying answers from a hosted one reports the carbon in
-    // its Scope 3, category 1, and the widget's "per analyst-year" is that
-    // organisation, so the page has to say whose report the lines are on.
-    const anatomyFoot = plain(doc.querySelector('.anatomy-foot').innerHTML);
-    assert(/whoever runs the model/.test(text('anatomySummary')) && /whoever runs the model/.test(anatomyFoot),
-        'Boundary: Anatomy names whose report its Scope 2 and Scope 3 lines are on');
-    assert(/hosted model[^.]*Scope 3, category 1 \(purchased services\)/.test(anatomyFoot) && /category 1/.test(text('anatomySummary')),
-        'Boundary: and says where the carbon goes for a buyer of a hosted model, in the foot and in the copied figure');
     assert(!/Scope 3, capital goods/.test(coach), 'Boundary: the coach does not put the operator\'s capital-goods label on the reader');
 }
 

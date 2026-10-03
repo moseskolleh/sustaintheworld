@@ -115,6 +115,92 @@ function checkAvailability(label, entry) {
     return problems;
 }
 
+// The interactives a case study can host on case-studies.html, each drawn
+// by modules/dossier.js into the host the generator writes for it.
+const WIDGETS = ['borehole', 'flood'];
+
+/**
+ * What the homepage's teaser card needs from a case study: the lines it
+ * prints, a headline result with a one-line basis, and one photo a reader
+ * can be shown at the size it is drawn. Returns problems, like the rest.
+ */
+function checkCard(at, cs) {
+    const problems = [];
+    ['subtitle', 'location'].forEach((field) => {
+        if (!cs[field]) problems.push(`${at}: missing ${field} (the homepage card prints it)`);
+    });
+    if (!Array.isArray(cs.tags) || !cs.tags.length || !cs.tags.every(t => typeof t === 'string' && t.trim())) {
+        problems.push(`${at}: tags must be a list of tools and topics (the homepage card shows them, the Assay reads them)`);
+    }
+
+    // The first result is the headline. Its brief stands in for the basis
+    // where there is no room for it, so it has to be there, and short.
+    const headline = (cs.results || [])[0];
+    if (headline && !(typeof headline.brief === 'string' && headline.brief.trim())) {
+        problems.push(`${at}: the first result is the homepage headline and needs a one-line brief of its basis`);
+    } else if (headline && headline.brief.length > 120) {
+        problems.push(`${at}: the headline's brief is ${headline.brief.length} characters; one line is 120 at most`);
+    }
+
+    const p = cs.photo;
+    if (!p || typeof p !== 'object') {
+        problems.push(`${at}: no photo for the homepage card`);
+    } else {
+        ['src', 'thumb'].forEach((k) => {
+            const bad = typeof p[k] === 'string' && localPath(p[k]) === p[k] ? urlProblem(p[k]) : 'is not a file in this repository';
+            if (bad) problems.push(`${at}: photo.${k} ${bad}`);
+        });
+        if (!(typeof p.alt === 'string' && p.alt.trim())) problems.push(`${at}: the photo has no alt text`);
+        if (!(Number.isInteger(p.width) && p.width > 0 && Number.isInteger(p.height) && p.height > 0)) {
+            problems.push(`${at}: the photo needs its intrinsic width and height, so nothing shifts as it arrives`);
+        }
+    }
+
+    if (cs.widget !== undefined && !WIDGETS.includes(cs.widget)) {
+        problems.push(`${at}: widget "${cs.widget}" is not one of ${WIDGETS.join(', ')}`);
+    }
+    return problems;
+}
+
+// How a photo in a case study's gallery may be drawn: wider than the rest,
+// or not cropped to a landscape box (the hints the homepage dossiers had).
+const PHOTO_LAYOUTS = ['wide', 'tall'];
+const PHOTO_KEYS = ['src', 'thumb', 'width', 'height', 'layout', 'alt', 'caption', 'fullCaption'];
+
+/**
+ * A case study's photos (optional): each a file in this repository at a
+ * declared size, with alt text and a caption. The captions are evidence,
+ * so none may be blank, and a misspelt field is refused rather than
+ * silently dropped from the page.
+ */
+function checkGallery(at, cs) {
+    if (cs.gallery === undefined) return [];
+    if (!Array.isArray(cs.gallery) || !cs.gallery.length) return [`${at}: gallery must be a list of photos (leave it out for none)`];
+    const problems = [];
+    const seen = new Set();
+    cs.gallery.forEach((p, i) => {
+        const where = `${at}, photo ${i + 1}`;
+        if (!p || typeof p !== 'object') { problems.push(`${where}: is not a photo`); return; }
+        Object.keys(p).filter(k => !PHOTO_KEYS.includes(k)).forEach(k => problems.push(`${where}: unknown field "${k}"`));
+        ['src'].concat(p.thumb === undefined ? [] : ['thumb']).forEach((k) => {
+            const bad = typeof p[k] === 'string' && localPath(p[k]) === p[k] ? urlProblem(p[k]) : 'is not a file in this repository';
+            if (bad) problems.push(`${where}: ${k} ${bad}`);
+        });
+        if (seen.has(p.src)) problems.push(`${where}: ${p.src} is already in this gallery`);
+        seen.add(p.src);
+        if (!(Number.isInteger(p.width) && p.width > 0 && Number.isInteger(p.height) && p.height > 0)) {
+            problems.push(`${where}: needs its intrinsic width and height, so nothing shifts as it arrives`);
+        }
+        ['alt', 'caption', 'fullCaption'].forEach((k) => {
+            if (!(typeof p[k] === 'string' && p[k].trim())) problems.push(`${where}: no ${k === 'alt' ? 'alt text' : k}`);
+        });
+        if (p.layout !== undefined && !PHOTO_LAYOUTS.includes(p.layout)) {
+            problems.push(`${where}: layout "${p.layout}" is not one of ${PHOTO_LAYOUTS.join(', ')}`);
+        }
+    });
+    return problems;
+}
+
 // A language level the Assay can compare with what a job ad asks for.
 // "Good" or "fluent" means different things to different readers; a CEFR
 // level (or "native") means the same thing to all of them.
@@ -137,6 +223,85 @@ function checkLanguages(languages) {
             problems.push(`${at}: level "${l && l.level}" is not a CEFR level (A1–C2) or "native"`);
         }
     });
+    return problems;
+}
+
+// ------------------------------------------------------------------
+// profile.atAGlance — the strip under the homepage hero
+//
+// The first thing a recruiter checks, so the first place a guess would do
+// harm. The shape is closed: a misspelt key ("availablefrom") would
+// otherwise be skipped as unknown and the fact silently never shown. A
+// fact Moses has not stated is null, and the strip leaves it out; a
+// stand-in written as a value ("TBC", "n/a", "?") is refused, because on
+// the page it would read as an answer.
+// ------------------------------------------------------------------
+const GLANCE_KEYS = ['targetRoles', 'workArea', 'seniority', 'availableFrom', 'rightToWork'];
+const PLACEHOLDER = /^\s*(?:tbc|tbd|to be (?:confirmed|decided)|n\/?a|todo|unknown|\?+|-+|…|\.\.\.)\s*$/i;
+const AVAILABLE_FROM = /^(?:now|(\d{4})-(0[1-9]|1[0-2])(?:-(0[1-9]|[12]\d|3[01]))?)$/;
+
+// How long each fact may be. On a phone the first screen holds the strip,
+// the buttons and the hero's four figures, and filled in a line per fact,
+// the strip pushed the figures off a 390x844 screen. So "short" is a
+// number here, and smoke.js draws the strip with every fact at its longest
+// and checks that it all still fits. Raise one only with that check passing.
+const GLANCE_LIMITS = {
+    targetRoles: 80,    // characters
+    workArea: 32,       // characters, the phrases joined by ", "
+    seniority: 32,
+    rightToWork: 48,
+    languages: 80       // characters of profile.languages as the strip
+};                      // writes it: "English (C2) · Dutch (B1)"
+
+// The languages line as the strip shows it (build-content.js writes the
+// same words, escaped): every language, none left out to make room.
+const glanceLanguages = (languages) => languages.map(l => `${l.language} (${l.level})`).join(' · ');
+
+function checkAtAGlance(glance, languages) {
+    const at = 'profile: atAGlance';
+    if (!glance || typeof glance !== 'object' || Array.isArray(glance)) return [`${at} is missing — the hero's availability line is written from it`];
+    const problems = [];
+    Object.keys(glance).filter(k => !k.startsWith('$') && !GLANCE_KEYS.includes(k))
+        .forEach(k => problems.push(`${at}.${k} is not a fact the strip knows (${GLANCE_KEYS.join(', ')}) — misspelt, it would never be shown`));
+
+    const phrase = (key, required) => {
+        const v = glance[key];
+        if (v === null || v === undefined) {
+            if (required) problems.push(`${at}.${key} is required`);
+            return;
+        }
+        if (typeof v !== 'string' || !v.trim()) problems.push(`${at}.${key} must be a phrase, or null until it is known`);
+        else if (PLACEHOLDER.test(v)) problems.push(`${at}.${key} is "${v}" — leave it null until it is known; the strip then leaves it out`);
+        else if (v.length > GLANCE_LIMITS[key]) problems.push(`${at}.${key} is ${v.length} characters; the first screen has room for ${GLANCE_LIMITS[key]}`);
+    };
+    phrase('targetRoles', true);
+    ['seniority', 'rightToWork'].forEach(k => phrase(k, false));
+    // Where he would work, after the roles on the availability line: a
+    // list of short phrases.
+    const area = glance.workArea;
+    if (area !== null && area !== undefined) {
+        if (!Array.isArray(area) || !area.length || area.some(a => typeof a !== 'string' || !a.trim() || PLACEHOLDER.test(a))) {
+            problems.push(`${at}.workArea must be a list of short phrases, or null`);
+        } else if (area.join(', ').length > GLANCE_LIMITS.workArea) {
+            problems.push(`${at}.workArea is ${area.join(', ').length} characters; the first screen has room for ${GLANCE_LIMITS.workArea}`);
+        }
+    }
+    // profile.languages is checked for shape by checkLanguages; here, only
+    // for whether the strip has room for all of it.
+    if (Array.isArray(languages) && languages.every(l => l && typeof l === 'object')) {
+        const line = glanceLanguages(languages);
+        if (line.length > GLANCE_LIMITS.languages) {
+            problems.push(`profile: the languages come to ${line.length} characters in the at-a-glance strip ("${line}"); the first screen has room for ${GLANCE_LIMITS.languages}`);
+        }
+    }
+
+    const from = glance.availableFrom;
+    if (from !== null && from !== undefined) {
+        const m = typeof from === 'string' && from.match(AVAILABLE_FROM);
+        // 2026-02-30 matches the pattern; only a real day may pass.
+        const real = m && (!m[3] || new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])).getUTCDate() === +m[3]);
+        if (!real) problems.push(`${at}.availableFrom "${from}" is not "now" or a date as YYYY-MM or YYYY-MM-DD`);
+    }
     return problems;
 }
 
@@ -522,6 +687,15 @@ function loadAll() {
         (cs.lenses || []).forEach((l) => {
             if (!lensIds.includes(l)) problems.push(`${at}: unknown lens "${l}"`);
         });
+
+        problems.push(...checkCard(at, cs));
+        problems.push(...checkGallery(at, cs));
+    });
+
+    // Each interactive has one home: its ids are page-wide.
+    const hosts = projects.caseStudies.filter(cs => cs.widget).map(cs => cs.widget);
+    hosts.filter((w, i) => hosts.indexOf(w) !== i).forEach((w) => {
+        problems.push(`widget "${w}" is hosted by more than one case study`);
     });
 
     // --- research outputs -----------------------------------------------
@@ -585,6 +759,9 @@ function loadAll() {
     // --- languages (optional) ------------------------------------------
     problems.push(...checkLanguages(profile.languages));
 
+    // --- the at-a-glance strip -------------------------------------------
+    problems.push(...checkAtAGlance(profile.atAGlance, profile.languages));
+
     if (problems.length) {
         throw new Error(`content failed validation:\n  - ${problems.join('\n  - ')}`);
     }
@@ -606,11 +783,18 @@ module.exports = {
     CONTENT_DIR,
     TRUSTED_HOSTS,
     STATUSES,
+    WIDGETS,
     load,
     loadAll,
     urlProblem,
     checkAvailability,
+    checkCard,
+    checkGallery,
+    PHOTO_LAYOUTS,
     checkLanguages,
+    checkAtAGlance,
+    GLANCE_LIMITS,
+    glanceLanguages,
     checkStats,
     peel,
     orderForLens

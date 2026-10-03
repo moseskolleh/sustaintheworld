@@ -29,7 +29,7 @@
     padding: 9px 11px 8px;
 }
 
-body.light-mode .dispatch-bar {
+html.light-mode .dispatch-bar {
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
 }
 

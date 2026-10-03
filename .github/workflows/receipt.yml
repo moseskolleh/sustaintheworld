@@ -1,0 +1,119 @@
+name: Carbon receipt
+
+# One comment on every pull request: what it changes in the site's weight,
+# the estimated CO₂e of each page's first view, and each page's length at
+# 1440x900 and 390x844, against main. scripts/receipt.js writes it; this
+# job measures both sides and posts it.
+#
+# Both sides are measured by the pull request's own scripts (main through
+# --root), so a difference in the receipt is a difference in the site, not
+# in how it was measured, and the first pull request to carry these
+# scripts gets a receipt too. The ceilings are each side's own (main's are
+# read from main's copy of check-budget.js), so a ceiling the pull request
+# moves shows as moved. The receipt only reports; the CI workflow is what
+# fails a pull request over a budget.
+#
+# The comment is found again by the marker on its first line and edited in
+# place, so a pull request carries one receipt however often it is pushed.
+# From a fork (or Dependabot) the token is read-only and cannot comment;
+# the receipt then goes to the job summary only, and the job stays green.
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+# A newer push makes the older receipt pointless.
+concurrency:
+  group: receipt-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  receipt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # The pull request as it would merge, and main as it stands. Neither
+      # checkout keeps the token: nothing here pushes.
+      - uses: actions/checkout@v4
+        with:
+          path: head
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: head/package-lock.json
+      - run: npm ci
+        working-directory: head
+      # The Chromium build that matches the pinned playwright-core, as the
+      # CI smoke job uses, from the same cache.
+      - name: Read the pinned playwright-core version
+        id: playwright
+        working-directory: head
+        run: echo "version=$(node -p "require('playwright-core/package.json').version")" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ms-playwright-${{ runner.os }}-chromium-${{ steps.playwright.outputs.version }}
+      - run: npx playwright-core install --with-deps chromium
+        working-directory: head
+
+      # A side over a ceiling still has its numbers written, and a side
+      # that fails leaves no file: the receipt says which, so neither
+      # stops the job.
+      - name: Measure main
+        working-directory: head
+        run: |
+          node scripts/check-budget.js --json --root "$GITHUB_WORKSPACE/base" > "$RUNNER_TEMP/base.json" || rm -f "$RUNNER_TEMP/base.json"
+          node scripts/smoke.js --require --lengths-only --root "$GITHUB_WORKSPACE/base" --lengths-out "$RUNNER_TEMP/base-length.json" || true
+      - name: Measure the pull request
+        working-directory: head
+        run: |
+          node scripts/smoke.js --require --lengths-only --lengths-out "$RUNNER_TEMP/head-length.json" || true
+          lengths=()
+          if [ -s "$RUNNER_TEMP/head-length.json" ]; then lengths=(--lengths "$RUNNER_TEMP/head-length.json"); fi
+          node scripts/check-budget.js --json "${lengths[@]}" > "$RUNNER_TEMP/head.json"
+      - name: Write the receipt
+        working-directory: head
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          node scripts/receipt.js \
+            --base "$RUNNER_TEMP/base.json" --head "$RUNNER_TEMP/head.json" \
+            --base-length "$RUNNER_TEMP/base-length.json" --head-length "$RUNNER_TEMP/head-length.json" \
+            --base-label "$BASE_REF" --head-label "This PR" --base-sha "$BASE_SHA" --head-sha "$HEAD_SHA" \
+            > "$RUNNER_TEMP/receipt.md"
+          cat "$RUNNER_TEMP/receipt.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Post or update the one receipt comment
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          marker='<!-- carbon-receipt'
+          ids=$(gh api --paginate "repos/$REPO/issues/$PR/comments" \
+            --jq ".[] | select(.user.login == \"github-actions[bot]\" and (.body | startswith(\"$marker\"))) | .id") || ids=''
+          id=${ids%%$'\n'*}
+          if [ -n "$id" ]; then
+            gh api --method PATCH "repos/$REPO/issues/comments/$id" -F "body=@$RUNNER_TEMP/receipt.md" > /dev/null \
+              || echo "::notice::Could not update the receipt comment (read-only token); it is in the job summary."
+          else
+            gh api --method POST "repos/$REPO/issues/$PR/comments" -F "body=@$RUNNER_TEMP/receipt.md" > /dev/null \
+              || echo "::notice::Could not comment (read-only token); the receipt is in the job summary."
+          fi
+      - name: No comment from a fork
+        if: github.event.pull_request.head.repo.full_name != github.repository
+        run: echo "::notice::A pull request from a fork gets a read-only token, so the receipt is in this job's summary, not a comment."

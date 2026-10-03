@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "browser": "Chromium 141.0.7390.37",
+  "viewports": {
+    "1440x900": { "width": 1440, "height": 900, "label": "desktop" },
+    "390x844": { "width": 390, "height": 844, "label": "phone" }
+  },
+  "pages": {
+    "index.html": {
+      "1440x900": { "px": 8820, "screens": 9.8 },
+      "390x844": { "px": 15614, "screens": 18.5 }
+    },
+    "stats.html": {
+      "1440x900": { "px": 3942, "screens": 4.38, "full": { "px": 9052, "screens": 10.06 } },
+      "390x844": { "px": 6131, "screens": 7.26, "full": { "px": 10128, "screens": 12 } }
+    }
+  }
+}

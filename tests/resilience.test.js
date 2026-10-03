@@ -61,7 +61,7 @@ function assert(cond, msg) {
         toggle.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }));
     } catch (err) { threw = err; }
     assert(!threw, `Storage blocked: toggling the theme does not throw (${threw && threw.message})`);
-    assert(doc.body.classList.contains('light-mode'), 'Storage blocked: the theme still changes, it just is not remembered');
+    assert(doc.documentElement.classList.contains('light-mode'), 'Storage blocked: the theme still changes, it just is not remembered');
 
     const eco = doc.getElementById('ecoModeToggle');
     threw = null;
@@ -122,14 +122,13 @@ function assert(cond, msg) {
         return scrolled;
     };
 
-    // A control genuinely on the page — the homepage widget's model picker is
-    // exactly the case reported.
-    const select = doc.querySelector('select');
-    assert(!!select, 'Shortcut setup: the page has a <select> to focus');
-    if (select) {
-        assert(press('c', select).length === 0, 'Shortcut: "c" on a <select> does not scroll to Contact');
-        assert(press('h', select).length === 0, 'Shortcut: "h" on a <select> does not scroll home');
-    }
+    // The case reported was the homepage calculator's model picker. The
+    // calculator has moved to carbon-ai.html, and the homepage has no
+    // <select> of its own now, so one is built, as the contenteditable is.
+    const select = doc.querySelector('select') || doc.body.appendChild(doc.createElement('select'));
+    select.appendChild(new window.Option('Claude', 'c'));
+    assert(press('c', select).length === 0, 'Shortcut: "c" on a <select> does not scroll to Contact');
+    assert(press('h', select).length === 0, 'Shortcut: "h" on a <select> does not scroll home');
 
     const button = doc.querySelector('button');
     assert(press('c', button).length === 0, 'Shortcut: "c" on a <button> is ignored');

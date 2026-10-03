@@ -68,14 +68,15 @@ const key = (window, k, target, init) => {
             (read(rel).match(/^(?:async\s+)?function\s*\*?\s*[\w$]+/gm) || []).forEach(m => declared.push(`${rel}: ${m}`));
         });
         assert(declared.length === 0, `Globals: no shipped script declares a function at the top level, where it would land on window (${declared.join(', ') || 'none'})`);
-        const marked = ['dossier', 'terminal', 'interactives', 'dispatch'].filter(m => mks.loaded[m] !== true);
+        const marked = ['terminal', 'interactives', 'dispatch'].filter(m => mks.loaded[m] !== true);
         assert(marked.length === 0, `Globals: every module marks itself in mks.loaded (unmarked: ${marked.join(', ') || 'none'})`);
 
         // No shipped script hangs a new name on window, the visit counter
         // included: its mks.track once had window.trackEvent beside it, the
         // name the old analytics dispatcher used, kept until nothing called it.
+        // Nor does the case studies' module, which makes window.mks itself.
         const assigned = [];
-        ['script.js', 'count.js', ...MODULE_FILES].forEach((rel) => {
+        ['script.js', 'count.js', 'modules/dossier.js', ...MODULE_FILES].forEach((rel) => {
             (read(rel).match(/\bwindow\.[A-Za-z_$][\w$]*\s*=(?!=)/g) || []).forEach((m) => {
                 const name = m.match(/window\.([\w$]+)/)[1];
                 if (name !== 'mks') assigned.push(`${rel}: window.${name}`);
@@ -87,11 +88,13 @@ const key = (window, k, target, init) => {
         // names on its page's window, and these are them, by name, so a new
         // one cannot slip in unnoticed: the data files export themselves for
         // both the browser and Node (the tests require them), and carbon-ai.js
-        // is carbon-ai.html's own classic script, never loaded on the homepage.
+        // is carbon-ai.html's own classic script, never loaded on the homepage
+        // (EcoPromptCoach is how modules/anatomy.js reads what its calculator
+        // is set to).
         const EXPECTED_ELSEWHERE = {
             'ai-carbon-data.js': ['AICarbonData'],
             'voice-scripts.js': ['VoiceScripts'],
-            'carbon-ai.js': ['calculate', 'clampNumber', 'sanitize', 'suggest']
+            'carbon-ai.js': ['EcoPromptCoach', 'calculate', 'clampNumber', 'sanitize', 'suggest']
         };
         const found = {};
         Object.keys(EXPECTED_ELSEWHERE).forEach((rel) => {
@@ -128,25 +131,18 @@ const key = (window, k, target, init) => {
         const doc = window.document;
         const mks = window.mks;
         assert(onDocument === 1, `Keys: one keydown listener on the document, with every module loaded (${onDocument})`);
-        const stray = ['script.js', ...MODULE_FILES].filter(rel => (read(rel).match(/document\.addEventListener\(\s*['"]keydown/g) || []).length > (rel === 'script.js' ? 1 : 0));
+        const stray = ['script.js', 'modules/dossier.js', ...MODULE_FILES].filter(rel => (read(rel).match(/document\.addEventListener\(\s*['"]keydown/g) || []).length > (rel === 'script.js' ? 1 : 0));
         assert(stray.length === 0, `Keys: no module adds a document keydown listener of its own (${stray.join(', ') || 'none'})`);
         const ranks = mks.keyRank;
-        assert(ranks.terminal > ranks.lightbox && ranks.lightbox > ranks.player && ranks.player > ranks.menu && ranks.menu > ranks.page,
-            'Keys: the layers rank terminal, lightbox, player, menu, page — the order Escape closes them in');
+        assert(ranks.terminal > ranks.player && ranks.player > ranks.menu && ranks.menu > ranks.page,
+            'Keys: the layers rank terminal, player, menu, page — the order Escape closes them in');
+        // The photo lightbox left with the photos, for case-studies.html,
+        // which answers its own keys (tests/phone.test.js).
+        assert(!('lightbox' in ranks) && !doc.getElementById('lightbox'), 'Keys: the homepage has no lightbox layer left, nor a lightbox');
 
         const menu = doc.getElementById('navMenu');
         const toggle = doc.getElementById('navToggle');
-        const lightbox = doc.getElementById('lightbox');
         const menuOpen = () => menu.classList.contains('active');
-
-        // The lightbox over an open menu.
-        doc.querySelector('.gallery-item').click();
-        toggle.click();
-        assert(lightbox.classList.contains('active') && menuOpen(), 'Escape setup: the lightbox is open over an open menu');
-        key(window, 'Escape', doc.activeElement);
-        assert(!lightbox.classList.contains('active') && menuOpen(), 'Escape: the first press closes the lightbox and leaves the menu open');
-        key(window, 'Escape');
-        assert(!menuOpen() && doc.activeElement === toggle, 'Escape: the second closes the menu, and focus returns to its button');
 
         // The terminal over an open menu.
         toggle.click();
@@ -155,7 +151,7 @@ const key = (window, k, target, init) => {
         key(window, 'Escape', prompt);
         assert(!mks.terminal.isOpen() && menuOpen(), 'Escape: the terminal closes first, the menu stays open');
         key(window, 'Escape');
-        assert(!menuOpen(), 'Escape: then the menu');
+        assert(!menuOpen() && doc.activeElement === toggle, 'Escape: then the menu, and focus returns to its button');
 
         // Focus inside the open player, menu open behind it.
         const bar = doc.getElementById('dispatchBar');
@@ -183,7 +179,7 @@ const key = (window, k, target, init) => {
         assert(!term.isOpen(), 'Backtick: nor in anything that says it takes text (role="textbox")');
         key(window, '`', doc.body, { ctrlKey: true });
         assert(!term.isOpen(), 'Backtick: Ctrl+` is left to the browser');
-        key(window, '`', doc.querySelector('.project-toggle'));
+        key(window, '`', doc.getElementById('themeToggle'));
         assert(term.isOpen(), 'Backtick: a focused button does not hold it back');
         key(window, '`');
         assert(!term.isOpen(), 'Backtick: pressed again, it closes the terminal');
@@ -363,10 +359,10 @@ const key = (window, k, target, init) => {
         const drawn = (grew) => { pageHeight += grew; held().forEach(o => o.cb([])); };
         const scrolled = [];
         window.HTMLElement.prototype.scrollIntoView = function () { scrolled.push(this.id); };
-        doc.querySelector('.nav-menu a[href="#skills"]').dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }));
-        assert(scrolled.join() === 'skills', 'Course: a nav link scrolls to its section');
+        doc.querySelector('.nav-menu a[href="#experience"]').dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }));
+        assert(scrolled.join() === 'experience', 'Course: a nav link scrolls to its section');
         drawn(-713);   // a section passed on the way is drawn, shorter than its estimate
-        assert(scrolled.join() === 'skills,skills', 'Course: a section drawn at its real height mid-jump lands it again, on the same target');
+        assert(scrolled.join() === 'experience,experience', 'Course: a section drawn at its real height mid-jump lands it again, on the same target');
         window.dispatchEvent(new window.Event('wheel'));
         drawn(297);
         assert(scrolled.length === 2 && held().length === 0, 'Course: once the reader scrolls for themselves, the page stops steering');
@@ -447,7 +443,7 @@ const key = (window, k, target, init) => {
                 if (!(Math.abs(w / h - real[0] / real[1]) <= 0.01 * real[0] / real[1])) wrong.push(`${page}: ${src} says ${w}x${h}, is ${real.join('x')}`);
             });
         });
-        assert(checked > 20 && wrong.length === 0, `Images: all ${checked} say their real shape, so one arriving late moves nothing (${wrong.join('; ') || 'none wrong'})`);
+        assert(checked >= 6 && wrong.length === 0, `Images: all ${checked} say their real shape, so one arriving late moves nothing (${wrong.join('; ') || 'none wrong'})`);
     }
 
     // ===============================================================

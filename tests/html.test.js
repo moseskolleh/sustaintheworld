@@ -121,8 +121,9 @@ PAGES.forEach((page) => {
     const noAlt = imgs.filter(t => attr(t, 'alt') === null);
     assert(noAlt.length === 0, `${page}: every <img> has an alt attribute (${noAlt.length} without)`);
 
-    // Intrinsic dimensions prevent the layout shifting as images arrive. The
-    // lightbox's placeholder has no src until it is opened, so it is exempt.
+    // Intrinsic dimensions prevent the layout shifting as images arrive. An
+    // <img> with no src would be exempt (the lightbox's is made by script
+    // now, with the size of the photo it shows).
     const noDims = imgs.filter(t => attr(t, 'src') && (!attr(t, 'width') || !attr(t, 'height')));
     assert(noDims.length === 0, `${page}: every <img> with a src declares width and height (${noDims.length} without)`);
 
@@ -192,6 +193,37 @@ PAGES.forEach((page) => {
     assert(hiddenWithTabindex.length === 0, `${page}: nothing is both aria-hidden and focusable`);
 });
 
+// --- Every icon a page draws is in that page's sprite ---------------------
+// A <use> whose symbol is not there draws nothing, silently. index.html's
+// sprite is one long line several changes touch at once (eleven unused
+// symbols came out of it in one), so this holds every icon to it: those in
+// the markup, and those the page's scripts write, the modules it fetches
+// included (named outright, or by the few templates that pick one).
+PAGES.forEach((page) => {
+    const html = read(page);
+    const symbols = new Set((html.match(/<symbol\b[^>]*\bid=["']([^"']+)["']/gi) || []).map(t => attr(t, 'id')));
+    const scripts = new Set((html.match(/<script\b[^>]*\bsrc=["'][^"']+["']/gi) || []).map(t => attr(t, 'src')).filter(src => !/^(https?:)?\/\//.test(src)));
+    const inline = (html.match(/<script(?![^>]*\bsrc=)[^>]*>[\s\S]*?<\/script>/gi) || []).join('\n');
+    // Code only: a module a comment mentions is not one the page fetches.
+    const source = (src) => (fs.existsSync(path.join(ROOT, src)) ? fs.readFileSync(path.join(ROOT, src), 'utf8') : '')
+        .replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    // The modules a page's own scripts fetch (script.js's MODULES, the case
+    // studies' loader, carbon-ai.html's Anatomy) are named in them as paths.
+    [inline, ...Array.from(scripts).map(source)]
+        .forEach(text => (text.match(/modules\/[\w-]+\.js/g) || []).forEach(m => scripts.add(m)));
+    const code = inline + Array.from(scripts).map(source).join('\n');
+    const drawn = new Set([
+        ...(html.match(/<use\b[^>]*\bhref=["']#([^"']+)["']/gi) || []).map(t => attr(t, 'href').slice(1)),
+        ...(code.match(/#i-[a-z0-9-]+/g) || []).map(m => m.slice(1)),
+        // `#i-${light ? 'sun' : 'moon'}`, setIcon('pause'), icon: 'fa-leaf'
+        ...(code.match(/#i-\$\{[^}]*\?[^}]*\}/g) || []).flatMap(t => (t.match(/'([a-z0-9-]+)'/g) || []).map(q => `i-${q.slice(1, -1)}`)),
+        ...(/#i-\$\{name\}/.test(code) ? (code.match(/setIcon\('([a-z0-9-]+)'\)/g) || []).map(m => `i-${m.slice(9, -2)}`) : []),
+        ...(/#i-\$\{t\.icon\.replace\('fa-', ''\)\}/.test(code) ? (code.match(/icon: 'fa-([a-z0-9-]+)'/g) || []).map(m => `i-${m.slice(10, -1)}`) : [])
+    ].filter(id => id.startsWith('i-') && !/^i-(\$|$)/.test(id)));
+    const missing = Array.from(drawn).filter(id => !symbols.has(id));
+    assert(missing.length === 0, `${page}: every icon it draws (${drawn.size}) is a <symbol> in its sprite (missing: ${missing.join(', ') || 'none'})`);
+});
+
 // --- Structured data ------------------------------------------------------
 // A <script type="application/ld+json"> block is raw text: HTML entities are
 // NOT decoded inside it. Escaping an ampersand there — which is the right
@@ -243,7 +275,7 @@ PAGES.forEach((page) => {
     assert(attr(form, 'action') === GAS, 'Endpoint: the contact form without JavaScript posts to the same deployment');
 
     const shipped = [
-        'script.js', 'count.js', 'carbon-ai.js', 'ai-carbon-data.js', 'voice-scripts.js',
+        'script.js', 'count.js', 'theme.js', 'carbon-ai.js', 'ai-carbon-data.js', 'voice-scripts.js',
         ...fs.readdirSync(path.join(ROOT, 'modules')).filter(f => f.endsWith('.js')).map(f => `modules/${f}`)
     ].map(rel => [rel, js(rel)]);
     PAGES.forEach((page) => {
@@ -282,31 +314,37 @@ PAGES.forEach((page) => {
 });
 
 // --- The lightbox is a modal and has to say so ----------------------------
+// It went with the photos to case-studies.html, where the page's own script
+// makes the dialog at the first press (tests/phone.test.js drives it, and
+// scripts/smoke.js in a browser). What the page ships is a link per photo,
+// to the photo itself: the whole feature, without JavaScript.
 {
-    const html = read('index.html');
-    const dialog = (html.match(/<div[^>]+id=["']lightbox["'][^>]*>/i) || [])[0];
-    assert(!!dialog, 'index.html: the lightbox container is present');
-    if (dialog) {
-        assert(attr(dialog, 'role') === 'dialog', 'Lightbox: declares role="dialog"');
-        assert(attr(dialog, 'aria-modal') === 'true', 'Lightbox: declares aria-modal="true"');
-        assert(
-            !!(attr(dialog, 'aria-labelledby') || attr(dialog, 'aria-label')),
-            'Lightbox: carries an accessible name'
-        );
-        assert(attr(dialog, 'aria-hidden') === 'true', 'Lightbox: starts hidden from assistive tech');
-    }
+    assert(!/id=["']lightbox["']/.test(read('index.html')), 'index.html: no lightbox is left on the homepage');
+    const html = read('case-studies.html');
+    const links = html.match(/<a\b[^>]*data-lightbox=[^>]*>\s*<img\b[^>]*>/gi) || [];
+    // The generator writes these in double quotes, and a caption may hold
+    // an apostrophe ("I'm ready"), which attr() would stop at.
+    const dq = (tag, name) => (tag.match(new RegExp(`\\b${name}="([^"]*)"`)) || [])[1];
+    const bad = links.filter((m) => {
+        const a = m.match(/<a\b[^>]*>/i)[0], img = m.match(/<img\b[^>]*>/i)[0];
+        const href = dq(a, 'href');
+        return !href || href !== dq(img, 'src') || !fs.existsSync(path.join(ROOT, href)) || !dq(a, 'data-caption') ||
+            !dq(img, 'alt') || dq(img, 'loading') !== 'lazy';
+    });
+    assert(links.length >= 20 && bad.length === 0,
+        `case-studies.html: each of its ${links.length} photos is a link to the photo it shows, with a caption for the lightbox, alt text, and lazy (${bad.length} not)`);
+    assert(!/id=["']lightbox["']/.test(html), 'case-studies.html: no dialog in the markup, where it would sit dead without JavaScript');
 
-    // Focus management is in script.js, and a dialog without it is worse than
-    // no dialog — the keyboard ends up behind the overlay.
-    const js = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8');
-    // The lightbox's own block: from where it looks the element up to the
-    // end of its IIFE, rather than a character count a comment can outgrow.
-    const start = js.indexOf("getElementById('lightbox')");
-    const block = js.slice(start, js.indexOf('})();', start));
-    assert(/lastFocus\s*=\s*document\.activeElement/.test(block), 'Lightbox: remembers what had focus before opening');
-    assert(/lastFocus[\s\S]{0,80}\.focus\(\)/.test(block), 'Lightbox: returns focus when it closes');
-    assert(/onKey\('Escape'/.test(block), 'Lightbox: closes on Escape (through the one key router)');
-    assert(/e\.key === 'Tab'/.test(block), 'Lightbox: keeps Tab inside the dialog');
+    // The dialog as its script makes it.
+    const js = (html.match(/<script>[\s\S]*?<\/script>/g) || []).join('\n');
+    const start = js.indexOf("querySelectorAll('a[data-lightbox]')");
+    const block = start > -1 ? js.slice(start) : '';
+    assert(/setAttribute\('role', 'dialog'\)/.test(block) && /setAttribute\('aria-modal', 'true'\)/.test(block),
+        'Lightbox: declares role="dialog" and aria-modal="true"');
+    assert(/'aria-labelledby', 'lightboxCaption'/.test(block) && /setAttribute\('aria-label'/.test(block),
+        'Lightbox: carries an accessible name, its caption or else the alt text');
+    assert(/opener = link/.test(block) && /opener\.focus\(\)/.test(block), 'Lightbox: returns focus to the photo that opened it');
+    assert(/e\.key === 'Escape'/.test(block) && /e\.key === 'Tab'/.test(block), 'Lightbox: closes on Escape and keeps Tab inside the dialog');
 }
 
 if (failures > 0) {

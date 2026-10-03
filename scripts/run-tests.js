@@ -19,6 +19,10 @@
 // as it runs, and the rest hold their output until it is their turn, so
 // lines from two suites never interleave.
 //
+// The last line counts the assertions that passed (the suites' "PASS:"
+// lines), so a figure quoted elsewhere can be read off a run rather than
+// typed and left to drift, as the README's was.
+//
 // Exits non-zero if any suite does — a failed assertion, an uncaught
 // exception, or a suite still running after SUITE_TIMEOUT_MS, which is
 // killed rather than left to hang CI. (RUN_TESTS_DIR points it at another
@@ -50,7 +54,7 @@ const limit = Math.max(1, Math.min(os.availableParallelism(), suites.length));
 const seconds = (ms) => `${(ms / 1000).toFixed(1)} s`;
 
 // One record per suite, in report order.
-const runs = suites.map(name => ({ name, chunks: [], started: false, shown: false, done: false, code: null, ms: 0 }));
+const runs = suites.map(name => ({ name, chunks: [], passes: 0, tail: '', started: false, shown: false, done: false, code: null, ms: 0 }));
 let cursor = 0;   // the suite whose output is printing live
 
 const header = (r) => process.stdout.write(`\n── ${LABEL}/${r.name} ${'─'.repeat(Math.max(3, 56 - r.name.length))}\n`);
@@ -81,6 +85,13 @@ function start(r) {
         env: process.env
     });
     const collect = (chunk) => { r.chunks.push(chunk); if (runs[cursor] === r) drain(); };
+    // Counted a line at a time: a chunk can end mid-line.
+    child.stdout.on('data', (chunk) => {
+        const lines = (r.tail + chunk).split('\n');
+        r.tail = lines.pop();
+        r.passes += lines.filter(l => l.startsWith('PASS:')).length;
+    });
+    child.stdout.on('end', () => { if (r.tail.startsWith('PASS:')) r.passes++; r.tail = ''; });
     child.stdout.on('data', collect);
     child.stderr.on('data', collect);
     child.on('error', (err) => r.chunks.push(`\n  ✗ could not start: ${err.message}\n`));
@@ -114,8 +125,10 @@ function start(r) {
 
     const failed = runs.filter(r => r.code !== 0);
     const total = runs.reduce((n, r) => n + r.ms, 0);
+    const passes = runs.reduce((n, r) => n + r.passes, 0);
     console.log(`\n  ${runs.length} suite${runs.length === 1 ? '' : 's'}, ${runs.length - failed.length} passed, in ${seconds(Date.now() - t0)} ` +
         `(${seconds(total)} of work across ${limit} at a time)`);
+    console.log(`  ${passes.toLocaleString('en-GB')} passing assertion${passes === 1 ? '' : 's'}`);
     if (failed.length) {
         console.log(`  failed: ${failed.map(r => r.name).join(', ')}\n`);
         process.exit(1);

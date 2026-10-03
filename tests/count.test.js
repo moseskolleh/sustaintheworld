@@ -256,6 +256,35 @@ function load(options = {}) {
     assert(ref(undefined) === '', 'ref: no referrer is ""');
     assert(ref('http://localhost:8080/draft') === 'localhost:8080', 'ref: a port stays with its host');
     assert(ref('android-app://com.linkedin.android/') === 'com.linkedin.android', 'ref: an app referrer is its package name, which is its host');
+
+    // An old homepage address forwarded to where its feature moved arrives
+    // from the homepage, so its referrer is this site, and every visit
+    // through a link shared on LinkedIn was counted as direct. The homepage
+    // passes the site on as ?via= (script.js); it is believed only from
+    // this site, and it leaves the address either way.
+    const via = (url, referrer, more = {}) => {
+        const p = load(Object.assign({ url: SITE + url, referrer }, more));
+        p.leave();
+        return { ref: p.payload().ref, sent: p.calls.length, at: p.window.location.pathname + p.window.location.search + p.window.location.hash };
+    };
+    const fwd = via('carbon-ai.html?via=www.linkedin.com#anatomy', SITE + '#anatomy');
+    assert(fwd.ref === 'www.linkedin.com' && fwd.at === '/sustaintheworld/carbon-ai.html#anatomy',
+        `ref: forwarded from the homepage, the site that linked to it is counted, and ?via= leaves the address (${JSON.stringify(fwd)})`);
+    const lensKept = via('case-studies.html?lens=water&via=www.linkedin.com#play-borehole', SITE);
+    assert(lensKept.ref === 'www.linkedin.com' && lensKept.at === '/sustaintheworld/case-studies.html?lens=water#play-borehole',
+        `ref: the rest of the query stays (${JSON.stringify(lensKept)})`);
+    const elsewhere = via('carbon-ai.html?via=made-up.example', 'https://www.reddit.com/r/x');
+    const typed = via('carbon-ai.html?via=made-up.example', undefined);
+    assert(elsewhere.ref === 'www.reddit.com' && typed.ref === '' && typed.at === '/sustaintheworld/carbon-ai.html',
+        `ref: ?via= is not believed from another site, or with no referrer at all (${elsewhere.ref}, "${typed.ref}")`);
+    const junk = via('carbon-ai.html?via=not%20a%20host%2Fpath', SITE);
+    assert(junk.ref === '', `ref: a ?via= that is not a host name is dropped ("${junk.ref}")`);
+    const quietFwd = via('carbon-ai.html?via=www.linkedin.com#anatomy', SITE, { gpc: true });
+    assert(quietFwd.sent === 0 && quietFwd.at === '/sustaintheworld/carbon-ai.html#anatomy',
+        `ref: under Global Privacy Control nothing is sent, and ?via= still leaves the address (${JSON.stringify(quietFwd)})`);
+    const fwdSrc = (SCRIPT.match(/const forwardMoved = \(\) => \{[\s\S]*?\n\};/) || [''])[0];
+    assert(/new URL\(document\.referrer\)\.host/.test(fwdSrc) && /\?via=\$\{encodeURIComponent\(via\)\}#/.test(fwdSrc) && /via !== location\.host/.test(fwdSrc),
+        'ref: script.js forwards with the referring host as ?via=, and never this site\'s own');
 }
 
 // --- vp --------------------------------------------------------------------

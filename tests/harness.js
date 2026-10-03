@@ -18,6 +18,11 @@ const { JSDOM } = require('jsdom');
 const ROOT = path.join(__dirname, '..');
 
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+// What index.html's <head> runs before its stylesheet: mks.theme, which puts
+// the stored or the system's theme on <html> before the first paint. jsdom
+// is told to run no inline script, so the harness runs this one as the page
+// does.
+const themeJs = (html.match(/<script>([^<]*\bmks\.theme\(\))<\/script>/) || [])[1] || '';
 const js = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8');
 const voiceJs = fs.readFileSync(path.join(ROOT, 'voice-scripts.js'), 'utf8');
 const dataJs = fs.readFileSync(path.join(ROOT, 'ai-carbon-data.js'), 'utf8');
@@ -26,9 +31,9 @@ const dataJs = fs.readFileSync(path.join(ROOT, 'ai-carbon-data.js'), 'utf8');
 // evaluated straight after the core, in the order a visitor who used every
 // feature would have loaded them, so the suites see the page fully built.
 // Each marks itself in window.mks.loaded, which is how the core's loader
-// knows not to inject a <script> for it.
+// knows not to inject a <script> for it. (modules/dossier.js is not one:
+// case-studies.html loads it, and tests/widgets.test.js boots that page.)
 const MODULE_FILES = [
-    'modules/dossier.js',
     'modules/terminal.js',
     'modules/interactives.js',
     'modules/dispatch.js'
@@ -37,6 +42,7 @@ const moduleJs = MODULE_FILES.map((rel) => fs.readFileSync(path.join(ROOT, rel),
 
 /**
  * @param {string} theme  value seeded into localStorage before the script runs
+ *                        (null or undefined: nothing stored)
  * @param {object} options
  *   storage: 'ok' | 'blocked'   how window.localStorage/sessionStorage behave
  *   speech:  'none' | undefined  remove the speech synthesis API entirely
@@ -52,7 +58,7 @@ function run(theme, options) {
     const dom = new JSDOM(html, { runScripts: 'outside-only', pretendToBeVisual: true, url: 'https://example.com/' });
     const { window } = dom;
 
-    if (opts.storage !== 'blocked') {
+    if (opts.storage !== 'blocked' && theme != null) {
         // Seed localStorage before the script runs
         window.localStorage.setItem('theme', theme);
     }
@@ -110,8 +116,10 @@ function run(theme, options) {
     if (typeof opts.before === 'function') opts.before(window);
 
     // Execute the site scripts in the window context, in the order the
-    // browser would: the two data files a module depends on, the core, then
-    // the modules the core would have fetched on demand.
+    // browser would: the theme from <head>, the two data files a
+    // module depends on, the core, then the modules the core would have
+    // fetched on demand.
+    window.eval(themeJs);
     window.eval(voiceJs);
     window.eval(dataJs);
     window.eval(js);
@@ -183,4 +191,4 @@ function fakeClock(window, errors) {
     return { tick, now: () => now, pending: () => timers.size };
 }
 
-module.exports = { run, ROOT, html, js, voiceJs, MODULE_FILES };
+module.exports = { run, ROOT, html, js, voiceJs, themeJs, MODULE_FILES };

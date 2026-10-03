@@ -11,29 +11,30 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 
 ## Features
 
-- **Living journey map**: a hand-built SVG map of the journey region — West Africa to East Asia, so every stop gets real resolution instead of a world map that's half empty ocean (Natural Earth 50 m coastlines, simplified hardest away from the Rhine delta where the map zooms deepest, zero runtime dependencies). It flies from Freetown to Changsha, Bonn, Wageningen and Amsterdam as you scroll, and fieldwork sites like Wuppertal join the map when the story reaches them. Regenerate with `npm install && npm run map:build`, then sync the printed stop pixels into `script.js`; `npm run map:check` proves the committed SVG still matches the script and runs in CI
-- **"Site the borehole" mini-game**: a playable resistivity profile in the Groundwater dossier — read the curve, place the rig, drill. Water-bearing fracture, clay pocket or dry hole; the score converges on the point: reading the curve first struck water 70% of the time in the field (the ~30% for blind drilling is labelled illustrative until it has a source)
-- **"Don't let it become a boat" flood scene**: an interactive Wupper cross-section in the Wuppertal dossier — slide the river from a calm day to July 2021 and watch the margin under the Schwebebahn's hanging cars shrink
+- **Living journey map**: a hand-built SVG map of the journey region — West Africa to East Asia, so every stop gets real resolution instead of a world map that's half empty ocean (Natural Earth 50 m coastlines, simplified hardest away from the Rhine delta where the map zooms deepest, zero runtime dependencies). It flies from Freetown to Changsha, Bonn, Wageningen and Amsterdam as you scroll (on a phone, in a band pinned under the nav bar above the stop you are reading), and fieldwork sites like Wuppertal join the map when the story reaches them. Every name on it is 11px or more on any screen, and the Rhine delta's four sit clear of each other and of the route. Regenerate with `npm install && npm run map:build`, then sync the printed stop pixels into `script.js`; `npm run map:check` proves the committed SVG still matches the script and runs in CI
+- **"Seven in ten" — site the borehole**: a playable resistivity profile on the [groundwater case study](case-studies.html#play-borehole) — read the curve, place the rig, drill. Water-bearing fracture, clay pocket or dry hole; your holes fill a scoreboard beside the field records' 7 in 10 (reading the curve first) and blind drilling's ~3 in 10, which is labelled illustrative until it has a source. It was two widgets, the game and a strike-rate slider, making one point; it is one now
+- **"Don't let it become a boat" flood scene**: a schematic Wupper cross-section on the [Wuppertal case study](case-studies.html#play-flood) — slide the river from a calm day to July 2021 and watch the margin under the Schwebebahn's hanging cars shrink. Both games load only when a reader scrolls near them, and without JavaScript each is a note that it needs JavaScript and one line of summary
 - **Field terminal**: press <code>`</code> anywhere (or the footer button) for a hidden green-on-black terminal — try `journey`, `drill`, `co2`, `voice`, `kushe`, `help`
 - **The spoken page**: one `Listen` control in the nav reads the section in view with the browser's own speech engine, which transfers **zero bytes**. The one recording on the site is Moses introducing himself in his own voice, offered once he has recorded it, fetched only on click and labelled with exactly what it transfers (see [Narration](#narration-the-spoken-page)). Nothing ever autoplays
-- **Carbon-aware by construction**: images ship as optimized WebP, the three typefaces are self-hosted subsets, and a first view costs about **282 KB over the wire, fonts included**, against a 300 KB ceiling `npm test` enforces — a budget, not a number in a README, and one that `npm run smoke` checks against a real browser (see [Performance](#performance)). Everything a visit does not reach — the narration player, the field terminal, the dossier games, the section-05 interactives — is fetched only when it is used. Nothing is loaded from any other origin, and only two things are ever sent to one, both to the site's own Apps Script endpoint: a contact message, and one cookieless visit count per page view (never under Do Not Track or Global Privacy Control; see [The visit counter and privacy](#the-visit-counter-and-privacy)). A live footer badge weighs each visit in the browser (Resource Timing API × Sustainable Web Design model), counting network transfer only. A low-energy mode pauses all animation and honours `prefers-reduced-motion`
+- **Carbon-aware by construction**: images ship as optimized WebP, the three typefaces are self-hosted subsets, and a first view costs about **275 KB over the wire, fonts included**, against a 288 KB ceiling `npm test` enforces — a budget, not a number in a README, and one that `npm run smoke` checks against a real browser (see [Performance](#performance)). Everything a visit does not reach — the narration player, the field terminal, the section-05 interactives, the case studies' two games — is fetched only when it is used. Nothing is loaded from any other origin, and only two things are ever sent to one, both to the site's own Apps Script endpoint: a contact message, and one cookieless visit count per page view (never under Do Not Track or Global Privacy Control; see [The visit counter and privacy](#the-visit-counter-and-privacy)). A live footer badge weighs each visit in the browser (Resource Timing API × Sustainable Web Design model), counting network transfer only. A low-energy mode pauses all animation and honours `prefers-reduced-motion`
 - **[Case studies](case-studies.html), evidence-first**: the same six projects as **problem → method → artifact → result**. Every result carries the basis it rests on and says plainly whether you can check it from outside; every artifact says whether it is public, available on request, or held by the client. See [Content pipeline](#content-pipeline)
 - **Role-specific lenses**: `case-studies.html?lens=water`, `?lens=climate-risk`, `?lens=sustainable-ai` — shareable views that reframe the portfolio for one kind of role. They **reorder and frame, they never filter**: every case study stays on the page in every view, because a view that hides inconvenient work is a CV that lies by omission. Without JavaScript the switcher steps aside and every case study shows in the default view
+- **No dead ends**: every page but the homepage shares one small nav (Home, Case studies, Research, CV, Contact, with the page you are on marked) and ends with a way to reach Moses: his address, the contact form and the CV. The pages built on `carbon-ai.css` have the homepage's light theme and its switch, and keep the reader's choice from page to page (`theme.js`, before the first paint); with nothing chosen they follow the system's setting, with or without JavaScript. The homepage follows it only with JavaScript: without, it stays dark, because following the system there would put a second copy of every light-theme rule in its first view. The text-only field report and the 404 page take the nav and the call to action as plain lines, and no script
 - **[Research outputs](research.html)**: theses, reports, datasets, code and tools, each labelled public / on request / held by the client. No DOI, journal or conference is named anywhere, because none of this work has one — and a test fails the build if one ever appears without proof
 - **[Open counts](stats.html)**: what the site's own cookieless counter has counted, rebuilt weekly — the five numbers that say whether the site works, page views by page, lens and window width, referrers, features used and bytes per page view, in whole weeks. Every count under 5 reads `<5`, a figure that would let one be worked out by subtraction reads `held`, and the page prints the exact payload a page view sends. See [Open counts](#open-counts)
-- **Borehole core-log experience timeline**: career history logged the way a geologist logs a core — depth is time, every layer is a chapter
-- **"AI, Weighed" live widget**: a homepage slice of the EcoPrompt Coach research — model × workload × grid → energy, carbon, water, in units people can feel
-- **Evidence-first skills**: no invented percentages — every tool links to the project where it earned its place, plus real field numbers (164 water points itemized, 70% strike rate)
-- **The Assay**: paste a job ad beside the contact form and get an honest fit, graded in the browser; the ad itself is never sent (the page view's count carries the grade, see [The visit counter and privacy](#the-visit-counter-and-privacy)). It lists matched evidence with links, and gaps (languages, years of experience, named tools, consulting-firm or director-level experience, financial modelling, a PhD or a law degree), first when they cap the grade; right to work, visa, clearance, driving licence, relocation and the level of English are named as things to confirm with Moses, never guessed. General skills (stakeholders, data, delivery, international work, research) count towards a grade but never make one: an ad with nothing from his own field is "Different field" Its facts about him come from `content/profile.json`
-- **Field Notes**: short essays connecting boreholes, scenario storytelling and sustainable AI
-- **Modern design**: dark theme with vibrant green accents, light mode, responsive layout, full SEO/social metadata (Open Graph, JSON-LD, sitemap)
-- **Comprehensive sections**: journey, about (with CV download), experience, projects with photo dossiers, AI cost widget, skills, education, field notes, contact form
+- **Borehole core-log experience timeline**: career history logged the way a geologist logs a core — depth is time, every layer is a chapter. Each role is a short card (dates, role, organisation, one line), the rest a press away
+- **"AI, Weighed"**: one chart from the EcoPrompt Coach research on the homepage — guess how the energy of one AI answer grows with model size, then see the published estimates. The calculator (model × grid × tokens → energy, carbon, water) and Anatomy of a Prompt are on [`carbon-ai.html`](carbon-ai.html)
+- **Evidence-first skills**: no invented percentages — every tool links to the project where it earned its place; the 164 water points are itemized in About
+- **The Assay**: under the contact form, behind one button, paste a job ad and get an honest fit, graded in the browser; the ad itself is never sent (the page view's count carries the grade, see [The visit counter and privacy](#the-visit-counter-and-privacy)). It lists matched evidence with links, and gaps (languages, years of experience, named tools, consulting-firm or director-level experience, financial modelling, a PhD or a law degree), first when they cap the grade; right to work, visa, clearance, driving licence, relocation and the level of English are named as things to confirm with Moses, never guessed. General skills (stakeholders, data, delivery, international work, research) count towards a grade but never make one: an ad with nothing from his own field is "Different field" Its facts about him come from `content/profile.json`
+- **Field Notes**: short essays connecting boreholes, scenario storytelling and sustainable AI, under About
+- **Modern design**: dark theme with vibrant green accents, light mode (the reader's choice, shared by every page, or with none the system's, from the first paint), responsive layout, full SEO/social metadata (Open Graph, JSON-LD, sitemap)
+- **Seven sections**: journey, about (with the CV download and the field notes), experience, six project cards leading to the case studies, AI, Weighed, skills and education, contact form
 
 ## Technologies Used
 
 - **HTML5**: Semantic markup for better SEO and accessibility
 - **CSS3**: Modern styling with CSS Grid, Flexbox, animations, and transitions
-- **JavaScript (Vanilla)**: no framework, no bundler. A 73 KB core (`script.js`, 23 KB gzipped) and four on-demand modules in `modules/` (plus the player's stylesheet, `modules/dispatch.css`) that the core fetches the first time a feature is used
+- **JavaScript (Vanilla)**: no framework, no bundler. A 74 KB core (`script.js`, 24 KB gzipped) and five on-demand modules in `modules/`, each fetched the first time it is needed: the core fetches three on the homepage (the section-05 interactives with the Assay and the footer receipt, the narration player with its stylesheet, the field terminal), the case studies fetch the two games (`dossier.js` and `.css`) and `carbon-ai.html` fetches Anatomy of a Prompt (`anatomy.js` and `.css`), each as it comes near the screen
 - **Icons**: an inline SVG symbol sprite, no icon font
 - **Fonts**: Inter, Space Grotesk and IBM Plex Mono, self-hosted as Latin subsets under the SIL Open Font License (see [Fonts](#fonts))
 - **GitHub Pages**: Free hosting for static websites
@@ -42,40 +43,39 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 
 ### 🏠 Home (Hero)
 - Name, role and a one-line value proposition over a rotating set of fieldwork photographs (the rotation only runs while the hero is on screen and the tab is visible)
-- Call-to-action buttons and a live index of the five interactive features (the one `Listen` control is in the nav)
+- An at-a-glance strip written from `content/profile.json` by `npm run build:content`: the roles he is open to and where he is today; seniority, start date, languages and right to work appear once Moses states them, and a fact that is `null` is simply not shown
+- One primary action (**See the evidence**, to the case studies), **Get in touch** second, and a quieter CV link; it is the one filled button on the first screen (the nav's Contact is an outline there, filled on hover). The figures below and the photo's caption sit inside the first screen at 1440×900 and 390×844, in a laptop's shorter browser window (1366×657, 1280×720), where the description follows the figures as it does on a phone, and on a small phone (375×667, 360×640)
+- A six-link nav: Work, About, Experience, Research, CV and Contact, with the one `Listen` control and the theme switch beside them. The index of the five interactive features sits just before Contact
 - Four exact figures (164 water points, 54 hazard systems, 3 continents, 2 master's degrees), written into the HTML so they read correctly without JavaScript; with it they count up to the same values, with nothing appended, and stay still under reduced motion or low-energy mode
 
 ### 🗺️ Journey
-- The living journey map: Freetown → Changsha → Bonn → Wageningen → Amsterdam, flown as you scroll, with a visitor mark for wherever you are reading from
+- The living journey map: Freetown → Changsha → Bonn → Wageningen → Amsterdam, flown as you scroll, with a visitor mark for wherever you are reading from. On a phone it is a band pinned under the nav bar while the stops scroll past below it, showing the one being read; it jumps instead of flying under reduced motion or low-energy mode
 
 ### 👤 About
-- Professional summary with the CV download
-- Four fact cards: where the work was done, the 164 water points, the data toolkit and the ESG certificate
+- Professional summary with the CV download, and the 164 water points itemised (100 wells rehabilitated, 50 boreholes drilled, 14 solar-powered)
+- The three Field Notes, each its title until opened
 
 ### 💼 Experience
 - The borehole core-log timeline: depth is time, every layer a chapter, technology tags for each
+- Short cards at every width: dates, role, organisation and the first line, with the rest and the tags behind a More button named for its role; on a desktop a shut card is one row
 
 ### 🔬 Projects
-- Six expandable dossiers with photo galleries, each with challenge → approach → results
-- Two of them carry a mini-game: "Site the borehole" and "Don't let it become a boat"
+- Six teaser cards, generated from `content/projects.json` so they cannot disagree with the case studies: where and when, the headline result with the one line of its basis and whether you can check it from outside, the role lenses, the tools, a thumbnail photo, and one link to the whole story on `case-studies.html` (the subtitle is the case study's)
+- The two games that used to sit in the dossiers are on the case studies they illustrate: "Seven in ten" on groundwater, "Don't let it become a boat" on Wuppertal
+- So are the dossiers' 25 field photos, with their captions word for word: a row under each case study, folded under one line until asked for (nothing is fetched until then), each photo a link to the full one. With JavaScript they open in a lightbox that steps through that case study's photos: previous and next, the arrow keys, "2 of 5", Escape
 
 ### ⚡ AI, Weighed
-- The homepage slice of the EcoPrompt Coach research: You Draw It, the live cost widget and Anatomy of a Prompt
+- You Draw It, the homepage's one chart from the EcoPrompt Coach research, with a link to the coach. It is drawn as wide as it is shown, so every label is 11px or more on a phone (they were about 5px)
+- The calculator and Anatomy of a Prompt (where one query lands on a CSRD report) are on `carbon-ai.html`; Anatomy is drawn from the calculator's own numbers and fetched only as its section comes near
 
-### 🛠️ Skills
+### 🛠️ Skills & Education
 - Evidence-first: every tool links to the project where it earned its place, with real field numbers instead of percentages
-- ESG frameworks and standards (SBTi, CDP, GHG Protocol, TCFD, TNFD, etc.)
-
-### 🎓 Education
-- Master's degrees in Environmental Sciences and Industrial Engineering
-- Bachelor's degree in Geology
-- Professional certifications (ESG Specialist, Google Data Analytics, etc.)
-
-### 📝 Field Notes
-- Short essays connecting boreholes, scenario storytelling and sustainable AI
+- Areas of expertise, and ESG frameworks and standards (SBTi, CDP, GHG Protocol, TCFD, TNFD, etc.)
+- Master's degrees in Environmental Sciences and Industrial Engineering, and a Bachelor's in Geology, each with its dates, institution and what it held
+- Professional certifications (ESG Specialist, Google Data Analytics, etc.), each with its issuer, date and what it covered
 
 ### 📧 Contact
-- Contact form (Google Apps Script backend, honeypot, rate limits; works without JavaScript by posting to the same endpoint), The Assay, direct contact details and social links
+- Direct contact details, social links and the contact form (Google Apps Script backend, honeypot, rate limits; works without JavaScript by posting to the same endpoint), with The Assay below the form as the optional step: its question and promise in view, its box behind a "Grade a job description" button
 
 ## Setup Instructions
 
@@ -249,7 +249,8 @@ npm run voice -- --clone path/to/sample # make a voice model (add --sections to 
 
 The API key is used only there, on your machine; it never reaches the browser.
 Fish Audio bills 1 credit per UTF-8 byte of text, so the cost is known before
-anything is sent: the ten sections are ~7,850 credits today, and the dry run
+anything is sent: the eight sections are ~8,300 credits today (8,347 on
+2026-10-03), and the dry run
 prints the exact figure. Scripts are hashed, so fixing one sentence re-renders
 one file. `scripts/lib/voice-signature.js` is
 the one definition of "has this track already been rendered?", shared by the
@@ -315,10 +316,10 @@ CI uses Node 22.
 | `npm run build:check` | every generated page still matches `content/` |
 | `npm run fonts:check` | the committed fonts still hash to their manifest and every stylesheet's `@font-face` block is current |
 | `npm run lint:html` | every page is valid HTML ([html-validate](https://html-validate.org/)'s recommended rules; the two relaxations are explained in `.htmlvalidate.cjs`) |
-| `npm run test:unit` | every `tests/*.test.js`, side by side, one process per suite, so a new suite runs the day it exists: the sixteen listed below (1307 passing assertions on 2026-09-27) |
+| `npm run test:unit` | every `tests/*.test.js`, side by side, one process per suite, so a new suite runs the day it exists: the twenty-three listed below, and it ends by counting the assertions that passed, so no figure for them is kept here to go stale |
 | `npm run map:check` | the committed `journey-map.svg` still matches its generator |
-| `npm run budget` | the weights this README quotes (see [Performance](#performance)) |
-| `npm run smoke` | every page in a real browser: no errors, no failed or off-origin requests, every on-demand module arrives when used, no axe-core violation at 1440×900 or 390×844 in either theme, and each budgeted page's measured first view no heavier than the budget claims; every page again with JavaScript off, and the homepage with `script.js` blocked and late; the skip link, Back, the theme switch, back to top and the nav bar at every width; the listen control and its player; the Assay; where jumps land while sections are drawn on demand, that reading back up after skipping ahead moves nothing, find-in-page and printing, which loops run, and how busy the idle page keeps the main thread at 4× CPU slowdown; the carbon-ai page's dropdowns and numbers; and the visit counter's one request, taken apart: exactly the documented fields, no cookie, no Referer, once per page view, and nothing under Do Not Track or Global Privacy Control or with JavaScript off (its own CI job; needs Chromium — `-- --browser firefox` runs it in Firefox, which CI also does) |
+| `npm run budget` | the weights this README quotes, and that its budget tables still say what the script measures (see [Performance](#performance)) |
+| `npm run smoke` | every page in a real browser: no errors, no failed or off-origin requests, every on-demand module arrives when used, no axe-core violation at 1440×900 or 390×844 in either theme, and each budgeted page's measured first view no heavier than the budget claims, and every page no longer than its length budget at both sizes once it has settled; every page again with JavaScript off, and the homepage with `script.js` blocked and late; the skip link, Back, the theme switch (followed from page to page, and the system's setting with nothing chosen), back to top and the nav bar at every width, and every other page's shared nav and call to action at 320px, links to a game, a case study or Anatomy of a Prompt landing clear of that nav, and the nav not moving as its theme switch appears; the first screen's figures, caption, strip and primary action, as the strip is today and with every fact at the longest the validator accepts; the journey map pinned over none of its stop's text on a phone, and its delta's names clear of each other on a desktop; the listen control and its player; the Assay; the case studies' two games, photo rows and lightbox; every drawing label at 11px or more on a phone, and inside its drawing; where jumps land while sections are drawn on demand, that reading back up after skipping ahead moves nothing, find-in-page and printing, which loops run, and how busy the idle page keeps the main thread at 4× CPU slowdown; the carbon-ai page's dropdowns and numbers; and the visit counter's one request, taken apart: exactly the documented fields, no cookie, no Referer, once per page view, and nothing under Do Not Track or Global Privacy Control or with JavaScript off (its own CI job; needs Chromium — `-- --browser firefox` runs it in Firefox, which CI also does) |
 | `npm run mcp:verify` | the pinned MCP package still hashes to the reviewed tarball (needs network) |
 
 The suites, and the failure each one exists to prevent:
@@ -338,10 +339,11 @@ The suites, and the failure each one exists to prevent:
   `html.js`, one global `[hidden]` rule instead of per-element patches, the
   hero figures written as their real values and read as those while they
   count up, counters that never append a `+` or move under reduced motion or
-  low-energy mode, dossier titles that say "expanded" over the open dossiers
-  a reader without JavaScript gets, copy that promises a click hidden with
-  the script, and a late start that keeps those dossiers open and holds the
-  line being read while the page fills in. `npm run smoke` loads every page
+  low-energy mode and that end 1.8 s in at any frame rate, project cards with nothing a script has to open and case
+  study games that ship their controls hidden and say, without JavaScript,
+  that they need it, copy that promises a click
+  hidden with the script, and a late start that holds the line being read
+  while the page fills in. `npm run smoke` loads every page
   with JavaScript disabled (every nav link on show at 390 and 1024px too),
   the homepage with `script.js` blocked and delayed (the line being read
   stays put when it takes over, scroll anchoring off too), and carbon-ai.html
@@ -350,7 +352,23 @@ The suites, and the failure each one exists to prevent:
   and through the real page; the input/output token split; the evidence
   ledger, which fails if any factor loses its source, range or review date;
   and the one number formatter both AI pages share: no exponent notation and
-  no "0.0" for something that is not zero, from 1e-14 to 1e24.
+  no "0.0" for something that is not zero, from 1e-14 to 1e24. Anatomy of a
+  Prompt is fetched only as its section nears, draws the calculator's own
+  figures, says whose report its Scope lines are on, and keeps every label at
+  11px or more inside the drawing, from a 320px phone to a desktop; nothing
+  tells a reader to drag the grid, which is a dropdown.
+- **`sections.test.js`** — the shorter homepage, and its one rule: no fact
+  leaves the site. Seven sections numbered 01 to 07, the Field Notes inside
+  About and Education inside Skills (`#notes` and `#education` still
+  addresses), and no call-to-action band between them; experience as short
+  cards at every width, each More button a real button named for its role,
+  every card whole without JavaScript and in print; the contact form before
+  the Assay, whose question and promise stay in view while its box opens from
+  one "Grade a job description" button (at once, before its module arrives,
+  and from the play index's link); every area, framework, degree,
+  certificate, field note and project subtitle still on the page or its case
+  study, and each figure taken out of About or Skills still shown with the
+  role it belongs to; and the narration matching the merged sections.
 - **`assay.test.js`** — the paste-a-job-ad fit check: an ad asking for fluent
   Dutch, 5+ years at a Big Four firm and SAP gets every one of those as a gap
   and not the top grade; ads that do fit still grade well, with evidence
@@ -376,20 +394,44 @@ The suites, and the failure each one exists to prevent:
 - **`content.test.js`** — the pages must agree with `content/profile.json`
   (dates, degrees, certifications, JSON-LD, links, sitemap), and so must
   their figures: a record fact (team size, programme length, grade) matches
-  its profile entry, every dossier shows its case study's years, the page
+  its profile entry, every project card shows its case study's years, the page
   weights the footer, the lens and this README quote are the ones `npm run
   budget` measures, the claims removed for having no basis ("10,000+
   people", a project completion rate, "15% efficiency", "advised the UN",
   "certified across", "if a skill is listed, there's a project behind it")
   stay gone, the field report names no tool the homepage does not show, the
   two illustrative numbers (the 30% blind-drilling baseline and the You Draw
-  It guess line) say so wherever they are shown, You Draw It judges a guess
-  against the published range rather than calling an estimate the actual
-  value, and Anatomy says whose report its Scope lines are on.
+  It guess line) say so wherever they are shown, and You Draw It judges a
+  guess against the published range rather than calling an estimate the
+  actual value.
 - **`portfolio.test.js`** — every case study has all four stages and every
   result a basis; no artifact claims to be public without a working link; the
   lenses reorder without ever dropping a case study; and the validator is fed
-  deliberately fabricated links to prove it still rejects them.
+  deliberately fabricated links to prove it still rejects them. The homepage's
+  project cards say what their case studies say (title, headline result,
+  basis, checkability, lenses), link to them, and carry one lazy photo whose
+  declared size is the file's own; no dossier id or link is left behind.
+- **`widgets.test.js`** — the case studies' two games: nothing fetched until
+  a host is within a screen of view, then the stylesheet before the script;
+  the module runs without `script.js` (and with storage refused), wires a
+  host before showing it, plays a round with one scoreboard and no second
+  slider, never counts a re-drilled strike, labels the 30% illustrative
+  wherever it shows, drills and floods at once under reduced motion or
+  low-energy mode, and sizes its drawing labels for the scale they are
+  drawn at, so a phone reads them at 11px or more. `npm run smoke` plays both
+  in Chromium and measures those labels at 390 and 320px.
+- **`phone.test.js`** — the journey map follows the stop across a reading
+  line (below a phone's pinned band), not the next one arriving, zooms in
+  further on a narrow band where the stops are close, keeps every name 11 to
+  14px on screen and jumps under low-energy mode; You Draw It is drawn as
+  wide as it is shown, and again at a new width; the 25 field photos are back
+  on their case studies with their captions word for word, folded, lazy and
+  at their files' own sizes, and the validator refuses a photo without a
+  caption, a size or a file; the lightbox steps with buttons, arrow keys and
+  a "2 of 5", goes round, keeps Tab inside and hands focus back. `npm run
+  smoke` pins the band over none of its stop's text at 390 and 320px, checks
+  the delta's names on a desktop, measures the chart's labels, and steps the
+  lightbox in both themes.
 - **`stats.test.js`** — the open counts: every published count is 5 or more
   or reads `<5`, and no `<5` can be worked out by subtraction, from one table
   or a chain of them (the rows the review that found it used are the test);
@@ -433,8 +475,8 @@ The suites, and the failure each one exists to prevent:
   schema check, every `data-analytics` name on the site must be one the
   counter keeps, and every CV and email link on a counted page must have one.
 - **`navigation.test.js`** — an in-page link updates the address (so Back
-  works) and moves focus to its target, Back and Forward land there again and
-  reopen a closed dossier, the theme switch sits in the nav bar and names what
+  works) and moves focus to its target, Back and Forward land there again,
+  the theme switch sits in the nav bar and names what
   it will do, and back to top waits a full screen and steps aside for every
   control in its corner, not whole regions; a jump lands again when the page
   grows, even in the frame before the first report of it. `npm run smoke`
@@ -444,13 +486,49 @@ The suites, and the failure each one exists to prevent:
   to it, lands under the nav bar and stays there, and
   at 390x844 back to top never covers a control from the hero to the footer,
   yet shows on the last screen.
+- **`firstview.test.js`** — the hero's at-a-glance strip is exactly what
+  `content/profile.json` says (a `null` fact is not drawn; a stand-in such as
+  "TBC", a misspelt key or an impossible date fails validation), the hero has
+  one primary action, the nav six links with no numbers, the play index sits
+  out of the first view, and the nav lights Work on the homepage's projects.
+  `npm run smoke` checks that the figures, the caption, the strip and the
+  primary action are on the first screen at 1440×900 and 390×844 and in two
+  laptop windows, 1366×657 and 1280×720.
+- **`shell.test.js`** — every page but the homepage has the same five nav
+  links, the current page marked, and one call to action with the address,
+  the contact form and the CV; the theme switch only where `theme.js` runs,
+  shipped hidden; the hand-authored pages' shell exactly as generated; the
+  stored choice (or the system's) on `<html>` before the first paint, a
+  press, blocked storage, Back from the page cache, and one choice shared
+  with the homepage, which with none opens in the theme `theme.js` would
+  (the system's, set on `<html>` from `<head>`, before its stylesheet, so
+  no frame is drawn dark first); and the light palette twice and the same,
+  the homepage's. `npm run smoke` follows the choice through the
+  nav in a real browser, checks the system's setting with JavaScript off
+  and on the homepage from its first frame, and every page at 320px.
 - **`tooling.test.js`** — the machinery under the rest: the runner fails when
-  any suite fails and keeps each suite's output in one block, `npm test` runs
+  any suite fails, keeps each suite's output in one block and counts the
+  assertions that passed, `npm test` runs
   it rather than a hand-kept list of suites, the fake clock fires timers in
   order and only when told, and every page with a first-view budget exists
   and is measured.
+- **`budget.test.js`** — the budgets themselves: `npm run budget -- --json`
+  gives every budget its measure, ceiling and headroom; the ratchet, run on
+  made-up measurements from far under to far over, lowers ceilings to what
+  they hold plus 5% and never raises one (or touches a held one, or any line
+  but a ceiling's); every page has a length budget at both sizes, the
+  homepage's at or under the plan's 10 and 18 screens; the README's tables,
+  and its figures for the first view's ceiling and the core script's
+  weight, say exactly what `--readme` would write; and the receipt workflow asks for
+  no more than it needs and cannot comment from a fork.
+- **`receipt.test.js`** — the pull-request receipt, from fixture budgets and
+  lengths: a rise with a plus, a fall with a minus, no change as 0, the
+  CO₂e at 0.36 g per MB of 1024² bytes, a budget over its ceiling or new on
+  one side, the open counts page held drawn full, and tables whose rows are
+  as wide as their headers; and, measured with `--root` as the workflow
+  measures main, a ceiling the branch moved, added or dropped.
 - **`cpu.test.js`** — the page's keys go through one listener, so one Escape
-  closes one layer (terminal, then lightbox, then player, then menu) and the
+  closes one layer (terminal, then player, then menu) and the
   backtick follows one rule for "typing"; one `mks.motionOK()` answers for
   reduced motion and low-energy mode, live; the time-zone table is fetched
   only when the journey map needs it; everything the core shares hangs off
@@ -460,10 +538,13 @@ The suites, and the failure each one exists to prevent:
   looping animation runs on transform and opacity and pauses out of view and
   in a hidden tab.
 
-The jsdom harness (`tests/harness.js`) evaluates `script.js` and then every
-file in `modules/`, so the suites see the page the way a visitor who used
-every feature would — and a module that declared anything at the top level,
-or reached for storage directly, fails `resilience.test.js`. A suite that
+The jsdom harness (`tests/harness.js`) evaluates the theme script at the top
+of `<body>`, `script.js`, and then the three modules the core fetches on
+demand, so the suites see the homepage the way a visitor who used every
+feature would — and a module that declared anything at the top level, or
+reached for storage directly, fails `resilience.test.js`. The case studies'
+games and Anatomy of a Prompt are booted with their own pages
+(`widgets.test.js`, `carbon.test.js`). A suite that
 tests timing passes `clock: true` and moves time with `await clock.tick(ms)`
 instead of sleeping, so a 1.7-second timeout costs nothing to test.
 
@@ -477,8 +558,8 @@ Everything derived now comes from `content/`:
 
 | Source | Feeds |
 |---|---|
-| `content/profile.json` | JSON-LD, `sitemap.xml`, the Assay's facts block in `modules/interactives.js`, the facts `content.test.js` holds every page to |
-| `content/projects.json` | `case-studies.html` |
+| `content/profile.json` | JSON-LD, `sitemap.xml`, the homepage's at-a-glance strip, the Assay's facts block in `modules/interactives.js`, the shared shell's call to action on every page but the homepage, the facts `content.test.js` holds every page to |
+| `content/projects.json` | `case-studies.html` (with each case study's photos and game), and the homepage's six project cards |
 | `content/lenses.json` | the role-specific views |
 | `content/research.json` | `research.html` |
 | `content/narration.json` | `voice-scripts.js` |
@@ -490,9 +571,16 @@ npm run build:check       # fail if a generated file is out of date (runs in CI)
 ```
 
 `index.html` and `field-report.html` stay hand-authored — they are long-form
-editorial pages, and templating over 130 KB of hand-tuned markup to remove
+editorial pages, and templating over their hand-tuned markup to remove
 duplication a test already catches would trade a small problem for a large one.
-`content.test.js` holds them to `content/` instead.
+The exceptions are regions the generator writes between markers: in
+`index.html` the JSON-LD block, the at-a-glance strip and the six project
+cards.
+`content.test.js` holds them to `content/` instead. `carbon-ai.html` and
+`404.html` are hand-authored too, bar the shared shell: the generator writes
+the nav and the call to action into them and the field report, between
+`<!-- SHELL-NAV -->` and `<!-- SHELL-CTA -->` markers (and `theme.js` into
+`carbon-ai.html`'s head), and `build:check` fails if a page's copy drifts.
 
 ### The rules the content model enforces
 
@@ -592,21 +680,22 @@ visitor's own browser, and sends none of it.) All of it is `count.js`: 3 KB
 (2 KB gzipped), loaded deferred on every page and counted in each page's
 budget.
 
-**Status.** Built and tested, but not yet counting: the live Apps Script has
-to be published again with the counter's code first (item S1 in
+**Status.** Built, tested and on `main`, which the live site is built from,
+since pull request #49 was merged (2026-09-27), but not yet counting: the live Apps Script has to be
+published again with the counter's code first (item S1 in
 [docs/owner-checklist.md](docs/owner-checklist.md)). Until then the counts
 reach the old script. Every version of `Code.gs` committed here from
 2026-07-17 on reads a count as a contact message with no name and refuses it,
-so nothing is recorded and nobody is emailed; the 2025 versions would have
-recorded and emailed every one, which is why the checklist publishes the new
-script before this reaches the live site.
+so nothing is recorded and nobody is emailed; the 2025 versions would record
+and email every one, which is why S1 starts by checking which version is
+live.
 
 **What one page view sends.** One POST, the first time the page is hidden or
 left (`visibilitychange` to hidden, or `pagehide`), and never a second for the
 same page view. This is the whole of one, exactly as `count.js` sends it:
 
 ```json
-{"v":1,"page":"index","lens":"","deepest":"contact","features":["cv-download-hero","cv-download","module-dossier"],"ref":"www.linkedin.com","vp":"m","kb":284}
+{"v":1,"page":"index","lens":"","deepest":"contact","features":["cv-download-hero","cv-download","module-interactives"],"ref":"www.linkedin.com","vp":"m","kb":284}
 ```
 
 | Key | What it holds |
@@ -614,8 +703,8 @@ same page view. This is the whole of one, exactly as `count.js` sends it:
 | `v` | `1`, the version of this format |
 | `page` | the page's file name without `.html` (`index`, `case-studies`, `research`, `carbon-ai`, `field-report`, `stats`), or `404` |
 | `lens` | the `?lens=` the page view arrived with, or `""` |
-| `deepest` | the id of the furthest top-level part of `<main>` that came on screen: on the homepage one of the nine sections the nav links to, from `journey` to `contact`; `csGrid` on the case studies; `""` on the pages that have no such part |
-| `features` | up to 20 distinct names of things used: the site's `data-analytics` hooks (27 today, such as `cv-download-hero` and `receipt-open`), `cv-download` once for a view that used any CV link (the CV-downloads figure counts page views), `cv-download-terminal` when the field terminal's `cv` command fetches the CV, `module-<name>` for each on-demand module fetched, `contact-form-submit`, and the Assay's grade (`assay-high`, `assay-workable`, `assay-marginal`) |
+| `deepest` | the id of the furthest top-level part of `<main>` that came on screen: on the homepage one of its seven sections, from `journey` to `contact`; `csGrid` on the case studies; `""` on the pages that have no such part |
+| `features` | up to 20 distinct names of things used: the site's `data-analytics` hooks (34 today, such as `cv-download-hero` and `receipt-open`), `cv-download` once for a view that used any CV link (the CV-downloads figure counts page views), `cv-download-terminal` when the field terminal's `cv` command fetches the CV, `module-<name>` for each on-demand module fetched, `contact-form-submit`, and the Assay's grade (`assay-high`, `assay-workable`, `assay-marginal`) |
 | `ref` | the referring site's host only (`www.linkedin.com`); `""` if there was none, or it was this site |
 | `vp` | the browser window's width as a class: `s` under 600 px, `m` under 1024 px, `l` wider |
 | `kb` | whole KB this page view transferred, from the browser's Resource Timing API, so a cached revisit counts as the near-zero it is |
@@ -706,8 +795,8 @@ To change the color scheme, edit the CSS variables in `style.css`:
 ```
 
 ### Content
-- Update personal information in `index.html`
-- Modify section content directly in the HTML
+- Update personal facts in `content/profile.json` (they feed the JSON-LD, the at-a-glance strip, the Assay and every other page's call to action) and projects in `content/projects.json`, then run `npm run build:content`; `npm test` names any hand-authored page that still disagrees
+- Modify the rest of a section's content directly in the HTML
 - Add or remove projects, experiences, and skills as needed
 
 ### Images
@@ -724,9 +813,10 @@ What CI runs every page in, on every pull request:
 
 - ✅ Chromium, the build pinned by `playwright-core` — so Chrome and Edge,
   which share its engine
-- ◐ Firefox, the build pinned by `playwright-core` (142 at the moment): the
-  job is in CI, and its first run is on the pull request that adds it; this
-  becomes ✅ once that run has passed
+- ✅ Firefox, the build pinned by `playwright-core` (142 at the moment): its
+  own CI job, which first passed on pull request #49 (2026-09-27), once what
+  its first run found was fixed. The length budget is measured in Chromium
+  only
 - ✅ Phone width (390×844) and desktop (1440×900), in both themes, for the
   accessibility checks — a browser window at that size, not a real phone
 
@@ -739,21 +829,27 @@ This section used to claim a Lighthouse score of 95+ and sub-two-second loads,
 with nothing measuring either. Claims like that decay quietly: by the time
 anyone checked, the image total had grown past 3 MB while the README still said
 "under 2 MB". So the numbers below are the ones `npm run budget` measures on
-every run of `npm test`, and the build fails when they are exceeded.
+every run of `npm test`, and the build fails when they are exceeded. The
+table itself is written by `npm run budget -- --readme` from those
+measurements and the ceilings in `scripts/check-budget.js`, and `npm test`
+fails while it says anything else, so it cannot drift the way the old claims
+did.
 
+<!-- BUDGET-TABLE:START — generated by scripts/check-budget.js (npm run budget -- --readme). Do not edit by hand. -->
 | Budget | Measured | Ceiling |
 |---|---|---|
-| First view of the homepage, over the wire (fonts included) | ~282 KB | 300 KB |
-| Everything a full visit adds on demand (modules, scripts, map) | ~69 KB | 72 KB |
-| Case studies page, over the wire (fonts included) | ~94 KB | 120 KB |
-| Research outputs page, over the wire (fonts included) | ~90 KB | 110 KB |
-| AI, Weighed (`carbon-ai.html`), over the wire (fonts included) | ~106 KB | 111 KB |
-| Text-only field report, the HTML file (the size the footer quotes) | ~9 KB | 12 KB |
+| First view of the homepage, over the wire (fonts included) | ~275 KB | 288 KB |
+| Everything a full visit adds on demand (modules, scripts, map) | ~72 KB | 72 KB |
+| Largest single image | ~200 KB | 210 KB |
+| Every image in the repository | ~3.36 MB | 3.5 MB |
+| Recorded narration: Moses's introduction (sized for his 60–90 s take) | 0 KB | 800 KB |
+| Text-only field report, the HTML file (the size the footer quotes) | ~9 KB | 11 KB |
 | Text-only field report, over the wire (with its visit counter) | ~6 KB | 8 KB |
-| Largest single image | ~200 KB | 220 KB |
-| Every image in the repository | ~3.23 MB | 3.5 MB |
-| Recorded narration: Moses's introduction (0 KB until he records it) | 0 KB | 800 KB |
-| Open counts page, over the wire (fonts included; empty today) | ~90 KB | 105 KB |
+| Case studies page, over the wire (fonts included) | ~104 KB | 109 KB |
+| Open counts page, over the wire (fonts included; sized for a full page) | ~95 KB | 103 KB |
+| Research outputs page, over the wire (fonts included) | ~94 KB | 99 KB |
+| AI, Weighed (`carbon-ai.html`), over the wire (fonts included) | ~110 KB | 111 KB |
+<!-- BUDGET-TABLE:END -->
 
 **What the estimate used to miss.** An earlier version of this table said
 234 KB. Opening the page in a real browser measured over 500 KB. Two things
@@ -771,23 +867,35 @@ JS are counted gzipped — what a visitor actually downloads — while images an
 fonts are counted as-is. The first view is `index.html`, its stylesheet, the
 core script, the visit counter, the four font files, the icon and the one
 preloaded hero image. Everything else is fetched only when it is reached: the
-journey map on the first scroll, the other 32 images as you get to them, the
-remaining hero backgrounds when the rotation needs them, and no narration until
-someone presses play. So "every image in the repository" is the cost of opening
-every gallery, not the cost of arriving.
+journey map on the first scroll, the portrait and the six project photos as
+you get to them (a 480px copy wherever that is enough), a case study's photos
+when its row is opened, the remaining hero
+backgrounds when the rotation needs them, and no narration until someone
+presses play. So "every image in the repository" is what the repository
+holds, not the cost of arriving.
 
 **On-demand modules.** About two thirds of the site's JavaScript serves
 features most visits never reach. It used to ship in one 155 KB file, parsed
-and run on every visit. It now lives in `modules/` and `script.js` fetches
-each file the moment it is first needed:
+and run on every visit. It now lives in `modules/`, and each file, like the
+few data files features read, is fetched the moment it is first needed:
 
+<!-- MODULE-TABLE:START — generated by scripts/check-budget.js (npm run budget -- --readme). Do not edit by hand. -->
 | Module | Loads when | Gzipped |
 |---|---|---|
-| `modules/interactives.js` (+ `ai-carbon-data.js`) | section 05 or the footer receipt comes within a screen of the viewport, or a deep link lands there | ~35 KB |
-| `modules/dispatch.js` (+ `dispatch.css`, `voice-scripts.js`) | the first press of Listen, or `voice` in the terminal | ~16 KB |
-| `modules/dossier.js` | a project dossier with a mini-game is opened | ~6 KB |
+| `modules/interactives.js` (+ `ai-carbon-data.js`) | section 05, the Assay or the footer receipt comes within a screen of the viewport, or a deep link lands there | ~31 KB |
+| `modules/dispatch.js` (+ `dispatch.css`, `voice-scripts.js`) | the first press of Listen, or `voice` in the terminal | ~15 KB |
+| `modules/dossier.js` (+ `dossier.css`) | on `case-studies.html`, a game's host comes within a screen of view (the page's own loader, not `script.js`) | ~9 KB |
 | `modules/terminal.js` | the backtick key or the footer button | ~5 KB |
+| `modules/anatomy.css` + `anatomy.js`, on `carbon-ai.html` | Anatomy of a Prompt comes within 400px of the screen (`carbon-ai.js` fetches them) | ~5 KB |
+| `assets/journey-map.svg` | the first sign a reader is heading down the page: a scroll, a key, a touch, or a deep link | ~4 KB |
 | `assets/timezones.json` | the journey map arrives, for its "you?" mark (the zone is looked up in the page, never sent) | ~2 KB |
+| `assets/audio/voice-manifest.json` | 1.5 s after load, only where the browser has no voice to read aloud with: whether a recording can stand in | <1 KB |
+<!-- MODULE-TABLE:END -->
+
+`npm run budget -- --readme` writes this table from `MODULE_TABLE` in
+`scripts/check-budget.js`: the words are written there, the weights are
+measured, and every file fetched on demand has a row, so the rows add up to
+the on-demand budget above.
 
 Modules are classic scripts sharing the page's global scope: they declare
 nothing at the top level and reach the core only through `window.mks`. The
@@ -796,9 +904,60 @@ speak; the first press fetches the player, its stylesheet and its scripts.
 
 Run `npm run budget` to see the current numbers, asset by asset. To make
 room under a ceiling, remove something of equal weight rather than raise it
-([docs/plan.md](docs/plan.md), "Stop doing"). A ceiling that does change is
-changed in `scripts/check-budget.js` **and** in this table, in the same
-commit.
+([docs/plan.md](docs/plan.md), "Stop doing"). The report ends by naming every
+budget whose ceiling could come down: more than 10% headroom, and a ratchet
+target (measured plus 5%, at least 1 KB or a tenth of a screen over it) below
+the ceiling: "you could lower … from X to Y".
+
+**Length is a budget too.** A long page costs a busy reader what a heavy one
+costs the network, so every page is also held to a length: its scroll height
+over the window's height, in screens, at 1440×900 and 390×844. `npm run
+smoke` measures it in Chromium once the page has settled (fonts loaded, every
+section drawn at its real height, on-demand features arrived, nothing opened)
+and fails a page above its ceiling. The homepage's ceilings began as the
+plan's targets, 10 and 18 screens (it was 19.4 and 32.7), and came down to
+what it measured plus 5% once it met them; every other page's is what it
+measured when the budget was set, plus 5% (the open counts page drawn full,
+as the smoke's fixture draws a busy quarter, since that is the page the
+weekly Action will commit).
+
+<!-- LENGTH-TABLE:START — generated by scripts/check-budget.js (npm run budget -- --readme). Do not edit by hand. -->
+| Page | Desktop, 1440×900 | Phone, 390×844 |
+|---|---|---|
+| `index.html` | 9.79 screens | 17.09 screens |
+| `case-studies.html` | 11.85 screens | 19.78 screens |
+| `carbon-ai.html` | 7.07 screens | 13.38 screens |
+| `research.html` | 5.86 screens | 8.99 screens |
+| `stats.html` | 10.97 screens | 16.25 screens |
+| `field-report.html` | 4.4 screens | 7.44 screens |
+| `404.html` | 1.05 screens | 1.05 screens |
+<!-- LENGTH-TABLE:END -->
+
+```bash
+npm run smoke -- --lengths-only        # just the lengths: every page, both sizes (writes .smoke/length.json)
+npm run budget -- --ratchet --lengths .smoke/length.json
+```
+
+**Ceilings only move down.** `npm run budget -- --ratchet` lowers every
+ceiling to what it measures plus 5% (at least 1 KB, or a tenth of a screen,
+over it; bytes round up to a whole KB), rewrites this README to match, and
+never raises one. Two budgets are held where they are, because they are
+sized for something that has not happened yet: the recording Moses has not
+made, and the open counts page once it is full of counts.
+
+**A carbon receipt on every pull request.** `.github/workflows/receipt.yml`
+measures `main` and the pull request with the pull request's own scripts
+(`check-budget.js --json`, and `smoke.js --lengths-only` in the Chromium
+build CI pins) and posts one comment, updated on each push: the bytes of
+every budget and how they moved, the estimated CO₂e of each page's first
+view, and how each page's length moved at both sizes. Each side keeps its
+own ceilings (main's are read from main's copy of `check-budget.js`), so a
+ceiling the pull request moves shows what it was. The CO₂e uses the
+constant the footer badge uses (Sustainable Web Design, 0.36 g per MB
+transferred) and counts network transfer only. `scripts/receipt.js` writes
+it from two budget files and two length files; on a fork, whose token cannot
+comment, it goes to the job summary instead. The receipt reports; the CI
+workflow is what fails a pull request over a budget.
 
 **Measured in a browser, not scored.** `npm run smoke` runs every page in
 headless Chromium (its own job in CI) and reports the bytes actually
@@ -847,19 +1006,23 @@ aspirational:
   it sits in)
 - Every form control has an accessible name; every image has `alt` plus
   intrinsic `width`/`height`
-- The lightbox is a real modal: `role="dialog"`, `aria-modal`, an accessible
-  name, focus moved in and restored on close, Escape to close, Tab kept inside
+- The case studies' photo lightbox is a real modal: `role="dialog"`,
+  `aria-modal`, an accessible name (the caption, or the alt text), focus moved
+  in and restored to the photo on close, Escape to close, Tab kept inside;
+  previous, next, the arrow keys and a "2 of 5" step through a case study's
+  photos, and without JavaScript each photo is a link to itself
 - Skip-to-content link that targets an element which exists and moves focus
   there, so the next Tab lands inside `<main>`; every in-page link moves focus
   and updates the address (`tests/navigation.test.js`, `npm run smoke`)
 - Single-letter shortcuts stand down while a form control has focus
-- Escape closes one layer at a time: the field terminal, then the lightbox, then the narration player, then the menu
+- Escape closes one layer at a time: the field terminal, then the narration player, then the menu
 - No duplicate `id`s, no focusable element inside an `aria-hidden` container
 
 `npm run smoke` adds axe-core in a real browser: every page at 1440×900 and
-390×844 in both themes, and the homepage again with a dossier, the Assay's
-verdict, the carbon receipt, the player, the terminal and the phone menu
-open, and with its script blocked. Any violation fails, contrast included —
+390×844 in both themes, the homepage again with the Assay's verdict, the
+carbon receipt, the player, the terminal and the phone menu open, and with
+its script blocked, and the case studies with both games played, a row of
+photos open and the lightbox open. Any violation fails, contrast included —
 but axe fails only what it can decide, and text over an image or a gradient
 it leaves for a person to review.
 
@@ -892,7 +1055,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [x] Blog section for sustainability articles (Field Notes)
 - [x] Dark/Light theme toggle
 - [ ] Multi-language support (English, Dutch)
-- [x] Project detail pages (expandable dossiers)
+- [x] Project detail pages (case studies, with a teaser card for each on the homepage)
 - [x] Interactive data visualizations (journey map, AI cost widget, impact charts)
 - [x] PDF resume download
 - [ ] Newsletter subscription

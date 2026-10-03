@@ -86,8 +86,8 @@ const countScrolls = (window) => {
 
         // Back and Forward: jsdom fires popstate and hashchange, as browsers
         // do; the landing happens once, a task later.
-        click(window, doc.querySelector('.nav-menu a[href="#skills"]'));
-        assert(doc.activeElement === doc.getElementById('skills'), 'Links: focus is on #skills before going Back');
+        click(window, doc.querySelector('.nav-menu a[href="#experience"]'));
+        assert(doc.activeElement === doc.getElementById('experience'), 'Links: focus is on #experience before going Back');
         const aboutScrolls = scrolled.about;
         window.history.back();
         await clock.tick(40);
@@ -117,7 +117,7 @@ const countScrolls = (window) => {
         window.HTMLElement.prototype.scrollIntoView = function (opts) { seen.push(opts && opts.behavior); };
         click(window, doc.querySelector('.nav-menu a[href="#about"]'));
         doc.body.classList.add('eco-mode');
-        click(window, doc.querySelector('.nav-menu a[href="#skills"]'));
+        click(window, doc.querySelector('.nav-menu a[href="#experience"]'));
         window.history.back();
         await clock.tick(40);
         assert(seen[0] === 'smooth' && seen[1] === 'instant' && seen[2] === 'instant',
@@ -147,41 +147,18 @@ const countScrolls = (window) => {
         const scrolled = countScrolls(window);
         const report = () => observers.filter(o => o.on).forEach(o => o.cb([{ target: doc.body }], o));
 
-        click(window, doc.querySelector('.nav-menu a[href="#skills"]'));
-        assert(scrolled.skills === 1, 'Hold: the jump lands once');
+        click(window, doc.querySelector('.nav-menu a[href="#contact"]'));
+        assert(scrolled.contact === 1, 'Hold: the jump lands once');
         bodyHeight = 20400;   // the module grew the page before the first report
         report();
-        assert(scrolled.skills === 2, `Hold: the first report, already carrying the growth, lands the jump again (${scrolled.skills - 1} landings after it)`);
+        assert(scrolled.contact === 2, `Hold: the first report, already carrying the growth, lands the jump again (${scrolled.contact - 1} landings after it)`);
         report();
-        assert(scrolled.skills === 2, 'Hold: a report of the same height lands nothing');
+        assert(scrolled.contact === 2, 'Hold: a report of the same height lands nothing');
         bodyHeight = 20700;
         report();
-        assert(scrolled.skills === 3, 'Hold: each later growth lands it again');
+        assert(scrolled.contact === 3, 'Hold: each later growth lands it again');
         window.dispatchEvent(new window.Event('wheel'));
         assert(observers.every(o => !o.on), 'Hold: the reader\'s own scroll lets go of it');
-    }
-
-    // --- Back into a collapsed dossier opens it again ---
-    {
-        const { window, clock } = run('dark', { clock: true });
-        const doc = window.document;
-        countScrolls(window);
-        const card = doc.querySelector('.project-card[data-project="groundwater"]');
-        const game = doc.getElementById('boreholeGame');
-        assert(!!card && !!game && card.contains(game), 'Dossier setup: the borehole game sits inside the groundwater dossier');
-
-        click(window, doc.querySelector('.play-index a[href="#boreholeGame"]'));
-        assert(card.classList.contains('expanded'), 'Dossier: a link into a closed dossier opens it');
-        await clock.tick(300);
-        assert(doc.activeElement === game, 'Dossier: focus lands on the game once the dossier is open');
-
-        card.querySelector('.project-toggle').click();   // the reader closes it
-        assert(!card.classList.contains('expanded'), 'Dossier setup: closed again');
-        click(window, doc.querySelector('.nav-menu a[href="#skills"]'));
-        window.history.back();
-        await clock.tick(320);
-        assert(window.location.hash === '#boreholeGame' && card.classList.contains('expanded'), 'Dossier: Back to #boreholeGame opens the dossier again');
-        assert(doc.activeElement === game, 'Dossier: and focus follows it in');
     }
 
     // --- The theme switch is a button in the nav bar ---
@@ -204,12 +181,12 @@ const countScrolls = (window) => {
 
         toggle.click();
         const use = toggle.querySelector('use');
-        assert(doc.body.classList.contains('light-mode'), 'Theme: pressing it switches to light');
+        assert(doc.documentElement.classList.contains('light-mode'), 'Theme: pressing it switches to light');
         assert(toggle.getAttribute('aria-label') === 'Switch to dark theme' && use.getAttribute('href') === '#i-sun', 'Theme: the name and the icon follow');
         assert(meta.getAttribute('content') === '#f4f6f0', `Theme: the browser chrome colour follows (${meta.getAttribute('content')})`);
         assert(window.localStorage.getItem('theme') === 'light', 'Theme: the choice is remembered');
         toggle.click();
-        assert(!doc.body.classList.contains('light-mode') && toggle.getAttribute('aria-label') === 'Switch to light theme' && meta.getAttribute('content') === '#0a0a0a', 'Theme: and back to dark');
+        assert(!doc.documentElement.classList.contains('light-mode') && toggle.getAttribute('aria-label') === 'Switch to light theme' && meta.getAttribute('content') === '#0a0a0a', 'Theme: and back to dark');
     }
     {
         const { window } = run('light');
@@ -250,7 +227,7 @@ const countScrolls = (window) => {
         const band = observers.filter(o => o.els.length).pop();
         const watched = (sel) => !!band && Array.from(doc.querySelectorAll(sel)).every(el => band.els.includes(el));
         const CONTROLS = ['.hero-availability', '.hero-cta a', '.contact-form input', '.contact-form textarea', '.btn-submit',
-            '.project-toggle', '#ecoModel', '.assay-sample', '.toolkit-proof', '.carbon-badge', '.receipt-btn', '.eco-mode-toggle', '.terminal-toggle'];
+            '.corelog-more', '.project-link', '#ydiReveal', '.assay-sample', '.assay-open', '.toolkit-proof', '.carbon-badge', '.receipt-btn', '.eco-mode-toggle', '.terminal-toggle'];
         const missing = CONTROLS.filter(sel => !doc.querySelector(sel) || !watched(sel));
         assert(!!band && missing.length === 0, `Back to top: it watches every control it could sit on, from the hero to the footer (not watched: ${missing.join(', ') || 'none'})`);
         assert(!!band && !band.els.some(el => el.classList.contains('footer') || el.classList.contains('contact-form')),
@@ -258,16 +235,35 @@ const countScrolls = (window) => {
         const margin = String(band && band.opts.rootMargin || '').split(/\s+/);
         assert(margin.length === 4 && /^-\d+px$/.test(margin[0]) && /^-\d+px$/.test(margin[3]),
             `Back to top: its band is cut to the button's corner, not the whole width of the screen (${band && band.opts.rootMargin})`);
-        const toggle = doc.querySelector('.project-toggle');
-        band.cb([{ target: toggle, isIntersecting: true }]);
+        const link = doc.querySelector('.project-link');
+        band.cb([{ target: link, isIntersecting: true }]);
         await clock.tick(20);
-        assert(!btn.classList.contains('visible'), 'Back to top: it steps aside while a dossier title passes beneath it');
-        band.cb([{ target: toggle, isIntersecting: false }]);
+        assert(!btn.classList.contains('visible'), 'Back to top: it steps aside while a project card\'s link passes beneath it');
+        band.cb([{ target: link, isIntersecting: false }]);
         await clock.tick(20);
         assert(btn.classList.contains('visible'), 'Back to top: and comes back once it has passed');
 
         btn.click();
         assert(doc.activeElement === doc.getElementById('home'), 'Back to top: focus goes to the top of the page, not down with the hidden button');
+    }
+
+    // --- A shared link to something that moved goes on to where it is ---
+    // The games and Anatomy of a Prompt left this page in Phase 2; a link
+    // already shared for one opened the homepage at its top. jsdom cannot
+    // follow location.replace to another page, so this holds the map to
+    // the pages (scripts/smoke.js follows each link in Chromium).
+    {
+        const src = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8');
+        const literal = (src.match(/const MOVED = new Map\((\[[\s\S]*?\])\);/) || [])[1];
+        const moved = literal ? Function(`return ${literal}`)() : [];
+        const page = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
+        const home = page('index.html');
+        const stale = moved.filter(([id]) => new RegExp(`\\bid="${id}"`).test(home)).map(([id]) => id);
+        const dead = moved.filter(([, to]) => { const [rel, id] = to.split('#'); return !new RegExp(`\\bid="${id}"`).test(page(rel)); }).map(([, to]) => to);
+        assert(moved.length >= 4 && moved.some(([id]) => id === 'strikeWidget') && moved.some(([id]) => id === 'anatomy'),
+            `Moved: the old addresses of the games and Anatomy of a Prompt are forwarded (${moved.map(([id]) => `#${id}`).join(', ') || 'none'})`);
+        assert(stale.length === 0, `Moved: none of them is an id on the homepage again, which a forward would hide (${stale.join(', ') || 'none'})`);
+        assert(dead.length === 0, `Moved: each goes to an id its page has (missing: ${dead.join(', ') || 'none'})`);
     }
 
     if (failures > 0) {
