@@ -7,8 +7,10 @@
 //         [--base-label main] [--head-label "This PR"]
 //         [--base-sha abc1234] [--head-sha def5678]
 //
-// The budget files are `npm run budget -- --json` on each side; the length
-// files are what `npm run smoke -- --lengths-only` wrote on each side. The
+// The budget files are `npm run budget -- --json` on each side (main's
+// with --root, which reports main's own ceilings beside the branch's
+// measure of main); the length files are what `npm run smoke --
+// --lengths-only` wrote on each side. The
 // Markdown goes to stdout. .github/workflows/receipt.yml measures main and
 // the pull request with the pull request's own scripts and posts this as
 // one comment, which it finds again by the marker on the first line and
@@ -62,6 +64,13 @@ function lengthOf(lengthFile, budget, page, vp) {
 
 const union = (...lists) => lists.flat().filter((k, i, all) => all.indexOf(k) === i);
 
+// A ceiling where main's differs: what main's was, or that main had none.
+// Each side reports its own (check-budget.js reads main's from main's copy
+// of it), so a pull request that moves a ceiling, either way, shows it.
+// Nothing is said when main was not measured.
+const moved = (was, now, format) => (was === undefined || was === now ? ''
+    : num(was) === null ? ' (new)' : ` (was ${format(was)})`);
+
 // ------------------------------------------------------------------
 // The receipt
 // ------------------------------------------------------------------
@@ -81,7 +90,7 @@ function receipt({ base = null, head, baseLength = null, headLength = null, base
     });
     const pages = union(Object.keys(head.length || {}), Object.keys((headLength && headLength.pages) || {}), Object.keys((baseLength && baseLength.pages) || {}));
     const vps = union(Object.keys(head.viewports || {}), ...pages.map(p => Object.keys(((headLength && headLength.pages) || {})[p] || {})));
-    const ceilingOf = (page, vp) => (head.length && head.length[page] && head.length[page][vp] ? head.length[page][vp].ceiling : null);
+    const ceilingOf = (page, vp, side = head) => (side.length && side.length[page] && side.length[page][vp] ? side.length[page][vp].ceiling : null);
     pages.forEach(page => vps.forEach((vp) => {
         const m = lengthOf(headLength, head, page, vp);
         const c = ceilingOf(page, vp);
@@ -110,8 +119,9 @@ function receipt({ base = null, head, baseLength = null, headLength = null, base
         let ceiling = '—';
         if (h) {
             const mark = hm === null ? '' : hm > h.ceiling ? '✗ over ' : '✓ ';
-            const moved = b && b.ceiling !== h.ceiling ? ` (was ${fmtCeiling(b.ceiling)})` : '';
-            ceiling = `${mark}${fmtCeiling(h.ceiling)}${moved}`;
+            ceiling = `${mark}${fmtCeiling(h.ceiling)}${moved(b ? b.ceiling : undefined, h.ceiling, fmtCeiling)}`;
+        } else if (b && num(b.ceiling) !== null) {
+            ceiling = `none (was ${fmtCeiling(b.ceiling)})`;
         }
         out.push(`| ${(h || b).readme || key} | ${cell(bm, fmtBytes)} | ${cell(hm, fmtBytes)} | ${change(bm, hm, fmtByteChange)} | ${ceiling} |`);
     });
@@ -143,11 +153,15 @@ function receipt({ base = null, head, baseLength = null, headLength = null, base
             const hm = lengthOf(headLength, head, page, vp);
             if (!bm && !hm) return;
             const c = ceilingOf(page, vp);
+            // undefined when main was not measured; null where it has no ceiling.
+            const was = base && base.length ? ceilingOf(page, vp, base) : undefined;
             let ceiling = '—';
             if (c !== null) {
                 const held = hm ? heldLength(hm) : null;
                 const mark = held === null ? '' : held > c ? '✗ over ' : '✓ ';
-                ceiling = `${mark}${c}${hm && hm.full ? ` (drawn full: ${fmtScreens(hm.full.screens)})` : ''}`;
+                ceiling = `${mark}${c}${moved(was, c, String)}${hm && hm.full ? ` (drawn full: ${fmtScreens(hm.full.screens)})` : ''}`;
+            } else if (num(was) !== null) {
+                ceiling = `none (was ${was})`;
             }
             const b = bm ? bm.screens : null;
             const h = hm ? hm.screens : null;

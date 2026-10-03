@@ -307,6 +307,36 @@ function assert(cond, msg) {
     assert(reveal.hidden && doc.activeElement === hit, 'Bug12: revealing from the chart with Enter leaves focus on the chart');
 }
 
+// --- You Draw It: the guess being drawn is spoken ---
+// The chart was role=application, where a value is not allowed, so the
+// guess each arrow set was dropped and a screen reader heard nothing (axe:
+// aria-allowed-attr, critical, once the chart had focus). It is a slider
+// now, its value the guess at the cursor, kept up to date as it moves.
+{
+    const { window } = run('dark');
+    const doc = window.document;
+    const hit = doc.querySelector('#ydiSvg .ydi-hit');
+    const press = (k) => hit.dispatchEvent(new window.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+    const said = () => ({ now: hit.getAttribute('aria-valuenow'), text: hit.getAttribute('aria-valuetext') || '' });
+    const agrees = (s) => s.now !== null && s.text.includes(`your guess ${s.now} Wh`);
+    const before = said();
+    assert(hit.getAttribute('role') === 'slider' && hit.getAttribute('aria-valuemin') === '0' && +hit.getAttribute('aria-valuemax') > 1 && agrees(before),
+        `YDI: the chart is a slider whose value is the guess at its cursor, before any key (${hit.getAttribute('role')}, ${before.now}, "${before.text}")`);
+    press('ArrowUp');
+    const up = said();
+    press('ArrowRight');
+    const right = said();
+    assert(agrees(up) && +up.now > +before.now && agrees(right) && right.text !== up.text,
+        `YDI: raising the guess and moving to the next model each change what it says ("${up.text}", then "${right.text}")`);
+    // An image's content is not read, so it may hold no control (axe:
+    // nested-interactive): the chart is a group, and its drawn words are
+    // hidden, as the data table says them.
+    const svg = doc.getElementById('ydiSvg');
+    const loud = Array.from(svg.querySelectorAll('text')).filter(t => t.getAttribute('aria-hidden') !== 'true');
+    assert(svg.getAttribute('role') === 'group' && !!svg.getAttribute('aria-label') && svg.querySelectorAll('text').length > 10 && loud.length === 0,
+        `YDI: the chart is a named group around its slider, its ${svg.querySelectorAll('text').length} drawn words hidden from a screen reader (${loud.length} not)`);
+}
+
 // --- Bug 7: a message the endpoint turns down says why ---
 // The Apps Script answers a rejection with a reason written for the visitor
 // ("a valid email address", "wait a moment"). The form used to throw that

@@ -6,7 +6,9 @@
 // in tests/fixtures/receipt/ are a main and a branch with every case in
 // them: a rise, a fall, no change, a budget over its ceiling, a ceiling the
 // branch lowered, a budget only one side has, a held budget, and a page
-// whose length budget is held drawn full.
+// whose length budget is held drawn full. The moved ceilings are also
+// measured for real at the end, as the workflow measures main: with
+// check-budget.js --root on a checkout whose own copy of it differs.
 //
 // Run with: node tests/receipt.test.js
 
@@ -84,7 +86,7 @@ const cells = (line) => line.split('|').slice(1, -1).map(s => s.trim());
     assert(audio[1] === '0 KB' && audio[3] === '0', `Bytes: no change is 0 (${audio.join(' | ')})`);
     const gone = cells(row('A page this branch removes, over the wire'));
     const fresh = cells(row('A page new on this branch, over the wire'));
-    assert(gone[2] === '—' && gone[3] === '—' && gone[4] === '—', `Bytes: a budget only main has shows a dash for the branch (${gone.join(' | ')})`);
+    assert(gone[2] === '—' && gone[3] === '—' && gone[4] === 'none (was 8 KB)', `Bytes: a budget only main has shows a dash for the branch, and the ceiling it had (${gone.join(' | ')})`);
     assert(fresh[1] === '—' && fresh[2] === '1.00 MB' && fresh[3] === '—', `Bytes: a budget new on the branch shows a dash for main (${fresh.join(' | ')})`);
     assert(/\*\*The homepage's first view:\*\* 275\.1 KB \(\+819 B from 274\.3 KB on main\), about 96\.7 mg CO₂e a view\./.test(md),
         'Summary: the homepage first view, its change and its CO₂e, in one line');
@@ -164,6 +166,54 @@ const cells = (line) => line.split('|').slice(1, -1).map(s => s.trim());
     const same = receipt({ base: json, head: json });
     const changes = same.split('\n').filter(l => l.startsWith('| ') && !l.startsWith('| Budget') && !l.startsWith('| Page')).map(l => cells(l)[3]);
     assert(changes.length > 0 && changes.every(c => c === '0' || c === '—'), `CLI: check-budget.js --json against itself changes nothing (${changes.length} rows)`);
+    assert(!/\(was |\(new\)|none \(was/.test(same), 'CLI: against itself no ceiling has moved');
+}
+
+// --- Main measured as the workflow measures it ---------------------------------
+// receipt.yml weighs main with the branch's check-budget.js and --root. That
+// script used to report its own ceilings for both sides, so "(was …)" could
+// never show in a real receipt, and a pull request that raised a ceiling
+// went unremarked. A checkout standing in for main, with its own copy of
+// the script: one ceiling higher (the branch lowered it), one length
+// ceiling higher, a budget the branch does not have, and none for a budget
+// the branch adds.
+{
+    const os = require('os');
+    const KB = 1024;
+    const main = fs.mkdtempSync(path.join(os.tmpdir(), 'mks-receipt-main-'));
+    try {
+        fs.mkdirSync(path.join(main, 'scripts'));
+        fs.copyFileSync(path.join(ROOT, 'index.html'), path.join(main, 'index.html'));
+        const { BUDGETS, LENGTH } = require('../scripts/check-budget.js');
+        let src = fs.readFileSync(path.join(ROOT, 'scripts', 'check-budget.js'), 'utf8');
+        const raise = (key, to) => { src = src.replace(new RegExp(`(\\n {4}${key}: \\{[^]*?\\n {8}max: )[^,\\n]+`), `$1${to / KB} * KB`); };
+        raise('caseStudiesWire', BUDGETS.caseStudiesWire.max + 10 * KB);
+        src = src.replace(/(\n {4}'index\.html': \{ '1440x900': )[\d.]+/, `$1${LENGTH['index.html']['1440x900'] + 0.5}`);
+        src = src.replace(/\n {4}carbonAiWire: \{[^]*?\n {4}\}/, '');
+        src = src.replace('const BUDGETS = {\n', "const BUDGETS = {\n    retiredWire: { label: 'A page main had', max: 50 * KB, readme: 'A page main had, over the wire' },\n");
+        fs.writeFileSync(path.join(main, 'scripts', 'check-budget.js'), src);
+
+        const measure = (...args) => JSON.parse(spawnSync(process.execPath, [path.join(ROOT, 'scripts', 'check-budget.js'), '--json', ...args], { cwd: ROOT, encoding: 'utf8' }).stdout);
+        const mainJson = measure('--root', main);
+        const branch = measure();
+        assert(mainJson.bytes.caseStudiesWire.ceiling === BUDGETS.caseStudiesWire.max + 10 * KB && mainJson.bytes.criticalWire.ceiling === BUDGETS.criticalWire.max,
+            `--root: main's ceilings are main's own, read from its copy of check-budget.js (${mainJson.bytes.caseStudiesWire.ceiling / KB} KB, not the branch's ${BUDGETS.caseStudiesWire.max / KB})`);
+        assert(typeof mainJson.bytes.criticalWire.measured === 'number' && mainJson.bytes.caseStudiesWire.measured === null,
+            '--root: and what main weighs is still measured by the branch\'s script (a page it lacks is null)');
+        const md = receipt({ base: mainJson, head: branch });
+        const rowOf = (name) => cells(md.split('\n').find(l => l.startsWith(`| ${name} |`)) || '| |');
+        assert(rowOf(BUDGETS.caseStudiesWire.readme)[4] === `✓ ${BUDGETS.caseStudiesWire.max / KB} KB (was ${BUDGETS.caseStudiesWire.max / KB + 10} KB)`,
+            `Moved: a ceiling the branch lowered shows what main's was (${rowOf(BUDGETS.caseStudiesWire.readme)[4]})`);
+        assert(!/\(was|\(new/.test(rowOf(BUDGETS.criticalWire.readme)[4]), `Moved: an unchanged ceiling says nothing more (${rowOf(BUDGETS.criticalWire.readme)[4]})`);
+        assert(/ \(new\)$/.test(rowOf(BUDGETS.carbonAiWire.readme)[4]), `Moved: a budget main did not have is new (${rowOf(BUDGETS.carbonAiWire.readme)[4]})`);
+        assert(rowOf('A page main had, over the wire')[4] === 'none (was 50 KB)', `Moved: a budget the branch drops shows the ceiling main had (${rowOf('A page main had, over the wire')[4]})`);
+        const lengths = { schema: 1, browser: 'Chromium test', viewports: branch.viewports, pages: { 'index.html': { '1440x900': { px: 8000, screens: 8.89 } } } };
+        const withLength = receipt({ base: mainJson, head: branch, baseLength: lengths, headLength: lengths });
+        const desk = cells(withLength.split('\n').find(l => l.startsWith('| `index.html` |') && l.includes('1440×900')) || '| |');
+        assert(desk[5] === `✓ ${LENGTH['index.html']['1440x900']} (was ${LENGTH['index.html']['1440x900'] + 0.5})`, `Moved: so does a length ceiling (${desk[5]})`);
+    } finally {
+        fs.rmSync(main, { recursive: true, force: true });
+    }
 }
 
 if (failures > 0) {

@@ -175,7 +175,7 @@
                     </div>
                     <h3><a href="ai-carbon-data.js">AI carbon factor set &mdash; sources, ranges and review dates</a></h3>
                     <p class="rs-venue">sustaintheworld</p>
-                    <p class="rs-summary-text">The machine-readable factor set behind both tools: ten models, thirteen grid regions, four cooling profiles, plus PUE, the token-energy model and everyday equivalents &mdash; each with a citation, a vintage and a plausible range.</p>
+                    <p class="rs-summary-text">The machine-readable factor set behind the EcoPrompt Coach and the homepage's AI energy chart: ten models, thirteen grid regions, four cooling profiles, plus PUE, the token-energy model and everyday equivalents &mdash; each with a citation, a vintage and a plausible range.</p>
                     <p class="rs-methods"><span class="mono-label">Methods</span> Literature synthesis &middot; Provider disclosure review</p>
                     <p class="rs-note">Reusable on its own. A test fails the build if any factor loses its source, range or review date.</p>
 
@@ -276,7 +276,7 @@
 
         <section class="rs-repro">
             <h2>Reproducing what is here</h2>
-            <p>Everything public on this page runs from one clone with no build step and no API key. The two carbon tools share a single factor set, so they cannot quote different numbers. The map regenerates byte-identically from pinned dependencies. The narration is content-addressed, so re-rendering unchanged text costs nothing.</p>
+            <p>Everything public on this page runs from one clone with no build step and no API key. The EcoPrompt Coach and the homepage's energy chart read one factor set, so they cannot quote different numbers. The map regenerates byte-identically from pinned dependencies. The narration is content-addressed, so re-rendering unchanged text costs nothing.</p>
             <dl class="rs-commands">
                 <dt><code>npm install &amp;&amp; npm test</code></dt><dd>runs every suite, the map check and the asset-weight budgets</dd>
                 <dt><code>npm run map:build</code></dt><dd>regenerates the journey map from Natural Earth data</dd>

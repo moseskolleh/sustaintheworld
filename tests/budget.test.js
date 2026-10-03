@@ -116,8 +116,12 @@ try {
         assert(t(100 * KB, 'bytes') === 105 * KB, `Ratchet: exactly 5% over a round figure stays that figure (${t(100 * KB, 'bytes') / KB} KB)`);
         assert(t(10, 'screens') === 10.5 && t(10.67, 'screens') === 11.21, `Ratchet: lengths go up by 5%, to a hundredth (${t(10, 'screens')}, ${t(10.67, 'screens')})`);
         assert(t(1, 'screens') === 1.1 && t(2, 'screens') === 2.1, `Ratchet: at least a tenth of a screen, and 2 × 1.05 is 2.1, not 2.11 (${t(1, 'screens')}, ${t(2, 'screens')})`);
-        assert(budget.couldLowerTo(90, 100, 'bytes') === null && budget.couldLowerTo(89 * KB, 100 * KB, 'bytes') === 94 * KB,
-            'Hints: only over 10% headroom (10% is not enough; 11% is)');
+        // At a scale where the 5% target alone would lower the ceiling (95 KB
+        // under 100, 9.45 screens under 10), so only the 10% rule says no.
+        assert(budget.couldLowerTo(90 * KB, 100 * KB, 'bytes') === null && budget.couldLowerTo(89 * KB, 100 * KB, 'bytes') === 94 * KB,
+            `Hints: only over 10% headroom (10% is not enough; 11% is: ${budget.couldLowerTo(90 * KB, 100 * KB, 'bytes')}, ${budget.couldLowerTo(89 * KB, 100 * KB, 'bytes')})`);
+        assert(budget.couldLowerTo(9, 10, 'screens') === null && budget.couldLowerTo(8.9, 10, 'screens') === 9.35,
+            `Hints: the same for a length (${budget.couldLowerTo(9, 10, 'screens')}, ${budget.couldLowerTo(8.9, 10, 'screens')})`);
         assert(budget.couldLowerTo(0, 800 * KB, 'bytes', 'held') === null, 'Hints: never for a budget held for later');
     }
 
@@ -201,6 +205,16 @@ try {
         assert(budget.renderReadme(readme, json) === readme, 'README: the budget, length and on-demand module tables are current (run `npm run budget -- --readme` if not)');
         const quoted = readme.match(/against a (\d+) KB ceiling/);
         assert(!!quoted && +quoted[1] === BUDGETS.criticalWire.max / KB, `README: the summary quotes the first view's real ceiling (${quoted && quoted[1]} KB)`);
+        // The core's weight was typed by hand, and said 72 KB once script.js
+        // had passed 72.5. It is written from the measurement now, rounded
+        // as the report prints it, and a stale one is rewritten.
+        const core = readme.match(/A (\d+) KB core \(`script\.js`, (\d+) KB gzipped\)/);
+        const disk = fs.statSync(path.join(ROOT, 'script.js')).size;
+        const wire = require('zlib').gzipSync(fs.readFileSync(path.join(ROOT, 'script.js')), { level: 9 }).length;
+        assert(!!core && core[1] === (disk / KB).toFixed(0) && core[2] === (wire / KB).toFixed(0),
+            `README: the core script is quoted at what it weighs (${core ? `${core[1]} KB, ${core[2]} KB gzipped` : 'no quote'}; measured ${(disk / KB).toFixed(1)} and ${(wire / KB).toFixed(1)})`);
+        const staleCore = readme.replace(/A (\d+) KB core/, (m, n) => `A ${+n - 1} KB core`);
+        assert(staleCore !== readme && budget.renderReadme(staleCore, json) === readme, 'README: a stale weight for the core script is rewritten to the measured one');
         Object.values(BUDGETS).forEach((b) => {
             assert(readme.includes(`| ${b.readme} |`), `README: a row for "${b.readme}"`);
         });

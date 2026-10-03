@@ -247,6 +247,33 @@ function dom(file) {
     const active = doc.querySelector('.cs-lens.is-active');
     assert(active && active.dataset.lens === 'water', 'Lens URL: the switcher marks the current view');
 
+    // Back and Forward run the lens again. A link to a game (#play-flood)
+    // or back to the top is a step in history too, and putting every card
+    // back where it already was took the focus from a control inside one:
+    // the next Tab went to the top of the page. Same lens, nothing moves;
+    // a new lens moves the cards, and the focus stays where it was.
+    {
+        const grid = doc.getElementById('csGrid');
+        const moves = [];
+        // The listener runs as the event is dispatched; its records are
+        // taken straight after, not left for a microtask.
+        const observer = new window.MutationObserver(() => {});
+        observer.observe(grid, { childList: true });
+        const slider = doc.getElementById('floodSlider');
+        slider.focus();
+        window.history.pushState(null, '', '#play-flood');
+        window.dispatchEvent(new window.PopStateEvent('popstate', { state: null }));
+        moves.push(...observer.takeRecords());
+        assert(moves.length === 0 && doc.activeElement === slider,
+            `Lens, Back: with the lens unchanged no case study is moved, and the focus stays in its card (${moves.length} moves, focus on ${doc.activeElement && (doc.activeElement.id || doc.activeElement.tagName)})`);
+        window.history.pushState(null, '', 'case-studies.html?lens=sustainable-ai');
+        window.dispatchEvent(new window.PopStateEvent('popstate', { state: null }));
+        moves.push(...observer.takeRecords());
+        const first = doc.querySelector('#csGrid > .cs-card');
+        assert(moves.length > 0 && first && first.id === 'sustainable-ai' && doc.activeElement === slider,
+            `Lens, Back: a new lens reorders them, and the focus is handed back to what had it (${first && first.id} first, focus on ${doc.activeElement && (doc.activeElement.id || doc.activeElement.tagName)})`);
+    }
+
     // An unknown lens must degrade to everything, not to an empty page.
     const bogus = new JSDOM(html, { runScripts: 'dangerously', url: 'https://example.com/case-studies.html?lens=nonsense' });
     const bogusShown = Array.from(bogus.window.document.querySelectorAll('[data-lens-panel]')).filter(p => !p.hidden);

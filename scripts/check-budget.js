@@ -22,7 +22,8 @@
 // --lengths FILE adds the scroll lengths `npm run smoke` measured (it
 // writes them to .smoke/length.json) to --json, --ratchet and the report;
 // --root DIR measures another checkout with this script, which is how the
-// pull-request receipt weighs main (see .github/workflows/receipt.yml).
+// pull-request receipt weighs main (see .github/workflows/receipt.yml);
+// with --json it reports that checkout's own ceilings (see ceilingsOf).
 //
 // WHAT "WIRE WEIGHT" MEANS. GitHub Pages compresses text responses, so the
 // bytes a visitor downloads for HTML/CSS/JS are the gzipped bytes, not the
@@ -418,7 +419,9 @@ function measure() {
         fieldReport: sizeOf('field-report.html'),
         fieldReportWire: pageWire('field-report.html'),
         // Not a budget: the README's on-demand table, row by row.
-        modules: moduleRows(onDemand)
+        modules: moduleRows(onDemand),
+        // Nor this: the core script as the README's summary of it quotes it.
+        core: sizeOf('script.js') === null ? null : { raw: sizeOf('script.js'), wire: gzipOf('script.js') }
     };
     const largest = images.map(f => ({ f, size: sizeOf(f) || 0 })).sort((a, b) => b.size - a.size)[0] || null;
     return { measured, critical, onDemand, largest };
@@ -443,39 +446,67 @@ function readLengths(file) {
     return data;
 }
 
-function budgetJson(measured, lengths = null) {
+// Whose ceilings. Another checkout (--root) is measured by this script, so
+// the receipt compares two sites and not two methods, but the ceilings it
+// reports are that checkout's own, from its copy of this script. Read from
+// this one, main's ceilings were always the branch's, and a pull request
+// that moved a ceiling, down or up, showed no sign of it in its receipt.
+// A copy that is missing or will not load leaves this script's (nothing is
+// shown to have moved); a budget its copy lacks has no ceiling there.
+function ceilingsOf(root) {
+    const own = { BUDGETS, LENGTH };
+    const file = path.join(root, 'scripts', 'check-budget.js');
+    if (path.resolve(file) === __filename || !fs.existsSync(file)) return own;
+    try {
+        const theirs = require(file);
+        return theirs && theirs.BUDGETS ? { BUDGETS: theirs.BUDGETS, LENGTH: theirs.LENGTH || {} } : own;
+    } catch (e) {
+        return own;
+    }
+}
+
+function budgetJson(measured, lengths = null, ceilings = { BUDGETS, LENGTH }) {
     const pageOf = Object.fromEntries(Object.entries(PAGE_BUDGETS).map(([page, key]) => [key, page]));
+    const maxOf = (b) => (b && typeof b.max === 'number' ? b.max : null);
     const bytes = {};
     Object.entries(BUDGETS).forEach(([key, b]) => {
         const m = typeof measured[key] === 'number' ? measured[key] : null;
+        const max = maxOf(ceilings.BUDGETS[key]);
         bytes[key] = {
             label: b.label,
             readme: b.readme,
             page: pageOf[key] || null,
             unit: 'bytes',
             measured: m,
-            ceiling: b.max,
-            headroom: m === null ? null : b.max - m,
+            ceiling: max,
+            headroom: m === null || max === null ? null : max - m,
             hold: b.hold || null,
-            couldLowerTo: couldLowerTo(m, b.max, 'bytes', b.hold)
+            couldLowerTo: couldLowerTo(m, max, 'bytes', b.hold)
         };
     });
+    // A budget only the other checkout has: its ceiling, unmeasured, as
+    // this script no longer knows what it weighed.
+    Object.entries(ceilings.BUDGETS).forEach(([key, b]) => {
+        if (bytes[key]) return;
+        bytes[key] = { label: b.label || key, readme: b.readme || b.label || key, page: null, unit: 'bytes', measured: null, ceiling: maxOf(b), headroom: null, hold: b.hold || null, couldLowerTo: null };
+    });
     const length = {};
-    Object.entries(LENGTH).forEach(([page, ceilings]) => {
+    const pages = Object.keys(LENGTH).concat(Object.keys(ceilings.LENGTH).filter(p => !LENGTH[p]));
+    pages.forEach((page) => {
         length[page] = {};
         Object.keys(VIEWPORTS).forEach((vp) => {
             const m = lengths && lengths.pages[page] ? heldLength(lengths.pages[page][vp]) : null;
-            const c = ceilings[vp];
+            const c = ceilings.LENGTH[page] && typeof ceilings.LENGTH[page][vp] === 'number' ? ceilings.LENGTH[page][vp] : null;
             length[page][vp] = {
                 unit: 'screens',
                 measured: m,
                 ceiling: c,
-                headroom: m === null ? null : round2(c - m),
+                headroom: m === null || c === null ? null : round2(c - m),
                 couldLowerTo: couldLowerTo(m, c, 'screens')
             };
         });
     });
-    return { schema: SCHEMA, viewports: VIEWPORTS, bytes, length, modules: measured.modules || null };
+    return { schema: SCHEMA, viewports: VIEWPORTS, bytes, length, modules: measured.modules || null, core: measured.core || null };
 }
 
 // A ceiling as a person writes it: 300 KB, 3.5 MB.
@@ -505,8 +536,14 @@ const README_TABLES = {
     length: ['<!-- LENGTH-TABLE:START — generated by scripts/check-budget.js (npm run budget -- --readme). Do not edit by hand. -->', '<!-- LENGTH-TABLE:END -->'],
     modules: ['<!-- MODULE-TABLE:START — generated by scripts/check-budget.js (npm run budget -- --readme). Do not edit by hand. -->', '<!-- MODULE-TABLE:END -->']
 };
-// Prose that quotes a ceiling, kept true the same way.
-const README_QUOTES = [{ key: 'criticalWire', re: /(against a )\d+( KB ceiling)/ }];
+// Prose that quotes a figure, kept true the same way: the first view's
+// ceiling, and the core script's weight on disk and gzipped (typed by
+// hand, it still said 72 KB after script.js had passed 72.5).
+const README_QUOTES = [
+    { what: 'the first view\'s ceiling', re: /(against a )\d+( KB ceiling)/, value: (json) => json.bytes.criticalWire.ceiling },
+    { what: 'script.js on disk', re: /(A )\d+( KB core \(`script\.js`, )/, value: (json) => json.core && json.core.raw },
+    { what: 'script.js gzipped', re: /(\(`script\.js`, )\d+( KB gzipped\))/, value: (json) => json.core && json.core.wire }
+];
 
 function readmeTables(json) {
     const bytes = ['| Budget | Measured | Ceiling |', '|---|---|---|']
@@ -534,9 +571,11 @@ function renderReadme(text, json) {
         if (a === -1 || b < a) throw new Error(`README.md is missing the ${start.slice(5, start.indexOf(':'))} markers`);
         out = out.slice(0, a + start.length) + '\n' + tables[which] + '\n' + out.slice(b);
     });
-    README_QUOTES.forEach(({ key, re }) => {
-        if (!re.test(out)) throw new Error(`README.md no longer quotes the ${key} ceiling where ${re} expects it`);
-        out = out.replace(re, `$1${Math.round(json.bytes[key].ceiling / KB)}$2`);
+    README_QUOTES.forEach(({ what, re, value }) => {
+        if (!re.test(out)) throw new Error(`README.md no longer quotes ${what} where ${re} expects it`);
+        if (typeof value(json) !== 'number') throw new Error(`${what} was not measured, so the README cannot quote it`);
+        // Rounded as the report prints it ("73 KB on disk → 24 KB gzipped").
+        out = out.replace(re, `$1${(value(json) / KB).toFixed(0)}$2`);
     });
     return out;
 }
@@ -644,7 +683,7 @@ function report() {
     // receipt measures main with it, and main may be over a ceiling the
     // pull request sets.
     if (flag('--json')) {
-        console.log(JSON.stringify(json, null, 2));
+        console.log(JSON.stringify(option('--root') ? budgetJson(measured, lengths, ceilingsOf(ROOT)) : json, null, 2));
         return;
     }
     if (flag('--readme')) {
@@ -734,6 +773,6 @@ if (require.main === module) {
 module.exports = {
     BUDGETS, PAGE_BUDGETS, LENGTH, VIEWPORTS, RATCHET, SCHEMA, README_TABLES, MODULE_TABLE,
     measure, criticalAssets, onDemandAssets, moduleRows,
-    budgetJson, readLengths, heldLength, hints, ratchetTarget, couldLowerTo, ratchetSource, loadSource,
+    budgetJson, ceilingsOf, readLengths, heldLength, hints, ratchetTarget, couldLowerTo, ratchetSource, loadSource,
     readmeTables, renderReadme, fmtCeiling
 };

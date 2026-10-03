@@ -233,27 +233,49 @@ const text = (el) => (el ? el.textContent.replace(/\s+/g, ' ').trim() : '');
 
 // Ten holes and more: the row shows the last ten and says so.
 {
-    // One hole per freshly surveyed site: twelve holes, none of them a repeat.
+    // One hole per freshly surveyed site, none of them a repeat, each where
+    // the spoken reading says "very low" so that some strike and some do
+    // not; on until the first ten holes and the last ten differ, as only
+    // then can the row show which ten it keeps.
     const { window, doc } = boot({ eco: 'on' });
-    for (let i = 0; i < 12; i++) {
+    const stage = doc.getElementById('boreholeStage');
+    const outcomes = [];
+    const key10 = (list) => list.map(w => (w ? 'w' : 'd')).join('');
+    for (let i = 0; i < 60 && (outcomes.length < 12 || key10(outcomes.slice(0, 10)) === key10(outcomes.slice(-10))); i++) {
+        for (let k = 0; k < 60; k++) key(window, stage, 'ArrowLeft');
+        for (let k = 0; k < 56 && !/very low/.test(stage.getAttribute('aria-valuetext')); k++) key(window, stage, 'ArrowRight');
         click(window, doc.getElementById('drillBtn'));
+        outcomes.push(/STRIKE/.test(doc.getElementById('drillResult').textContent));
         click(window, doc.getElementById('drillResetBtn'));
     }
     const score = text(doc.getElementById('drillScore'));
-    const row = doc.querySelector('.strike-row');
-    assert(/ of 12 struck water, the last 10 shown$/.test(score) && row.querySelectorAll('.strike-cell.water, .strike-cell.dry').length === 10,
-        `Round: past ten holes, your row keeps the last ten and says so (${score})`);
+    const cellsNow = Array.from(doc.querySelector('.strike-row').querySelectorAll('.strike-cell'));
+    const shown = cellsNow.map(c => (c.classList.contains('water') ? 'w' : c.classList.contains('dry') ? 'd' : '-')).join('');
+    assert(new RegExp(` of ${outcomes.length} struck water, the last 10 shown$`).test(score) && cellsNow.length === 10,
+        `Round: past ten holes, your row keeps ten cells and says it shows the last ten (${score})`);
+    assert(key10(outcomes.slice(0, 10)) !== key10(outcomes.slice(-10)) && shown === key10(outcomes.slice(-10)),
+        `Round: the ten it shows are the last ten holes, in the order drilled (${shown}, the holes ${key10(outcomes)})`);
 }
 
 // Motion: the drill runs down over frames, unless the reader asked for calm.
 {
     const moving = boot();
     click(moving.window, moving.doc.getElementById('drillBtn'));
-    assert(/Drilling…/.test(moving.doc.getElementById('drillResult').textContent) && moving.doc.getElementById('drillBtn').disabled,
-        'Motion: with motion allowed the hole is drilled over frames, the button held until it lands');
+    const btn = moving.doc.getElementById('drillBtn');
+    const tally = text(moving.doc.getElementById('drillScore'));
+    assert(/Drilling…/.test(moving.doc.getElementById('drillResult').textContent) && btn.getAttribute('aria-disabled') === 'true',
+        'Motion: with motion allowed the hole is drilled over frames, the button marked busy until it lands');
+    // Never disabled: a disabled button loses the focus a keyboard press
+    // left on it (scripts/smoke.js presses it for real), so a second press
+    // while it is busy is simply ignored.
+    click(moving.window, btn);
+    assert(!btn.disabled && !btn.hasAttribute('disabled'), 'Motion: the busy button is never disabled, so it keeps the focus of the key that pressed it');
     let guard = 0;
     while (moving.flush(1e6) && guard++ < 5);
-    assert(!/Drilling…/.test(moving.doc.getElementById('drillResult').textContent) && !moving.doc.getElementById('drillBtn').disabled, 'Motion: and when it lands, the result is told and the button is back');
+    const after = text(moving.doc.getElementById('drillScore'));
+    assert(!/Drilling…/.test(moving.doc.getElementById('drillResult').textContent) && btn.getAttribute('aria-disabled') === 'false',
+        'Motion: and when it lands, the result is told and the button is back');
+    assert(/ of 1 struck water$/.test(after) && after !== tally, `Motion: a press while busy drills no second hole (${after})`);
 
     const reduced = boot({ reduced: true });
     click(reduced.window, reduced.doc.getElementById('drillBtn'));

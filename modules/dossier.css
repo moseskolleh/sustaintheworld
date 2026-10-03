@@ -33,7 +33,7 @@
     cursor: pointer;
 }
 .dw-btn-primary { background: var(--primary-green); color: var(--darker-bg); }
-.dw-btn:disabled { opacity: 0.55; cursor: progress; }
+.dw-btn[aria-disabled="true"] { opacity: 0.55; cursor: progress; }
 .dw-btn:focus-visible { outline: 2px solid var(--primary-green); outline-offset: 2px; }
 
 .dw-label,

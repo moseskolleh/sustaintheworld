@@ -90,6 +90,9 @@
         let rigX = 400;
         let drilling = false;
         let drillRun = 0;        // invalidates in-flight drill animations on reset
+        // Marked busy while a hole goes down, not disabled: that dropped a
+        // keyboard's focus to the page. drill() ignores it meanwhile.
+        const busy = (on) => { drilling = on; drillBtn.setAttribute('aria-disabled', on); };
         const holes = [];        // true for a strike, in the order drilled
         let svg, rigEl, holesEl, revealEl, title, sideLabels = [], fit = null;
 
@@ -240,8 +243,7 @@
                 result.textContent = zone.kind === 'water'
                     ? 'Already struck here — that fracture zone is yours. Move the rig and read the curve for the next one.'
                     : 'That\'s the clay pocket you already found. Move the rig and read the curve again.';
-                drilling = false;
-                drillBtn.disabled = false;
+                busy(false);
                 return;
             }
             if (zone) zone.drilled = true;
@@ -261,14 +263,12 @@
                 result.textContent = `Dry hole — hard gabbro all the way down. The curve was high here: high resistivity, no fractures, no water. ${tally}`;
             }
             updateScore();
-            drilling = false;
-            drillBtn.disabled = false;
+            busy(false);
         };
 
         const drill = () => {
             if (drilling) return;
-            drilling = true;
-            drillBtn.disabled = true;
+            busy(true);
             const run = ++drillRun;
             const x = rigX, sy = surfaceY(x);
             const hole = el('line', { x1: x, y1: sy, x2: x, y2: sy, class: 'bh-hole' }, holesEl);
@@ -291,8 +291,7 @@
 
         const reset = () => {
             drillRun++; // abandon any drill still in progress
-            drilling = false;
-            drillBtn.disabled = false;
+            busy(false);
             newZones();
             drawScene();
             result.textContent = 'New site surveyed. Read the curve, place the rig, drill.';

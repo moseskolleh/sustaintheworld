@@ -16,7 +16,7 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 - **"Don't let it become a boat" flood scene**: a schematic Wupper cross-section on the [Wuppertal case study](case-studies.html#play-flood) — slide the river from a calm day to July 2021 and watch the margin under the Schwebebahn's hanging cars shrink. Both games load only when a reader scrolls near them, and without JavaScript each is a note that it needs JavaScript and one line of summary
 - **Field terminal**: press <code>`</code> anywhere (or the footer button) for a hidden green-on-black terminal — try `journey`, `drill`, `co2`, `voice`, `kushe`, `help`
 - **The spoken page**: one `Listen` control in the nav reads the section in view with the browser's own speech engine, which transfers **zero bytes**. The one recording on the site is Moses introducing himself in his own voice, offered once he has recorded it, fetched only on click and labelled with exactly what it transfers (see [Narration](#narration-the-spoken-page)). Nothing ever autoplays
-- **Carbon-aware by construction**: images ship as optimized WebP, the three typefaces are self-hosted subsets, and a first view costs about **274 KB over the wire, fonts included**, against a 288 KB ceiling `npm test` enforces — a budget, not a number in a README, and one that `npm run smoke` checks against a real browser (see [Performance](#performance)). Everything a visit does not reach — the narration player, the field terminal, the section-05 interactives, the case studies' two games — is fetched only when it is used. Nothing is loaded from any other origin, and only two things are ever sent to one, both to the site's own Apps Script endpoint: a contact message, and one cookieless visit count per page view (never under Do Not Track or Global Privacy Control; see [The visit counter and privacy](#the-visit-counter-and-privacy)). A live footer badge weighs each visit in the browser (Resource Timing API × Sustainable Web Design model), counting network transfer only. A low-energy mode pauses all animation and honours `prefers-reduced-motion`
+- **Carbon-aware by construction**: images ship as optimized WebP, the three typefaces are self-hosted subsets, and a first view costs about **275 KB over the wire, fonts included**, against a 288 KB ceiling `npm test` enforces — a budget, not a number in a README, and one that `npm run smoke` checks against a real browser (see [Performance](#performance)). Everything a visit does not reach — the narration player, the field terminal, the section-05 interactives, the case studies' two games — is fetched only when it is used. Nothing is loaded from any other origin, and only two things are ever sent to one, both to the site's own Apps Script endpoint: a contact message, and one cookieless visit count per page view (never under Do Not Track or Global Privacy Control; see [The visit counter and privacy](#the-visit-counter-and-privacy)). A live footer badge weighs each visit in the browser (Resource Timing API × Sustainable Web Design model), counting network transfer only. A low-energy mode pauses all animation and honours `prefers-reduced-motion`
 - **[Case studies](case-studies.html), evidence-first**: the same six projects as **problem → method → artifact → result**. Every result carries the basis it rests on and says plainly whether you can check it from outside; every artifact says whether it is public, available on request, or held by the client. See [Content pipeline](#content-pipeline)
 - **Role-specific lenses**: `case-studies.html?lens=water`, `?lens=climate-risk`, `?lens=sustainable-ai` — shareable views that reframe the portfolio for one kind of role. They **reorder and frame, they never filter**: every case study stays on the page in every view, because a view that hides inconvenient work is a CV that lies by omission. Without JavaScript the switcher steps aside and every case study shows in the default view
 - **No dead ends**: every page but the homepage shares one small nav (Home, Case studies, Research, CV, Contact, with the page you are on marked) and ends with a way to reach Moses: his address, the contact form and the CV. The pages built on `carbon-ai.css` have the homepage's light theme and its switch, and keep the reader's choice from page to page (`theme.js`, before the first paint); with nothing chosen they follow the system's setting, with or without JavaScript. The homepage follows it only with JavaScript: without, it stays dark, because following the system there would put a second copy of every light-theme rule in its first view. The text-only field report and the 404 page take the nav and the call to action as plain lines, and no script
@@ -34,7 +34,7 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 
 - **HTML5**: Semantic markup for better SEO and accessibility
 - **CSS3**: Modern styling with CSS Grid, Flexbox, animations, and transitions
-- **JavaScript (Vanilla)**: no framework, no bundler. A 72 KB core (`script.js`, 24 KB gzipped) and five on-demand modules in `modules/`, each fetched the first time it is needed: the core fetches three on the homepage (the section-05 interactives with the Assay and the footer receipt, the narration player with its stylesheet, the field terminal), the case studies fetch the two games (`dossier.js` and `.css`) and `carbon-ai.html` fetches Anatomy of a Prompt (`anatomy.js` and `.css`), each as it comes near the screen
+- **JavaScript (Vanilla)**: no framework, no bundler. A 74 KB core (`script.js`, 24 KB gzipped) and five on-demand modules in `modules/`, each fetched the first time it is needed: the core fetches three on the homepage (the section-05 interactives with the Assay and the footer receipt, the narration player with its stylesheet, the field terminal), the case studies fetch the two games (`dossier.js` and `.css`) and `carbon-ai.html` fetches Anatomy of a Prompt (`anatomy.js` and `.css`), each as it comes near the screen
 - **Icons**: an inline SVG symbol sprite, no icon font
 - **Fonts**: Inter, Space Grotesk and IBM Plex Mono, self-hosted as Latin subsets under the SIL Open Font License (see [Fonts](#fonts))
 - **GitHub Pages**: Free hosting for static websites
@@ -517,14 +517,16 @@ The suites, and the failure each one exists to prevent:
   made-up measurements from far under to far over, lowers ceilings to what
   they hold plus 5% and never raises one (or touches a held one, or any line
   but a ceiling's); every page has a length budget at both sizes, the
-  homepage's at or under the plan's 10 and 18 screens; the README's tables
-  say exactly what `--readme` would write; and the receipt workflow asks for
+  homepage's at or under the plan's 10 and 18 screens; the README's tables,
+  and its figures for the first view's ceiling and the core script's
+  weight, say exactly what `--readme` would write; and the receipt workflow asks for
   no more than it needs and cannot comment from a fork.
 - **`receipt.test.js`** — the pull-request receipt, from fixture budgets and
   lengths: a rise with a plus, a fall with a minus, no change as 0, the
   CO₂e at 0.36 g per MB of 1024² bytes, a budget over its ceiling or new on
   one side, the open counts page held drawn full, and tables whose rows are
-  as wide as their headers.
+  as wide as their headers; and, measured with `--root` as the workflow
+  measures main, a ceiling the branch moved, added or dropped.
 - **`cpu.test.js`** — the page's keys go through one listener, so one Escape
   closes one layer (terminal, then player, then menu) and the
   backtick follows one rule for "typing"; one `mks.motionOK()` answers for
@@ -836,7 +838,7 @@ did.
 <!-- BUDGET-TABLE:START — generated by scripts/check-budget.js (npm run budget -- --readme). Do not edit by hand. -->
 | Budget | Measured | Ceiling |
 |---|---|---|
-| First view of the homepage, over the wire (fonts included) | ~274 KB | 288 KB |
+| First view of the homepage, over the wire (fonts included) | ~275 KB | 288 KB |
 | Everything a full visit adds on demand (modules, scripts, map) | ~72 KB | 72 KB |
 | Largest single image | ~200 KB | 210 KB |
 | Every image in the repository | ~3.36 MB | 3.5 MB |
@@ -946,7 +948,9 @@ measures `main` and the pull request with the pull request's own scripts
 (`check-budget.js --json`, and `smoke.js --lengths-only` in the Chromium
 build CI pins) and posts one comment, updated on each push: the bytes of
 every budget and how they moved, the estimated CO₂e of each page's first
-view, and how each page's length moved at both sizes. The CO₂e uses the
+view, and how each page's length moved at both sizes. Each side keeps its
+own ceilings (main's are read from main's copy of `check-budget.js`), so a
+ceiling the pull request moves shows what it was. The CO₂e uses the
 constant the footer badge uses (Sustainable Web Design, 0.36 g per MB
 transferred) and counts network transfer only. `scripts/receipt.js` writes
 it from two budget files and two length files; on a fork, whose token cannot

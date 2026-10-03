@@ -352,7 +352,7 @@ if (document.readyState === 'complete') {
 // The role label is intentionally static. A stable, always-legible identity
 // protects the critical first impression — the old typewriter could be caught
 // mid-deletion on first paint — and keeps first-viewport motion reserved for
-// the signature scroll-driven moments (journey map, core log, borehole).
+// the signature scroll-driven moments (journey map, core log).
 
 // ===================================
 // SMOOTH SCROLLING & NAVIGATION
@@ -474,6 +474,22 @@ inPageLinks.forEach((anchor, index) => {
     });
 });
 
+// Links already shared to what Phase 2 moved off this page (the games,
+// Anatomy of a Prompt) opened it at its top, with no sign of what they
+// were for. They go on to where it is now.
+const MOVED = new Map([
+    ['anatomy', 'carbon-ai.html#anatomy'],
+    ['boreholeGame', 'case-studies.html#play-borehole'],
+    ['strikeWidget', 'case-studies.html#play-borehole'],
+    ['floodSim', 'case-studies.html#play-flood']
+]);
+const forwardMoved = () => {
+    const id = location.hash.slice(1), to = MOVED.get(id);
+    if (!to || document.getElementById(id)) return false;
+    location.replace(to);
+    return true;
+};
+
 // Direct hits (a shared link, Back and Forward, a typed fragment) land the
 // same way, a task later so the browser's own scroll restoring comes first.
 // A shared link on arrival is not focused: nobody has pressed anything yet.
@@ -495,13 +511,15 @@ const handleHashReveal = (e) => {
         }
         return;
     }
+    if (forwardMoved()) return;
     let target;
     try { target = document.querySelector(location.hash); } catch (err) { return; }
     if (target) jumpTo(target, scrollMotion(), !!e, true);
 };
 window.addEventListener('popstate', handleHashReveal);
 window.addEventListener('hashchange', handleHashReveal);
-if (location.hash) window.addEventListener('load', () => setTimeout(() => handleHashReveal(null), 320));
+// A moved feature's address goes on at once, not after the page has loaded.
+if (location.hash && !forwardMoved()) window.addEventListener('load', () => setTimeout(() => handleHashReveal(null), 320));
 
 const setMenuOpen = (open) => {
     if (!navToggle || !navMenu) return;
@@ -861,11 +879,11 @@ if (statsSection && 'IntersectionObserver' in window) {
             document.dispatchEvent(new CustomEvent('journeymap:ready', { detail: { svg, mapBox, rescale } }));
             setActive(0);
 
-            // The stop shown is the one nearest a reading line: 45% of the
-            // way down the screen beside the map, 30% down what a phone's
-            // pinned band leaves. It was any stop 60% in view, often the next
-            // one arriving, so the map ran a stop ahead. The strip watched is
-            // wider than the gap between two stops.
+            // Beside the map, the stop shown is the one nearest a reading
+            // line 45% of the way down the screen. It was any stop 60% in
+            // view, often the next one arriving, so the map ran a stop
+            // ahead. The strip watched is wider than the gap between two
+            // stops.
             const stops = Array.from(document.querySelectorAll('.journey-stop'));
             const track = document.querySelector('.journey-track');
             let mapObserver = null;
@@ -877,7 +895,23 @@ if (statsSection && 'IntersectionObserver' in window) {
                 const css = getComputedStyle(mapBox);
                 const band = css.position === 'sticky' && m.left < t.right && t.left < m.right
                     ? (parseFloat(css.top) || 0) + m.height : 0;
-                const line = band + (window.innerHeight - band) * (band ? 0.3 : 0.45);
+                // On a phone the map is a band pinned over the stops: the
+                // stop shown is the first whose name is still below it, or,
+                // until the next name is on screen, the one just passed. By
+                // a reading line a stop stayed shown with its name under the
+                // band, the next stop whole below (by 190px at 360x640).
+                if (band) {
+                    const names = stops.map(s => s.querySelector('h3') || s);
+                    mapObserver = new IntersectionObserver(() => {
+                        const tops = names.map(h => h.getBoundingClientRect().top);
+                        let i = tops.findIndex(top => top >= band - 1);
+                        if (i < 0 || tops[i] >= window.innerHeight) i = Math.max(0, (i < 0 ? stops.length : i) - 1);
+                        setActive(+stops[i].getAttribute('data-stop'));
+                    }, { rootMargin: `${-Math.round(band)}px 0px 0px 0px`, threshold: [0, 1] });
+                    names.forEach(h => mapObserver.observe(h));
+                    return;
+                }
+                const line = window.innerHeight * 0.45;
                 const off = (el) => {
                     const r = el.getBoundingClientRect();
                     return Math.max(0, r.top - line, line - r.bottom);
@@ -1246,7 +1280,9 @@ document.querySelectorAll('.current-year').forEach(el => {
 // line, and keeps the rest of the card until it is asked for: the whole
 // log was 5.3 screens on a 390px phone and 2.6 on a desktop. The button
 // that asks is made here, because nothing could press it without this
-// script; without it every card is whole.
+// script; without it every card is whole. A late start leaves them open:
+// the reader has seen them whole, and the takeover below puts back the
+// html.js that folds them.
 (() => {
     document.querySelectorAll('.corelog-item .timeline-content').forEach((card, i) => {
         const list = card.querySelector('ul');
@@ -1268,7 +1304,7 @@ document.querySelectorAll('.current-year').forEach(el => {
             btn.setAttribute('aria-expanded', String(open));
             word.textContent = open ? 'Less' : 'More';
         };
-        show(false);
+        show(lateStart);
         btn.addEventListener('click', () => {
             show(!card.classList.contains('is-open'));
             document.dispatchEvent(new CustomEvent('mks:layout'));

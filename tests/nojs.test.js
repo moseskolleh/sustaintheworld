@@ -197,6 +197,29 @@ function rules(css) {
     assert(!!cite && !!cite.closest('.needs-js'), 'index.html: the chart\'s sources go with the chart when JavaScript cannot run');
     const noteRule = rules(read('style.css')).find(r => r.selectors.includes('.nojs-note'));
     assert(!!noteRule && /margin(?:-bottom)?:\s*[^;]*[1-9]/.test(noteRule.body), 'index.html: the note keeps its distance from what follows it');
+
+    // The note sends a reader without JavaScript to the coach's page, where
+    // they still have none. It promised "the figures behind it, their
+    // sources and their limits"; that page, without script, hides its
+    // evidence ledger (and only script fills it), so neither a figure nor a
+    // source was there. Whatever the note names must be on that page as a
+    // reader without JavaScript gets it.
+    const coach = new JSDOM(read('carbon-ai.html')).window.document;
+    rules(read('carbon-ai.css')).forEach(r => r.selectors.forEach((sel) => {
+        const m = sel.match(/^html:not\(\.js\)\s+(.+)$/);
+        if (m && /display:\s*none/.test(r.body)) coach.querySelectorAll(m[1]).forEach(el => el.remove());
+    }));
+    coach.querySelectorAll('[hidden], script, noscript').forEach(el => el.remove());
+    const shown = coach.body.textContent.replace(/\s+/g, ' ');
+    const promises = [
+        [/\bmethod\b/i, 'the method', /\bMethodology\b/.test(shown)],
+        [/\blimits?\b/i, 'its limits', /Caveat:.*inference only/.test(shown)],
+        [/\bsources?\b/i, 'the sources', /\bSources\b/.test(shown) && /Jegham/.test(shown)],
+        [/\bfigures?\b/i, 'the figures', /\d\s*Wh\b/.test(shown)]
+    ].filter(([said]) => said.test(note.textContent));
+    const unkept = promises.filter(([, , kept]) => !kept).map(([, what]) => what);
+    assert(promises.length >= 2 && unkept.length === 0,
+        `index.html: the no-JS note promises only what carbon-ai.html shows without JavaScript (promised: ${promises.map(p => p[1]).join(', ') || 'nothing'}; not there: ${unkept.join(', ') || 'none'})`);
 }
 // The case studies' two games. Without JavaScript a host was its heading
 // and a footnote, under artifact cards that call it interactive and link
@@ -332,13 +355,20 @@ async function takeoverCase(label, markJs) {
     assert(errors.length === 0, `${label}: no errors`);
     assert(window.mks.ready === true, `${label}: script.js reports ready`);
     assert(doc.documentElement.classList.contains('js'), `${label}: the page is marked html.js once script.js has run`);
+    // The experience cards fold under html.js; the takeover puts it back.
+    const cards = Array.from(doc.querySelectorAll('#experience .timeline-content')).filter(c => c.querySelector(':scope > .corelog-more'));
+    const open = cards.filter(c => c.classList.contains('is-open') && c.querySelector('.corelog-more').getAttribute('aria-expanded') === 'true');
     if (markJs) {
         assert(reveals.some(el => !el.classList.contains('visible')), `${label}: reveals still wait to scroll into view`);
+        assert(cards.length > 0 && open.length === 0, `${label}: the experience cards start short, each a press from the rest (${open.length} of ${cards.length} open)`);
     } else {
         // A late start: <head> already showed everything. Putting the mark
         // back must not hide any of it again, and the intro must not replay.
         assert(reveals.length > 0 && reveals.every(el => el.classList.contains('visible')), `${label}: every reveal is marked done before the mark goes back (${reveals.filter(el => !el.classList.contains('visible')).length} not)`);
         assert(!doc.getElementById('preloader'), `${label}: the intro does not replay over a page already on screen`);
+        // They were on screen whole; the mark must not fold them under the reader.
+        assert(cards.length > 0 && open.length === cards.length && cards.every(c => /^Less/.test(c.querySelector('.corelog-more').textContent)),
+            `${label}: every experience card the reader has seen whole stays open, its button offering Less (${open.length} of ${cards.length} open)`);
     }
     await tick(0);   // let the counters' microtask run before the window goes
     window.close();

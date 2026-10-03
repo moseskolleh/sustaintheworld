@@ -97,7 +97,7 @@
             <h2 id="lens-sustainable-ai-h">Sustainable AI &amp; AI governance <span class="cs-lens-tagline">Every prompt has a footprint</span></h2>
             <p class="cs-lens-summary">The newest thread, and the one that made the rest make sense: the tools we now use to analyse environmental problems have environmental costs of their own, and almost nobody is measuring them. At the Digital Society School I am building the framework and the decision-support tooling for a finance ministry adopting generative AI &mdash; mapping Scope 2 electricity, Scope 3 hardware and data-centre water, in a reporting language the organisation already speaks.</p>
             <p class="cs-lens-bestfor"><strong>Best fit for:</strong> Roles in sustainable AI, AI governance, green software, or ESG where digital footprint is in scope &mdash; and anywhere the job is to make an environmental claim survive scrutiny.</p>
-            <ul class="cs-lens-evidence"><li>Sustainable-AI framework and prototype for the Dutch Ministry of Finance</li><li>EcoPrompt Coach &mdash; a public tool with a full evidence ledger behind every factor</li><li>Framework framed against CSRD/ESRS disclosure logic</li><li>This site: a first view of ~274 KB with its fonts, budgeted and enforced in CI</li></ul>
+            <ul class="cs-lens-evidence"><li>Sustainable-AI framework and prototype for the Dutch Ministry of Finance</li><li>EcoPrompt Coach &mdash; a public tool with a full evidence ledger behind every factor</li><li>Framework framed against CSRD/ESRS disclosure logic</li><li>This site: a first view of ~275 KB with its fonts, budgeted and enforced in CI</li></ul>
         </section>
 
         <p class="cs-note">
@@ -713,7 +713,16 @@
                 card.classList.toggle('cs-card-secondary', lens !== 'all' && !owns);
                 (lens === 'all' || owns ? matched : rest).push(card);
             });
-            matched.concat(rest).forEach(function (card) { grid.appendChild(card); });
+            // Moved only when the order changes. Every Back runs this, and
+            // a link to a game, or back to the top, is a step in history:
+            // re-appending a card in place took the focus from the slider
+            // or the photo link in it, so the next Tab went to the top of
+            // the page. When a lens does move the card, focus goes with it.
+            var want = matched.concat(rest);
+            if (want.every(function (card, i) { return grid.children[i] === card; })) return;
+            var had = grid.contains(document.activeElement) ? document.activeElement : null;
+            want.forEach(function (card) { grid.appendChild(card); });
+            if (had && document.activeElement !== had) had.focus({ preventScroll: true });
         }
 
         function fromUrl() {

@@ -84,6 +84,11 @@ const facts = (d) => Array.from(d.querySelectorAll('.glance-fact')).map(f => [te
     assert(line.endsWith(` — ${profile.atAGlance.workArea.join(', ')}`),
         `Today: the work area follows the roles on the availability line, not the location ("${line}")`);
     assert(!/TBC|TBD|to be confirmed|n\/a|\?/i.test(d.body.textContent), 'Today: no stand-in for a fact nobody has stated');
+    // The value line ended "from the field to the boardroom": no case study
+    // puts the work before a board (the most senior are a municipality and
+    // a ministry, as partners). The first view claims no such audience.
+    const value = text(doc.querySelector('.hero-valueprop'));
+    assert(!!value && !/board|C-suite|\bexecutive/i.test(value), `Today: the value line claims no boardroom the case studies do not show ("${value}")`);
 }
 
 // ===================================================================

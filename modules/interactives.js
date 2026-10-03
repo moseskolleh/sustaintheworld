@@ -5,14 +5,10 @@
 // that only matters once someone scrolls to section 05, reaches the Assay
 // under the contact form, or opens the footer receipt. You Draw It needs
 // ai-carbon-data.js, which the loader fetches first. The calculator and
-// Anatomy of a Prompt that used to be here are on carbon-ai.html now: the
-// calculator was the same job its own page already did, and Anatomy is
-// modules/anatomy.js, drawn from that page's numbers.
+// Anatomy of a Prompt that were here are on carbon-ai.html.
 //
-// Loaded on demand by script.js (mks.load('interactives')) — see the
-// ON-DEMAND MODULES section there for when. This file is a classic script:
-// it shares the page's global scope, so it declares nothing at the top
-// level and talks to the core only through window.mks.
+// Loaded on demand by script.js (mks.load('interactives')), whose ON-DEMAND
+// MODULES section says when, and why it declares nothing at the top level.
 // ===================================================================
 
 // ===================================
@@ -685,7 +681,9 @@ window.mks.share = (() => {
         for (const k in attrs) e.setAttribute(k, attrs[k]);
         return e;
     };
-    const mk = (name, attrs) => set(document.createElementNS('http://www.w3.org/2000/svg', name), attrs);
+    // A group, not an image (which may hold no control); its words are for
+    // the eye, the data table reads them.
+    const mk = (name, attrs) => set(document.createElementNS('http://www.w3.org/2000/svg', name), name === 'text' ? { 'aria-hidden': 'true', ...attrs } : attrs);
 
     const KEYS = ['llama-32-1b', 'gpt-4-1-nano', 'gpt-4o-mini', 'gemini-15-flash', 'gemini-20-flash', 'llama-33-70b', 'claude-37-sonnet', 'gpt-4o', 'gemini-15-pro', 'deepseek-r1'];
     const SHORT = { 'llama-32-1b': '1B', 'gpt-4-1-nano': 'nano', 'gpt-4o-mini': '4o-mini', 'gemini-15-flash': '1.5 Flash', 'gemini-20-flash': '2.0 Flash', 'llama-33-70b': '70B', 'claude-37-sonnet': 'Sonnet', 'gpt-4o': 'GPT-4o', 'gemini-15-pro': '1.5 Pro', 'deepseek-r1': 'R1' };
@@ -752,6 +750,8 @@ window.mks.share = (() => {
     const drawGuess = () => {
         guessLine.setAttribute('points', pts(guess).split(' ').slice(KNOWN - 1).join(' '));
         for (let i = KNOWN; i < n; i++) set(guessDots[i], { cx: xAt(i), cy: yAt(guess[i]) });
+        const g = guess[cursor].toFixed(2);
+        set(hit, { 'aria-valuenow': g, 'aria-valuetext': `${models[cursor].short}: your guess ${g} Wh per answer` });
     };
     // Pulse the first predict dot so people know the curve is grabbable.
     if (guessDots[KNOWN]) guessDots[KNOWN].classList.add('ydi-dot-pulse');
@@ -761,11 +761,10 @@ window.mks.share = (() => {
 
     // --- interaction (pointer + keyboard) ---
     const cursorRing = svg.appendChild(mk('circle', { class: 'ydi-cursor', r: 9 }));
-    const hit = mk('rect', { class: 'ydi-hit', fill: 'transparent' });
-    hit.setAttribute('tabindex', '0');
-    hit.setAttribute('role', 'application');
-    hit.setAttribute('aria-label', 'Draw your prediction: left/right arrows move between models, up/down arrows raise or lower the guessed energy, Enter reveals the research estimates. The Reveal button and the data table below are equivalent.');
-    svg.appendChild(hit);
+    // A slider, its value the guess at the cursor, spoken as it changes
+    // (role=application allows no value: each arrow press was silent).
+    const hit = svg.appendChild(mk('rect', { class: 'ydi-hit', fill: 'transparent', tabindex: 0, role: 'slider', 'aria-valuemin': 0, 'aria-valuemax': yMax,
+        'aria-label': 'Draw your prediction: left/right arrows move between models, up/down arrows raise or lower the guessed energy, Enter reveals the research estimates. The Reveal button and the data table below are equivalent.' }));
 
     // The published estimates, and a third line: a straight-line guess that
     // misses the reasoning spike, drawn, not sourced, so the legend and the
@@ -846,10 +845,7 @@ window.mks.share = (() => {
     window.addEventListener('pointerup', () => { dragging = false; });
     window.addEventListener('pointercancel', () => { dragging = false; });
 
-    const moveCursor = () => {
-        set(cursorRing, { cx: xAt(cursor), cy: yAt(guess[cursor]) });
-        hit.setAttribute('aria-valuetext', `${models[cursor].short}: your guess ${guess[cursor].toFixed(2)} Wh per answer`);
-    };
+    const moveCursor = () => set(cursorRing, { cx: xAt(cursor), cy: yAt(guess[cursor]) });
     hit.addEventListener('focus', () => { svg.classList.add('ydi-kbd'); moveCursor(); });
     hit.addEventListener('blur', () => { svg.classList.remove('ydi-kbd'); });
     hit.addEventListener('keydown', (e) => {

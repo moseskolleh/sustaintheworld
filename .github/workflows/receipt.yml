@@ -8,8 +8,10 @@ name: Carbon receipt
 # Both sides are measured by the pull request's own scripts (main through
 # --root), so a difference in the receipt is a difference in the site, not
 # in how it was measured, and the first pull request to carry these
-# scripts gets a receipt too. The receipt only reports; the CI workflow is
-# what fails a pull request over a budget.
+# scripts gets a receipt too. The ceilings are each side's own (main's are
+# read from main's copy of check-budget.js), so a ceiling the pull request
+# moves shows as moved. The receipt only reports; the CI workflow is what
+# fails a pull request over a budget.
 #
 # The comment is found again by the marker on its first line and edited in
 # place, so a pull request carries one receipt however often it is pushed.

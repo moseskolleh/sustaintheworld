@@ -27,20 +27,22 @@
 //     the at-a-glance strip and one primary action, or with the play index,
 //     today or with every at-a-glance fact filled in at the longest
 //     content.js accepts; a photo caption over the eyebrow or the name,
-//     down to 320px
+//     down to 320px; a scroll cue drawn across the hero's words
 //   - a page that, with JavaScript off (or script.js blocked or late), is
 //     covered, leaves content invisible, shows a [hidden] element or a
 //     control only a script could drive, or hides the contact form
 //   - a skip link, nav link or Back that does not land where it says; a
 //     link to a game, a case study or Anatomy of a Prompt that lands it
 //     under the other pages' nav bar; a theme switch or nav item off the
-//     bar; back to top over a control
+//     bar; back to top over a control; an address shared for something
+//     that moved off the homepage that does not go on to it
 //   - a page whose theme does not follow the reader's choice (or, with none,
 //     the system's; the homepage from its first frame), or a page other
 //     than the homepage with no room on a 320px phone for its nav and its
 //     call to action, or whose nav moves as its theme switch appears
 //   - on a phone, a journey map out of view while its stops are read, over
-//     the text of the stop it shows, or showing another; a name on the map
+//     the text of the stop it shows, or showing another, or one whose name
+//     is under it while another's is in sight; a name on the map
 //     under 11px, or on a desktop over another name, the frame's edge or
 //     the route; a You Draw It label under 11px or cut off
 //   - a case study's photos fetched before their row is opened, or a
@@ -55,7 +57,9 @@
 //   - an experience card that is not short, or whose More sits on its text
 //   - a case-study game fetched before a reader nears it, that will not
 //     play, whose labels are under 11px on a phone or run past its edge,
-//     or that moves the page under a reader when it arrives above them
+//     that moves the page under a reader when it arrives above them, or
+//     that drops the focus (its button pressed by key, or Back after a
+//     link to it)
 //   - a page longer than its length budget in scripts/check-budget.js, at
 //     1440x900 or 390x844, once it has settled (the homepage's is under
 //     the plan's 10 and 18 screens)
@@ -674,8 +678,32 @@ async function exerciseCarbonTool(page, r) {
 // loading screen gone, nothing scrolled. Besides the plan's two screens,
 // two laptops' browser windows, which are shorter than their screens: a
 // 1366x768 laptop leaves about 1366x657, and the figures sat wholly below
-// it; at 1280x720 the fold cut through the digits.
-const FIRST_VIEWS = [[1440, 900], [390, 844], [1366, 657], [1280, 720]];
+// it; at 1280x720 the fold cut through the digits. And two windows 1,024px
+// wide, either side of the short-window rule (880px tall), where the
+// scroll cue was drawn through the hero's words.
+const FIRST_VIEWS = [[1440, 900], [390, 844], [1366, 657], [1280, 720], [1024, 768], [1024, 881]];
+
+// The words in the hero the scroll cue is drawn across, if it is shown:
+// centred at the hero's foot, it ran through the description's last line
+// in windows 900-1,030px wide once a short window put the description
+// there, and through a figure's label at 1024x881. Run in the page.
+function cueOverText() {
+    const cue = document.querySelector('.scroll-indicator');
+    const c = cue && cue.getBoundingClientRect();
+    if (!c || !c.width || getComputedStyle(cue).display === 'none') return [];
+    const hits = [];
+    const walk = document.createTreeWalker(document.querySelector('.hero-content'), NodeFilter.SHOW_TEXT);
+    for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+        if (!n.textContent.trim()) continue;
+        const range = document.createRange();
+        range.selectNodeContents(n);
+        if (Array.from(range.getClientRects()).some(b => b.width && b.left < c.right && c.left < b.right && b.top < c.bottom && c.top < b.bottom)) {
+            hits.push(n.textContent.trim().slice(0, 32));
+        }
+    }
+    return hits;
+}
+
 async function exerciseFirstView(browser, origin) {
     console.log('  index.html — the first view');
     for (const [width, height] of FIRST_VIEWS) {
@@ -719,6 +747,9 @@ async function exerciseFirstView(browser, origin) {
         if (r.play >= height) ok(`first view ${at}: the play index is below the fold (${r.play}px)`);
         else bad(`first view ${at}: the play index is in the first screen (${r.play}px)`);
         if (r.links <= 7) ok(`first view ${at}: ${r.links} links in the nav`); else bad(`first view ${at}: ${r.links} links in the nav — at most 7`);
+        const cue = await page.evaluate(cueOverText);
+        if (cue.length) bad(`first view ${at}: the scroll cue is drawn across "${cue.join('", "')}"`);
+        else ok(`first view ${at}: the scroll cue crosses no words of the hero`);
         await context.close();
     }
 
@@ -810,6 +841,9 @@ async function exerciseLongestStrip(browser, origin) {
         if (Math.max(r.glance, r.act, r.stats) <= height) ok(`${at}: the strip, the primary action and the figures are on the first screen (the figures end at ${r.stats}px)`);
         else bad(`${at}: the strip ends at ${r.glance}px, the primary action at ${r.act}px and the figures at ${r.stats}px, past the first ${height}px`);
         if (r.wide) bad(`${at}: the page scrolls sideways`);
+        const cue = await page.evaluate(cueOverText);
+        if (cue.length) bad(`${at}: the scroll cue is drawn across "${cue.join('", "')}"`);
+        else ok(`${at}: the scroll cue crosses no words of the hero`);
         await context.close();
     }
 }
@@ -838,7 +872,7 @@ async function playGames(page) {
             await page.keyboard.press('ArrowRight');
         }
         await page.keyboard.press('Enter');
-        await page.waitForFunction(() => !document.getElementById('drillBtn').disabled, null, { timeout: 3000 });
+        await page.waitForFunction(() => document.getElementById('drillBtn').getAttribute('aria-disabled') !== 'true', null, { timeout: 3000 });
         if (/STRIKE/.test(await page.textContent('#drillResult'))) break;
         for (let k = 0; k < 6; k++) await page.keyboard.press('ArrowRight');   // past this dip
     }
@@ -922,7 +956,63 @@ async function exerciseCaseStudyGames(page, r) {
     if (r.foreign.length) r.foreign.forEach(f => bad(`left the origin: ${f}`));
 
     await holdReaderBelowGame(page.context().browser(), new URL(page.url()).origin);
+    await keepFocusInGames(page.context().browser(), new URL(page.url()).origin);
     await exercisePhotos(page.context().browser(), new URL(page.url()).origin);
+}
+
+// Two ways the focus fell to <body> on this page, and the next Tab went to
+// the top of it. "Drill here" was disabled while a hole went down, which
+// blurs the button a key just pressed, so the next press went nowhere; and
+// Back, after following a link to a game and playing it, ran the lens
+// script, which put every case study back in place and took the focus from
+// the control in it. With motion and without, as a keyboard reader plays.
+async function keepFocusInGames(browser, origin) {
+    for (const motion of ['reduce', 'no-preference']) {
+        const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: motion });
+        const page = await context.newPage();
+        const tag = `case-studies.html${motion === 'reduce' ? ', reduced motion' : ''}`;
+        await page.goto(`${origin}/case-studies.html`, { waitUntil: 'load' });
+
+        // The link to the flood game, followed by keyboard; the slider played.
+        await page.focus('a[href="#play-flood"]');
+        await page.keyboard.press('Enter');
+        await page.waitForFunction(() => document.querySelectorAll('.cs-play.is-live').length === 2, null, { timeout: 5000 });
+        await page.focus('#floodSlider');
+        await page.keyboard.press('ArrowRight');
+        await page.waitForTimeout(700);
+        await page.goBack();
+        await page.waitForTimeout(400);
+        const back = await page.evaluate(() => ({ at: document.activeElement.id || document.activeElement.tagName, y: Math.round(scrollY) }));
+        await page.keyboard.press('Tab');
+        // The next Tab goes on from the slider, not back to the skip link.
+        const next = await page.evaluate(() => ({
+            el: document.activeElement.id || document.activeElement.textContent.trim().slice(0, 24) || document.activeElement.tagName,
+            on: !!(document.getElementById('floodSlider').compareDocumentPosition(document.activeElement) & Node.DOCUMENT_POSITION_FOLLOWING),
+            y: Math.round(scrollY)
+        }));
+        if (back.at === 'floodSlider' && next.on && next.y >= back.y - 50) ok(`${tag}: Back after playing the flood game keeps the focus on its slider, and the next Tab goes on from it ("${next.el}")`);
+        else bad(`${tag}: Back after playing the flood game left the focus on ${back.at} (at ${back.y}px), and the next Tab went to "${next.el}" at ${next.y}px`);
+
+        // "Drill here", pressed by Enter and then by Space: the focus stays
+        // through each hole, and both presses reach it.
+        await page.evaluate(() => {
+            window.__drillPresses = 0;
+            document.getElementById('drillBtn').addEventListener('click', () => { window.__drillPresses++; });
+            document.getElementById('play-borehole').scrollIntoView({ block: 'center' });
+        });
+        await page.focus('#drillBtn');
+        const kept = [];
+        for (const k of ['Enter', ' ']) {
+            await page.keyboard.press(k);
+            kept.push(await page.evaluate(() => document.activeElement.id || document.activeElement.tagName));
+            await page.waitForFunction(() => document.getElementById('drillBtn').getAttribute('aria-disabled') === 'false', null, { timeout: 3000 }).catch(() => null);
+            kept.push(await page.evaluate(() => document.activeElement.id || document.activeElement.tagName));
+        }
+        const presses = await page.evaluate(() => window.__drillPresses);
+        if (kept.every(id => id === 'drillBtn') && presses === 2) ok(`${tag}: "Drill here" keeps the focus through a hole, by Enter and by Space (${presses} presses)`);
+        else bad(`${tag}: "Drill here" pressed by keyboard: focus on ${kept.join(', ')}, ${presses} of 2 presses reached it`);
+        await context.close();
+    }
 }
 
 // A reader who has scrolled on to the case study after Wuppertal's, with
@@ -1129,28 +1219,39 @@ async function exerciseJourneyAndChart(browser, origin) {
         if (small.size) bad(`${where}: names under ${LABEL_MIN_PX}px (${Array.from(small).join(', ')})`);
         else ok(`${where}: every name on it ${LABEL_MIN_PX}px or more`);
 
-        // Scrolled through: whenever a stop can be read below it, it is in view.
+        // Scrolled through: whenever a stop can be read below it, it is in
+        // view; and the stop it shows has its name in sight whenever another
+        // stop's is (met only at each stop, as above, it could not see a stop
+        // kept on show, its name under the band, the next one whole below).
         const sweep = await page.evaluate(async () => {
             const map = document.getElementById('journeyMap');
             const section = document.getElementById('journey');
             const stops = Array.from(document.querySelectorAll('.journey-stop'));
             const frames = () => new Promise(res => requestAnimationFrame(() => requestAnimationFrame(res)));
             const out = [];
+            const hidden = [];
             let checked = 0;
             const start = section.getBoundingClientRect().top + scrollY;
-            for (let y = start - innerHeight; y < start + section.offsetHeight; y += 120) {
+            for (let y = start - innerHeight; y < start + section.offsetHeight; y += 60) {
                 scrollTo({ top: y, behavior: 'instant' });
                 await frames();
+                await new Promise(res => setTimeout(res, 20));   // the observer's callback
                 const m = map.getBoundingClientRect();
                 const reading = stops.some((s) => { const b = s.getBoundingClientRect(); return b.top < innerHeight - 40 && b.bottom > m.bottom + 40; });
                 if (!reading) continue;
                 checked++;
                 if (m.top < document.getElementById('navbar').getBoundingClientRect().bottom - 1 || m.bottom > innerHeight) out.push(`${Math.round(y)}px (band at ${Math.round(m.top)}-${Math.round(m.bottom)})`);
+                const name = (s) => s.querySelector('h3').getBoundingClientRect();
+                const shown = document.querySelector('.journey-stop.map-active');
+                const other = stops.find(s => s !== shown && name(s).top >= m.bottom && name(s).bottom <= innerHeight);
+                if (shown && name(shown).top < m.bottom - 1 && other) hidden.push(`${Math.round(y)}px (${shown.querySelector('h3').textContent} under the band, ${other.querySelector('h3').textContent} in sight)`);
             }
-            return { out, checked, still: map.classList.contains('map-still') };
+            return { out, hidden, checked, still: map.classList.contains('map-still') };
         });
         if (sweep.out.length || sweep.checked < 5) bad(`${where}: out of view with a stop to read at ${sweep.out.join(', ') || `only ${sweep.checked} positions checked`}`);
         else ok(`${where}: in view at all ${sweep.checked} scroll positions with a stop to read below it`);
+        if (sweep.hidden.length) bad(`${where}: shows a stop whose name is under it while another's is in sight, at ${sweep.hidden.slice(0, 4).join(', ')}${sweep.hidden.length > 4 ? ` and ${sweep.hidden.length - 4} more` : ''}`);
+        else ok(`${where}: the stop it shows has its name in sight whenever another stop's is, at every 60px`);
         if (sweep.still) ok(`${where}: with reduced motion it jumps from stop to stop`); else bad(`${where}: it flies with reduced motion asked for`);
         await context.close();
     }
@@ -1460,6 +1561,25 @@ async function exerciseNavigation(browser, origin) {
         if (misses.length) bad(`shared link /#${id} at 390px: stopped short of the nav bar, or shut (${misses.join(', ')})`);
         else ok(`shared link /#${id} at 390px: lands under the nav bar${id === 'assay' ? ', open' : ''}, 3 of 3 times with the cache warm`);
     }
+
+    // The addresses shared for what moved off the homepage in Phase 2 go on
+    // to where it is now: they opened the homepage at its top, the feature
+    // nowhere on it.
+    const moved = [['anatomy', '/carbon-ai.html#anatomy'], ['boreholeGame', '/case-studies.html#play-borehole'],
+        ['strikeWidget', '/case-studies.html#play-borehole'], ['floodSim', '/case-studies.html#play-flood']];
+    const lost = [];
+    const fwd = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
+    for (const [id, to] of moved) {
+        const pg = await fwd.newPage();
+        await pg.goto(`${origin}/index.html#${id}`, { waitUntil: 'load' });
+        await pg.waitForURL((u) => `${u.pathname}${u.hash}` === to, { timeout: 5000 }).catch(() => null);
+        const r = await pg.evaluate(() => ({ at: location.pathname + location.hash, there: !!document.getElementById(location.hash.slice(1)) }));
+        if (r.at !== to || !r.there) lost.push(`/#${id} ended on ${r.at}${r.there ? '' : ' (no such id)'}`);
+        await pg.close();
+    }
+    await fwd.close();
+    if (lost.length) bad(`moved features: ${lost.join('; ')}`);
+    else ok(`moved features: ${moved.map(([id]) => `/#${id}`).join(', ')} each go on to the page the feature is on now`);
 
     // Without script the switch could not switch anything, so it must not show.
     const noScript = await browser.newContext({ viewport: { width: 390, height: 800 }, javaScriptEnabled: false });
@@ -2627,6 +2747,17 @@ async function axeHomepageStates(page, view, note, attempt) {
         await page.evaluate(() => scrollTo(0, 0));
         await page.waitForTimeout(250);
         note(rel, 'scrolled through', view, await axeRun(page));
+    });
+
+    // You Draw It with a guess drawn by keyboard. The chart was
+    // role=application, where its value is not allowed (aria-allowed-attr,
+    // critical, once focused), so the guess was never spoken; it is a
+    // slider now, in a group, as an image may hold no control.
+    await attempt(`${rel}: axe on You Draw It, drawn by keyboard`, async () => {
+        await page.focus('#ydiSvg .ydi-hit');
+        for (const k of ['ArrowUp', 'ArrowRight', 'ArrowUp']) await page.keyboard.press(k);
+        note(rel, 'You Draw It, drawn by keyboard', view, await axeRun(page, '#ydi'));
+        await page.evaluate(() => { document.activeElement.blur(); scrollTo(0, 0); });
     });
 
     // The Assay's verdict, with rows for what matched and for the gaps.

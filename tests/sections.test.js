@@ -101,7 +101,7 @@ const profile = JSON.parse(read('content/profile.json'));
     assert(/html\.js \.timeline-content:not\(\.is-open\) ul li:nth-child\(n\+2\),\s*html\.js \.timeline-content:not\(\.is-open\) \.tags \{\s*display: none;/.test(everywhere),
         'Experience: with html.js, a closed card shows its first line and folds the rest and the tags, at every width');
     assert(/html\.js \.corelog-more \{ display: inline-block; \}/.test(everywhere) && /\.corelog-more \{\s*display: none;/.test(css),
-        'Experience: the button shows only with html.js; on a late start there is none, and every card is whole');
+        'Experience: the button shows only with html.js, so without script.js there is none and every card is whole (a late start, which puts html.js back, is held in tests/nojs.test.js)');
     assert(/@media print \{\s*html\.js \.timeline-content:not\(\.is-open\) \{ display: block; \}\s*html\.js \.timeline-content:not\(\.is-open\) ul li:nth-child\(n\+2\) \{ display: list-item; \}/.test(css),
         'Experience: printed, every card is whole');
     assert(/@media \(min-width: 900px\) \{\s*html\.js \.timeline-content:not\(\.is-open\) \{\s*display: grid;/.test(css),

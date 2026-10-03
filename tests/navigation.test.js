@@ -247,6 +247,25 @@ const countScrolls = (window) => {
         assert(doc.activeElement === doc.getElementById('home'), 'Back to top: focus goes to the top of the page, not down with the hidden button');
     }
 
+    // --- A shared link to something that moved goes on to where it is ---
+    // The games and Anatomy of a Prompt left this page in Phase 2; a link
+    // already shared for one opened the homepage at its top. jsdom cannot
+    // follow location.replace to another page, so this holds the map to
+    // the pages (scripts/smoke.js follows each link in Chromium).
+    {
+        const src = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8');
+        const literal = (src.match(/const MOVED = new Map\((\[[\s\S]*?\])\);/) || [])[1];
+        const moved = literal ? Function(`return ${literal}`)() : [];
+        const page = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
+        const home = page('index.html');
+        const stale = moved.filter(([id]) => new RegExp(`\\bid="${id}"`).test(home)).map(([id]) => id);
+        const dead = moved.filter(([, to]) => { const [rel, id] = to.split('#'); return !new RegExp(`\\bid="${id}"`).test(page(rel)); }).map(([, to]) => to);
+        assert(moved.length >= 4 && moved.some(([id]) => id === 'strikeWidget') && moved.some(([id]) => id === 'anatomy'),
+            `Moved: the old addresses of the games and Anatomy of a Prompt are forwarded (${moved.map(([id]) => `#${id}`).join(', ') || 'none'})`);
+        assert(stale.length === 0, `Moved: none of them is an id on the homepage again, which a forward would hide (${stale.join(', ') || 'none'})`);
+        assert(dead.length === 0, `Moved: each goes to an id its page has (missing: ${dead.join(', ') || 'none'})`);
+    }
+
     if (failures > 0) {
         console.log(`\n${failures} assertion(s) failed`);
         process.exit(1);

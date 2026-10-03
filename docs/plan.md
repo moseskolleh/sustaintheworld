@@ -556,7 +556,7 @@ rule makes that cheap.
 ## Progress
 
 What branch `claude/plan-implementation-soh954` implements so far, step by step,
-checked against the code and the test runs on 2026-10-02 (`npm test`: 1,970
+checked against the code and the test runs on 2026-10-03 (`npm test`: 1,998
 passing in twenty-three suites, the figure the runner prints at the end;
 `npm run smoke` in Chromium: passes). Waves 1
 and 2 are on `main` (pull requests #48 and #49, merged by 2026-09-27, where
@@ -763,10 +763,10 @@ fixed, and what they changed is folded into the steps below and 6.6-6.7.
 not done as a phase: the at-a-glance strip still lacks the four facts only
 Moses can give (2.1), and none of it is live until the wave's pull request
 is merged, which is his call (S7). Measured in Chromium once the page has
-settled: the homepage is 9.32 screens at 1440×900 and 16.27 at 390×844,
+settled: the homepage is 9.36 screens at 1440×900 and 16.29 at 390×844,
 from 19.4 and 32.7 when this plan was written (18.78 and 32.18 when the wave
 began); `index.html` is 84 KB on disk (21 KB gzipped), from 134 KB; the
-homepage's first view is 274 KB over the wire, from 282 KB.
+homepage's first view is 275 KB over the wire, from 282 KB.
 What the wave needs from Moses is in the owner checklist: F1–F3 (the
 strip's facts), P1 and P2 (two choices to confirm) and S7 (when it goes
 live).
@@ -783,17 +783,22 @@ live).
    "TBC", or a fact longer than the first screen has room for
    (`GLANCE_LIMITS` in `scripts/lib/content.js`). The four exact figures
    and the photo's caption are on the first screen at 1440×900 and 390×844
-   (the figures end at 827px and 672px, the caption at 121px and 108px; the
+   (the figures end at 795px and 660px, the caption at 121px and 108px; the
    caption sat at 1,069px), and smoke checks it, and checks it again with
    every fact filled in at the longest the validator accepts (the figures
-   then end at 859px and 815px). On a phone that takes the facts as a
+   then end at 829px and 792px). On a phone that takes the facts as a
    two-column list and the hero's description after the figures; filled in
    a line each, the facts had pushed the figures off the screen. A laptop's
    browser window is shorter than its screen (1366×768 leaves about
    1366×657, where the figures sat wholly below the fold), so below 880px
    tall a desktop takes the description after the figures too, and smoke
-   checks 1366×657 and 1280×720 as well (the figures end at 588px and
-   600px; 652px and 664px with every fact at its longest). ✗
+   checks 1366×657 and 1280×720 as well (the figures end at 559px and
+   575px; 623px and 635px with every fact at its longest). There the
+   scroll cue goes, as it ran through the description from 900 to 1,030px
+   wide; where it shows, the hero keeps its 70px clear of the figures
+   (smoke checks both at 1024×768 and 1024×881). The value line ends at
+   "decisions leaders can act on": "from the field to the boardroom"
+   claimed an audience no case study shows. ✗
    Seniority, available from, languages with the Dutch level, and right to
    work (owner checklist F1–F3).
 2. ✓ **One primary action.** "See the evidence" (to the case studies, in
@@ -812,7 +817,12 @@ live).
    fetched only as they near the screen (`modules/dossier.js`). AI, Weighed
    keeps You Draw It; its calculator went (`carbon-ai.html` has its own)
    and Anatomy of a Prompt moved to `carbon-ai.html`, fetched as its
-   section nears. Experience is short cards at every width, not only on a
+   section nears. A link already shared to one of them on the homepage
+   (`#anatomy`, `#boreholeGame`, `#strikeWidget`, `#floodSim`) goes on to
+   where it is now rather than opening the homepage at its top. The games
+   keep a keyboard reader's focus: "Drill here" is marked busy while a hole
+   goes down rather than disabled, and Back after a link to a game leaves
+   the case studies where they are (smoke checks both). Experience is short cards at every width, not only on a
    phone, each opened by a More button named for its role. The Assay sits
    below the contact form, its question and promise in view and its box
    behind one "Grade a job description" button. To reach the targets
@@ -841,13 +851,19 @@ live).
    see it.
 6. ✓ **The journey map on phones.** Below 980px the map is a band pinned
    under the nav bar (about 170px tall at 390px) while the stops scroll past
-   beneath it, and it shows the stop crossing a reading line rather than the
-   next one arriving; under reduced motion or low-energy mode it jumps
+   beneath it, and it shows the first stop whose name is still below it
+   (the one just passed, until the next name is on screen): by a reading
+   line it had kept a stop on show with its name under the band and the
+   next one whole below, by up to 190px at 360×640. Beside the stops on a
+   desktop it shows the stop crossing a reading line rather than the next
+   one arriving. Under reduced motion or low-energy mode it jumps
    instead of flying. Every name is 11px or more on screen, and on a
    desktop the Rhine delta's four names sit clear of each other and of the
    route (Wuppertal's and Changsha's moved). The journey section is shorter
    on a phone for it: 2.70 → 2.15 screens at 390×844. Smoke checks the band
-   covers none of its stop's text at 390 and 320px.
+   covers none of its stop's text at 390 and 320px, and, every 60px through
+   the section, that the stop it shows has its name in sight whenever
+   another stop's is.
 7. ✓ **Legibility on phones.** You Draw It is drawn as many units wide as
    the pixels it is shown in (up to 640, 5:4 below 480px) and redrawn when
    that changes: every label is 11px or more (4.9px at 390×844 before). The
@@ -984,9 +1000,16 @@ move to `content/brief.json`. 4.2 and 4.4 not started.
    budget's bytes and how they moved, the CO₂e of each page's first view at
    0.36 g/MB (network transfer only), each page's length at both sizes, and
    anything over its ceiling first; from a fork it goes to the job summary
-   instead. `check-budget.js` ends its report with "you could lower X from
-   A to B" wherever there is more than 10% headroom, and writes the
-   README's budget and length tables and its quoted first-view ceiling;
+   instead. Each side's ceilings are its own: measuring another checkout,
+   `check-budget.js --json --root` reads them from that checkout's copy of
+   the script, so a ceiling the pull request lowers, raises, adds or drops
+   shows what main's was (read from the branch's copy, both sides had the
+   branch's, and a moved ceiling never showed; `receipt.test.js` now runs
+   it on a checkout whose copy differs). `check-budget.js` ends its report
+   with "you could lower X from A to B" wherever there is more than 10%
+   headroom, and writes the README's budget and length tables, its quoted
+   first-view ceiling and the core script's weight (typed by hand, it had
+   gone stale);
    `npm test` fails while they are stale, and the weekly open-counts Action
    rewrites them. The README's table of on-demand modules is written the
    same way: the words for each row are in `MODULE_TABLE`, the weights are

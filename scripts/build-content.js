@@ -656,7 +656,16 @@ ${cards}
                 card.classList.toggle('cs-card-secondary', lens !== 'all' && !owns);
                 (lens === 'all' || owns ? matched : rest).push(card);
             });
-            matched.concat(rest).forEach(function (card) { grid.appendChild(card); });
+            // Moved only when the order changes. Every Back runs this, and
+            // a link to a game, or back to the top, is a step in history:
+            // re-appending a card in place took the focus from the slider
+            // or the photo link in it, so the next Tab went to the top of
+            // the page. When a lens does move the card, focus goes with it.
+            var want = matched.concat(rest);
+            if (want.every(function (card, i) { return grid.children[i] === card; })) return;
+            var had = grid.contains(document.activeElement) ? document.activeElement : null;
+            want.forEach(function (card) { grid.appendChild(card); });
+            if (had && document.activeElement !== had) had.focus({ preventScroll: true });
         }
 
         function fromUrl() {

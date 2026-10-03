@@ -1172,6 +1172,13 @@ html.light-mode .hero-photo-caption {
     }
 }
 
+/* Where it is shown (a short window hides it too, below), the hero keeps
+   the cue's 70px clear of its figures: at 1024x881 the line ran through
+   "Continents studied and worked on". */
+@media (min-width: 901px) and (min-height: 881px) {
+    .hero { padding-bottom: 76px; }
+}
+
 .scroll-indicator-line {
     display: block;
     width: 2px;
@@ -1628,9 +1635,9 @@ html.light-mode .hero-photo-caption {
 /* Each layer is a short card: dates, role, organisation and the first
    line, with the rest and the tags a press away. The whole log was 5.3
    screens on a 390px phone and 2.6 on a desktop. Only with script.js,
-   which makes the button that opens a card (and never on a late start,
-   which leaves html.js off): without it every card is shown whole. The
-   button sits at the card's top right, on the dates' line, open or shut. */
+   which makes the button that opens a card (and leaves them open on a
+   late start): without it every card is shown whole. The button sits at
+   the card's top right, on the dates' line, open or shut. */
 .corelog-more {
     display: none;
     position: absolute;
@@ -2832,8 +2839,11 @@ html.js .nojs-note { display: none; }
 }
 
 /* In a laptop's window the rest closes up too, enough for the figures to
-   fit with the strip at its longest (smoke.js: 1366x657, 1280x720). */
+   fit with the strip at its longest (smoke.js: 1366x657, 1280x720). The
+   scroll cue goes: it ran through the description, here at the hero's
+   foot, from 900 to 1,030px wide, and the page plainly goes on below. */
 @media (min-width: 900px) and (max-height: 880px) {
+    .scroll-indicator { display: none; }
     .hero { padding-top: 84px; }
     .hero-title { font-size: clamp(2.3rem, min(7vw, 8vh), 5rem); }
     .at-a-glance { margin-bottom: 16px; }

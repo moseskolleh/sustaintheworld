@@ -4,10 +4,8 @@
 // A hidden feature costs nothing until it is found: the core listens for
 // the backtick and the footer button, and fetches this on the first press.
 //
-// Loaded on demand by script.js (mks.load('terminal')) — see the
-// ON-DEMAND MODULES section there for when. This file is a classic script:
-// it shares the page's global scope, so it declares nothing at the top
-// level and talks to the core only through window.mks.
+// Loaded on demand by script.js (mks.load('terminal')), whose ON-DEMAND
+// MODULES section says when, and why it declares nothing at the top level.
 // ===================================================================
 (() => {
     const mks = window.mks;
