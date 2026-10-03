@@ -1011,6 +1011,17 @@ async function exerciseCaseStudyGames(page, r) {
         else bad(`case-studies.html at ${width}px: game labels past the drawing's edge: ${m.cut.join(', ')}`);
         if (m.wide) bad(`case-studies.html at ${width}px: the page scrolls sideways`);
     }
+    // A wide card sets its artifacts and its results side by side (one to a
+    // row left most of a 1,100px card empty); a phone keeps one to a row.
+    for (const [width, rowsOf] of [[1280, () => 1], [390, n => n]]) {
+        await page.setViewportSize({ width, height: 800 });
+        const got = await page.evaluate(() => ['.cs-artifacts', '.cs-results'].map((sel) => {
+            const items = Array.from(document.querySelectorAll(`#gaia ${sel} > li`));
+            return { n: items.length, rows: new Set(items.map(li => Math.round(li.getBoundingClientRect().top))).size };
+        }));
+        if (got.every(g => g.n > 1 && g.rows === rowsOf(g.n))) ok(`case-studies.html at ${width}px: the GAIA case's artifacts and results are ${width > 900 ? 'side by side' : 'one to a row'}`);
+        else bad(`case-studies.html at ${width}px: artifacts and results in ${got.map(g => `${g.rows} rows of ${g.n}`).join(', ')}`);
+    }
     await page.setViewportSize({ width: 1280, height: 800 });
     if (r.errors.length) r.errors.forEach(e => bad(e)); else ok('the games played without an error');
     if (r.foreign.length) r.foreign.forEach(f => bad(`left the origin: ${f}`));
@@ -1018,6 +1029,34 @@ async function exerciseCaseStudyGames(page, r) {
     await holdReaderBelowGame(page.context().browser(), new URL(page.url()).origin);
     await keepFocusInGames(page.context().browser(), new URL(page.url()).origin);
     await exercisePhotos(page.context().browser(), new URL(page.url()).origin);
+    await openEsgLens(page.context().browser(), new URL(page.url()).origin);
+}
+
+// The ESG lens, as a shared link opens it on a phone: its framing shown,
+// its own case (GAIA) first with what it found on show, the sustainable-AI
+// case that only touches the lens after it, and every other case study
+// still on the page, set back rather than hidden.
+async function openEsgLens(browser, origin) {
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const page = await context.newPage();
+    const errors = [];
+    page.on('pageerror', e => errors.push(String(e.message || e)));
+    await page.goto(`${origin}/case-studies.html?lens=esg-csrd`, { waitUntil: 'load' });
+    const got = await page.evaluate(() => ({
+        ids: Array.from(document.querySelectorAll('#csGrid > .cs-card')).map(c => c.id),
+        set: Array.from(document.querySelectorAll('#csGrid > .cs-card-secondary')).map(c => c.id),
+        others: Array.from(document.querySelectorAll('#csGrid > .cs-card')).filter(c => !c.dataset.lenses.split(' ').includes('esg-csrd')).length,
+        panels: Array.from(document.querySelectorAll('[data-lens-panel]')).filter(p => p.getClientRects().length).map(p => p.getAttribute('data-lens-panel')),
+        current: (document.querySelector('.cs-lens[aria-current="true"]') || {}).textContent,
+        findings: Array.from(document.querySelectorAll('#gaia .cs-findings > li')).filter(li => li.getClientRects().length).length
+    }));
+    const lead = got.ids.slice(0, 2).join();
+    if (lead === 'gaia,sustainable-ai' && got.set.length === got.others && got.set.every(id => got.ids.indexOf(id) > 1) && got.panels.join() === 'esg-csrd' && /ESG/.test(got.current || '') && got.findings > 0 && !errors.length) {
+        ok(`case-studies.html?lens=esg-csrd at 390px: the ESG framing, then GAIA and the sustainable-AI case, ${got.findings} of GAIA's findings on show, and the other ${got.set.length} set back, not hidden`);
+    } else {
+        bad(`case-studies.html?lens=esg-csrd: cards ${got.ids.join(', ')} (${got.set.length} set back), panels ${got.panels.join(', ') || 'none'}, current "${got.current}", ${got.findings} findings shown${errors.length ? `, errors: ${errors.join('; ')}` : ''}`);
+    }
+    await context.close();
 }
 
 // Two ways the focus fell to <body> on this page, and the next Tab went to
@@ -2810,6 +2849,14 @@ async function axeView(browser, origin, view, note, trouble) {
                 await attempt(`${rel}: axe with the games played`, async () => {
                     await playGames(page);
                     for (const host of ['#play-borehole', '#play-flood']) note(rel, 'the games played', view, await axeRun(page, host));
+                });
+                // The method is folded until asked for, so on arrival axe
+                // sees only its heading: opened from the keyboard, its steps.
+                await attempt(`${rel}: a method opened with Enter, and axe on it`, async () => {
+                    await page.evaluate(() => { const s = document.querySelector('#gaia .cs-method-fold > summary'); s.scrollIntoView({ block: 'center' }); s.focus(); });
+                    await page.keyboard.press('Enter');
+                    if (!await page.evaluate(() => document.querySelector('#gaia .cs-method-fold').open)) throw new Error('Enter on the method\'s heading did not open it');
+                    note(rel, 'a method open', view, await axeRun(page, '#gaia .cs-method-fold'));
                 });
                 await attempt(`${rel}: axe on a row of photos and the lightbox`, async () => {
                     await page.evaluate(() => { const d = document.querySelector('#wuppertal details.cs-photos'); d.open = true; d.scrollIntoView({ block: 'center' }); });

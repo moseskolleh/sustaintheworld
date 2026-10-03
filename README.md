@@ -17,8 +17,8 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 - **Field terminal**: press <code>`</code> anywhere (or the footer button) for a hidden green-on-black terminal — try `journey`, `drill`, `co2`, `voice`, `kushe`, `help`
 - **The spoken page**: one `Listen` control in the nav reads the section in view with the browser's own speech engine, which transfers **zero bytes**. The one recording on the site is Moses introducing himself in his own voice, offered once he has recorded it, fetched only on click and labelled with exactly what it transfers (see [Narration](#narration-the-spoken-page)). Nothing ever autoplays
 - **Carbon-aware by construction**: images ship as optimized WebP, the three typefaces are self-hosted subsets, and a first view costs about **275 KB over the wire, fonts included**, against a 288 KB ceiling `npm test` enforces — a budget, not a number in a README, and one that `npm run smoke` checks against a real browser (see [Performance](#performance)). Everything a visit does not reach — the narration player, the field terminal, the section-05 interactives, the case studies' two games — is fetched only when it is used. Nothing is loaded from any other origin, and only two things are ever sent to one, both to the site's own Apps Script endpoint: a contact message, and one cookieless visit count per page view (never under Do Not Track or Global Privacy Control; see [The visit counter and privacy](#the-visit-counter-and-privacy)). A live footer badge weighs each visit in the browser (Resource Timing API × Sustainable Web Design model), counting network transfer only. A low-energy mode pauses all animation and honours `prefers-reduced-motion`
-- **[Case studies](case-studies.html), evidence-first**: the same six projects as **problem → method → artifact → result**. Every result carries the basis it rests on and says plainly whether you can check it from outside; every artifact says whether it is public, available on request, or held by the client. See [Content pipeline](#content-pipeline)
-- **Role-specific lenses**: `case-studies.html?lens=water`, `?lens=climate-risk`, `?lens=sustainable-ai` — shareable views that reframe the portfolio for one kind of role. They **reorder and frame, they never filter**: every case study stays on the page in every view, because a view that hides inconvenient work is a CV that lies by omission. Without JavaScript the switcher steps aside and every case study shows in the default view
+- **[Case studies](case-studies.html), evidence-first**: the homepage's six projects and a seventh, GAIA, an open method and tool for reporting an organisation's AI footprint on the lines of a sustainability report, each as **problem → method → artifact → result → findings**. Every result carries the basis it rests on and says plainly whether you can check it from outside; every artifact says whether it is public, available on request, or held by the client; every case study says what the work found or recommends, with its basis. The method is folded to one line until asked for. See [Content pipeline](#content-pipeline)
+- **Role-specific lenses**: `case-studies.html?lens=water`, `?lens=climate-risk`, `?lens=sustainable-ai`, `?lens=esg-csrd` — shareable views that reframe the portfolio for one kind of role. They **reorder and frame, they never filter**: every case study stays on the page in every view, because a view that hides inconvenient work is a CV that lies by omission. Without JavaScript the switcher steps aside and every case study shows in the default view
 - **No dead ends**: every page but the homepage shares one small nav (Home, Case studies, Research, CV, Contact, with the page you are on marked) and ends with a way to reach Moses: his address, the contact form and the CV. The pages built on `carbon-ai.css` have the homepage's light theme and its switch, and keep the reader's choice from page to page (`theme.js`, before the first paint); with nothing chosen they follow the system's setting, with or without JavaScript. The homepage follows it only with JavaScript: without, it stays dark, because following the system there would put a second copy of every light-theme rule in its first view. The text-only field report and the 404 page take the nav and the call to action as plain lines, and no script
 - **[Research outputs](research.html)**: theses, reports, datasets, code and tools, grouped by whether you can open them: public, on request, or held by the client. The public ones lead with Moses's own repositories on GitHub (a groundwater toolkit, the GAIA Green AI framework, a CMIP6 extremes pipeline, an A/B test in SQL and Python, the sustainable-AI prototypes and the maintained EcoPrompt Coach), each described only as far as the repository itself shows. No DOI, journal or conference is named anywhere, because none of this work has one — and a test fails the build if one ever appears without proof
 - **[Open counts](stats.html)**: what the site's own cookieless counter has counted, rebuilt weekly — the five numbers that say whether the site works, page views by page, lens and window width, referrers, features used and bytes per page view, in whole weeks. Every count under 5 reads `<5`, a figure that would let one be worked out by subtraction reads `held`, and the page prints the exact payload a page view sends. See [Open counts](#open-counts)
@@ -60,7 +60,7 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 - Short cards at every width: dates, role, organisation and the first line, with the rest and the tags behind a More button named for its role; on a desktop a shut card is one row
 
 ### 🔬 Projects
-- Six teaser cards, generated from `content/projects.json` so they cannot disagree with the case studies: where and when, the headline result with the one line of its basis and whether you can check it from outside, the role lenses, the tools, a thumbnail photo, and one link to the whole story on `case-studies.html` (the subtitle is the case study's)
+- Six teaser cards, generated from `content/projects.json` so they cannot disagree with the case studies: where and when, the headline result with the one line of its basis and whether you can check it from outside, the role lenses, the tools, a thumbnail photo, and one link to the whole story on `case-studies.html` (the subtitle is the case study's). The seventh case study, GAIA, has no card (`homepageCard: false`): it is method and tooling with no photo, and leads the ESG lens, linked from the section's introduction with the other three
 - The two games that used to sit in the dossiers are on the case studies they illustrate: "Seven in ten" on groundwater, "Don't let it become a boat" on Wuppertal
 - So are the dossiers' 25 field photos, with their captions word for word: a row under each case study, folded under one line until asked for (nothing is fetched until then), each photo a link to the full one. With JavaScript they open in a lightbox that steps through that case study's photos: previous and next, the arrow keys, "2 of 5", Escape
 
@@ -404,10 +404,13 @@ The suites, and the failure each one exists to prevent:
   It guess line) say so wherever they are shown, and You Draw It judges a
   guess against the published range rather than calling an estimate the
   actual value.
-- **`portfolio.test.js`** — every case study has all four stages and every
-  result a basis; no artifact claims to be public without a working link; the
-  lenses reorder without ever dropping a case study; and the validator is fed
-  deliberately fabricated links to prove it still rejects them. The homepage's
+- **`portfolio.test.js`** — every case study has all five stages and every
+  result a basis; every case study says what it found, and the build refuses
+  one that does not; no artifact claims to be public without a working link,
+  and no lens stands without a public artifact behind it; the lenses reorder
+  without ever dropping a case study, each lens's home case studies first
+  (`?lens=esg-csrd` opens on GAIA); and the validator is fed deliberately
+  fabricated links and findings to prove it still rejects them. The homepage's
   project cards say what their case studies say (title, headline result,
   basis, checkability, lenses), link to them, and carry one lazy photo whose
   declared size is the file's own; no dossier id or link is left behind.
@@ -559,7 +562,7 @@ Everything derived now comes from `content/`:
 | Source | Feeds |
 |---|---|
 | `content/profile.json` | JSON-LD, `sitemap.xml`, the homepage's at-a-glance strip, the Assay's facts block in `modules/interactives.js`, the shared shell's call to action on every page but the homepage, the facts `content.test.js` holds every page to |
-| `content/projects.json` | `case-studies.html` (with each case study's photos and game), and the homepage's six project cards |
+| `content/projects.json` | `case-studies.html` (with each case study's photos and game), and the homepage's six project cards (every case study not marked `homepageCard: false`) |
 | `content/lenses.json` | the role-specific views |
 | `content/research.json` | `research.html` |
 | `content/narration.json` | `voice-scripts.js` |
@@ -590,6 +593,12 @@ should fail the build rather than ship. `scripts/lib/content.js` refuses:
 - **A result with no basis.** Every outcome states how it was measured, and
   whether a reader can check it from outside. Where the answer is no — client
   work, internship deliverables — it says so rather than implying otherwise.
+- **A case study that says only what was done.** Every one carries
+  `findings`: one to four short entries, each a finding or a recommendation
+  (at least one a finding), drawn from what the work's records and this site
+  already say, with a basis wherever there is a figure.
+- **A lens a reader can check nothing behind.** Each needs a case study, and
+  a public artifact among its case studies.
 - **An artifact that claims to be public without a working link.** `status` is
   one of `public` / `on-request` / `internal` / `planned`; only `public` may
   carry a URL, and anything `internal` must name who holds it.
@@ -850,7 +859,7 @@ did.
 | Recorded narration: Moses's introduction (sized for his 60–90 s take) | 0 KB | 800 KB |
 | Text-only field report, the HTML file (the size the footer quotes) | ~9 KB | 11 KB |
 | Text-only field report, over the wire (with its visit counter) | ~6 KB | 8 KB |
-| Case studies page, over the wire (fonts included) | ~105 KB | 109 KB |
+| Case studies page, over the wire (fonts included) | ~109 KB | 109 KB |
 | Open counts page, over the wire (fonts included; sized for a full page) | ~96 KB | 103 KB |
 | Research outputs page, over the wire (fonts included) | ~96 KB | 99 KB |
 | EcoPrompt Coach (`carbon-ai.html`), over the wire (fonts included) | ~110 KB | 111 KB |

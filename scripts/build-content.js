@@ -93,6 +93,12 @@ const STATUS_EXPLAIN = {
     'planned': 'Intended, not yet done.'
 };
 
+// How a case study's findings are labelled on the page, by kind.
+const FINDING_LABEL = {
+    finding: 'Finding',
+    recommendation: 'Recommendation'
+};
+
 /** The availability chip shown next to every artifact and output. */
 function statusChip(entry) {
     const label = STATUS_LABEL[entry.status] || entry.status;
@@ -520,6 +526,15 @@ function renderCaseStudies(data) {
         </section>`;
     }).join('\n');
 
+    // A case study is problem, method, artifact, result and findings. The
+    // method is folded to its one line ("02 Method, 4 steps") until asked
+    // for: the seventh case study and every case study's findings left no
+    // room under the page's length budget (scripts/check-budget.js), and
+    // the open methods alone are 3.3 screens on a phone and 1.2 on a
+    // desktop. Of the five stages the method is the one that says what was
+    // done rather than what came of it; the rest stays open, the
+    // artifacts' availability above all. A closed <details> needs no
+    // script, and Chrome's find-in-page opens it.
     const card = (cs) => {
         const artifacts = cs.artifacts.map((a) => {
             // An artifact on this page (an interactive below) is linked by its
@@ -541,19 +556,28 @@ function renderCaseStudies(data) {
                     </li>`;
         }).join('');
 
+        // Each result's basis is introduced by whether a reader can check it,
+        // in the homepage card's words. It was "How this is known" over the
+        // basis, then a sentence under it saying what the green rule says: a
+        // line per result, which the findings needed more on a phone.
         const results = cs.results.map(r => `
                     <li class="cs-result${r.verifiable ? ' cs-result-verifiable' : ''}">
                         <p class="cs-result-claim">${prose(r.claim)}</p>
-                        <p class="cs-result-basis"><span class="mono-label">How this is known</span> ${prose(r.basis)}</p>
-                        <p class="cs-result-check">${r.verifiable
-                            ? 'You can check this yourself.'
-                            : 'You cannot check this from outside — it rests on records held elsewhere.'}</p>
+                        <p class="cs-result-basis"><span class="mono-label">${r.verifiable ? 'Checkable from outside' : 'Not checkable from outside'}</span> ${prose(r.basis)}</p>
+                    </li>`).join('');
+
+        // What the work found, and what it says to do: each entry labelled
+        // as one or the other, with its basis under it where it has one.
+        const findings = cs.findings.map(f => `
+                    <li class="cs-finding cs-finding-${f.kind}">
+                        <p><span class="cs-finding-kind mono-label">${FINDING_LABEL[f.kind]}</span> ${prose(f.text)}</p>${f.basis ? `
+                        <p class="cs-finding-basis"><span class="mono-label">Basis</span> ${prose(f.basis)}</p>` : ''}
                     </li>`).join('');
 
         return `
             <article class="cs-card" id="${esc(cs.id)}" data-lenses="${esc((cs.lenses || []).join(' '))}">
                 <header class="cs-card-head">
-                    <p class="cs-card-meta mono-label">${esc(cs.period)} &middot; ${esc(cs.location)}</p>
+                    <p class="cs-card-meta mono-label">${esc(cs.period)}${cs.location ? ` &middot; ${esc(cs.location)}` : ''}</p>
                     <h3>${prose(cs.title)}</h3>
                     <p class="cs-card-sub">${prose(cs.subtitle || '')}</p>
                     <p class="cs-card-org">${prose(cs.organization)}${cs.partner ? ` &middot; with ${prose(cs.partner)}` : ''}${cs.role ? ` &middot; ${prose(cs.role)}` : ''}</p>
@@ -564,10 +588,10 @@ function renderCaseStudies(data) {
                     <p>${prose(cs.problem)}</p>
                 </div>
 
-                <div class="cs-stage">
-                    <h4 class="cs-stage-h"><span class="cs-stage-n">02</span> Method</h4>
+                <details class="cs-stage cs-method-fold">
+                    <summary><h4 class="cs-stage-h"><span class="cs-stage-n">02</span> Method <span class="cs-method-n">${cs.method.length} steps</span></h4></summary>
                     <ul class="cs-method">${cs.method.map(m => `<li>${prose(m)}</li>`).join('')}</ul>
-                </div>
+                </details>
 
                 <div class="cs-stage">
                     <h4 class="cs-stage-h"><span class="cs-stage-n">03</span> Artifact</h4>
@@ -578,6 +602,12 @@ function renderCaseStudies(data) {
                 <div class="cs-stage">
                     <h4 class="cs-stage-h"><span class="cs-stage-n">04</span> Result</h4>
                     <ul class="cs-results">${results}
+                    </ul>
+                </div>
+
+                <div class="cs-stage">
+                    <h4 class="cs-stage-h"><span class="cs-stage-n">05</span> Findings &amp; recommendations</h4>
+                    <ul class="cs-findings">${findings}
                     </ul>
                 </div>
 ${cs.widget ? widgetHost(cs.widget) : ''}${cs.caveat ? `
@@ -592,8 +622,7 @@ ${panels}
 
         <p class="cs-note">
             Every case study below is on this page in every view &mdash; a lens reorders and frames,
-            it never hides. Each result says how it was measured, and whether you can check it
-            from outside. Where the answer is no, it says so.
+            it never hides. Each result says whether you can check it from outside, and how it is known.
         </p>
 
         <div class="cs-grid" id="csGrid">
@@ -605,14 +634,14 @@ ${cards}
             <p>
                 A portfolio that lists outcomes without saying how they were measured is asking to be
                 taken on trust. Splitting each project into <strong>problem &rarr; method &rarr; artifact &rarr;
-                result</strong> makes the weak link visible: a strong method with an internal-only artifact
-                is a different thing from a public tool anyone can run, and both are different from a
-                number with no baseline behind it.
+                result &rarr; findings</strong> makes the weak link visible: a strong method with an internal-only
+                artifact is a different thing from a public tool anyone can run, and both from a number with
+                no baseline behind it.
             </p>
             <p>
-                The content lives in <code>content/projects.json</code>. A test fails the build if any
-                result loses its basis, if an artifact claims to be public without a working link, or if
-                a link points somewhere this repository has not already vouched for.
+                The content lives in <code>content/projects.json</code>. A test fails the build if a result
+                loses its basis, a case study its findings, an artifact claims to be public without a working
+                link, or a link points somewhere this repository has not already vouched for.
             </p>
         </section>`;
 
@@ -639,13 +668,17 @@ ${cards}
             });
 
             // Matching case studies rise to the top; the rest keep their order
-            // below. Nothing is removed from the document.
+            // below. Nothing is removed from the document. A card lists its
+            // lenses nearest first, so those the lens is home to lead the
+            // ones it only touches (orderForLens, scripts/lib/content.js).
             var matched = [], rest = [];
+            var rank = function (card) { return (card.getAttribute('data-lenses') || '').split(' ').indexOf(lens); };
             order.forEach(function (card) {
-                var owns = (card.getAttribute('data-lenses') || '').split(' ').indexOf(lens) > -1;
+                var owns = rank(card) > -1;
                 card.classList.toggle('cs-card-secondary', lens !== 'all' && !owns);
                 (lens === 'all' || owns ? matched : rest).push(card);
             });
+            if (lens !== 'all') matched.sort(function (a, b) { return rank(a) - rank(b); });
             // Moved only when the order changes. Every Back runs this, and
             // a link to a game, or back to the top, is a step in history:
             // re-appending a card in place took the focus from the slider
@@ -716,11 +749,11 @@ ${LIGHTBOX_SCRIPT}    </script>`;
 
     return pageShell({
         title: 'Case studies — Moses Kolleh Sesay',
-        description: 'Six projects in water, climate risk and sustainable AI — problem, method, artifact and measurable result, with the basis for every number.',
+        description: 'Seven case studies in water, climate risk, sustainable AI and ESG reporting — problem, method, artifact, result and what each found, with the basis for every number.',
         canonical: `${SITE}case-studies.html`,
-        heroTag: 'PROBLEM &middot; METHOD &middot; ARTIFACT &middot; RESULT',
+        heroTag: 'PROBLEM &middot; METHOD &middot; ARTIFACT &middot; RESULT &middot; FINDINGS',
         heroTitle: 'Case <span class="ca-accent">studies</span>',
-        heroLead: 'Six projects across four countries, each one traced from the question that started it to what it actually produced &mdash; and to how far you can check the result from where you are sitting.',
+        heroLead: 'Seven case studies, each one traced from the question that started it to what it actually produced and found &mdash; and to how far you can check the result from where you are sitting.',
         main,
         bodyEnd: script,
         current: 'case-studies.html',
@@ -1562,7 +1595,8 @@ function injectAtAGlance(data, html) {
 // ------------------------------------------------------------------
 // The homepage used to tell each project a second time, by hand: a 45 KB
 // section of dossiers whose years, results and wording could drift from
-// the case studies, and had. Now it shows a teaser per case study, drawn
+// the case studies, and had. Now it shows a teaser per case study (bar any
+// marked homepageCard: false; see onHomepage in scripts/lib/content.js), drawn
 // from the same entry: where and when, the headline result with the one
 // line of its basis and whether a reader can check it, the role lenses it
 // belongs to, its tools, and one link to the whole story. The subtitle is
@@ -1575,7 +1609,7 @@ function renderProjectCards(data) {
     const lensName = {};
     lenses.lenses.forEach((l) => { lensName[l.id] = l.shortLabel || l.label; });
 
-    const cards = projects.caseStudies.map((cs) => {
+    const cards = projects.caseStudies.filter(content.onHomepage).map((cs) => {
         const head = cs.results[0];
         const p = cs.photo;
         // One photo, lazy, drawn as a thumbnail beside the date and title

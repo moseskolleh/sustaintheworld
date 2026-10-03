@@ -119,6 +119,15 @@ function checkAvailability(label, entry) {
 // by modules/dossier.js into the host the generator writes for it.
 const WIDGETS = ['borehole', 'flood'];
 
+// Whether a case study has a card on the homepage (and so a line in the
+// field report, its text edition). Every one does unless `homepageCard` is
+// false. The homepage shows six projects, each with a photo and a result
+// from the work itself; GAIA, the ESG case study, is method and tooling
+// with no photo, and a seventh card would start a third row on a desktop
+// page held to a length budget (scripts/check-budget.js). A case study
+// kept off it is still on case-studies.html in every lens, and leads its own.
+const onHomepage = (cs) => cs.homepageCard !== false;
+
 /**
  * What the homepage's teaser card needs from a case study: the lines it
  * prints, a headline result with a one-line basis, and one photo a reader
@@ -159,6 +168,46 @@ function checkCard(at, cs) {
     if (cs.widget !== undefined && !WIDGETS.includes(cs.widget)) {
         problems.push(`${at}: widget "${cs.widget}" is not one of ${WIDGETS.join(', ')}`);
     }
+    return problems;
+}
+
+// ------------------------------------------------------------------
+// Findings and recommendations — what the work found, not only what it did
+//
+// A case study that stops at its results says what was produced; a reader
+// hiring for judgement wants what it showed, and what to do about it. So
+// every case study carries `findings`: one to four short entries, each a
+// "finding" (what the work showed) or a "recommendation" (what it says to
+// do), at least one of them a finding. Two to four is the aim; one where
+// the evidence is thin, because a padded list is a list of guesses. Each
+// says it in a sentence or two, and may carry a `basis` as a result does;
+// one with a figure in it must, since a number without one is a boast. The
+// shape is closed: a misspelt "basis" would otherwise drop the evidence
+// from the page without a word.
+// ------------------------------------------------------------------
+const FINDING_KINDS = ['finding', 'recommendation'];
+const FINDING_KEYS = ['kind', 'text', 'basis'];
+const FINDINGS_MAX = 4;
+const FINDING_LIMIT = 240;   // characters: a short bullet, not a paragraph
+
+function checkFindings(at, cs) {
+    const list = cs.findings;
+    if (!Array.isArray(list) || !list.length) {
+        return [`${at}: no findings — say what the work found or recommends, not only what it did (one to ${FINDINGS_MAX} entries)`];
+    }
+    const problems = [];
+    if (list.length > FINDINGS_MAX) problems.push(`${at}: ${list.length} findings; ${FINDINGS_MAX} at most, each a short bullet`);
+    list.forEach((f, i) => {
+        const where = `${at}, finding ${i + 1}`;
+        if (!f || typeof f !== 'object' || Array.isArray(f)) { problems.push(`${where}: is not a finding`); return; }
+        Object.keys(f).filter(k => !FINDING_KEYS.includes(k)).forEach(k => problems.push(`${where}: unknown field "${k}"`));
+        if (!FINDING_KINDS.includes(f.kind)) problems.push(`${where}: kind "${f.kind}" is not one of ${FINDING_KINDS.join(', ')}`);
+        if (!(typeof f.text === 'string' && f.text.trim())) problems.push(`${where}: no text`);
+        else if (f.text.length > FINDING_LIMIT) problems.push(`${where}: ${f.text.length} characters; a finding is a short bullet, ${FINDING_LIMIT} at most`);
+        if (f.basis !== undefined && !(typeof f.basis === 'string' && f.basis.trim())) problems.push(`${where}: basis is empty — leave it out, or say where the finding comes from`);
+        if (/\d/.test(f.text || '') && f.basis === undefined) problems.push(`${where}: has a figure in it and no basis — say where it comes from`);
+    });
+    if (!list.some(f => f && f.kind === 'finding')) problems.push(`${at}: only recommendations — say at least one thing the work found`);
     return problems;
 }
 
@@ -714,8 +763,15 @@ function loadAll() {
             if (!lensIds.includes(l)) problems.push(`${at}: unknown lens "${l}"`);
         });
 
-        problems.push(...checkCard(at, cs));
+        // On the homepage unless it says otherwise (onHomepage, above); off
+        // it, nothing needs the card's photo, tags or brief.
+        if (cs.homepageCard !== undefined && typeof cs.homepageCard !== 'boolean') {
+            problems.push(`${at}: homepageCard must be true or false (leave it out for true)`);
+        }
+        if (onHomepage(cs)) problems.push(...checkCard(at, cs));
+        else if (!cs.subtitle) problems.push(`${at}: missing subtitle (the case study prints it)`);
         problems.push(...checkGallery(at, cs));
+        problems.push(...checkFindings(at, cs));
     });
 
     // Each interactive has one home: its ids are page-wide.
@@ -769,6 +825,12 @@ function loadAll() {
         // A lens nothing matches is a claim to a specialism with no work behind it.
         const matching = projects.caseStudies.filter(cs => (cs.lenses || []).includes(l.id));
         if (!matching.length) problems.push(`${at}: no case study belongs to it`);
+        // And one whose work a reader can open none of is a specialism they
+        // have to take on trust (the plan's test for Phase 3: every lens has
+        // at least one public artifact behind it).
+        else if (!matching.some(cs => (cs.artifacts || []).some(a => a.status === 'public'))) {
+            problems.push(`${at}: none of its case studies has a public artifact — a reader can open nothing behind it`);
+        }
     });
     problems.push(...checkLensWork(lenses.lenses, projects, research));
 
@@ -804,12 +866,19 @@ function loadAll() {
     return { profile, projects, research, lenses, narration, stats, lensIds };
 }
 
-/** Case studies for a lens: matching ones first, the rest after. Never filtered. */
+/**
+ * Case studies for a lens: matching ones first, the rest after. Never
+ * filtered. A case study lists its lenses nearest first, so among the
+ * matching ones, those the lens is home to (listed first) lead, and those it
+ * only touches follow, each group in file order. The page's own script
+ * (build-content.js) orders the cards by the same rule.
+ */
 function orderForLens(caseStudies, lensId) {
     if (!lensId || lensId === 'all') return { primary: caseStudies.slice(), secondary: [] };
+    const rank = cs => (cs.lenses || []).indexOf(lensId);
     return {
-        primary: caseStudies.filter(cs => (cs.lenses || []).includes(lensId)),
-        secondary: caseStudies.filter(cs => !(cs.lenses || []).includes(lensId))
+        primary: caseStudies.filter(cs => rank(cs) > -1).sort((a, b) => rank(a) - rank(b)),
+        secondary: caseStudies.filter(cs => rank(cs) === -1)
     };
 }
 
@@ -825,6 +894,9 @@ module.exports = {
     checkAvailability,
     checkCard,
     checkGallery,
+    checkFindings,
+    FINDING_KINDS,
+    onHomepage,
     PHOTO_LAYOUTS,
     checkLanguages,
     checkAtAGlance,

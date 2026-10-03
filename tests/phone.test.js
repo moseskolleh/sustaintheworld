@@ -276,13 +276,16 @@ const webpSize = (rel) => {
     // ===============================================================
     const { projects } = content.loadAll();
     const page = read('case-studies.html');
+    // The six with a homepage card were the dossiers; a case study added
+    // since (GAIA, kept off the homepage) has no photos to bring back.
+    const dossiers = projects.caseStudies.filter(content.onHomepage);
     {
         const all = projects.caseStudies.flatMap(cs => (cs.gallery || []).map(p => ({ cs: cs.id, p })));
-        assert(all.length === 25 && projects.caseStudies.every(cs => cs.gallery && cs.gallery.length),
+        assert(all.length === 25 && dossiers.every(cs => cs.gallery && cs.gallery.length),
             `Photos: all 25 of the dossiers' photos are back, each case study with its own (${projects.caseStudies.map(cs => `${cs.id} ${(cs.gallery || []).length}`).join(', ')})`);
         // The captions and alt text came from the homepage's dossiers, word for
         // word; the photo on each card is one of them.
-        const cardPhotos = projects.caseStudies.filter(cs => cs.gallery.some(p => p.src === cs.photo.src));
+        const cardPhotos = dossiers.filter(cs => cs.gallery.some(p => p.src === cs.photo.src));
         assert(cardPhotos.length === 6, 'Photos: each card\'s photo is one of its case study\'s own');
         const off = all.filter(({ p }) => { const s = webpSize(p.src); return !s || s.width !== p.width || s.height !== p.height; });
         assert(off.length === 0, `Photos: each is the size it declares, read from the file (${off.map(o => o.p.src).join(', ') || 'all 25'})`);
@@ -299,6 +302,7 @@ const webpSize = (rel) => {
         projects.caseStudies.forEach((cs) => {
             const card = doc.getElementById(cs.id);
             const fold = card.querySelector('details.cs-photos');
+            if (!cs.gallery) { if (fold) wrong.push(`${cs.id}: a photo row with no photos`); return; }
             if (!fold || fold.open || card.lastElementChild !== fold) { wrong.push(`${cs.id}: not a closed fold at the card's end`); return; }
             if (fold.querySelector('summary').textContent.trim() !== `${cs.gallery.length} photos`) wrong.push(`${cs.id}: summary "${fold.querySelector('summary').textContent}"`);
             const figs = Array.from(fold.querySelectorAll('li > figure.cs-photo'));

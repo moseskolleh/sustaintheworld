@@ -125,7 +125,7 @@
       "year": "2026",
       "status": "public",
       "url": "https://github.com/moseskolleh/GAIA-Framework-",
-      "caseStudy": "sustainable-ai",
+      "caseStudy": "gaia",
       "summary": "An open (MIT) framework, Excel workbook and web estimator for the energy, carbon and water footprint of an organisation's AI use, with uncertainty tiers. It maps its outputs to disclosure lines in GRI, ESRS E1 and E3, IFRS S2, CDP and SBTi.",
       "methods": [],
       "note": "A mapping to disclosure line items, not a claim of compliance. Its estimator weighs workloads typed into it and cannot read actual usage."

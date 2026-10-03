@@ -246,9 +246,12 @@ const fieldText = plain(fieldReport);
 // --- Figures: case-study periods ------------------------------------------
 // A thesis period is not the degree's dates. The two editions had drifted
 // apart on exactly that — 2021–24 against 2023–24 for the coastal thesis —
-// so each project's years are held to its case study.
+// so each project's years are held to its case study. The homepage shows
+// every case study not kept off it (homepageCard: false), and the field
+// report, its text edition, lists the same.
 {
-    const projects = JSON.parse(read('content/projects.json')).caseStudies;
+    const { onHomepage } = require('../scripts/lib/content.js');
+    const projects = JSON.parse(read('content/projects.json')).caseStudies.filter(onHomepage);
     const years = (s) => [...new Set((String(s).match(/\b(?:19|20)\d{2}\b/g) || []))].sort().join(',');
 
     const wrongIndex = [];
@@ -262,7 +265,7 @@ const fieldText = plain(fieldReport);
     // The field report numbers its projects in the case-study order.
     const section = fieldReport.split(/<h2>Projects<\/h2>/)[1] || '';
     const listed = (section.split('</dl>')[0].match(/<dt>\[\d+\][^<]*<\/dt>/g) || []);
-    assert(listed.length === projects.length, `Figures: the field report lists every case study (${listed.length}/${projects.length})`);
+    assert(listed.length === projects.length, `Figures: the field report lists every case study the homepage shows (${listed.length}/${projects.length})`);
     const wrongField = projects
         .filter((cs, i) => !listed[i] || years(listed[i]) !== years(cs.period))
         .map((cs) => `${cs.id} vs "${cs.period}"`);
@@ -444,7 +447,7 @@ const fieldText = plain(fieldReport);
     const GH = 'https://github.com/moseskolleh/';
     const REPOS = [
         { name: 'WaterProject', research: { caseStudy: 'groundwater' }, artifactOf: ['groundwater'], skill: 'Python' },
-        { name: 'GAIA-Framework-', research: { caseStudy: 'sustainable-ai' }, artifactOf: ['sustainable-ai'] },
+        { name: 'GAIA-Framework-', research: { caseStudy: 'gaia' }, artifactOf: ['gaia'] },
         { name: 'climatematch-pipeline', research: { lenses: ['climate-risk'] }, artifactOf: [] },
         { name: 'A-B-Testing-at-Globox', research: {}, artifactOf: [], skill: 'SQL' },
         { name: 'SustainableAIPrototypes', research: { caseStudy: 'sustainable-ai' }, artifactOf: ['sustainable-ai'] },

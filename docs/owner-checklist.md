@@ -595,6 +595,45 @@ anything.
 
 ---
 
+## Confirm the ESG case and the findings (Phase 3.2 and 3.3)
+
+Wave 4 added a seventh case study, GAIA, behind a new ESG & CSRD lens, and
+a "Findings & recommendations" stage to every case study. Each sentence is
+drawn from the GAIA repository or from what the site already said.
+
+- [ ] **G1. GAIA and the ministry's framework.**
+  - *What:* the sustainable-AI case study lists its "Sustainability
+    assessment framework for AI use cases" as held by the client ("not mine
+    to publish unilaterally"); GAIA, public under your own MIT licence,
+    answers a related question. The GAIA case names no partner and does
+    not say where GAIA began. Confirm GAIA is yours to publish, and whether
+    it is that framework; if it is, the sustainable-AI artifact should say
+    so rather than "held by the client".
+  - *Where:* `content/projects.json` → `gaia` and `sustainable-ai` →
+    `artifacts`.
+  - *Also:* the ministry is still named where it was (`content/profile.json`
+    → `currentRole.partner`, the sustainable-AI case study, the hero tag of
+    `carbon-ai.html`); nothing new names it. Whether it stays is your call
+    on the partner's consent.
+- [ ] **G2. The GAIA case's own facts.** Your role ("Author and
+  maintainer"), its period ("2025 — 2026"), and that the web estimator at
+  moseskolleh.github.io/GAIA-Framework-/ is live (it could not be reached
+  from where this was built). `content/projects.json` → `gaia`.
+- [ ] **G3. The findings.** Confirm each, and say more where you can: which
+  socioeconomic drivers dominated in the coastal thesis (and their effect
+  sizes, if the thesis can be cited), and which interventions the Wuppertal
+  report recommended (if the municipality agrees). Today those two say only
+  that the thesis and the report hold them. `content/projects.json` →
+  `caseStudies[i].findings`; one to four each, and `npm test` refuses a
+  figure without a basis.
+- [ ] **G4. The method, folded.** Each case study's method now opens on a
+  press ("02 Method, 4 steps"), to make room for the findings and the
+  seventh case under the page's length ceiling. Open, the seven methods add
+  about 3.3 screens on a phone and 1.2 on a desktop, past the ceiling, so
+  something of equal length would have to come off first.
+
+---
+
 ## Your own voice (Phase 4.3)
 
 - [ ] **V1. Approve the wording of the introduction.**

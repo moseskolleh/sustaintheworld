@@ -229,8 +229,11 @@ const profile = JSON.parse(read('content/profile.json'));
     assert(cards.every(c => c.querySelector('.project-tags > .project-lenses') && c.querySelector('.project-tags > .project-tech span')),
         'Projects: each card keeps its lenses and its tools (the Assay reads them), on one run of small type');
     const intro = bare.querySelector('#projects .section-description');
-    assert(!!intro && intro.querySelectorAll('a[href^="case-studies.html"]').length === 4 && !bare.querySelector('#projects .section-header > p:nth-of-type(2)'),
-        'Projects: one line of introduction, still with the case studies and the three lenses');
+    const lensIds = JSON.parse(read('content/lenses.json')).lenses.map(l => l.id);
+    const lensLinks = intro ? Array.from(intro.querySelectorAll('a[href^="case-studies.html?lens="]')).map(a => a.getAttribute('href').split('=')[1]) : [];
+    assert(!!intro && intro.querySelectorAll('a[href="case-studies.html"]').length === 1 && lensLinks.join() === lensIds.join() &&
+            !bare.querySelector('#projects .section-header > p:nth-of-type(2)'),
+        `Projects: one line of introduction, still with the case studies and every lens, in lenses.json's order (${lensLinks.join(', ')})`);
 }
 
 // ===================================================================
