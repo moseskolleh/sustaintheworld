@@ -1131,6 +1131,12 @@ html.light-mode .btn-primary {
     color: var(--text-secondary);
 }
 
+/* Under the figures, the way to their basis (claims.html), as quiet as
+   their labels; a mono-label, so the rest of its look is that class's. */
+.hero-ledger { margin-top: 12px; }
+.hero-ledger a { color: inherit; text-underline-offset: 4px; }
+.hero-ledger a:hover { color: var(--primary-green); }
+
 /* Just under the bar, where the first screen shows it (at the hero's
    foot it sat below the fold), and clear of the scroll drill. */
 .hero-photo-caption {

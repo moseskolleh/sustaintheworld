@@ -193,7 +193,7 @@ function rules(css) {
     const ways = Array.from(home.querySelectorAll('#ecoprompt a[href="carbon-ai.html"]'));
     assert(!!note && !note.querySelector('a') && ways.length === 1 && ways[0].closest('.eco-actions'),
         `index.html: without JavaScript, the EcoPrompt Coach teaser has one way on to the coach, its button (${ways.length} links)`);
-    const cite = Array.from(home.querySelectorAll('#ecoprompt .eco-footnote *')).find(el => /Jegham/.test(el.textContent) && !el.querySelector('*:not(a)') );
+    const cite = Array.from(home.querySelectorAll('#ecoprompt .eco-footnote *')).find(el => /Jegham/.test(el.textContent) && !el.querySelector('*:not(a):not([data-claim])') );
     assert(!!cite && !!cite.closest('.needs-js'), 'index.html: the chart\'s sources go with the chart when JavaScript cannot run');
     const noteRule = rules(read('style.css')).find(r => r.selectors.includes('.nojs-note'));
     assert(!!noteRule && /margin(?:-bottom)?:\s*[^;]*[1-9]/.test(noteRule.body), 'index.html: the note keeps its distance from what follows it');

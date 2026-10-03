@@ -1106,7 +1106,7 @@ window.mks.share = (() => {
         if (totalMb < MEDIAN_MB) {
             lines.push({ t: 'c', s: `— you're ${Math.round((1 - totalMb / MEDIAN_MB) * 100)}% lighter —` });
         }
-        lines.push({ t: 'r', l: 'Text-only report', r: '9 KB' });
+        lines.push({ t: 'r', l: 'Text-only report', r: '10 KB' });
         if (unmeasured) {
             lines.push({ t: 'c', s: `* ${unmeasured} off-site request${unmeasured > 1 ? 's' : ''} not counted`, dim: true });
         }

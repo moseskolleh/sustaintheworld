@@ -192,7 +192,7 @@
                     </div>
                     <h3><a href="index.html#notes">Field Notes</a></h3>
                     <p class="rs-venue">sustaintheworld</p>
-                    <p class="rs-summary-text">Short essays connecting the three threads: what 164 water points taught me about data, why I wrote a pessimistic future on purpose, and what to do about the footprint of a prompt.</p>
+                    <p class="rs-summary-text">Short essays connecting the three threads: what <span data-claim="water-points">164</span> water points taught me about data, why I wrote a pessimistic future on purpose, and what to do about the footprint of a prompt.</p>
 
                     <p class="rs-note">Written for the site, not peer-reviewed.</p>
                 </article>
@@ -222,7 +222,7 @@
                     </div>
                     <h3>A study of socioeconomic drivers of river export of multiple pollutants in sub-basins worldwide, and qualitative future storylines for African coastal water pollution</h3>
                     <p class="rs-venue">Wageningen University &amp; Research</p>
-                    <p class="rs-summary-text">Modelled multi-pollutant river export across 10,226 sub-basins with MARINA-Multi, identified the socioeconomic drivers statistically, and built qualitative scenario storylines for African coastal waters under climate change.</p>
+                    <p class="rs-summary-text">Modelled multi-pollutant river export across <span data-claim="sub-basins">10,226</span> sub-basins with MARINA-Multi, identified the socioeconomic drivers statistically, and built qualitative scenario storylines for African coastal waters under climate change.</p>
                     <p class="rs-methods"><span class="mono-label">Methods</span> MARINA-Multi model &middot; Statistical driver analysis &middot; Qualitative scenario storylines</p>
                     <p class="rs-note">Examined and defended. Not deposited in a public repository &mdash; ask and I will send it. <a class="rs-link" href="case-studies.html#coastal">Read the case study &rarr;</a></p>
                 </article>
@@ -276,7 +276,7 @@
                         <span class="rs-year mono-label">2023</span>
                         <span class="cs-status cs-status-internal" title="Belongs to the organisation it was made for, not mine to publish. UNDRR.">Held by the client</span>
                     </div>
-                    <h3>Inventory of 54 global hazard information systems</h3>
+                    <h3>Inventory of <span data-claim="hazard-systems">54</span> global hazard information systems</h3>
                     <p class="rs-venue">UN Office for Disaster Risk Reduction</p>
                     <p class="rs-summary-text">Catalogued global hazard information systems, expanding the organisation's regional and hazard-type coverage, alongside a terminology standardisation for economic loss and damage reporting.</p>
                     <p class="rs-methods"><span class="mono-label">Methods</span> Systematic source review &middot; Terminology harmonisation</p>
@@ -301,7 +301,7 @@
             <h2>Reproducing what is here</h2>
             <details>
                 <summary>How, and the commands to run</summary>
-                <p>The outputs that are part of this site run from its one clone, with no build step and no API key; each repository above says how to run it. The EcoPrompt Coach and the homepage's energy chart read one factor set, so they cannot disagree about a model. The chart shows each model's published figure for a 1,000-token answer; the coach multiplies it by data-centre overhead (PUE, 1.2 unless you change it), so for the same answer it prints 1.2 times the chart's figure. The map regenerates byte-identically from pinned dependencies. The narration is content-addressed, so re-rendering unchanged text costs nothing.</p>
+                <p>The outputs that are part of this site run from its one clone, with no build step and no API key; each repository above says how to run it. The EcoPrompt Coach and the homepage's energy chart read one factor set, so they cannot disagree about a model. The chart shows each model's published figure for a <span data-claim="answer-tokens">1,000</span>-token answer; the coach multiplies it by data-centre overhead (PUE, <span data-claim="default-pue">1.2</span> unless you change it), so for the same answer it prints <span data-claim="default-pue">1.2</span> times the chart's figure. The map regenerates byte-identically from pinned dependencies. The narration is content-addressed, so re-rendering unchanged text costs nothing.</p>
                 <dl class="rs-commands">
                     <dt><code>npm install &amp;&amp; npm test</code></dt><dd>runs every suite, the map check and the asset-weight budgets</dd>
                     <dt><code>npm run map:build</code></dt><dd>regenerates the journey map from Natural Earth data</dd>
@@ -325,6 +325,7 @@
     </main>
     <footer class="ca-foot">
         <p><a href="stats.html">Open counts</a>: what this site counts about its visits, and what it never collects.</p>
+        <p><a href="claims.html" data-analytics="claims-foot">Check my numbers</a>: every number on this site, with its basis.</p>
     </footer>
 
 </body>

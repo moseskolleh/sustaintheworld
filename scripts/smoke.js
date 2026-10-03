@@ -336,6 +336,7 @@ async function visit(context, page, rel, origin) {
     await exerciseCpu(browser, origin);
     await exerciseJourneyAndChart(browser, origin);
     await exerciseStatsPage(browser, origin);
+    await checkClaimMarks(browser, origin);
 
     // The top nav at every desktop width: one line per item, nothing past the
     // right edge. It used to wrap "Case studies" and the coach's link at every
@@ -1891,6 +1892,43 @@ async function exerciseStatsPage(browser, origin) {
         else ok(`stats.html full (${label}): no table splits a word, and nothing scrolls sideways, 320-430px and 1440px`);
     }
     if (errors.length) errors.forEach(e => bad(`stats.html full: uncaught ${e}`));
+    await context.close();
+}
+
+// ------------------------------------------------------------------
+// Check my numbers: the figures as a reader sees them
+// ------------------------------------------------------------------
+// tests/claims.test.js holds the HTML as shipped to the claims ledger
+// (content/claims.json). A script can still change a marked figure after
+// load: the hero's figures count up to theirs. So each page that marks
+// figures is read here once its scripts have run and the count-up has
+// ended, every mark against its entry; and the ledger page, a list of
+// long entries, on the narrowest phones.
+async function checkClaimMarks(browser, origin) {
+    const figures = require('./lib/claims.js');
+    const ledger = JSON.parse(fs.readFileSync(path.join(ROOT, 'content', 'claims.json'), 'utf8')).claims;
+    const value = new Map(ledger.map(c => [c.id, c.value]));
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    const page = await context.newPage();
+    for (const rel of ['index.html', 'case-studies.html', 'research.html', 'carbon-ai.html', 'field-report.html', 'claims.html']) {
+        await page.goto(`${origin}/${rel}`, { waitUntil: 'load' });
+        if (rel === 'index.html') {
+            await page.waitForFunction(() => !document.querySelector('.hero-stat-number[aria-hidden]')
+                && [...document.querySelectorAll('.hero-stat-number')].every(c => c.textContent === c.dataset.target), null, { timeout: 6000 }).catch(() => null);
+        }
+        const marks = await page.evaluate(() => [...document.querySelectorAll('[data-claim]')].map(el => [el.getAttribute('data-claim'), el.textContent.trim()]));
+        const wrong = marks.filter(([id, shown]) => !value.has(id) || !figures.agrees(value.get(id), shown)).map(([id, shown]) => `${id} "${shown}"`);
+        if (!marks.length) bad(`${rel}: no figure is marked with its ledger entry`);
+        else if (wrong.length) bad(`${rel}: once its scripts have run, ${wrong.length} marked figure(s) disagree with the ledger: ${wrong.join(', ')}`);
+        else ok(`${rel}: once its scripts have run, all ${marks.length} marked figures say what the ledger says`);
+    }
+    for (const width of [320, 390]) {
+        await page.setViewportSize({ width, height: 800 });
+        await page.goto(`${origin}/claims.html`, { waitUntil: 'load' });
+        await page.evaluate(() => document.fonts.ready);
+        if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) bad(`claims.html at ${width}px: the page scrolls sideways`);
+        else ok(`claims.html at ${width}px: every entry fits, nothing scrolls sideways`);
+    }
     await context.close();
 }
 

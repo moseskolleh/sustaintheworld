@@ -317,7 +317,7 @@ CI uses Node 22.
 | `npm run build:check` | every generated page still matches `content/` |
 | `npm run fonts:check` | the committed fonts still hash to their manifest and every stylesheet's `@font-face` block is current |
 | `npm run lint:html` | every page is valid HTML ([html-validate](https://html-validate.org/)'s recommended rules; the two relaxations are explained in `.htmlvalidate.cjs`) |
-| `npm run test:unit` | every `tests/*.test.js`, side by side, one process per suite, so a new suite runs the day it exists: the twenty-seven listed below, and it ends by counting the assertions that passed, so no figure for them is kept here to go stale |
+| `npm run test:unit` | every `tests/*.test.js`, side by side, one process per suite, so a new suite runs the day it exists: the twenty-eight listed below, and it ends by counting the assertions that passed, so no figure for them is kept here to go stale |
 | `npm run map:check` | the committed `journey-map.svg` still matches its generator |
 | `npm run budget` | the weights this README quotes, and that its budget tables still say what the script measures (see [Performance](#performance)) |
 | `npm run smoke` | every page in a real browser: no errors, no failed or off-origin requests, every on-demand module arrives when used, no axe-core violation at 1440×900 or 390×844 in either theme, and each budgeted page's measured first view no heavier than the budget claims, and every page no longer than its length budget at both sizes once it has settled; every page again with JavaScript off, and the homepage with `script.js` blocked and late; the skip link, Back, the theme switch (followed from page to page, and the system's setting with nothing chosen), back to top and the nav bar at every width, and every other page's shared nav and call to action at 320px, links to a game, a case study or Anatomy of a Prompt landing clear of that nav, and the nav not moving as its theme switch appears; the first screen's figures, caption, strip and primary action, as the strip is today and with every fact at the longest the validator accepts; the journey map pinned over none of its stop's text on a phone, and its delta's names clear of each other on a desktop; the listen control and its player; the Assay; the case studies' two games, photo rows and lightbox; every drawing label at 11px or more on a phone, and inside its drawing; where jumps land while sections are drawn on demand, that reading back up after skipping ahead moves nothing, find-in-page and printing, which loops run, and how busy the idle page keeps the main thread at 4× CPU slowdown; the carbon-ai page's dropdowns and numbers; and the visit counter's one request, taken apart: exactly the documented fields, no cookie, no Referer, once per page view, and nothing under Do Not Track or Global Privacy Control or with JavaScript off (its own CI job; needs Chromium — `-- --browser firefox` runs it in Firefox, which CI also does) |
@@ -405,6 +405,18 @@ The suites, and the failure each one exists to prevent:
   It guess line) say so wherever they are shown, and You Draw It judges a
   guess against the published range rather than calling an estimate the
   actual value.
+- **`claims.test.js`** — the claims ledger (see [Every number has a
+  basis](#every-number-has-a-basis-the-claims-ledger)): every figure marked
+  on every page agrees with its entry in `content/claims.json`, and the
+  hero's count-up ends on it; no numeral on any page is unmarked unless it
+  is a year, a date, a section number, a standard's name or the like, and
+  each one that is gets printed with its page and the words around it; the
+  calculators' hosts, which the scan skips, hold no figure of their own;
+  every number the narration says in words is an entry's; each figure the
+  budget measures is what it measures today; `claims.html` lists every
+  entry, where the pages mark it and how to check it; and the validator is
+  fed entries with no basis, two bases, a basis that says another number
+  and a link on a figure nobody can check, to prove it still refuses them.
 - **`portfolio.test.js`** — every case study has all five stages and every
   result a basis; every case study says what it found, and the build refuses
   one that does not; no artifact claims to be public without a working link,
@@ -588,6 +600,7 @@ Everything derived now comes from `content/`:
 | `content/lenses.json` | the role-specific views |
 | `content/research.json` | `research.html`, the CV's public work |
 | `content/testimonials.json` | the homepage's testimonials, once there is one |
+| `content/claims.json` | `claims.html` ("Check my numbers"), and the `data-claim` mark on every figure a generated page prints from `content/` |
 | `content/narration.json` | `voice-scripts.js` |
 | `content/stats.json` | `stats.html`, the open counts (written weekly by `scripts/fetch-stats.js`) |
 
@@ -607,7 +620,8 @@ layer's depths and the date in the log's head.
 `404.html` are hand-authored too, bar the shared shell: the generator writes
 the nav and the call to action into them and the field report, between
 `<!-- SHELL-NAV -->` and `<!-- SHELL-CTA -->` markers (and `theme.js` into
-`carbon-ai.html`'s head), and `build:check` fails if a page's copy drifts.
+`carbon-ai.html`'s head, and its footer between `<!-- SHELL-FOOT -->`
+markers), and `build:check` fails if a page's copy drifts.
 
 ### The rules the content model enforces
 
@@ -668,6 +682,48 @@ already says everything in it. `tests/cv.test.js` reads the PDF back and fails
 if it leaves out a role, a degree or a certificate, carries a figure
 `content/` does not have, or was printed from anything but what `content/`
 says now (`assets/cv.hash`): change a fact, run `npm run cv`, commit both.
+
+### Every number has a basis (the claims ledger)
+
+The rule that guards `content/` guards the hand-authored pages too: **no
+number is typed straight into `index.html`, or any other page. It goes
+through the claims ledger.**
+
+`content/claims.json` holds every figure the site prints: its value as the
+page writes it, what it counts, its basis (a case-study result, a field of
+`profile.json`, an input of the calculators in `ai-carbon-data.js`, a cited
+source with its URL, a budget `npm run budget` measures, a figure worked out
+from other entries, or "illustrative" with the reason it has no source), and
+whether a reader can check it (`public`, with where; `on-request`;
+`not-checkable`). A result's basis and checkability are the case study's,
+not repeated. Each figure on a page is marked with its entry:
+
+```html
+<span data-claim="water-points">164</span> water points
+```
+
+by hand in `index.html`, `carbon-ai.html`, `field-report.html` and
+`404.html`, and by `npm run build:content` wherever a generated page prints
+one from `content/` (`scripts/lib/claims.js` finds it by how the ledger
+writes it). The build writes [`claims.html`](claims.html) from the ledger,
+"Check my numbers": every figure, its basis, whether it can be checked, and
+the pages that mark it, linked from the homepage's figures and every
+page's footer.
+
+`tests/claims.test.js` fails on a mark that disagrees with its entry, an
+entry with no basis or one that says another number, a number the narration
+says in words that no entry backs, and a numeral on any page that is
+neither marked nor a year, a date, a section number, a standard's name, a
+place's coordinates, the phone number or another kind listed in
+`scripts/lib/claims.js` (`EXEMPT`). The numbers the calculators work out in
+the browser (the EcoPrompt Coach, the homepage's chart, the footer's receipt) are
+model outputs, not claims: their hosts are skipped by name, must hold no
+figure in the HTML, and their inputs are entries where the pages print
+them. The open counts on `stats.html` are the counter's own.
+
+To add a figure: give it an entry, mark it on the page (`npm run
+build:content` marks it in generated pages), and run `npm test`; an
+unmarked numeral is printed with its page and the words around it.
 
 ### Keeping the profile honest over time
 
@@ -906,7 +962,7 @@ did.
 | Largest single image | ~200 KB | 210 KB |
 | Every image in the repository | ~3.36 MB | 3.5 MB |
 | Recorded narration: Moses's introduction (sized for his 60–90 s take) | 0 KB | 800 KB |
-| Text-only field report, the HTML file (the size the footer quotes) | ~9 KB | 11 KB |
+| Text-only field report, the HTML file (the size the footer quotes) | ~10 KB | 11 KB |
 | Text-only field report, over the wire (with its visit counter) | ~6 KB | 8 KB |
 | Case studies page, over the wire (fonts included) | ~109 KB | 109 KB |
 | Open counts page, over the wire (fonts included; sized for a full page) | ~96 KB | 103 KB |
@@ -990,6 +1046,7 @@ weekly Action will commit).
 | `index.html` | 9.79 screens | 17.09 screens |
 | `case-studies.html` | 11.85 screens | 19.78 screens |
 | `carbon-ai.html` | 7.07 screens | 13.38 screens |
+| `claims.html` | 6.03 screens | 10.65 screens |
 | `research.html` | 5.86 screens | 8.99 screens |
 | `stats.html` | 10.97 screens | 16.25 screens |
 | `field-report.html` | 4.4 screens | 7.44 screens |

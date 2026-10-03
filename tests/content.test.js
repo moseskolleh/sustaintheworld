@@ -37,8 +37,12 @@ function assert(cond, msg) {
     }
 }
 
+// A figure marked with its claims-ledger entry reads as the figure alone
+// (tests/claims.test.js holds the mark to the ledger).
+const unmark = (html) => html.replace(/<span data-claim="[^"]*">([^<]*)<\/span>/g, '$1');
+
 // Compare on visible text: the pages use HTML entities and the profile does not.
-const plain = (html) => html
+const plain = (html) => unmark(html)
     .replace(/<[^>]+>/g, ' ')
     .replace(/&amp;/g, '&')
     .replace(/&mdash;/g, '—')
@@ -282,9 +286,9 @@ const fieldText = plain(fieldReport);
     const KB = 1024;
 
     const reportKB = Math.round(measured.fieldReport / KB);
-    const quoted = [...index.matchAll(/(\d+)(?:&nbsp;| )KB field report|whole portfolio in (\d+)(?:&nbsp;| )KB/g)]
+    const quoted = [...unmark(index).matchAll(/(\d+)(?:&nbsp;| )KB field report|whole portfolio in (\d+)(?:&nbsp;| )KB/g)]
         .concat([...read('modules/interactives.js').matchAll(/'Text-only report', r: '(\d+) KB'/g)])
-        .concat([...read('404.html').matchAll(/(\d+)(?:&nbsp;| )KB field report/g)])
+        .concat([...unmark(read('404.html')).matchAll(/(\d+)(?:&nbsp;| )KB field report/g)])
         .map(m => +(m[1] || m[2]));
     assert(
         quoted.length === 4 && quoted.every(n => n === reportKB),
@@ -298,7 +302,7 @@ const fieldText = plain(fieldReport);
     const wireKB = measured.criticalWire / KB;
     const readme = read('README.md');
     const firstView = [
-        ['footer', index.match(/first view now costs about (\d+)(?:&nbsp;| )KB/)],
+        ['footer', unmark(index).match(/first view now costs about (\d+)(?:&nbsp;| )KB/)],
         ['sustainable-AI lens', read('content/lenses.json').match(/first view of ~(\d+) KB/)],
         ['README summary', readme.match(/a first view costs about \*\*(\d+) KB over the wire/)],
         ['README budget table', readme.match(/\| First view of the homepage[^|]*\| ~(\d+) KB \|/)]

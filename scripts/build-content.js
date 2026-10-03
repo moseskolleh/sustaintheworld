@@ -19,6 +19,9 @@
 //   stats.html          what the visit counter has counted, suppressed
 //                       below 5, and exactly what it sends (content/stats.json,
 //                       which scripts/fetch-stats.js writes once a week)
+//   claims.html         'Check my numbers': every figure in
+//                       content/claims.json, its basis, whether a reader
+//                       can check it, and where the pages below mark it
 //   sitemap.xml         every page, with a lastmod that is not in the future
 //   voice-scripts.js    the narration module, from content/narration.json
 //   index.html          the JSON-LD block, the hero's at-a-glance strip
@@ -30,7 +33,10 @@
 //                       markers: what the fit-check may say about Moses
 //   carbon-ai.html, field-report.html, 404.html
 //                       the shared shell only (the nav, the closing call to
-//                       action), between its markers
+//                       action, carbon-ai.html's footer), between its markers
+//
+// Every figure the generated pages print from content/ is marked with its
+// claims-ledger entry on the way (see `prose`, below).
 //
 // STILL HAND-AUTHORED: index.html, field-report.html, carbon-ai.html and
 // 404.html, bar the regions above. They are long-form editorial pages, a
@@ -46,6 +52,7 @@
 const fs = require('fs');
 const path = require('path');
 const content = require('./lib/content.js');
+const figures = require('./lib/claims.js');
 
 const ROOT = content.ROOT;
 const CHECK = process.argv.slice(2).includes('--check');
@@ -64,9 +71,20 @@ const esc = (s) => String(s == null ? '' : s)
 
 // Typographic tidy-up for prose: the content files are written with plain
 // ASCII quotes and dashes so they stay easy to edit and diff.
-const prose = (s) => esc(s)
+const typeset = (html) => html
     .replace(/ — /g, ' &mdash; ')
     .replace(/(\d)-(\d)/g, '$1&ndash;$2');
+
+// And every figure in it that the claims ledger knows is marked with its
+// entry, <span data-claim="…">, as the hand-authored pages mark theirs by
+// hand: a "70%" that came from content/projects.json is held to
+// content/claims.json like one typed into index.html. The figures are
+// found by scripts/lib/claims.js before anything is escaped; main() hands
+// it the ledger, and until then (a test drawing one region) nothing is.
+let cutFigures = (s) => [[String(s == null ? '' : s), null]];
+const prose = (s) => cutFigures(s)
+    .map(([text, id]) => (id ? `<span data-claim="${id}">${esc(text)}</span>` : typeset(esc(text))))
+    .join('');
 
 const slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
@@ -219,6 +237,17 @@ function shellCta(facts, { plain = false, base = '', hooks = SHELL_HOOKS.cta } =
 <p class="ca-top"><a href="#top">Back to top</a></p>`;
 }
 
+/**
+ * The footer of every page on carbon-ai.css: what the site counts about its
+ * visits, and every number it prints with its basis, the page it is on
+ * marked as current.
+ */
+function shellFoot({ current = '' } = {}) {
+    const here = (page) => (page === current ? ' aria-current="page"' : '');
+    return `<p><a href="stats.html"${here('stats.html')}>Open counts</a>: what this site counts about its visits, and what it never collects.</p>
+<p><a href="claims.html"${here('claims.html')} data-analytics="claims-foot">Check my numbers</a>: every number on this site, with its basis.</p>`;
+}
+
 // Not deferred, and ahead of the stylesheets: theme.js sets the theme
 // before anything is painted, and a script after a stylesheet would wait
 // for the stylesheet to arrive first.
@@ -284,7 +313,7 @@ ${main}
 ${indentBlock(shellCta(facts), '        ')}
     </main>
     <footer class="ca-foot">
-        <p><a href="stats.html"${current === 'stats.html' ? ' aria-current="page"' : ''}>Open counts</a>: what this site counts about its visits, and what it never collects.</p>
+${indentBlock(shellFoot({ current }), '        ')}
     </footer>
 ${bodyEnd}
 </body>
@@ -326,10 +355,10 @@ const WIDGET_HOSTS = {
                         <p class="borehole-result" id="drillResult" aria-live="polite">Drag the rig (or focus the profile and use the arrow keys), then drill.</p>
                         <div class="strike-board">
                             <p class="strike-row"><span class="strike-row-label" id="drillScore">Your holes &middot; drill to fill this row</span><span class="strike-waffle" data-row="you" aria-hidden="true"></span></p>
-                            <p class="strike-row"><span class="strike-row-label">Reading the curve first &middot; 7 in 10, field records</span><span class="strike-waffle" data-row="7" aria-hidden="true"></span></p>
-                            <p class="strike-row"><span class="strike-row-label">Blind drilling &middot; about 3 in 10, illustrative</span><span class="strike-waffle" data-row="3" aria-hidden="true"></span></p>
+                            <p class="strike-row"><span class="strike-row-label">Reading the curve first &middot; <span data-claim="strike-rate">7 in 10</span>, field records</span><span class="strike-waffle" data-row="7" aria-hidden="true"></span></p>
+                            <p class="strike-row"><span class="strike-row-label">Blind drilling &middot; about <span data-claim="blind-siting">3 in 10</span>, illustrative</span><span class="strike-waffle" data-row="3" aria-hidden="true"></span></p>
                         </div>`,
-        summary: 'Reading the resistivity curve first, the boreholes in the field records struck water 70% of the time; the ~30% for blind drilling is illustrative &mdash; not a measured figure.'
+        summary: 'Reading the resistivity curve first, the boreholes in the field records struck water <span data-claim="strike-rate">70%</span> of the time; the <span data-claim="blind-siting">~30%</span> for blind drilling is illustrative &mdash; not a measured figure.'
     },
     flood: {
         title: 'Don&rsquo;t let it become a boat',
@@ -1320,6 +1349,178 @@ ${privacy}`;
 }
 
 // ------------------------------------------------------------------
+// claims.html — Check my numbers
+// ------------------------------------------------------------------
+// Every number the site prints, from content/claims.json: the figure, what
+// it rests on, whether a reader can check it, and where it appears. Built
+// last, from the other pages as this run writes them, so "where it
+// appears" is read off the pages themselves and cannot drift from them.
+// The entries are grouped by the question a sceptical reader asks first:
+// can I check this without taking his word for it?
+
+// The pages that mark figures, by the name the shell's nav gives them.
+const CLAIM_PAGES = {
+    'index.html': 'Home',
+    'case-studies.html': 'Case studies',
+    'research.html': 'Research',
+    'carbon-ai.html': 'AI, Weighed',
+    'field-report.html': 'Field report',
+    '404.html': 'Page not found'
+};
+
+const CHECK_GROUPS = [
+    { key: 'public', title: 'Checkable from outside',
+      intro: 'You can check these yourself. Each says where: a source, a public file, or the case study that says how.' },
+    { key: 'on-request', title: 'On request',
+      intro: 'The evidence is a document I hold, a certificate or a transcript. Ask and I will send it.' },
+    { key: 'not-checkable', title: 'Not checkable from outside',
+      intro: 'These rest on records someone else holds, a client, an employer or the UN, or on no source at all. Each says which, and none is dressed up as more.' }
+];
+
+/**
+ * Where each figure is marked in a page's HTML: claim id → the id of the
+ * section or article around its first mark ('' when there is none), so the
+ * ledger can link to the place and not just the page. Scripts, styles and
+ * comments are skipped; the pages nest no section in an unclosed one.
+ */
+function marksIn(html) {
+    const first = new Map();
+    const open = [];
+    const re = /<!--[\s\S]*?-->|<(script|style)\b[\s\S]*?<\/\1\s*>|<(\/?)([a-zA-Z][\w-]*)\b([^>]*)>/g;
+    let m;
+    while ((m = re.exec(html))) {
+        const [, block, closing, tag, attrs] = m;
+        if (block || !tag) continue;
+        if (/^(?:section|article)$/i.test(tag)) {
+            if (closing) open.pop();
+            else open.push((attrs.match(/\bid="([^"]+)"/) || [])[1] || '');
+        }
+        const id = !closing && (attrs.match(/\bdata-claim="([^"]+)"/) || [])[1];
+        if (id && !first.has(id)) first.set(id, open.filter(Boolean).pop() || '');
+    }
+    return first;
+}
+
+/** Where a reader checks a figure, as a link: the host for another site, the page's name for this one. */
+function checkLink(href) {
+    if (/^https?:/.test(href)) return `<a href="${esc(href)}">${esc(new URL(href).host)}</a>`;
+    const page = href.split('#')[0];
+    return `<a href="${esc(href)}">${esc(CLAIM_PAGES[page] || page)}</a>`;
+}
+
+function renderClaims(data, pages) {
+    const { claims, projects } = data;
+    const factors = content.loadFactors();
+    const { BUDGETS } = require('./check-budget.js');
+    const list = claims.claims;
+    const byId = new Map(list.map(c => [c.id, c]));
+    const ref = (c) => `<a href="#claim-${esc(c.id)}">${prose(c.unit)}</a>`;
+
+    const marked = Object.keys(CLAIM_PAGES).filter(p => pages[p]).map(p => [p, marksIn(pages[p])]);
+    const spokenText = [data.narration.intro ? data.narration.intro.text : ''].concat(data.narration.scripts.map(s => s.text)).join(' ').toLowerCase();
+
+    // A source file named once, so a reader of the repository knows where to look.
+    const file = (what, name) => ` <span class="cl-file">${what} <code>${name}</code>.</span>`;
+    const sharesResult = new Map();   // a result already shown in full → the entry that showed it
+
+    const basisOf = (c) => {
+        const b = c.basis;
+        if (b.result !== undefined) {
+            const { cs, result } = content.resultFor(c, projects);
+            const study = `<a href="case-studies.html#${esc(cs.id)}">${prose(cs.title)}</a>`;
+            if (sharesResult.has(result)) return `The same result as ${ref(sharesResult.get(result))}, in ${study}.`;
+            sharesResult.set(result, c);
+            return `${study}, &ldquo;${prose(result.claim)}&rdquo;: ${prose(result.basis)}`;
+        }
+        const note = b.note ? ` ${prose(b.note)}` : '';
+        if (b.profile !== undefined) return `${note.trim()}${file('Recorded in', 'content/profile.json')}`.trim();
+        if (b.factor !== undefined) {
+            // The factor's own entry carries its source: the nearest object on its path that names one.
+            const steps = b.factor.split('.');
+            const entry = steps.map((_, i) => content.atPath(factors, steps.slice(0, steps.length - i).join('.')))
+                .find(o => o && typeof o === 'object' && 'source' in o);
+            const src = entry && entry.source ? factors.SOURCES[entry.source] : null;
+            const cited = src ? `${prose(src.citation)}${b.url ? `, at ${checkLink(b.url)}` : ''}.` : (entry && entry.note ? prose(entry.note) : '');
+            return `${cited}${note}${file('One of the calculator&rsquo;s inputs, in', 'ai-carbon-data.js')}`.trim();
+        }
+        if (b.source !== undefined) return `<a href="${esc(b.url)}">${prose(b.source)}</a>.${note}`;
+        if (b.budget !== undefined) {
+            const budget = BUDGETS[b.budget];
+            return `The budget &ldquo;${prose(budget ? budget.readme : b.budget)}&rdquo;, measured by <code>npm run budget</code> on every build.${note}`;
+        }
+        if (b.derived !== undefined) {
+            const from = b.from.map(id => byId.get(id)).filter(Boolean).map(ref);
+            return `${prose(b.derived)} From ${from.join(' and ')}.`;
+        }
+        return `<strong>Illustrative.</strong> ${prose(b.illustrative)}`;
+    };
+
+    const entry = (c) => {
+        const checkable = content.checkabilityOf(c, projects);
+        const found = c.basis.result !== undefined ? content.resultFor(c, projects) : null;
+        const href = found ? `case-studies.html#${found.cs.id}` : c.check;
+        const check = `<span class="cl-check cl-check-${checkable}">${esc(CHECK_GROUPS.find(g => g.key === checkable).title)}</span>${checkable === 'public' && href ? `: ${checkLink(href)}` : ''}`;
+        const places = marked.filter(([, marks]) => marks.has(c.id))
+            .map(([page, marks]) => `<a href="${page}${marks.get(c.id) ? `#${marks.get(c.id)}` : ''}">${esc(CLAIM_PAGES[page])}</a>`);
+        if ((c.spoken || []).some(s => spokenText.includes(s.toLowerCase()))) places.push('the narration');
+        return `
+                <li class="cl-item" id="claim-${esc(c.id)}">
+                    <p class="cl-figure"><span class="cl-value" data-claim="${esc(c.id)}">${esc(c.value)}</span> ${prose(c.unit)}</p>
+                    <p class="cl-basis"><span class="mono-label">Basis</span> ${basisOf(c)}</p>
+                    <p class="cl-meta">${check} <span class="cl-where"><span class="mono-label">Where</span> ${places.join(' &middot; ')}</span></p>
+                </li>`;
+    };
+
+    const groups = CHECK_GROUPS.map((g) => {
+        const members = list.filter(c => content.checkabilityOf(c, projects) === g.key);
+        if (!members.length) return '';
+        return `
+        <section class="rs-group cl-group cl-group-${g.key}" aria-labelledby="cl-${g.key}-h">
+            <h2 id="cl-${g.key}-h">${esc(g.title)}</h2>
+            <p class="cl-group-intro">${esc(g.intro)}</p>
+            <ul class="cl-list">${members.map(entry).join('')}
+            </ul>
+        </section>`;
+    }).join('\n');
+
+    const main = `
+        <section class="rs-intro">
+            <p>
+                About my work or about the site itself, each number is here once, with every page it appears
+                on. The pages mark each one with its entry, and a test fails the build if a page prints a
+                number that is not here, or one that disagrees with its entry. What the narration says aloud
+                is held to the same list.
+            </p>
+        </section>
+${groups}
+
+        <section class="rs-repro cl-not-listed">
+            <h2>Not on this list</h2>
+            <p>
+                Years and dates, section numbers, the names of standards such as Scope 2 or SDG 13, places&rsquo;
+                coordinates and my phone number are numerals, not claims. The figures the calculators work out in
+                your browser, on <a href="carbon-ai.html">AI, Weighed</a>, in the chart on the homepage and on the
+                footer&rsquo;s receipt, are model outputs: their inputs are above, and every factor behind them is in
+                the calculator&rsquo;s <a href="carbon-ai.html#evidence">evidence ledger</a>. The
+                <a href="stats.html">open counts</a> are the visit counter&rsquo;s own, rewritten each week.
+            </p>
+        </section>`;
+
+    return pageShell({
+        title: 'Check my numbers — Moses Kolleh Sesay',
+        description: 'Every number on this portfolio, with what it rests on, where it appears and whether a reader can check it from outside.',
+        canonical: `${SITE}claims.html`,
+        heroTag: 'EVERY NUMBER &middot; ITS BASIS &middot; CAN YOU CHECK IT',
+        heroTitle: 'Check my <span class="ca-accent">numbers</span>',
+        heroLead: 'Every number on this site, with what it rests on, where it appears and whether you can check it without taking my word for it.',
+        main,
+        current: 'claims.html',
+        styles: ['claims.css'],
+        profile: data.profile
+    });
+}
+
+// ------------------------------------------------------------------
 // sitemap.xml
 // ------------------------------------------------------------------
 function renderSitemap(data) {
@@ -1780,8 +1981,8 @@ function injectHomeRegions(data, html) {
 // Hand-authored, each for a reason of its own: a calculator, a page held to
 // a few kilobytes, a page served at whatever address was missing. None of
 // those is a reason to be a dead end, so each takes the shell between
-// markers, in the flavour it can carry. carbon-ai.html has the full one and
-// theme.js in its <head>. The field report and the 404 page style
+// markers, in the flavour it can carry. carbon-ai.html has the full one,
+// footer included, and theme.js in its <head>. The field report and the 404 page style
 // themselves and run no script but the counter: they take the plain nav
 // and a one-line call to action, with no theme switch (nothing there could
 // drive it); the 404 page's links are root-absolute.
@@ -1793,7 +1994,7 @@ const shellMarkers = (name) => [`<!-- ${name} -->`, `<!-- /${name} -->`];
 
 function shellRegions(page, facts) {
     if (page === 'carbon-ai.html') {
-        return { 'SHELL-HEAD': THEME_SCRIPT, 'SHELL-NAV': shellNav(facts), 'SHELL-CTA': shellCta(facts) };
+        return { 'SHELL-HEAD': THEME_SCRIPT, 'SHELL-NAV': shellNav(facts), 'SHELL-CTA': shellCta(facts), 'SHELL-FOOT': shellFoot() };
     }
     if (page === 'field-report.html') {
         return { 'SHELL-NAV': shellNav(facts, { plain: true }), 'SHELL-CTA': shellCta(facts, { plain: true, hooks: SHELL_HOOKS.fieldReport }) };
@@ -1834,6 +2035,9 @@ function main() {
         process.exit(1);
     }
 
+    // From here on, every figure prose() prints from content/ is marked.
+    cutFigures = figures.marker(data.claims.claims);
+
     const outputs = [
         ['case-studies.html', renderCaseStudies(data)],
         ['research.html', renderResearch(data)],
@@ -1846,6 +2050,8 @@ function main() {
         ['field-report.html', injectShell(data, 'field-report.html')],
         ['404.html', injectShell(data, '404.html')]
     ];
+    // Last: where each figure appears is read off the pages above, as written.
+    outputs.push(['claims.html', renderClaims(data, Object.fromEntries(outputs))]);
 
     const stale = [];
     outputs.forEach(([rel, next]) => {
@@ -1871,7 +2077,7 @@ function main() {
         process.exit(1);
     }
 
-    console.log(`\n  ${data.projects.caseStudies.length} case studies · ${data.research.outputs.length} research outputs · ${data.lenses.lenses.length} lenses · counts ${data.stats.status}\n`);
+    console.log(`\n  ${data.projects.caseStudies.length} case studies · ${data.research.outputs.length} research outputs · ${data.lenses.lenses.length} lenses · ${data.claims.claims.length} claims · counts ${data.stats.status}\n`);
 }
 
 // Run as a script it builds; required (by tests/stats.test.js,
@@ -1881,4 +2087,4 @@ function main() {
 if (require.main === module) main();
 
 module.exports = { renderStats, EXAMPLE_PAYLOAD, renderAtAGlance, shellFacts, shellRegions, shellMarkers,
-    corelogDepths, injectCorelog, renderCertificates, renderTestimonials, homeRegions, fillRegion };
+    corelogDepths, injectCorelog, renderCertificates, renderTestimonials, homeRegions, fillRegion, marksIn, CLAIM_PAGES };

@@ -216,6 +216,7 @@
     { "path": "research.html", "loc": "https://moseskolleh.github.io/sustaintheworld/research.html", "lastmod": "2026-10-03", "changefreq": "monthly", "priority": "0.8" },
     { "path": "carbon-ai.html", "loc": "https://moseskolleh.github.io/sustaintheworld/carbon-ai.html", "lastmod": "2026-10-03", "changefreq": "monthly", "priority": "0.8" },
     { "path": "field-report.html", "loc": "https://moseskolleh.github.io/sustaintheworld/field-report.html", "lastmod": "2026-10-03", "changefreq": "monthly", "priority": "0.3" },
+    { "path": "claims.html", "loc": "https://moseskolleh.github.io/sustaintheworld/claims.html", "lastmod": "2026-10-03", "changefreq": "monthly", "priority": "0.5" },
     { "path": "stats.html", "loc": "https://moseskolleh.github.io/sustaintheworld/stats.html", "lastmod": "2026-10-03", "changefreq": "weekly", "priority": "0.2" }
   ]
 }

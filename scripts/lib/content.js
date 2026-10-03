@@ -28,6 +28,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const figures = require('./claims.js');
 
 const ROOT = path.join(__dirname, '..', '..');
 const CONTENT_DIR = path.join(ROOT, 'content');
@@ -795,6 +796,178 @@ function checkTestimonials(file) {
     return problems;
 }
 
+// ------------------------------------------------------------------
+// content/claims.json — the claims ledger
+//
+// Every number the site prints, with its basis. The page side (each
+// figure marked, every numeral accounted for) is tests/claims.test.js's;
+// what can be checked from the files alone is checked here, on every
+// build: the shape is closed, every entry has exactly one basis, the basis
+// exists and says the same number, and nothing is called checkable from
+// outside without saying where. The build fails on a figure with no basis
+// rather than publish it.
+// ------------------------------------------------------------------
+const CHECKABLE = ['public', 'on-request', 'not-checkable'];
+const BASIS_KINDS = ['result', 'profile', 'factor', 'source', 'budget', 'derived', 'illustrative'];
+const CLAIM_KEYS = ['id', 'value', 'unit', 'forms', 'spoken', 'basis', 'checkable', 'check'];
+const BASIS_EXTRA = { factor: ['url', 'note'], source: ['url', 'note'], derived: ['from'], profile: ['note'], budget: ['note'] };
+const CLAIM_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+/** The calculators' inputs, as the pages load them. */
+const loadFactors = () => require(path.join(ROOT, 'ai-carbon-data.js'));
+
+/** A value at a dotted path ("experience.4.teamSize"), or undefined. */
+const atPath = (obj, dotted) => String(dotted).split('.').reduce((o, k) => (o === null || o === undefined ? undefined : o[k]), obj);
+
+/**
+ * Whether a text states a claim's figure, written as the ledger writes it.
+ * A single digit is looked for on its own, outside a longer number.
+ */
+function mentions(text, claim) {
+    if (figures.markable(claim.value)) return figures.marker([claim])(text).some(([, id]) => id === claim.id);
+    return new RegExp(`(?<![\\d.,])${claim.value}(?![\\d.,%])`).test(String(text));
+}
+
+/** The case-study result a `result` basis rests on: the first to state the figure. */
+function resultFor(claim, projects) {
+    const cs = projects.caseStudies.find(c => c.id === (claim.basis && claim.basis.result));
+    if (!cs) return null;
+    const result = (cs.results || []).find(r => mentions(`${r.claim} ${r.basis}`, claim));
+    return result ? { cs, result } : null;
+}
+
+/** How checkable a claim is: a result's is the case study's own. */
+function checkabilityOf(claim, projects) {
+    if (claim.basis && claim.basis.result) {
+        const found = resultFor(claim, projects);
+        return found ? (found.result.verifiable ? 'public' : 'not-checkable') : null;
+    }
+    return claim.checkable;
+}
+
+/** What a calculator input amounts to, for comparing with the ledger. */
+function factorQuantity(f) {
+    if (typeof f === 'number') return { n: f };
+    if (Array.isArray(f) && f.length === 2 && f.every(n => typeof n === 'number')) return { lo: f[0], hi: f[1] };
+    if (f && typeof f.input === 'number' && typeof f.output === 'number') return { n: f.input / f.output, ratio: true };
+    return null;
+}
+
+function checkClaims(ledger, { profile, projects, factors }) {
+    const at = 'content/claims.json';
+    if (!ledger || !Array.isArray(ledger.claims) || !ledger.claims.length) return [`${at}: needs a "claims" list`];
+    const problems = [];
+    const ids = new Set();
+    const shownBy = new Map();
+    ledger.claims.forEach((c, i) => {
+        const where = `${at}: claim ${c && c.id ? `"${c.id}"` : i + 1}`;
+        if (!c || typeof c !== 'object') { problems.push(`${where}: is not an entry`); return; }
+        Object.keys(c).filter(k => !CLAIM_KEYS.includes(k))
+            .forEach(k => problems.push(`${where}: unknown field "${k}" (${CLAIM_KEYS.join(', ')})`));
+        if (!CLAIM_ID.test(c.id || '')) problems.push(`${where}: id must be kebab-case`);
+        else if (ids.has(c.id)) problems.push(`${where}: duplicate id`);
+        ids.add(c.id);
+
+        const value = figures.quantity(c.value || '');
+        if (typeof c.value !== 'string' || !value) {
+            problems.push(`${where}: value "${c.value}" is not one figure as the page writes it`);
+            return;
+        }
+        if (typeof c.unit !== 'string' || !c.unit.trim()) problems.push(`${where}: no unit — what does ${c.value} count?`);
+        else if (/\d/.test(figures.plain(c.unit).replace(/per[- ]1k/g, '').replace(/CO₂/g, ''))) {
+            problems.push(`${where}: the unit has a figure in it; give that figure an entry of its own`);
+        }
+
+        // Every other way of writing it has to come to the same thing.
+        ['forms', 'spoken'].forEach((key) => {
+            if (c[key] === undefined) return;
+            if (!Array.isArray(c[key]) || !c[key].length || c[key].some(s => typeof s !== 'string' || !s.trim())) {
+                problems.push(`${where}: ${key} must be a list of phrases`);
+                return;
+            }
+            c[key].filter(s => !figures.agrees(value, s))
+                .forEach(s => problems.push(`${where}: ${key === 'spoken' ? 'the narration\'s' : 'the form'} "${s}" does not say ${c.value}`));
+            if (key === 'spoken') c[key].filter(s => /\d/.test(s)).forEach(s => problems.push(`${where}: "${s}" is spoken, so it is written in words`));
+        });
+        // The marker finds a figure in content/ by how it is written; two
+        // entries written alike would leave it guessing.
+        [c.value].concat(c.forms || []).filter(figures.markable).forEach((s) => {
+            if (shownBy.has(s) && shownBy.get(s) !== c.id) problems.push(`${where}: "${s}" is also how "${shownBy.get(s)}" is written; the pages could not tell them apart`);
+            shownBy.set(s, c.id);
+        });
+
+        const b = c.basis;
+        const kinds = b && typeof b === 'object' ? BASIS_KINDS.filter(k => b[k] !== undefined) : [];
+        if (kinds.length !== 1) {
+            problems.push(`${where}: needs exactly one basis (${BASIS_KINDS.join(', ')}); a number with no basis is a boast`);
+            return;
+        }
+        const kind = kinds[0];
+        Object.keys(b).filter(k => k !== kind && !(BASIS_EXTRA[kind] || []).includes(k))
+            .forEach(k => problems.push(`${where}: a ${kind} basis has no field "${k}"`));
+        if (b.note !== undefined && (typeof b.note !== 'string' || !b.note.trim())) problems.push(`${where}: the basis note is empty`);
+
+        if (kind === 'result') {
+            const found = resultFor(c, projects);
+            if (!projects.caseStudies.some(cs => cs.id === b.result)) problems.push(`${where}: no case study "${b.result}"`);
+            else if (!found) problems.push(`${where}: no result of case study "${b.result}" states ${c.value}`);
+            if (c.checkable !== undefined || c.check !== undefined) {
+                problems.push(`${where}: a result's checkability and link are the case study's; leave checkable and check out`);
+            }
+        } else if (kind === 'profile') {
+            const paths = [].concat(b.profile);
+            paths.forEach((p) => {
+                if (typeof p !== 'string' || atPath(profile, p) === undefined) problems.push(`${where}: profile.json has no ${p}`);
+            });
+            const field = paths.length === 1 ? atPath(profile, paths[0]) : undefined;
+            if (field !== undefined && field !== null && typeof field !== 'object') {
+                if (!figures.agrees(value, String(field).split(' ')[0])) problems.push(`${where}: profile.json's ${paths[0]} is ${field}, not ${c.value}`);
+            } else if (!b.note) {
+                problems.push(`${where}: counted from profile.json rather than read from it, so it needs a note saying how`);
+            }
+        } else if (kind === 'factor') {
+            const f = typeof b.factor === 'string' ? atPath(factors, b.factor) : undefined;
+            const q = factorQuantity(f);
+            if (f === undefined) problems.push(`${where}: ai-carbon-data.js has no ${b.factor}`);
+            else if (q && !figures.agrees(value, q)) problems.push(`${where}: ai-carbon-data.js's ${b.factor} is not ${c.value}`);
+            else if (!q && !b.note) problems.push(`${where}: ${b.factor} is not one number, so the basis needs a note saying how ${c.value} follows from it`);
+            if (b.url !== undefined) {
+                const bad = urlProblem(b.url);
+                if (bad) problems.push(`${where}: the factor's url ${bad}`);
+            }
+        } else if (kind === 'source') {
+            if (typeof b.source !== 'string' || !b.source.trim()) problems.push(`${where}: the source has no name`);
+            const bad = urlProblem(b.url);
+            if (bad) problems.push(`${where}: a cited source needs its url, and this one ${bad}`);
+        } else if (kind === 'budget') {
+            if (typeof b.budget !== 'string' || !b.budget) problems.push(`${where}: names no budget`);
+        } else if (kind === 'derived') {
+            if (typeof b.derived !== 'string' || !b.derived.trim()) problems.push(`${where}: a derived figure says how it is worked out`);
+            if (!Array.isArray(b.from) || !b.from.length) problems.push(`${where}: a derived figure names the entries it comes from`);
+        } else if (kind === 'illustrative') {
+            if (typeof b.illustrative !== 'string' || !b.illustrative.trim()) problems.push(`${where}: an illustrative figure says why it has no source`);
+            if (c.checkable !== 'not-checkable') problems.push(`${where}: an illustrative figure has nothing to check it against: checkable is "not-checkable"`);
+        }
+
+        if (kind !== 'result') {
+            if (!CHECKABLE.includes(c.checkable)) problems.push(`${where}: checkable must be one of ${CHECKABLE.join(', ')}`);
+            if (c.checkable === 'public') {
+                const bad = c.check ? urlProblem(c.check) : 'is missing';
+                if (bad) problems.push(`${where}: is checkable from outside, so it says where — its check ${bad}`);
+            } else if (c.check !== undefined) {
+                problems.push(`${where}: is "${c.checkable}" but carries a link to check it, which reads as checkable`);
+            }
+        }
+    });
+    // Derived figures come from entries that exist.
+    ledger.claims.forEach((c) => {
+        const from = c && c.basis && c.basis.derived !== undefined ? c.basis.from || [] : [];
+        from.filter(id => id === c.id || !ids.has(id))
+            .forEach(id => problems.push(`${at}: claim "${c.id}" is derived from "${id}", which is ${id === c.id ? 'itself' : 'not an entry'}`));
+    });
+    return problems;
+}
+
 /**
  * What a reader of one role view can open: the public artifacts of its case
  * studies, and the public research outputs that belong to it, through their
@@ -833,8 +1006,10 @@ function loadAll() {
     const narration = load('narration');
     const stats = load('stats');
     const testimonials = load('testimonials');
+    const claims = load('claims');
 
     const problems = checkStats(stats);
+    problems.push(...checkClaims(claims, { profile, projects, factors: loadFactors() }));
     const lensIds = lenses.lenses.map(l => l.id);
 
     // --- case studies ---------------------------------------------------
@@ -976,7 +1151,7 @@ function loadAll() {
         throw new Error(`content failed validation:\n  - ${problems.join('\n  - ')}`);
     }
 
-    return { profile, projects, research, lenses, narration, stats, testimonials, lensIds };
+    return { profile, projects, research, lenses, narration, stats, testimonials, claims, lensIds };
 }
 
 /**
@@ -1023,5 +1198,13 @@ module.exports = {
     VERIFY_HOSTS,
     checkCertifications,
     TESTIMONIAL_LIMITS,
-    checkTestimonials
+    checkTestimonials,
+    CHECKABLE,
+    BASIS_KINDS,
+    checkClaims,
+    loadFactors,
+    atPath,
+    mentions,
+    resultFor,
+    checkabilityOf
 };
