@@ -350,18 +350,22 @@ if (document.readyState === 'complete') {
 const navToggle = document.getElementById('navToggle');
 const navMenu = document.getElementById('navMenu');
 
-// Open the receipt panel when a deep-link target is in it, so a shared
-// /#receiptPanel reveals the receipt instead of landing on a closed panel.
-// The Assay the same: "grade your job description" lands on it open. It
-// grows below its own top, so there is nothing to wait for.
+// Open what hides a deep-link target (claims.html links into each): a
+// [hidden] block by its control (aria-controls), so /#receiptPanel shows
+// the receipt and the method note opens; a closed <details>; a role behind
+// More. The receipt fills as it opens, so the landing waits for it. The
+// Assay the same; it grows below its own top, so there is nothing to wait for.
 const revealTarget = (target) => {
     if (!target || !target.closest) return false;
     let expanded = false;
-    const panel = target.id === 'receiptPanel' ? target : target.closest('#receiptPanel');
-    if (panel && panel.hasAttribute('hidden')) {
-        const rb = document.getElementById('receiptBtn');
-        if (rb) { rb.click(); expanded = true; }
-    }
+    const box = target.closest('[hidden]');
+    const opener = box && box.id && document.querySelector(`[aria-controls="${box.id}"]`);
+    if (opener) { opener.click(); expanded = true; }
+    const fold = target.closest('details:not([open])');
+    if (fold) fold.open = true;
+    const card = target.closest('.timeline-content:not(.is-open)');
+    const more = card && card.querySelector('.corelog-more');
+    if (more) more.click();
     const assay = target.closest('#assay');
     const shut = assay && assay.querySelector('.assay-open[aria-expanded="false"]');
     if (shut) shut.click();
@@ -1213,7 +1217,7 @@ document.querySelectorAll('.current-year').forEach(el => {
 // ===================================
 // INTERACTIVES — the trigger
 // ===================================
-// You Draw It in "AI, Weighed", The Assay and The Receipt
+// You Draw It in section 05, The Assay and The Receipt
 // (modules/interactives.js, with ai-carbon-data.js behind them) load when
 // any of their homes comes within about a screen of the viewport, so they
 // are drawn by the time the visitor arrives — and on the first press of one
@@ -1378,7 +1382,8 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
             });
         } catch (e) { /* older browsers: leave the badge quiet */ }
         if (!bytes) {
-            badgeText.textContent = 'Built to stay light — under ~1 MB per visit';
+            // No measure, so no figure: a fixed one would be a claim nothing holds.
+            badgeText.textContent = 'Built to stay light — this browser does not say what it fetched';
             return;
         }
         const mb = bytes / (1024 * 1024);

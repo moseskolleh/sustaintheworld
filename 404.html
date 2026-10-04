@@ -62,7 +62,8 @@
             line-height: 1.7;
             margin-bottom: 24px;
         }
-        .links { display: flex; flex-wrap: wrap; gap: 12px; }
+        /* Four links: two rows of two, not three and one left over. */
+        .links { display: grid; grid-template-columns: repeat(2, max-content); gap: 12px; }
         .links a {
             font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
             font-size: 0.85rem;
@@ -82,7 +83,7 @@
         @media (max-width: 560px) {
             body { padding: 16px; }
             .wrap { flex-direction: column; gap: 20px; text-align: center; }
-            .links { justify-content: center; }
+            .links { display: flex; flex-wrap: wrap; justify-content: center; }
         }
     </style>
 </head>
@@ -116,8 +117,9 @@
                isn't at this URL — the resistivity curve points somewhere else.</p>
             <nav class="links" aria-label="Places to drill instead">
                 <a href="/sustaintheworld/">&larr; back to the surface</a>
-                <a href="/sustaintheworld/field-report.html">9&nbsp;KB field report</a>
+                <a href="/sustaintheworld/field-report.html"><span data-claim="field-report-kb">10</span>&nbsp;KB field report</a>
                 <a href="/sustaintheworld/stats.html">open counts</a>
+                <a href="/sustaintheworld/claims.html">check my numbers</a>
             </nav>
             <!-- SHELL-CTA -->
             <p>Email <a href="mailto:moseskollehsesay@gmail.com" data-analytics="email-page-cta">moseskollehsesay@gmail.com</a>, <a href="/sustaintheworld/#contact" data-analytics="contact-page-cta">send a message</a> or download <a href="/sustaintheworld/assets/Moses_Kolleh_Sesay_CV.pdf" download data-analytics="cv-download-page-cta">my CV</a>.</p>

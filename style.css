@@ -93,6 +93,33 @@ html.light-mode {
     --hero-overlay-bottom: rgba(248, 250, 246, 0.95);
 }
 
+/* Printed, the light palette whatever the screen showed: paper is white.
+   tests/shell.test.js keeps it html.light-mode's. */
+@media print {
+    :root {
+        color-scheme: light;
+        --primary-green: #1a7a1a;
+        --dark-bg: #f5f6f3;
+        --darker-bg: #ffffff;
+        --card-bg: #ffffff;
+        --card-bg-alt: #fafbf8;
+        --text-primary: #161914;
+        --text-secondary: #54584f;
+        --text-dim: #5f635a;
+        --accent-color: #1a7a1a;
+        --hover-color: #146414;
+        --accent-amber: #8a6100;
+        --accent-blue: #1c6fa6;
+        --accent-salmon: #b0442c;
+        --accent-emerald: #127a3f;
+        --line-color: rgba(34, 139, 34, 0.25);
+        --line-soft: rgba(34, 139, 34, 0.1);
+        --box-shadow: 0 8px 30px rgba(34, 139, 34, 0.1);
+        --hero-overlay-top: rgba(248, 250, 246, 0.82);
+        --hero-overlay-bottom: rgba(248, 250, 246, 0.95);
+    }
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -998,14 +1025,14 @@ html.js .assay.is-folding:not(.is-open) .assay-body { display: none; }
 .assay-ev span::before, .assay-ev a::before { content: '✓'; position: absolute; left: 0; color: var(--primary-green); }
 
 .assay-note { margin-top: 16px; font-size: 0.74rem; color: var(--text-dim); line-height: 1.5; }
-/* A gap, or a fact to confirm, is a row like a match: as prominent, with a
-   different mark. */
+/* A gap, a fact to confirm or a proof with no public work behind it is a
+   row like a match: as prominent, with a different mark. */
 .assay-map + .assay-map { margin-top: 18px; }
 .assay-ev a { text-underline-offset: 3px; }
 .assay-ev a:hover { color: var(--primary-green); }
 .assay-row-gap .assay-ev span { color: var(--text-primary); }
 .assay-ev .assay-miss::before { content: '✗'; color: var(--accent-salmon); }
-.assay-ev .assay-ask::before { content: '?'; color: var(--accent-amber); }
+.assay-ev .assay-ask::before, .assay-ev .assay-part::before { content: '?'; color: var(--accent-amber); }
 .assay-soft { margin-left: 6px; padding: 1px 7px; border: 1px solid var(--line-color); border-radius: 999px; font: 400 0.62rem var(--font-mono); color: var(--text-secondary); }
 
 @media (max-width: 560px) {
@@ -1130,6 +1157,12 @@ html.light-mode .btn-primary {
     text-transform: uppercase;
     color: var(--text-secondary);
 }
+
+/* Under the figures, the way to their basis (claims.html), as quiet as
+   their labels; a mono-label, so the rest of its look is that class's. */
+.hero-ledger { margin-top: 12px; }
+.hero-ledger a { color: inherit; text-underline-offset: 4px; }
+.hero-ledger a:hover { color: var(--primary-green); }
 
 /* Just under the bar, where the first screen shows it (at the hero's
    foot it sat below the fold), and clear of the scroll drill. */
@@ -1495,6 +1528,7 @@ html.light-mode .hero-photo-caption {
     display: block;
     color: var(--primary-green);
     font-size: 0.95rem;
+    white-space: nowrap;    /* "68–73 m"; smoke.js keeps it off the core */
 }
 
 .corelog-depth span {
@@ -1702,7 +1736,7 @@ html.js .timeline-date { padding-right: 64px; }
         display: none;
     }
 
-    /* .corelog > : the tablet columns (46px 20px 1fr) come later in the file. */
+    /* .corelog > : the tablet columns (60px 20px 1fr) come later in the file. */
     .corelog > .corelog-item {
         grid-template-columns: 8px minmax(0, 1fr);
         gap: 0 12px;
@@ -1946,7 +1980,7 @@ html.js .timeline-date { padding-right: 64px; }
     transition: var(--transition);
 }
 
-.toolkit-proof:hover {
+a.toolkit-proof:hover {
     color: var(--primary-green);
 }
 
@@ -2475,10 +2509,13 @@ html.js .reveal.visible {
     }
 }
 
+/* Printed soon after arriving, the page was headings and white space; the
+   chart's footnote, faded for the screen, was 4.4:1 on paper. */
 @media print {
     html.js main > section {
         content-visibility: visible;
     }
+    html.js .reveal, html .eco-footnote { opacity: 1; transform: none; }
 }
 
 /* Nothing moves in a block until script.js marks it in view. A loop or
@@ -2706,7 +2743,7 @@ html.js .nojs-note { display: none; }
     }
 
     .corelog-item {
-        grid-template-columns: 46px 20px 1fr;
+        grid-template-columns: 60px 20px 1fr;
         gap: 0 12px;
     }
 
@@ -3046,7 +3083,7 @@ html.light-mode .journey-map-readout {
 }
 
 /* ===================================
-   AI, WEIGHED (You Draw It, and the way on to the coach)
+   SECTION 05 (You Draw It, and the way on to the coach)
    =================================== */
 .ecoprompt {
     background: var(--darker-bg);
@@ -3112,7 +3149,9 @@ html.light-mode .journey-map-readout {
 
 .ecoprompt .section-description a,
 .eco-footnote a,
-.fieldnote-body a {
+.fieldnote-body a,
+.cert-meta a,
+.testimonial a {
     color: var(--primary-green);
 }
 

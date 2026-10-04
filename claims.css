@@ -1,0 +1,84 @@
+/* ===================================================================
+   CHECK MY NUMBERS — claims.html only
+   Layered on carbon-ai.css like the other generated pages, before
+   content.css, whose research-page blocks (rs-intro, rs-group, rs-repro)
+   it borrows for the page's frame. Every rule here is on a cl- class,
+   which content.css never styles, so neither can undo the other; the
+   colours are carbon-ai.css's variables, so both themes follow.
+
+   One entry per figure: the figure and what it counts, its basis, and a
+   line saying whether it can be checked and where it appears. No table:
+   five columns do not fit a 320px screen, and a reader scans for one
+   number, not across a row.
+   =================================================================== */
+
+.cl-group-intro {
+    margin: -4px 0 14px;
+    font-size: 0.88rem;
+    line-height: 1.6;
+    color: var(--text-secondary);
+}
+
+.cl-list { list-style: none; margin: 0; padding: 0; }
+
+.cl-item {
+    padding: 14px 18px;
+    margin-bottom: 12px;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--border);
+    border-radius: 6px;
+    background: var(--card-bg);
+}
+.cl-group-public .cl-item { border-left-color: var(--primary-green); }
+.cl-group-on-request .cl-item { border-left-color: var(--amber); }
+
+.cl-figure { margin: 0 0 6px; line-height: 1.5; }
+.cl-value {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--primary-green);
+    margin-right: 2px;
+}
+
+.cl-basis,
+.cl-meta {
+    margin: 0 0 6px;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    overflow-wrap: anywhere;
+}
+.cl-meta { margin: 0; }
+.cl-basis .mono-label,
+.cl-where .mono-label { margin-right: 4px; }
+.cl-basis a,
+.cl-meta a { color: var(--primary-green); }
+.cl-file code { font-size: 0.85em; }
+
+/* Whether a reader can check it, stated as flatly as the case studies'
+   availability: "not checkable" is a fact about the evidence, not a fault. */
+.cl-check {
+    display: inline-block;
+    margin-right: 6px;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-family: var(--font-mono, 'IBM Plex Mono', monospace);
+    font-size: 0.66rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border: 1px solid var(--border);
+}
+.cl-check-public { color: var(--primary-green); border-color: var(--primary-green); }
+.cl-check-on-request { color: var(--amber); border-color: var(--amber); }
+
+.cl-where { display: inline-block; }
+
+/* The closing note sits in content.css's rs-repro frame, whose paragraph
+   rule now reads only inside its fold; this one is not folded. */
+.cl-not-listed > p { margin: 0; font-size: 0.92rem; line-height: 1.7; }
+
+@media (max-width: 640px) {
+    .cl-item { padding: 12px 14px; }
+    .cl-value { font-size: 1.2rem; }
+}

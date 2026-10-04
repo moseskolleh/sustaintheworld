@@ -37,8 +37,12 @@ function assert(cond, msg) {
     }
 }
 
+// A figure marked with its claims-ledger entry reads as the figure alone
+// (tests/claims.test.js holds the mark to the ledger).
+const unmark = (html) => html.replace(/<span data-claim="[^"]*">([^<]*)<\/span>/g, '$1');
+
 // Compare on visible text: the pages use HTML entities and the profile does not.
-const plain = (html) => html
+const plain = (html) => unmark(html)
     .replace(/<[^>]+>/g, ' ')
     .replace(/&amp;/g, '&')
     .replace(/&mdash;/g, '—')
@@ -79,6 +83,10 @@ const fieldText = plain(fieldReport);
         index.includes(profile.person.email) && fieldReport.includes(profile.person.email),
         'Links: the contact email matches profile.json on both editions'
     );
+    // The phone number the CV prints is the one the homepage publishes.
+    const tel = (index.match(/href="tel:([^"]+)"[\s\S]*?<p>([^<]+)<\/p>/) || []).slice(1);
+    assert(!!profile.person.phone && tel[0] === profile.person.phone.replace(/[^\d+]/g, '') && tel[1].replace(/&nbsp;/g, ' ') === profile.person.phone,
+        `Links: the homepage's phone number, its link and its text, matches profile.json (${tel.join(' / ') || 'none'})`);
     assert(
         fs.existsSync(path.join(ROOT, profile.links.cv)),
         `Links: the CV named in profile.json exists (${profile.links.cv})`
@@ -246,9 +254,12 @@ const fieldText = plain(fieldReport);
 // --- Figures: case-study periods ------------------------------------------
 // A thesis period is not the degree's dates. The two editions had drifted
 // apart on exactly that — 2021–24 against 2023–24 for the coastal thesis —
-// so each project's years are held to its case study.
+// so each project's years are held to its case study. The homepage shows
+// every case study not kept off it (homepageCard: false), and the field
+// report, its text edition, lists the same.
 {
-    const projects = JSON.parse(read('content/projects.json')).caseStudies;
+    const { onHomepage } = require('../scripts/lib/content.js');
+    const projects = JSON.parse(read('content/projects.json')).caseStudies.filter(onHomepage);
     const years = (s) => [...new Set((String(s).match(/\b(?:19|20)\d{2}\b/g) || []))].sort().join(',');
 
     const wrongIndex = [];
@@ -259,11 +270,23 @@ const fieldText = plain(fieldReport);
     });
     assert(wrongIndex.length === 0, `Figures: every homepage project card shows its case study's years (wrong: ${wrongIndex.join('; ') || 'none'})`);
 
-    // The field report numbers its projects in the case-study order.
-    const section = fieldReport.split(/<h2>Projects<\/h2>/)[1] || '';
+    // The text-only edition names the code the full site links: the public
+    // repositories were the point of Phase 3, and it named none of them.
+    const repos = [...new Set(fs.readdirSync(ROOT).filter(f => f.endsWith('.html') && f !== 'field-report.html')
+        .flatMap(f => [...read(f).matchAll(/https:\/\/github\.com\/moseskolleh\/([\w.-]+?)(?=["/#?])/g)].map(m => m[1])))]
+        .filter(r => r !== 'sustaintheworld');   // this site's own source, linked as a record of it
+    const evidence = (fieldReport.split(/<h2>Evidence<\/h2>/)[1] || '').split('<h2')[0];
+    const unnamed = repos.filter(r => !evidence.includes(r));
+    assert(repos.length >= 6 && unnamed.length === 0 && /href="https:\/\/github\.com\/moseskolleh"/.test(evidence),
+        `Field report: its evidence names every repository the site links, with a link to them (${unnamed.join(', ') || repos.join(', ')})`);
+
+    // The field report numbers its projects in the case-study order, all of
+    // them: it listed the homepage's six beside "seven case studies".
+    const all = JSON.parse(read('content/projects.json')).caseStudies;
+    const section = fieldReport.split(/<h2[^>]*>Projects<\/h2>/)[1] || '';
     const listed = (section.split('</dl>')[0].match(/<dt>\[\d+\][^<]*<\/dt>/g) || []);
-    assert(listed.length === projects.length, `Figures: the field report lists every case study (${listed.length}/${projects.length})`);
-    const wrongField = projects
+    assert(listed.length === all.length, `Figures: the field report lists every case study (${listed.length}/${all.length})`);
+    const wrongField = all
         .filter((cs, i) => !listed[i] || years(listed[i]) !== years(cs.period))
         .map((cs) => `${cs.id} vs "${cs.period}"`);
     assert(wrongField.length === 0, `Figures: every field-report project shows its case study's years (wrong: ${wrongField.join('; ') || 'none'})`);
@@ -279,9 +302,9 @@ const fieldText = plain(fieldReport);
     const KB = 1024;
 
     const reportKB = Math.round(measured.fieldReport / KB);
-    const quoted = [...index.matchAll(/(\d+)(?:&nbsp;| )KB field report|whole portfolio in (\d+)(?:&nbsp;| )KB/g)]
+    const quoted = [...unmark(index).matchAll(/(\d+)(?:&nbsp;| )KB field report|whole portfolio in (\d+)(?:&nbsp;| )KB/g)]
         .concat([...read('modules/interactives.js').matchAll(/'Text-only report', r: '(\d+) KB'/g)])
-        .concat([...read('404.html').matchAll(/(\d+)(?:&nbsp;| )KB field report/g)])
+        .concat([...unmark(read('404.html')).matchAll(/(\d+)(?:&nbsp;| )KB field report/g)])
         .map(m => +(m[1] || m[2]));
     assert(
         quoted.length === 4 && quoted.every(n => n === reportKB),
@@ -295,7 +318,7 @@ const fieldText = plain(fieldReport);
     const wireKB = measured.criticalWire / KB;
     const readme = read('README.md');
     const firstView = [
-        ['footer', index.match(/first view now costs about (\d+)(?:&nbsp;| )KB/)],
+        ['footer', unmark(index).match(/first view now costs about (\d+)(?:&nbsp;| )KB/)],
         ['sustainable-AI lens', read('content/lenses.json').match(/first view of ~(\d+) KB/)],
         ['README summary', readme.match(/a first view costs about \*\*(\d+) KB over the wire/)],
         ['README budget table', readme.match(/\| First view of the homepage[^|]*\| ~(\d+) KB \|/)]
@@ -326,7 +349,8 @@ const fieldText = plain(fieldReport);
         { re: /certified across/i, why: 'there is one ESG certificate, not a set of frameworks' },
         { re: /well above local averages|against roughly 30%/i, why: 'leans on the blind-drilling baseline, which has no recorded source' },
         { re: /if a skill is listed, there's a project behind it/i, why: 'Life Cycle Assessment, Carbon Markets and Circular Economy are listed with no project behind them' },
-        { re: /anywhere in the E\.?U\b/i, why: 'relocation and EU right to work are not stated on the site (owner checklist F2, F3)' }
+        { re: /anywhere in the E\.?U\b/i, why: 'relocation and EU right to work are not stated on the site (owner checklist F2, F3)' },
+        { re: /GeoPandas|GeoAI/i, why: 'not in the homepage\'s toolkit, so the CV printed from it left them off; the field report kept GeoPandas' }
     ];
     const found = [];
     Object.entries(pages).forEach(([page, text]) => {
@@ -430,6 +454,235 @@ const fieldText = plain(fieldReport);
     assert(!/Scope 3, capital goods/.test(coach), 'Boundary: the coach does not put the operator\'s capital-goods label on the reader');
 }
 
+// --- His public work: the six repositories ---------------------------------
+// Only 3 of 12 case-study results could be checked from outside, and 3 of
+// the 5 public research outputs were this site itself, while six public
+// repositories went unmentioned (docs/plan.md, Phase 3). Each is now where
+// it belongs, public and spelled as GitHub spells it, and the homepage's
+// skills point at them rather than at the site.
+{
+    const content = require('../scripts/lib/content.js');
+    const research = JSON.parse(read('content/research.json'));
+    const projects = JSON.parse(read('content/projects.json')).caseStudies;
+    const lenses = JSON.parse(read('content/lenses.json')).lenses;
+    const GH = 'https://github.com/moseskolleh/';
+    const REPOS = [
+        { name: 'WaterProject', research: { caseStudy: 'groundwater' }, artifactOf: ['groundwater'], skill: 'Python' },
+        { name: 'GAIA-Framework-', research: { caseStudy: 'gaia' }, artifactOf: ['gaia'] },
+        { name: 'climatematch-pipeline', research: { lenses: ['climate-risk'] }, artifactOf: [] },
+        { name: 'A-B-Testing-at-Globox', research: {}, artifactOf: [], skill: 'SQL' },
+        { name: 'SustainableAIPrototypes', research: { caseStudy: 'sustainable-ai' }, artifactOf: ['sustainable-ai'] },
+        { name: 'promptcoach', research: { caseStudy: 'sustainable-ai' }, artifactOf: ['sustainable-ai'], skill: 'JavaScript' }
+    ];
+    const home = new (require('jsdom').JSDOM)(index).window.document;
+    const wrong = [];
+    REPOS.forEach((r) => {
+        const url = GH + r.name;
+        const out = research.outputs.filter(o => o.url === url);
+        if (out.length !== 1 || out[0].status !== 'public') wrong.push(`${r.name}: ${out.length} public research outputs`);
+        else if (out[0].caseStudy !== r.research.caseStudy || JSON.stringify(out[0].lenses) !== JSON.stringify(r.research.lenses)) {
+            wrong.push(`${r.name}: research output placed at ${out[0].caseStudy || out[0].lenses}`);
+        }
+        const holders = projects.filter(cs => (cs.artifacts || []).some(a => a.url === url && a.status === 'public')).map(cs => cs.id);
+        if (holders.join() !== r.artifactOf.join()) wrong.push(`${r.name}: an artifact of ${holders.join(', ') || 'nothing'}, not ${r.artifactOf.join(', ') || 'nothing'}`);
+        if (r.skill) {
+            const item = Array.from(home.querySelectorAll('#skills .toolkit-item')).find(li => plain(li.querySelector('.toolkit-name').innerHTML).startsWith(r.skill));
+            const proof = item && item.querySelector('a.toolkit-proof');
+            if (!proof || proof.getAttribute('href') !== url) wrong.push(`${r.name}: not the ${r.skill} proof (${proof && proof.getAttribute('href')})`);
+        }
+    });
+    assert(wrong.length === 0, `Repos: each of the six is public where it belongs, on research.html, its case study and the skills (wrong: ${wrong.join('; ') || 'none'})`);
+
+    // A repository link anywhere is one of the six, spelled exactly: GitHub
+    // forgives the case, a reader comparing names does not.
+    const shipped = ['index.html', 'case-studies.html', 'research.html', 'carbon-ai.html', 'field-report.html', '404.html', 'stats.html', 'README.md']
+        .map(f => [f, read(f)]).concat(['projects', 'research', 'lenses', 'profile', 'narration'].map(n => [`content/${n}.json`, read(`content/${n}.json`)]));
+    const names = REPOS.map(r => r.name);
+    const stray = [];
+    shipped.forEach(([f, src]) => (src.match(/github\.com\/moseskolleh\/[\w.-]+/gi) || []).forEach((m) => {
+        const repo = m.split('/')[2].replace(/\.git$|\.$/, '');
+        if (!names.includes(repo) && repo !== 'sustaintheworld') stray.push(`${f}: ${m}`);
+    }));
+    assert(stray.length === 0, `Repos: every repository link names one of the six as GitHub spells it (stray: ${stray.join(', ') || 'none'})`);
+
+    // Every role view has public work a reader can open somewhere other
+    // than this site, whatever lenses content/lenses.json holds. The
+    // validator refuses one without; this says which work each lens has.
+    const bare = lenses.map(l => [l.id, content.publicWorkFor(l.id, { caseStudies: projects }, research)
+        .filter(w => /^https?:\/\//.test(w.url))]);
+    assert(bare.every(([, work]) => work.length > 0),
+        `Lenses: each has public work beyond this site (${bare.map(([id, work]) => `${id}: ${work.length}`).join(', ')})`);
+
+    // A lens's own work, not work borrowed from a case study that only
+    // touches it: without climatematch-pipeline the climate view's only
+    // repositories were the sustainable-AI case's, which lists the climate
+    // lens third, and the guard still passed.
+    const without = { outputs: research.outputs.filter(o => o.id !== 'climatematch-pipeline') };
+    const left = content.checkLensWork(lenses, { caseStudies: projects }, without);
+    assert(left.length === 1 && /lens "climate-risk"/.test(left[0]),
+        `Lenses: without climatematch-pipeline the climate view has no public work of its own, and the build says so (${left.join('; ') || 'it passed'})`);
+
+    // And the view shows it. research.html links an output with no case
+    // study to the view its lenses name; that view's panel lists it, linked,
+    // and links back to its entry, so the link lands on something. Without
+    // JavaScript the link lands on the "all" view, which lists it too.
+    const cs = new (require('jsdom').JSDOM)(read('case-studies.html')).window.document;
+    const unshown = research.outputs.filter(o => !o.caseStudy).flatMap(o => (o.lenses ? o.lenses.concat('all') : []).map(l => [o, l])).filter(([o, l]) => {
+        const panel = cs.querySelector(`[data-lens-panel="${l}"]`);
+        return !panel || !(o.status !== 'public' || panel.querySelector(`.cs-lens-evidence a[href="${o.url}"]`))
+            || !panel.querySelector(`.cs-lens-evidence a[href="research.html#${o.id}"]`);
+    }).map(([o, l]) => `${o.id} in ${l}`);
+    assert(research.outputs.some(o => o.lenses) && unshown.length === 0,
+        `Lenses: each output placed in a view by its lenses is listed, linked, in that view's panel and in the "all" view a reader without JavaScript gets (${unshown.join(', ') || 'all are'})`);
+
+    // Research outputs that are this site itself stay, but no longer make up
+    // most of the public list.
+    const open = research.outputs.filter(o => o.status === 'public');
+    const own = open.filter(o => !/^https?:\/\//.test(o.url));
+    assert(own.length * 2 < open.length, `Research: this site's own outputs are a minority of the public ones (${own.length} of ${open.length})`);
+}
+
+// --- What the repositories do not say stays off --------------------------
+// The repositories name clients and partners who never agreed to be named
+// here (docs/plan.md: "partner names stay out without their consent"), and
+// targets a README calls success metrics. None of it may reach a page.
+{
+    const KEEP_OUT = [/\bTimbo\b/, /\bACF\b/, /Living Water International/i, /\bWiNGiN\b/i,
+        /\bMatthijs\b/, /\bThomas\b/, /\bJop\b/, /\bCora\b/, /\bMirai\b/, /\bZahra\b/, /\bAli\b/, /\bRezaei\b/];
+    const pages = fs.readdirSync(ROOT).filter(f => f.endsWith('.html'))
+        .concat(fs.readdirSync(path.join(ROOT, 'content')).filter(f => f.endsWith('.json')).map(f => `content/${f}`), ['voice-scripts.js']);
+    const named = [];
+    pages.forEach((f) => {
+        const src = read(f);
+        KEEP_OUT.forEach((re) => { const m = src.match(re); if (m) named.push(`${f}: "${m[0]}"`); });
+    });
+    assert(named.length === 0, `Partners: no client, partner or team member the repositories name is on the site (${named.join(', ') || 'none'})`);
+
+    // The prototypes' README lists "success metrics" (a 25% CO2 cut, 4.2/5
+    // stars, 70% improvement) that are targets. Wherever the site mentions
+    // them it says so, and none of their figures appears.
+    const all = pages.map(f => plain(read(f))).join(' ');
+    const metrics = all.match(/success metrics[^.]*\./gi) || [];
+    assert(metrics.length > 0 && metrics.every(s => /targets, not results/.test(s)) && !/4\.2\s*\/\s*5|70% (?:self-reported )?improvement|25% reduction/i.test(all),
+        `Partners: the prototypes' success metrics are called targets, and none is quoted (${metrics.join(' | ')})`);
+
+    // GAIA maps its outputs to disclosure line items. That is not
+    // compliance, certification or assurance, and no sentence about it says so.
+    const gaia = all.split(/(?<=[.!?])\s+/).filter(s => /GAIA/.test(s));
+    assert(gaia.length > 0 && !gaia.some(s => /\b(?:compliant|certified|assured)\b/i.test(s)),
+        `GAIA: no sentence calls its mapping compliance, certification or assurance (${gaia.length} sentences)`);
+}
+
+// --- Power BI: a tool claimed only with its proof ------------------------
+// Nothing anywhere evidences Power BI, so it is named nowhere, unless the
+// homepage's toolkit lists it with a proof link (owner checklist E4). The
+// Assay's list of tools to detect in an ad is not a claim, and is not read.
+{
+    const pages = fs.readdirSync(ROOT).filter(f => f.endsWith('.html'))
+        .concat(fs.readdirSync(path.join(ROOT, 'content')).filter(f => f.endsWith('.json')).map(f => `content/${f}`), ['voice-scripts.js']);
+    const doc = new (require('jsdom').JSDOM)(index).window.document;
+    const listed = Array.from(doc.querySelectorAll('#skills .toolkit-item')).filter(li => /power\s*bi/i.test(li.textContent));
+    const proven = listed.every(li => li.querySelector('a.toolkit-proof[href^="http"], a.toolkit-proof[href^="case-studies.html#"]'));
+    const elsewhere = pages.filter(f => /power\s*bi/i.test(f === 'index.html'
+        ? read(f).replace(/<li class="toolkit-item">[\s\S]*?<\/li>/g, li => (/power\s*bi/i.test(li) && proven ? '' : li))
+        : read(f)));
+    assert(proven && elsewhere.length === 0, `Power BI: claimed nowhere without a proof link (${elsewhere.join(', ') || 'none'})`);
+}
+
+// --- Skills: each proof is public work that shows it, or says there is none
+// The proofs pointed at #projects, #education and the coach on this site.
+// Each now opens a repository, or says in words that there is no public
+// project, and then links nowhere or to the case study that tells the work.
+// QGIS pointed at the groundwater case study and passed because the case
+// study had a public repository, WaterProject, which shows no GIS work at
+// all. A case study is a proof only if one of its public artifacts names
+// the tool.
+{
+    const content = require('../scripts/lib/content.js');
+    const research = JSON.parse(read('content/research.json'));
+    const projects = JSON.parse(read('content/projects.json')).caseStudies;
+    const doc = new (require('jsdom').JSDOM)(index).window.document;
+    const items = Array.from(doc.querySelectorAll('#skills .toolkit-item'));
+    const bad = [];
+    items.forEach((li) => {
+        const name = li.querySelector('.toolkit-name');
+        const tool = plain(name.innerHTML).trim();
+        const names = name.firstChild.textContent.split(/[&·/]/).map(n => n.trim()).filter(Boolean);
+        const proof = li.querySelector('.toolkit-proof');
+        const href = proof && proof.getAttribute('href');
+        if (!proof) return bad.push(`${tool}: no proof`);
+        const none = /no public (?:[\w.]+ )?project/.test(proof.textContent);
+        if (!href) {
+            if (proof.localName === 'a' || !none) bad.push(`${tool}: an unlinked proof that does not say there is no public project`);
+            return;
+        }
+        const cs = href.startsWith('case-studies.html#') && projects.find(c => c.id === href.split('#')[1]);
+        const repo = research.outputs.some(o => o.url === href && o.status === 'public');
+        const shows = cs && (cs.artifacts || []).some(a => a.status === 'public' && /^https?:\/\//.test(a.url)
+            && names.some(n => new RegExp(`\\b${n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(`${a.name} ${a.note || ''}`)));
+        if (none && !cs) bad.push(`${tool}: says there is no public project, yet links ${href}`);
+        if (!none && !repo && !shows) bad.push(`${tool}: ${href} has no public work that shows ${names.join(' or ')}`);
+        if (/^https?:/.test(href) && proof.getAttribute('rel') !== 'noopener') bad.push(`${tool}: an off-site link without rel="noopener"`);
+    });
+    assert(items.length === 6 && bad.length === 0, `Skills: every proof is public work that shows the tool, or says there is none (wrong: ${bad.join('; ') || 'none'})`);
+    const gis = items.find(li => /^QGIS/.test(plain(li.innerHTML).trim()));
+    assert(!!gis && /on request; no public GIS project yet/.test(gis.querySelector('.toolkit-proof').textContent),
+        'Skills: the GIS proof says its maps are on request and there is no public GIS project yet (owner checklist R7)');
+    // The Tableau proof is the repository that links the dashboard, and says
+    // only that: no workbook is in it.
+    const tableau = items.find(li => /^Tableau/.test(plain(li.innerHTML).trim()));
+    assert(!!tableau && /links a Tableau Public dashboard/.test(tableau.querySelector('.toolkit-proof').textContent),
+        'Skills: the Tableau proof says the repository links a Tableau Public dashboard, and no more');
+    assert(!content.TRUSTED_HOSTS.includes('public.tableau.com'), 'Skills: the dashboard is reached through the repository, not linked from here');
+}
+
+// --- One name for one tool -----------------------------------------------
+// "AI, Weighed", "EcoPrompt Coach" and "promptcoach" were one tool under
+// three names. It is the EcoPrompt Coach: carbon-ai.html is this site's
+// edition, the promptcoach repository and its app the maintained one, and
+// "promptcoach" is only ever the repository's name.
+{
+    const shipped = fs.readdirSync(ROOT).filter(f => /\.(html|js|css)$/.test(f))
+        .concat(fs.readdirSync(path.join(ROOT, 'modules')).map(f => `modules/${f}`),
+            fs.readdirSync(path.join(ROOT, 'content')).map(f => `content/${f}`), ['README.md']);
+    const old = shipped.filter(f => /AI,(?:\s|&nbsp;)+Weighed/i.test(read(f)));
+    assert(old.length === 0, `One name: "AI, Weighed" is gone (${old.join(', ') || 'nowhere'})`);
+
+    // In what a reader sees, "promptcoach" is a repository: in its address,
+    // or in brackets after the tool's name.
+    const seen = [];
+    ['index.html', 'carbon-ai.html', 'case-studies.html', 'research.html'].forEach((f) => {
+        (plain(read(f)).match(/.{0,24}promptcoach.{0,2}/gi) || [])
+            .filter(m => !/\/promptcoach/i.test(m) && !/EcoPrompt Coach[^.]*\(promptcoach\)/.test(m) && !/\(promptcoach\)/.test(m))
+            .forEach(m => seen.push(`${f}: "${m}"`));
+    });
+    assert(seen.length === 0, `One name: "promptcoach" names the repository, never the tool (${seen.join('; ') || 'as it should'})`);
+
+    // The maintained tool is linked as such, app and code, from the coach's
+    // page and from the homepage's teaser.
+    const APP = 'https://moseskolleh.github.io/promptcoach/';
+    const REPO = 'https://github.com/moseskolleh/promptcoach';
+    const { JSDOM } = require('jsdom');
+    const coach = new JSDOM(read('carbon-ai.html')).window.document;
+    const teaser = new JSDOM(index).window.document.getElementById('ecoprompt');
+    [['carbon-ai.html', coach.querySelector('.ca-hero')], ['the homepage teaser', teaser]].forEach(([where, el]) => {
+        const hrefs = Array.from(el.querySelectorAll('a')).map(a => a.getAttribute('href'));
+        assert(hrefs.includes(APP) && hrefs.includes(REPO), `One name: ${where} links the maintained EcoPrompt Coach, its app and its code (${hrefs.join(', ')})`);
+    });
+
+    // carbon-ai.html's own figures say how old they are, from the data.
+    const data = require('../ai-carbon-data.js');
+    const vintage = coach.querySelector('.ca-hero .ca-vintage');
+    const grid = (Object.values(data.REGIONS)[0].vintage.match(/\d{4}/) || [])[0];
+    const sameGrid = Object.values(data.REGIONS).every(r => r.vintage === Object.values(data.REGIONS)[0].vintage);
+    assert(!!vintage && plain(vintage.querySelector('time').textContent) === data.REVIEWED_ON &&
+        sameGrid && new RegExp(`grid intensities from ${grid} data`).test(plain(vintage.innerHTML)) &&
+        /For newer models, see the EcoPrompt Coach app; its 2026 models are extrapolated/.test(plain(vintage.innerHTML)),
+        `Vintage: carbon-ai.html dates its figures as ai-carbon-data.js does (reviewed ${data.REVIEWED_ON}, grid ${grid}) and sends newer models to the app, extrapolated as it says`);
+    assert(!/reproduces its calculation model|mirrors the calculation model/i.test(read('content/research.json') + read('content/projects.json') + read('carbon-ai.js')),
+        'One name: nothing says this site\'s edition reproduces the maintained tool\'s model; they have separate code and data');
+}
+
 // --- Staleness ----------------------------------------------------------
 // Deliberately not a failure. A test that goes red on a calendar date teaches
 // people to ignore red. This prints where anyone will see it and moves on.
@@ -440,13 +693,13 @@ const fieldText = plain(fieldReport);
     const months = (Date.now() - verified.getTime()) / (1000 * 60 * 60 * 24 * 30.44);
     if (months > profile.meta.staleAfterMonths) {
         console.log('');
-        console.log(`NOTICE: content/profile.json was last verified ${Math.floor(months)} months ago (${profile.meta.verifiedOn}).`);
+        console.log(`NOTICE: content/profile.json was logged ${Math.floor(months)} months ago (${profile.meta.verifiedOn}).`);
         console.log(`        "${profile.currentRole.displayDates}" at ${profile.currentRole.organization} is still being`);
-        console.log('        published as current. Confirm it, then update meta.verifiedOn — or close the role');
+        console.log('        published as current. Confirm it, then set meta.confirmedOn and meta.verifiedOn — or close the role');
         console.log('        in profile.json, index.html, field-report.html, the CV and the narration together.');
         console.log('');
     } else {
-        console.log(`INFO: profile verified ${Math.floor(months)} month(s) ago; next review due after ${profile.meta.staleAfterMonths}.`);
+        console.log(`INFO: profile logged ${Math.floor(months)} month(s) ago; next review due after ${profile.meta.staleAfterMonths}.`);
     }
 }
 

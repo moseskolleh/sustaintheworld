@@ -163,6 +163,38 @@ html:not(.js) .cs-lenses { display: none; }
 }
 .cs-method li { margin-bottom: 5px; }
 
+/* The method, folded to its heading and how many steps it has (see the
+   card in build-content.js): the heading is the press, at a finger's
+   height, with a + that turns to − when open, as the photos' does. The
+   heading sits in the middle of the 44px, so the press reaches 12px up
+   to keep it level with the other stages' headings. */
+.cs-method-fold > summary {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    margin-top: -12px;
+    list-style: none;
+    cursor: pointer;
+}
+.cs-method-fold > summary::-webkit-details-marker { display: none; }
+.cs-method-fold > summary:focus-visible { outline: 2px solid var(--primary-green); outline-offset: 2px; }
+.cs-method-fold .cs-stage-h { margin: 0; }
+.cs-method-fold .cs-stage-h::after {
+    content: '+';
+    /* The sign is decoration: the fold says open or shut itself. Where the
+       empty alternative is not understood, the line above stands. */
+    content: '+' / '';
+    font-family: var(--font-mono, 'IBM Plex Mono', monospace);
+    font-size: 1rem;
+    letter-spacing: 0;
+}
+.cs-method-fold[open] .cs-stage-h::after { content: '\2212'; content: '\2212' / ''; }
+.cs-method-n {
+    font-weight: 400;
+    color: var(--text-secondary);
+}
+.cs-method-fold > .cs-method { margin-top: 2px; }
+
 /* --- artifacts --- */
 .cs-artifacts,
 .cs-results {
@@ -173,19 +205,32 @@ html:not(.js) .cs-lenses { display: none; }
     gap: 12px;
 }
 
+/* Side by side where the card is wide: on a desktop a card is 1,100px
+   across, and one artifact or result to a row left most of it empty and
+   the page longer than its length budget allows. */
+@media (min-width: 900px) {
+    .cs-artifacts,
+    .cs-results {
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    }
+}
+
 .cs-artifact {
     padding: 12px 14px;
     border: 1px solid var(--border);
     border-radius: 6px;
 }
+/* The kind and the availability chip open the name's own line, rather than
+   taking a line of their own above it. */
 .cs-artifact-head {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 6px;
+    margin-right: 8px;
+    vertical-align: 1px;
 }
 .cs-artifact-kind { color: var(--text-dim); }
-.cs-artifact-name { line-height: 1.5; }
+.cs-artifact-name { display: inline; line-height: 1.5; }
 .cs-artifact-name a {
     color: var(--primary-green);
     text-decoration: underline;
@@ -248,14 +293,34 @@ html:not(.js) .cs-lenses { display: none; }
     line-height: 1.6;
     color: var(--text-secondary);
 }
-.cs-result-basis .mono-label { display: block; margin-bottom: 2px; }
-.cs-result-check {
+.cs-result-basis .mono-label { margin-right: 4px; }
+.cs-result-verifiable .cs-result-basis .mono-label { color: var(--primary-green); }
+
+/* --- findings and recommendations ---
+   A list, not boxes: they are the case study's conclusions in a sentence
+   each, labelled as found or recommended, with their basis in small type
+   under them. A recommendation is ruled amber, as the caveat is: it is
+   advice, where a finding is what the work showed. */
+.cs-findings {
+    list-style: none;
     margin: 0;
-    font-size: 0.76rem;
-    font-style: italic;
-    color: var(--text-secondary);
-    opacity: 0.85;
+    padding: 0;
+    display: grid;
+    gap: 10px;
 }
+.cs-finding {
+    padding-left: 12px;
+    border-left: 2px solid var(--primary-green);
+}
+.cs-finding-recommendation { border-left-color: var(--amber); }
+.cs-finding p { margin: 0; font-size: 0.95rem; line-height: 1.6; }
+.cs-finding-kind { margin-right: 4px; }
+.cs-finding .cs-finding-basis {
+    margin-top: 2px;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+}
+.cs-finding-basis .mono-label { margin-right: 4px; }
 
 .cs-caveat {
     margin: 18px 0 0;
@@ -272,6 +337,9 @@ html:not(.js) .cs-lenses { display: none; }
 /* An interactive's host: its heading and the line that stands in for it
    until modules/dossier.css and .js arrive (or for good, without them). */
 .cs-play { margin: 0 0 20px; }
+/* A game's title is one run of words with a figure marked in it: as a
+   flex row, the mark and the words after it were two columns on a phone. */
+.cs-play > .cs-stage-h { display: block; }
 .cs-play-summary {
     margin: 0;
     font-size: 0.85rem;
@@ -420,6 +488,10 @@ html.lightbox-open { overflow: hidden; }
 }
 .cs-footnote h2 { margin: 0 0 12px; font-size: 1.1rem; color: var(--primary-green); }
 .cs-footnote p { margin: 0 0 10px; line-height: 1.7; font-size: 0.9rem; }
+/* Folded, as research.html's reproduction notes are: the case studies'
+   phone length (scripts/check-budget.js) had no room left once the
+   repositories, the GAIA case and every case study's findings joined. */
+.cs-footnote details > p:first-of-type { margin-top: 12px; }
 .cs-footnote code {
     background: var(--darker-bg);
     padding: 2px 6px;
@@ -514,9 +586,9 @@ html.lightbox-open { overflow: hidden; }
     color: var(--text-secondary);
 }
 .rs-methods .mono-label { margin-right: 4px; }
-.rs-link { margin: 10px 0 0; font-size: 0.85rem; }
-.rs-link a { color: var(--primary-green); text-decoration: none; }
-.rs-link a:hover { text-decoration: underline; }
+/* The case study or role view, at the end of the note: underlined, as a
+   link in a run of text has to be told apart by more than its colour. */
+.rs-link { white-space: nowrap; color: var(--primary-green); text-underline-offset: 3px; }
 
 .rs-repro {
     margin-top: 40px;
@@ -526,7 +598,11 @@ html.lightbox-open { overflow: hidden; }
     border-radius: 8px;
 }
 .rs-repro h2 { margin: 0 0 12px; font-size: 1.1rem; color: var(--primary-green); }
-.rs-repro > p { margin: 0 0 16px; line-height: 1.7; font-size: 0.92rem; }
+.rs-repro summary,
+.cs-footnote summary { cursor: pointer; font-size: 0.92rem; color: var(--text-secondary); }
+.rs-repro summary:hover,
+.cs-footnote summary:hover { color: var(--primary-green); }
+.rs-repro details > p { margin: 12px 0 16px; line-height: 1.7; font-size: 0.92rem; }
 
 .rs-commands { margin: 0; }
 .rs-commands dt { margin-top: 10px; }
@@ -548,11 +624,35 @@ html.lightbox-open { overflow: hidden; }
    Narrow screens
    ------------------------------------------------------------------- */
 @media (max-width: 640px) {
-    .cs-card { padding: 20px 18px; }
+    /* Closer set on a phone, where every pixel of padding is a narrower
+       line and so a taller card: the page holds seven case studies to a
+       length budget (scripts/check-budget.js). */
+    .cs-card { padding: 18px 14px; }
+    .cs-card-head { margin-bottom: 16px; }
+    .cs-stage { margin-bottom: 16px; }
+    .cs-stage p { line-height: 1.6; }   /* a short line needs less leading */
+    .cs-artifacts, .cs-results { gap: 10px; }
+    .cs-artifact, .cs-result { padding: 10px 12px; }
     .cs-card-head h3 { font-size: 1.25rem; }
     .cs-lens-panel { padding: 16px 18px; }
-    .rs-item { padding: 16px 16px; }
+    /* research.html likewise: sixteen outputs to fit under its own */
+    .rs-item { padding: 12px 14px; margin-bottom: 8px; }
+    .rs-intro, .rs-group { margin-bottom: 24px; }
     .rs-repro, .cs-footnote { padding: 18px 18px; }
+}
+/* Printed, the folds are open: paper has no press. The method, the
+   closing note and the reproduction notes are folded for the screen's
+   length alone; an inline script also opens them before printing, in
+   every browser (PRINT_FOLDS, build-content.js), which is how one without
+   ::details-content prints them. The photo rows stay shut. */
+@media print {
+    .cs-method-fold::details-content,
+    .cs-footnote details::details-content,
+    .rs-repro details::details-content { content-visibility: visible; display: block; }
+    /* Open, the sign is "−", and the rule that draws it names [open]: so
+       does this one, or it loses on paper, where the folds are open. */
+    .cs-method-fold .cs-stage-h::after,
+    .cs-method-fold[open] .cs-stage-h::after { content: none; }
 }
 /* Low-energy and reduced-motion visitors get no transitions to pay for. */
 @media (prefers-reduced-motion: reduce) {

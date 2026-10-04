@@ -157,12 +157,12 @@ window.mks.share = (() => {
                    { t: 'Flood-risk assessment with GIS for Wuppertal', href: 'case-studies.html#wuppertal' }] },
             { label: 'Data analysis & visualization', general: true,
               syn: ['python', 'data analysis', 'data analytics', 'pandas', 'sql', 'statistic', 'tableau', 'power bi', 'data visualization', 'data visualisation', 'r programming'],
-              ev: [{ t: 'Python for the global river-export pollution analysis (MSc thesis)', href: '#skills' },
+              ev: [{ t: 'Python and SQL in public repositories', href: '#skills' },
                    { t: 'Google Advanced Data Analytics certificate (2024)', href: '#education' }] },
             { label: 'Sustainable AI & AI governance',
               syn: ['sustainable ai', 'ai governance', 'responsible ai', 'ai ethics', 'green ai', 'ai sustainability', 'generative ai', 'llm'],
               ev: [{ t: 'Researcher, Sustainable AI at the Digital Society School, with the Ministry of Finance as partner', href: 'case-studies.html#sustainable-ai' },
-                   { t: 'EcoPrompt Coach: the public, runnable companion to the research prototype', href: 'carbon-ai.html' }] },
+                   { t: 'EcoPrompt Coach: this site’s edition, public and runnable', href: 'carbon-ai.html' }] },
             { label: 'Water quality & environmental modelling',
               syn: ['pollution', 'water quality', 'contamination', 'nutrient', 'nitrogen', 'effluent', 'catchment', 'watershed', 'eutrophication', 'environmental modelling', 'environmental modeling'],
               ev: [{ t: 'MARINA-Multi pollution modelling across 10,226 sub-basins (MSc thesis)', href: 'case-studies.html#coastal' },
@@ -349,10 +349,11 @@ window.mks.share = (() => {
         ['#education li, #education .cert-line', '#education', (el) => `Covered in ${up(el, '.education-card', 'h3, .cert-title')}: ${clean(el)}`],
         ['#skills .skills-checklist li, #skills .frameworks-list li', '#skills', () => 'Listed under Skills & Education']
     ];
+    // A proof with "no public" work behind it is partial, not ticked.
     function toolEvidence(tool, doc) {
         for (const [sel, href, say] of (doc ? SOURCES : [])) {
             const el = Array.from(doc.querySelectorAll(sel)).find(e => matches(clean(e), tool));
-            if (el) return [{ t: say(el), href }];
+            if (el) { const t = say(el); return [{ t, href, part: /no public/.test(t) }]; }
         }
         return null;
     }
@@ -578,7 +579,7 @@ window.mks.share = (() => {
     const block = (cls, heading, rows) => (rows.length
         ? `<div class="assay-map ${cls}"><div class="mono-label assay-map-h">${heading}</div>${rows.join('')}</div>` : '');
     const evidence = (list) => list.map(e => (e.href
-        ? `<a href="${escHtml(e.href)}">${escHtml(e.t)}</a>`
+        ? `<a href="${escHtml(e.href)}"${e.part ? ' class="assay-part"' : ''}>${escHtml(e.t)}</a>`
         : `<span>${escHtml(e.t)}</span>`)).join('');
 
     const assay = () => {
@@ -915,7 +916,7 @@ window.mks.share = (() => {
         else if (gWh < lo) msg = `You put the biggest model at ~${gWh.toFixed(2)} Wh. ${est}, so you underestimated the frontier, about ${Math.round(rWh / gWh)}× below its central figure.`;
         else if (gWh > hi) msg = `You had the frontier at ~${gWh.toFixed(2)} Wh. ${est}, so that is an overestimate.`;
         else msg = `You had the frontier at ~${gWh.toFixed(2)} Wh. ${est}: your guess is within that range.`;
-        msg += ` A 1B model answers for about ${tiny} Wh, so the frontier reasoning model uses roughly ${factorFrontier}× more for the same 1,000-token answer (${factors} across the ranges). That gap is exactly what the tools people prompt with never show them.`;
+        msg += ` A 1B model answers for about ${tiny} Wh, so the frontier reasoning model uses roughly ${factorFrontier}× more for the same 1,000-token answer (${factors} across the ranges). That gap is what the tools people prompt with rarely show them.`;
         // Shape grade: did they capture the frontier spike, not just a magnitude?
         let guessPeak = KNOWN;
         for (let i = KNOWN + 1; i < n; i++) if (guess[i] > guess[guessPeak]) guessPeak = i;
@@ -955,7 +956,7 @@ window.mks.share = (() => {
         ctx.font = "600 19px 'Space Grotesk', system-ui, sans-serif";
         const shapeLines = wrapText(ctx, cardData.shape, cw);
         ctx.font = "400 16px 'Inter', system-ui, sans-serif";
-        const factorText = `By the published estimates, the frontier reasoning model uses about ${cardData.factor}× the energy per answer of a 1-billion-parameter model (${cardData.factors} across their ranges).`;
+        const factorText = `By the published estimates, the frontier reasoning model uses about ${cardData.factor}× the energy per answer of a 1B model (${cardData.factors} across their ranges).`;
         const factorLines = wrapText(ctx, factorText, cw);
         const headerH = 78;
         const H = headerH + 26 + shapeLines.length * 26 + 14 + factorLines.length * 23 + 66;
@@ -1106,7 +1107,7 @@ window.mks.share = (() => {
         if (totalMb < MEDIAN_MB) {
             lines.push({ t: 'c', s: `— you're ${Math.round((1 - totalMb / MEDIAN_MB) * 100)}% lighter —` });
         }
-        lines.push({ t: 'r', l: 'Text-only report', r: '9 KB' });
+        lines.push({ t: 'r', l: 'Text-only report', r: '10 KB' });
         if (unmeasured) {
             lines.push({ t: 'c', s: `* ${unmeasured} off-site request${unmeasured > 1 ? 's' : ''} not counted`, dim: true });
         }

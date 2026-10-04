@@ -555,14 +555,20 @@ rule makes that cheap.
 
 ## Progress
 
-What branch `claude/plan-implementation-soh954` implements so far, step by step,
-checked against the code and the test runs on 2026-10-03 (`npm test`: 2,033
-passing in twenty-three suites, the figure the runner prints at the end;
-`npm run smoke` in Chromium: passes). Waves 1
-and 2 are on `main` (pull requests #48 and #49, merged by 2026-09-27, where
-CI's Chromium and Firefox smoke jobs passed). Wave 3 (Phase 2 and Phase 6
-step 8) is built on `wave/w3-integrate` for this branch and is not on `main`
-yet. ✓ done · ◐ partial, with the reason · ✗ waiting on Moses. Everything
+What the plan's branch implements so far, step by step, as it stands on
+the branch of pull request #51 (wave 4), checked against the code and the test runs on
+2026-10-04 (`npm test`: 2,386 passing assertions in twenty-eight suites, the
+figure the runner prints at the end; `npm run smoke -- --require` in
+Chromium: passed, and its length check measured every page within its
+ceiling). Waves 1 and 2 are on `main` (pull requests #48 and #49, merged
+by 2026-09-27, where CI's Chromium and Firefox smoke jobs passed), and so is
+wave 3 (Phase 2 and Phase 6 step 8; pull request #50, merged 2026-10-03,
+where all three CI jobs passed on its last run; GitHub Pages rebuilt from
+`main` the same day).
+Wave 4 (Phase 3) is in pull request #51 and not on `main` yet; it is built
+on `main` at `284ccd3`, so it carries `03c8c21` (the journey map's names
+measured by their glyphs, for Firefox).
+✓ done · ◐ partial, with the reason · ✗ waiting on Moses. Everything
 Moses has to supply is listed, with where it goes, in
 [owner-checklist.md](owner-checklist.md).
 
@@ -616,8 +622,8 @@ the steps below.
    every listed skill has a project behind it (Life Cycle Assessment, Carbon
    Markets and Circular Economy have none), and the contact narration says
    "Amsterdam and the E.U.", as the page does.
-   Left: the CV PDF still carries four of the removed claims (✗ Moses, or
-   Phase 3.7). ✗ Sources for the 30%, a people-reached count and a method for
+   The CV is printed from content/ since wave 4 (Phase 3.7) and carries none
+   of them. ✗ Sources for the 30%, a people-reached count and a method for
    95% and 15%, if they exist.
 5. ✓ **Contradictions resolved**: embodied carbon excluded on both pages,
    and Anatomy names whose report its Scope 2 and capital-goods lines are
@@ -671,7 +677,8 @@ one a blocker (the raw daily totals were readable by anyone while
 fixed, and what they changed is folded into the steps below and 6.6-6.7.
 
 1. ✓ **A cookieless, first-party counter**: `count.js` (3 KB, 2 KB
-   gzipped), deferred on all seven pages; the 404 page names itself. It
+   gzipped), deferred on every page (eight since wave 4 added
+   `claims.html`); the 404 page names itself. It
    sends the page, the lens, the deepest part of `<main>` reached, the
    features used, the referrer's host, a viewport class and the KB this
    page view transferred, plus a format version, as one POST the first time
@@ -706,9 +713,10 @@ fixed, and what they changed is folded into the steps below and 6.6-6.7.
    Every other browser context in smoke opens with Global Privacy Control
    on, so a test run never sends a real count.
 3. ✓ **The hooks are wired, and the Plausible/Cloudflare block is gone.**
-   All 34 `data-analytics` names now on the site (23 when this plan was
-   written, 27 after wave 2; wave 3's shell, first view and Assay button
-   added the rest) are counted when clicked, and so are the on-demand modules as
+   All 37 `data-analytics` names now on the site (23 when this plan was
+   written, 27 after wave 2, 34 after wave 3's shell, first view and Assay
+   button; wave 4 added the two links to `claims.html` and the ESG lens's)
+   are counted when clicked, and so are the on-demand modules as
    they are fetched (`module-<name>`), the contact form being sent, the
    terminal's `cv` command, and the Assay's grade; the ad itself never
    leaves the page, and the label by the Assay's button now says so ("the
@@ -718,10 +726,10 @@ fixed, and what they changed is folded into the steps below and 6.6-6.7.
    has a CV or email link without a hook (the field report's two had
    none). ✗ Whether the grade should be counted at all (S4).
 4. ◐ **`stats.html`, public.** Built: in the sitemap, linked from the
-   footers of the homepage, case studies, research, AI, Weighed and itself,
-   and from the field report and the 404 page, under a 103 KB budget (95 KB
-   today; 97.8 KB drawn full, every list at its cap, and the ceiling is that
-   plus 5%), with a privacy note that prints a literal example payload and
+   footers of the homepage, case studies, research, Check my numbers, the
+   EcoPrompt Coach page and itself, and from the field report and the 404
+   page, under a 103 KB budget (96 KB today; 97.8 KB drawn full, every list
+   at its cap, and the ceiling is that plus 5%), with a privacy note that prints a literal example payload and
    lists what is never collected. The weekly Action
    (`.github/workflows/stats.yml`, Mondays 04:17 UTC) reads the daily totals
    from `?action=stats`, which answers only the `STATS_TOKEN` token (the
@@ -752,25 +760,26 @@ fixed, and what they changed is folded into the steps below and 6.6-6.7.
    homepage views whose deepest section was Contact; and Brief uses, empty
    until Phase 4.1. ✗ The four-week baseline: it needs S1, S2 and four full
    weeks of counting; Moses records it here (S6). Baseline: not yet recorded.
-   Order matters: a baseline of the *current* homepage exists only if the
-   counter runs for those four weeks before the Phase 2 redesign goes live.
-   The redesign is built (wave 3, below) and goes live when its pull
-   request is merged; nothing in the code holds it back, and when is
-   Moses's call (S7).
+   Order mattered: a baseline of the old homepage existed only if the
+   counter ran for those four weeks before the Phase 2 redesign went live.
+   The redesign reached `main` with pull request #50 on 2026-10-03, six days
+   after the counter, so the baseline will be of the redesigned homepage,
+   and Phase 2 is judged against its own first four weeks (S7, done).
    Transfer is kept per page (`kb` rows keyed by page), so the Phase 4.2
    statement can report measured activity data by page.
 
-**Phase 2 — wave 3.** Built, and the homepage meets its length targets, but
-not done as a phase: the at-a-glance strip still lacks the four facts only
-Moses can give (2.1), and none of it is live until the wave's pull request
-is merged, which is his call (S7). Measured in Chromium once the page has
-settled: the homepage is 9.36 screens at 1440×900 and 16.31 at 390×844,
-from 19.4 and 32.7 when this plan was written (18.78 and 32.18 when the wave
-began); `index.html` is 84 KB on disk (21 KB gzipped), from 134 KB; the
-homepage's first view is 275 KB over the wire, from 282 KB.
+**Phase 2 — wave 3.** Built, on `main` since pull request #50 (2026-10-03),
+and the homepage meets its length targets, but not done as a phase: the
+at-a-glance strip still lacks the four facts only Moses can give (2.1).
+Measured in Chromium once the page had settled: the homepage was 9.36
+screens at 1440×900 and 16.31 at 390×844, from 19.4 and 32.7 when this plan
+was written (18.78 and 32.18 when the wave began); `index.html` was 84 KB on
+disk (21 KB gzipped), from 134 KB; the homepage's first view was 275 KB over
+the wire, from 282 KB. After wave 4 it is 9.42 and 16.49 screens and 276 KB
+(283,023 bytes), within the same ceilings.
 What the wave needs from Moses is in the owner checklist: F1–F3 (the
-strip's facts), P1 and P2 (two choices to confirm) and S7 (when it goes
-live).
+strip's facts) and P1 and P2 (two choices to confirm); S7, when it went
+live, is done.
 
 1. ◐ **The first view.** The availability line reads "Open to
    sustainability, climate-risk, ESG and sustainable-AI roles and
@@ -830,9 +839,9 @@ live).
    headline result and whether it can be checked, the lenses and tools, and
    one link. Seven in Ten and the borehole game are one game, on the
    groundwater case study, and the flood slider is on Wuppertal's; both are
-   fetched only as they near the screen (`modules/dossier.js`). AI, Weighed
-   keeps You Draw It; its calculator went (`carbon-ai.html` has its own)
-   and Anatomy of a Prompt moved to `carbon-ai.html`, fetched as its
+   fetched only as they near the screen (`modules/dossier.js`). The
+   EcoPrompt Coach section (then called AI, Weighed) keeps You Draw It; its
+   calculator went (`carbon-ai.html` has its own) and Anatomy of a Prompt moved to `carbon-ai.html`, fetched as its
    section nears. A link already shared to one of them on the homepage
    (`#anatomy`, `#boreholeGame`, `#strikeWidget`, `#floodSim`) goes on to
    where it is now rather than opening the homepage at its top, on arrival,
@@ -844,8 +853,14 @@ live).
    goes down rather than disabled, and Back after a link to a game leaves
    the case studies where they are (smoke checks both), and the rig and
    You Draw It, both sliders, take a slider's keys: Home, End and the Page
-   keys (and the rig's Up and Down) had scrolled the page away from them. Experience is short cards at every width, not only on a
-   phone, each opened by a More button named for its role. The Assay sits
+   keys (and the rig's Up and Down) had scrolled the page away from them.
+   Smoke's check of You Draw It's keys at 390×844 is flaky: wave 4's lanes
+   saw it fail on some runs, at wave 4's base too, with the page moved
+   1,173px. No scroll is called; `#about` and `#experience`, above the
+   chart, shrink from a 2,088px stand-in height to their real ones while
+   the keys are pressed, which points at the sections drawn on demand
+   (Phase 6.3). Not fixed yet. Experience is short cards at every width,
+   not only on a phone, each opened by a More button named for its role. The Assay sits
    below the contact form, its question and promise in view and its box
    behind one "Grade a job description" button. To reach the targets
    without losing a fact, beyond the plan: section padding 100 → 56px (44px
@@ -911,9 +926,13 @@ live).
    homepage both ways, and with none stored every page, the homepage
    included, follows the system's setting. The field report and the 404
    page take the nav and the call to action as plain lines, with no script,
-   no back to top and no light theme: the field report is 9,720 bytes, just
-   under where its quoted "9 KB" would round to 10, and `404.html` is
-   self-contained. axe finds no violation on any page in either theme.
+   no back to top and no light theme: the field report was 9,720 bytes, just
+   under where its quoted "9 KB" would round to 10 (wave 4's claim marks,
+   its seventh project and its line of code links keep it under 10.5 KB,
+   quoted as 10 KB under its 11 KB ceiling; the claims test fails if the
+   quote and `npm run budget` part), and
+   `404.html` is self-contained. axe finds no violation on any page in
+   either theme.
 9. ✓ **Ratchet the budgets,** once the rest of wave 3 was in: the
    homepage's first view 300 → 288 KB, the largest image 220 → 210 KB, the
    field report file 12 → 11 KB, case studies 120 → 109 KB, research 110 →
@@ -925,8 +944,240 @@ live).
    on-demand total (72 of 72 KB) and `carbon-ai.html` (110 of 111 KB) had
    no room to give.
 
-**Phase 3** — not started (3.5 and 3.10 ✗ Moses). The core-log depths
-(3.9) are still hard-coded.
+**Phase 3 — wave 4.** Built, and its "done when" holds: every lens has
+public work beyond the site's own pages (the validator refuses one that has
+none, and each lens's own is shown in its view), the claims-ledger test is
+green, and the CV is generated. Not done as a phase: the findings the plan
+names (3.3), the testimonials (3.5), the certificates' links (3.8) and the
+"Present" role (3.10) wait on Moses. Where the plan began, 3 of 12
+case-study results were labelled checkable from outside and 3 of 5 "public"
+research outputs were the portfolio itself. Two of those three labels said
+where to check nothing: the coastal model's 10,226 sub-basins cited no
+source, and the Hunan defence rests on a certificate `claims.html` files as
+on request. The build now refuses a result called checkable without a
+source of its own (`check`) or public work in its case study, and both say
+"not checkable from outside" until Moses supplies one (N4). So 3 of 15
+results across seven case studies are checkable today, each at a public
+repository, and 10 of 16 outputs are public, 4 of them this site's own
+pages. No ceiling was raised: the homepage's first view grew 949 bytes
+(282,074 → 283,023), past one rounding line and short of the next, and is
+quoted as 276 KB everywhere. 136 of those bytes are the light palette
+restated for print, since a reader printing from the dark theme got lime
+figures and pale-grey text on white paper; about 90 open what hides a
+figure the ledger links to (the badge's method note, a role behind More, a
+field note) and print every section, where paper got headings and white
+space; neither had a saving of the same size that kept the stylesheet's
+and the script's comments. The on-demand total paid for the narration
+player's shared constant by moving two comment blocks of
+`modules/dispatch.js` that restated the README to a pointer at it. `case-studies.html` grew most (106,779 →
+111,490 bytes, 126 under its ceiling once its inline script shipped
+without its comment lines; 11.54 and 19.74 screens against 11.85 and
+19.78), and
+`research.html` is 8.97 screens on a phone against 8.99. `claims.html` is
+new, with ceilings of 101 KB and 7.54 and 13.53 screens, set at what it
+measured plus 5% once the review had put the figures written in words on
+it (36 entries). What the wave needs
+from Moses is in the owner checklist: R1–R7 (his repositories), G1–G4 (the
+ESG case and the findings), N1–N4 (the ledger's evidence), D1–D3 and L1 (the
+CV, the ministry's name, the certificates, the testimonials) and F5.
+
+1. ✓ **His public work on the site.** All six public repositories are
+   research outputs, each described only as far as the repository shows:
+   WaterProject (also the first public code on the groundwater case study,
+   and so behind the water lens), GAIA-Framework- (its own case study, step
+   2), climatematch-pipeline (no case study of its own: a new `lenses` field
+   places it in the climate-risk view, whose panel lists it after the
+   lens's evidence, as the "all" view does too, which is the one a reader
+   without JavaScript gets, and its note says it has no licence file),
+   A-B-Testing-at-Globox, and SustainableAIPrototypes and promptcoach
+   (both public artifacts of the sustainable-AI case study). The toolkit's
+   proofs point at them: Python at WaterProject, SQL at the GloBox test,
+   Tableau at the same repository, whose README links a Tableau Public
+   dashboard, and JavaScript at promptcoach. Machine learning, shown by a
+   certificate alone, says "no public project yet" and links nowhere. QGIS
+   links the groundwater case study and says its maps are "on request; no
+   public GIS project yet": that case study's one public repository,
+   WaterProject, shows no QGIS or ArcGIS work, and a test now accepts a
+   case study as a proof only when a public artifact of it names the tool.
+   Power BI is claimed nowhere (a test keeps it so). `checkLensWork` in
+   `scripts/lib/content.js` refuses a lens with no public work of its own
+   beyond the site's own pages: the artifacts of the case studies that list
+   it first, and the outputs placed in it. (Counting every case study that
+   touched a lens let the climate view pass on the sustainable-AI case's
+   repositories; without climatematch-pipeline it now fails.)
+   `research.html` groups its outputs by availability
+   (public, on request, held by the client), each note ending with its case
+   study or lens, the reproduction notes folded. No partner is newly named.
+   WaterProject's apps and the Tableau dashboard are reached through their
+   repositories, not linked directly: WaterProject's README says its Pages
+   app goes live only once Pages is switched on, which nobody has
+   confirmed (R5), and the Streamlit and Tableau hosts are not on the
+   allowlist. ✗ Moses: the client names in WaterProject, the SQL label, a
+   public machine-learning project, whether the dashboard and the apps are
+   live, climatematch's licence, and public GIS work (R1–R7).
+2. ✓ **An ESG/CSRD lens and case study.** `?lens=esg-csrd`, "ESG & CSRD
+   reporting", built from GAIA, Anatomy of a Prompt and the OnePointFive
+   accelerator. Its home case study is a seventh, GAIA, presented as method
+   and tooling, with no client's assessment claimed (its caveat says so):
+   three public artifacts (the repository, the web estimator and
+   `carbon-ai.html#anatomy`) and two results checkable from outside, each on
+   what the repository states (3,984 cross-engine checks passing at 2.2.0;
+   every output mapped to GRI, ESRS E1 and E3, IFRS S2, CDP and SBTi, as a
+   mapping, not an assurance). Its method opens with the rebuild on
+   published science: the OnePointFive accelerator, which the repository
+   never mentions and which came months before it, is the ESG view's
+   background, not a step of GAIA. The sustainable-AI case joins the lens. GAIA
+   has no homepage card (`homepageCard: false`); the homepage's projects
+   section links the ESG view beside the other three. Each view now opens on
+   its home case studies, so `?lens=esg-csrd` opens on GAIA, the climate
+   view on Wuppertal and the water view on its three water-first studies.
+   ✗ Moses: whether GAIA is his to publish and whether it is the ministry
+   project's held framework, and the GAIA case's own facts (G1, G2).
+3. ◐ **Findings and recommendations.** Every case study carries `findings`:
+   one to four entries, each a finding or a recommendation (at least one a
+   finding), with a basis wherever there is a figure. The validator refuses
+   a case study without them, and they render as stage 05. They come only
+   from the field notes, the case studies' own text, photo captions, the
+   climate lens and the GAIA repository, so where the evidence is thin the
+   list is short: UNDRR has one, and Wuppertal one, its recommendation
+   having named no measure. The sustainable-AI finding on the spread
+   between models rests on the coach's factor set, not on the field note
+   that says it, and says "few tools put it in front of the person typing"
+   where it said "nobody", beside the case's own tools that do; the
+   principles finding names two of the five cards, as the photo shows them. Partial because none of the three findings this
+   step names is on the site: the coastal finding says only that the thesis
+   sets out which drivers dominate; Wuppertal has no measure; the
+   sustainable-AI case gives its five design principles, not the ministry's
+   decision criteria, which nothing on the site records. To make room under
+   the page's length ceiling each method is folded behind a press ("02
+   Method, four steps"), and so is the page's closing note; printed, both
+   open. ✗ Moses: confirm the findings, and supply the coastal drivers, the
+   Wuppertal measures and, if the framework may be quoted and the ministry
+   named, its decision criteria (G3); the folded method (G4).
+4. ✓ **One name for one tool.** "AI, Weighed" is gone from every page, the
+   README, the budget labels, the open counts' page names, smoke and the
+   tests (`content.test.js` fails if it comes back): the tool is EcoPrompt
+   Coach. `carbon-ai.html` is "this site's edition", dated from
+   `ai-carbon-data.js` (models reviewed 2026-08-05, grid data 2023); it and
+   the homepage's section 05 link the maintained app
+   (moseskolleh.github.io/promptcoach) and its code as the canonical tool,
+   for newer models, whose figures the app says are extrapolated. Nothing
+   claims the edition reproduces the maintained tool's calculation. The
+   other option, refreshing `ai-carbon-data.js` from GAIA's model catalogue,
+   was not taken: 117 of its 119 current models are modelled, not measured,
+   and its units differ. On the way, the "Power Hungry Processing" citation
+   got its authors right (Luccioni, Jernite and Strubell). ✗ Moses: that the
+   app is live (R5).
+5. ◐ **Testimonials with provenance.** Built: `content/testimonials.json`,
+   whose validator refuses a quote without a source (a linkedin.com profile
+   or recommendations address, or "on request" with the date permission was
+   given), a fourth entry or a quote over 200 characters; the homepage draws
+   a block under the core log only when there is an entry. A figure in a
+   quote, or in a certificate's line, is marked like any other on the
+   homepage, and one the claims ledger does not hold as written is refused
+   by name (`checkQuotedFigures`): a form on its entry is the fix, and the
+   quote is never edited. Partial because
+   there are none, so the homepage shows nothing: ✗ Moses, two or three
+   people with permission (L1). No full-length one fits yet: with stand-in
+   quotes of 200 characters, one takes the homepage to 9.80 screens at
+   1440×900 against a 9.79 ceiling, and two to 9.80 and 17.18 at 390×844
+   against 17.09, so room has to be made first.
+6. ✓ **Check my numbers.** `content/claims.json` holds the 36 figures the
+   site prints, each with its value, what it counts, exactly one basis (a
+   case-study result, a `profile.json` field, an `ai-carbon-data.js`
+   factor, a source with its URL, a budget, a figure derived from others, or
+   "illustrative") and whether a reader can check it (public, with where;
+   on request; or not checkable; a result's is its case study's). Every
+   figure on `index.html`, `carbon-ai.html`, `field-report.html` and
+   `404.html` is wrapped by hand in `<span data-claim>`, and the build marks
+   those the generated pages print from `content/`. `claims.html`, generated,
+   lists them by checkability with the pages that mark each, each "Where"
+   linking the section, or the view of the case studies, that shows the
+   figure in sight; where every mark of it on a page is folded (the
+   badge's method note, a role behind More, a photo's caption, the
+   research page's reproduction notes) the link points into the fold,
+   names it, and the page opens it on arrival, which `npm run smoke`
+   checks by following every link. It is linked under the hero's figures,
+   from every footer and from the 404 page. `tests/claims.test.js` fails on
+   a mark that disagrees with its entry, an entry with no basis, a number
+   the narration says that no entry backs, and an unmarked numeral on any
+   page, in digits or in words, in the text or in the labels, tooltips,
+   photo captions and descriptions a reader is shown. On `stats.html` the
+   weekly counts are skipped as the counter's own, and the rules the page
+   states (30 counts a minute, nothing under 5 published, up to 20
+   features, the window-width classes, the four-week baseline) are printed
+   from the counter's code and held to it, so `claims.html` says that page
+   is held another way rather than listed. A size said in words is read too ("a
+   fifth of a kettle", "twice", "millions of"): the kettle, which had no
+   basis, is gone, and "an order of magnitude" is held to the factor set.
+   Every host the scan skips because a script fills it names that script,
+   and what the script prints of its own is read from its source and held
+   to the ledger: the field terminal's lines, the Assay's evidence ("164
+   water points…", once held only to appearing somewhere on the site), the
+   receipt's 10 KB, You Draw It's words, the narration player's weight
+   note (which typed in its own grams per MB, and now reads the badge's) and
+   the coach's tips, three of which quoted ranges no source gave ("4–10×
+   more energy per token") and now print only what they work out or the
+   factor set holds. The footer's
+   badge prints no fixed figure. The allowlist is wider than years: `EXEMPT` in
+   `scripts/lib/claims.js` also passes dates, section numbers, standards'
+   names, versions, return periods and the like, each narrowly, and a test
+   feeds it the same numbers counting something; `WORD_EXEMPT` passes "one"
+   and a count of what the page shows in full, which a test holds to the
+   number shown. A count in words that is a figure is an entry, so
+   the Wuppertal team of six, the five months at UNDRR, the five design
+   principles and the factor set's models, grid regions and cooling
+   profiles are on the list (36 entries). Not ledgered: the calculators'
+   outputs (their inputs are). Where the calculator's input is its own
+   choice (the default PUE, the reference mix, the output weight and its
+   range), the ledger says so rather than giving the factor's citation as
+   its source. Two figures were corrected: "~25 MB of images" had no basis and is now "~22 MB on
+   arrival", measured at commit `3d7ab78`; the field report is quoted at
+   10 KB and ≈0.004 g. ✗ Moses: the evidence behind the on-request and
+   not-checkable figures, the 22 MB line and the two results' sources
+   (N1–N4), and a source for the 30%
+   (E1).
+7. ✓ **A CV generated from `content/`.** `npm run cv`
+   (`scripts/build-cv.js`) prints `assets/Moses_Kolleh_Sesay_CV.pdf`, two A4
+   pages, with the smoke test's Chromium, from `profile.json`,
+   `projects.json`, `research.json` and the homepage's own words, through
+   the template `scripts/cv.html` (not a page of the site), the site's fonts
+   embedded as TrueType and nothing fetched. `tests/cv.test.js` reads the
+   PDF back without a browser: every role, degree and certificate, every
+   case study's headline result, the public outputs; none of the dropped
+   claims, no name not yet cleared, no number `content/` lacks, and no
+   "facts confirmed" line until Moses has set `meta.confirmedOn` (it ended
+   "Facts last verified 5 August 2026", the day the record is logged as of,
+   which nobody had confirmed); and
+   `assets/cv.hash` fails it once `content/` or the homepage has moved on
+   without a new print. The old CV's "10,000+", 95%, 15%, "3+ years" and
+   Power BI are gone. His phone number is on it, as the homepage's contact
+   card publishes it (`person.phone`, held to the card by a test). Left off
+   until Moses says: the ministry's name. ✗ Moses: read it (D1); the
+   ministry (D2).
+8. ◐ **Certificates link to their verification pages.** Built: an optional
+   `verifyUrl` per certification in `profile.json`; the homepage's
+   certificate cards are generated from the list, with a "Verify" link
+   where there is one, on the CV too; `VERIFY_HOSTS` limits it to issuers'
+   hosts, and Coursera's and CFI's credential site are on the allowlist.
+   Partial because no certificate has its link yet: ✗ Moses, the four
+   links (D3); Masterschool's and the UN System Staff College's hosts are
+   added once known.
+9. ✓ **Depths from dates.** `npm run build:content` writes each core-log
+   layer's depth from its role's dates, 10 m a year, its top where the role
+   ended and its base where it began, measured from `meta.verifiedOn`
+   rather than the day of the build (the build is deterministic, and no
+   test fails on the calendar): the labels went from 0, 8, 24, 63 and 70 m
+   to 0–9, 13–14, 28–32, 68–73 and 73–79 m, and the head reads "LOGGED AUG
+   2026". `tests/corelog.test.js` works them out by hand, and a role added
+   or reordered on one side only stops the build.
+10. ✗ **Re-verify the "Present" role** (F5). `SustainableAIPrototypes` was
+    last changed on 2025-11-26, and promptcoach's handover document from the
+    Digital Society School is dated January 2026. Moses's confirmation is
+    `meta.confirmedOn`, null until he sets it, and only then does the CV say
+    the facts were confirmed; bumping `meta.verifiedOn` redraws the core log
+    (the narration says "as last logged", not "today"), so `npm run cv`
+    follows either.
 
 **Phase 4.** 4.3 ◐ the ten stock-voice tracks (4.13 MB) are retired; the
 `intro` script (193 words, opening "Kushe") is in `content/narration.json`;
@@ -997,24 +1248,27 @@ move to `content/brief.json`. 4.2 and 4.4 not started.
    `^22.22.0 || >=24.8.0`, which html-validate needs). ✓ Chromium pinned to
    the build `playwright-core` 1.56.1 names (141.0.7390.37), cached in CI.
    ✓ Suites run side by side, one process each, and the timing suites on a
-   fake clock: `test:unit` takes about 12 s here for twenty-three suites
-   (about 44 s of work on four cores), where twelve used to take about 17 s
-   one after another; a new suite runs the day it exists. ✓ axe-core in smoke on every page at
+   fake clock: `test:unit` takes about 18 s here for twenty-eight suites
+   (about 65 s of work, four at a time), where twelve used to take about
+   17 s one after another; a new suite runs the day it exists. ✓ axe-core in smoke on every page at
    1440×900 and 390×844 in both themes, and on the homepage's open states
    (0 violations); html-validate on every page in `npm test`, not in smoke
    as this step says: on the source files it needs no browser, runs early in
    the test job, and names the file and line to fix, and
    what scripts add after load is covered by axe in smoke. ✓ A budget
-   for `carbon-ai.html` (110 KB of 111 KB today), and smoke compares every
-   budgeted page's measured first view with its estimate. ✓ A Firefox pass,
+   for `carbon-ai.html` (111 KB of 111 KB today, 468 bytes under), and
+   smoke compares every budgeted page's measured first view with its estimate. ✓ A Firefox pass,
    a CI job of its own: its first run, on pull request #49, failed eight
    checks (carbon-ai.html's selects in each browser's own font, and one
    check that read a jump before it settled), fixed in `c85f9b6`, and it
-   then passed. Wave 3's new smoke checks have run only in Chromium so far;
-   their first Firefox run is on the wave's pull request. Not started:
+   then passed. Wave 3's new smoke checks first ran in Firefox on pull
+   request #50: two journey-map checks failed there (fixed in `03c8c21`, on
+   `main`), and the next run passed all three jobs. Wave 4's new checks have
+   run only in Chromium so far; their first Firefox run is on its pull
+   request. Not started:
    comparing smoke screenshots with a baseline, left until after the Phase
    2 redesign, which changes every one.
-8. ◐ **A carbon receipt on every pull request.**
+8. ✓ **A carbon receipt on every pull request.**
    `.github/workflows/receipt.yml` measures `main` and the pull request
    with the pull request's own scripts (`check-budget.js --json`, and
    `smoke.js --lengths-only` in the pinned Chromium), and
@@ -1037,8 +1291,7 @@ move to `content/brief.json`. 4.2 and 4.4 not started.
    rewrites them. The README's table of on-demand modules is written the
    same way: the words for each row are in `MODULE_TABLE`, the weights are
    measured, and a file fetched on demand that no row names stops it being
-   written. Partial: the workflow has never run (tested here from fixtures,
-   and end to end against an earlier commit); its first run is on wave 3's
-   pull request.
+   written. It first ran on pull request #50 (2026-10-03): both runs
+   succeeded, and the second edited the first one's comment in place.
 
 **Phase 7** — not started.

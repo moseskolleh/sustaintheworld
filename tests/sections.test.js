@@ -229,8 +229,11 @@ const profile = JSON.parse(read('content/profile.json'));
     assert(cards.every(c => c.querySelector('.project-tags > .project-lenses') && c.querySelector('.project-tags > .project-tech span')),
         'Projects: each card keeps its lenses and its tools (the Assay reads them), on one run of small type');
     const intro = bare.querySelector('#projects .section-description');
-    assert(!!intro && intro.querySelectorAll('a[href^="case-studies.html"]').length === 4 && !bare.querySelector('#projects .section-header > p:nth-of-type(2)'),
-        'Projects: one line of introduction, still with the case studies and the three lenses');
+    const lensIds = JSON.parse(read('content/lenses.json')).lenses.map(l => l.id);
+    const lensLinks = intro ? Array.from(intro.querySelectorAll('a[href^="case-studies.html?lens="]')).map(a => a.getAttribute('href').split('=')[1]) : [];
+    assert(!!intro && intro.querySelectorAll('a[href="case-studies.html"]').length === 1 && lensLinks.join() === lensIds.join() &&
+            !bare.querySelector('#projects .section-header > p:nth-of-type(2)'),
+        `Projects: one line of introduction, still with the case studies and every lens, in lenses.json's order (${lensLinks.join(', ')})`);
 }
 
 // ===================================================================
@@ -307,6 +310,10 @@ const profile = JSON.parse(read('content/profile.json'));
 {
     const { SCRIPTS } = require('../voice-scripts.js');
     const byId = Object.fromEntries(SCRIPTS.map(s => [s.id, s]));
+    // A sentence ends at a stop and a capital, but not after an initialism
+    // the narration spells for the voice: "Sustainable A.I. Prototypes" is
+    // one name.
+    const sentences = (t) => t.split(/(?<=[.!?])(?<!\b(?:[A-Z]\.)+)\s+(?=[A-Z])/);
     assert(!byId.notes && !byId.education, 'Narration: no script for a section that is now part of another');
     assert(/field notes/i.test(byId.about.label) && /what a hundred and sixty-four water points taught me about data/.test(byId.about.text),
         'Narration: About reads its field notes');
@@ -331,7 +338,7 @@ const profile = JSON.parse(read('content/profile.json'));
         [/^It runs entirely in your browser\.$/, ['entirely in your browser']],
         [/^The text never leaves this page, and no A\.I\. model is downloaded to do it\.$/, ['the text never leaves this page', 'no AI model is downloaded to do it']]
     ];
-    byId.contact.text.split(/(?<=[.!?])\s+(?=[A-Z])/).forEach((sentence) => {
+    sentences(byId.contact.text).forEach((sentence) => {
         const entry = SAID.find(([re]) => re.test(sentence));
         const missing = entry ? entry[1].filter(words => !section.includes(words)) : null;
         assert(!!entry && !missing.length,
@@ -347,15 +354,15 @@ const profile = JSON.parse(read('content/profile.json'));
         [/^Six projects, each with its headline result and how I know it\.$/, ['Six projects, each with its headline result and how I know it.']],
         [/^One, the sustainable A\.I\. framework: a working decision-support prototype, not a slide deck\.$/,
             ['Sustainable AI Framework', 'A working decision-support prototype, not a slide deck']],
-        [/^You can check that: the EcoPrompt Coach prototype is public and runnable, and every factor it uses carries its source\.$/,
-            ['Checkable from outside The EcoPrompt Coach prototype is public and runnable, and every factor it uses carries its source.']],
+        [/^You can check that: the team's prototypes are public on GitHub, as Sustainable A\.I\. Prototypes, with my role in its README\.$/,
+            ['Checkable from outside The team\'s prototypes are public on GitHub as Sustainable AI Prototypes, with my role in its README.']],
         [/^Two, coastal water pollution dynamics: ten thousand two hundred and twenty-six sub-basins modelled\.$/,
             ['Coastal Water Pollution Dynamics', '10,226 sub-basins modelled']],
-        [/^You can check that too: it is a property of the model domain used, not an estimate\.$/,
-            ['Checkable from outside A property of the model domain used, not an estimate.']],
+        [/^You cannot check that from outside: it is a property of the model domain used, not an estimate, and the thesis is on request\.$/,
+            ['Not checkable from outside A property of the model domain used, not an estimate; the thesis is on request.']],
         [/^Three, a flood-resilient Wuppertal: a complete flood-risk management framework, delivered to the municipality\.$/,
             ['Flood-Resilient Wuppertal', 'A complete flood-risk management framework delivered to the municipality']],
-        [/^You cannot check that from outside: the client holds the deliverable, and nothing here claims it was implemented\.$/,
+        [/^You cannot check that either: the client holds the deliverable, and nothing here claims it was implemented\.$/,
             ['Not checkable from outside The deliverable is held by the client; nothing here claims it was implemented.']],
         [/^Four, disaster risk reduction with the United Nations in Bonn: fifty-four global hazard information systems, identified and documented\.$/,
             ['UN Disaster Risk Reduction', 'Bonn, DE', '54 global hazard information systems identified and documented']],
@@ -363,8 +370,8 @@ const profile = JSON.parse(read('content/profile.json'));
             ['Not checkable from outside A count recorded in the deliverable, which UNDRR holds.']],
         [/^Five, soft path water management: successfully defended at Hunan University, in May twenty twenty-one\.$/,
             ['Soft Path Water Management', 'Successfully defended at Hunan University, May 2021']],
-        [/^You can check that: the degree was awarded, a master's in industrial engineering\.$/,
-            ['Checkable from outside Degree awarded: MSc Industrial Engineering, 2021.']],
+        [/^You cannot check that from outside either: the degree was awarded, a master's in industrial engineering, and its certificate is on request\.$/,
+            ['Not checkable from outside Degree awarded: MSc Industrial Engineering, 2021; the certificate is on request.']],
         [/^And six, groundwater potential mapping: a seventy per cent aquifer strike rate in the drilling that followed\.$/,
             ['Groundwater Potential Mapping', '70% aquifer strike rate in subsequent drilling']],
         [/^You cannot check that either: it comes from the field records of the boreholes sited with the survey, not a controlled trial\.$/,
@@ -372,7 +379,7 @@ const profile = JSON.parse(read('content/profile.json'));
         [/^The whole of each is in the case studies, and two of them you can play with there: site a borehole, or flood a river\.$/,
             ['The whole of each, with the basis for every number, is in the case studies']]
     ];
-    const projectSentences = byId.projects.text.split(/(?<=[.!?])\s+(?=[A-Z])/);
+    const projectSentences = sentences(byId.projects.text);
     projectSentences.forEach((sentence) => {
         const entry = PROJECTS_SAID.find(([re]) => re.test(sentence));
         const missing = entry ? entry[1].filter(words => !cards.includes(words)) : null;

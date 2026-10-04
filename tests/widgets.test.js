@@ -216,7 +216,8 @@ const text = (el) => (el ? el.textContent.replace(/\s+/g, ' ').trim() : '');
     assert(text(score) === tally && /New site surveyed/.test(result.textContent), 'Round: a new site keeps your score and says it is new');
 
     // The 30% has no recorded source. Wherever the widget shows it, it says so.
-    const lines = Array.from(host.querySelectorAll('h4, p, span')).filter(el => !el.children.length || el.matches('p'))
+    // (A figure's ledger mark, <span data-claim>, is part of its line, not a line.)
+    const lines = Array.from(host.querySelectorAll('h4, p, span:not([data-claim])')).filter(el => !el.querySelector(':not([data-claim])') || el.matches('p'))
         .map(text).filter(t => /30%|3 in 10|blind/i.test(t));
     assert(lines.length >= 2 && lines.every(t => /illustrative/.test(t)),
         `Illustrative: every line of the widget that mentions blind drilling says illustrative (${lines.join(' / ')})`);

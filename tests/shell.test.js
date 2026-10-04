@@ -447,8 +447,18 @@ const state = (doc) => {
             `Palette: the light tokens are the same set by theme.js and by the system setting alone (${Object.keys(explicit).length} and ${Object.keys(system).length})`);
         const unpaired = Object.keys(explicit).filter(k => !(k in dark)).concat(Object.keys(dark).filter(k => !(k in explicit)));
         assert(unpaired.length === 0, `Palette: every token has a dark and a light value (${unpaired.join(', ') || 'all paired'})`);
+        // Printed from the dark theme, the browser dropped the backgrounds
+        // and kept the lime figures and pale text, about 1.3:1 on white
+        // paper. Paper takes the light tokens, whatever the screen had: a
+        // third copy, the same as the other two (npm run smoke reads the
+        // colours a printed page gets).
+        const printed = tokens((css.match(/@media print\s*{\s*:root,\s*:root\[data-theme\]\s*{([^}]*)}/) || [])[1] || '');
+        assert(JSON.stringify(printed) === JSON.stringify(explicit), `Palette: printed, a shell page takes the light tokens whatever the theme (${Object.keys(printed).length} tokens)`);
 
         const home = tokens((strip(read('style.css')).match(/html\.light-mode\s*{([^}]*)}/) || [])[1] || '');
+        const homePrinted = tokens((strip(read('style.css')).match(/@media print\s*{\s*:root\s*{([^}]*)}/) || [])[1] || '');
+        assert(Object.keys(home).length >= 10 && JSON.stringify(homePrinted) === JSON.stringify(home),
+            `Palette: printed, the homepage takes its own light tokens whatever the theme (${Object.keys(homePrinted).length} of ${Object.keys(home).length})`);
         const same = { '--primary-green': '--primary-green', '--card-bg': '--card-bg', '--text-primary': '--text-primary',
             '--text-secondary': '--text-secondary', '--text-dim': '--text-dim', '--amber': '--accent-amber', '--border': '--line-color' };
         const differ = Object.entries(same).filter(([mine, theirs]) => explicit[mine] !== home[theirs])

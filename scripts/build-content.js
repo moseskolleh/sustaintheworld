@@ -13,22 +13,30 @@
 //
 // GENERATED (do not hand-edit — the header on each file says so):
 //
-//   case-studies.html   problem → method → artifact → result, per project,
-//                       with role lenses
+//   case-studies.html   problem → method → artifact → result → findings,
+//                       per case study, with role lenses
 //   research.html       research outputs and how to reproduce them
 //   stats.html          what the visit counter has counted, suppressed
 //                       below 5, and exactly what it sends (content/stats.json,
 //                       which scripts/fetch-stats.js writes once a week)
+//   claims.html         'Check my numbers': every figure in
+//                       content/claims.json, its basis, whether a reader
+//                       can check it, and where the pages below mark it
 //   sitemap.xml         every page, with a lastmod that is not in the future
 //   voice-scripts.js    the narration module, from content/narration.json
 //   index.html          the JSON-LD block, the hero's at-a-glance strip
 //                       and the six project cards, each between its
-//                       markers
+//                       markers; the certificates and the testimonials
+//                       (none yet), between short ones; and in place, the
+//                       core log's depths and the date it was logged
 //   modules/interactives.js   the Assay's facts block only, between its
 //                       markers: what the fit-check may say about Moses
 //   carbon-ai.html, field-report.html, 404.html
 //                       the shared shell only (the nav, the closing call to
-//                       action), between its markers
+//                       action, carbon-ai.html's footer), between its markers
+//
+// Every figure the generated pages print from content/ is marked with its
+// claims-ledger entry on the way (see `prose`, below).
 //
 // STILL HAND-AUTHORED: index.html, field-report.html, carbon-ai.html and
 // 404.html, bar the regions above. They are long-form editorial pages, a
@@ -44,6 +52,7 @@
 const fs = require('fs');
 const path = require('path');
 const content = require('./lib/content.js');
+const figures = require('./lib/claims.js');
 
 const ROOT = content.ROOT;
 const CHECK = process.argv.slice(2).includes('--check');
@@ -62,21 +71,26 @@ const esc = (s) => String(s == null ? '' : s)
 
 // Typographic tidy-up for prose: the content files are written with plain
 // ASCII quotes and dashes so they stay easy to edit and diff.
-const prose = (s) => esc(s)
+const typeset = (html) => html
     .replace(/ — /g, ' &mdash; ')
     .replace(/(\d)-(\d)/g, '$1&ndash;$2');
 
-const slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+// And every figure in it that the claims ledger knows is marked with its
+// entry, <span data-claim="…">, as the hand-authored pages mark theirs by
+// hand: a "70%" that came from content/projects.json is held to
+// content/claims.json like one typed into index.html. The figures are
+// found by scripts/lib/claims.js before anything is escaped; main() hands
+// it the ledger (useLedger), and until then (a test drawing one region)
+// nothing is.
+let cutFigures = (s) => [[String(s == null ? '' : s), null]];
+const useLedger = (claims) => { cutFigures = figures.marker(claims); };
+const prose = (s) => cutFigures(s)
+    .map(([text, id]) => (id ? `<span data-claim="${id}">${esc(text)}</span>` : typeset(esc(text))))
+    .join('');
+// Marked, but not typeset: a photo's caption keeps its characters as written.
+const markOnly = (s) => cutFigures(s).map(([text, id]) => (id ? `<span data-claim="${id}">${esc(text)}</span>` : esc(text))).join('');
 
-// Group headings on research.html. Appending an "s" gave "MSc thesiss" and
-// "Codes"; these are the rules the output types actually need.
-const UNCOUNTABLE = new Set(['Code']);
-const plural = (type) => {
-    if (UNCOUNTABLE.has(type)) return type;
-    if (/is$/.test(type)) return type.slice(0, -2) + 'es';   // thesis → theses
-    if (/s$/.test(type)) return type;                          // already plural: Essays
-    return type + 's';
-};
+const slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
 /** Pulls named <symbol> definitions out of the sprite index.html already ships. */
 function sprite(ids) {
@@ -103,6 +117,19 @@ const STATUS_EXPLAIN = {
     'planned': 'Intended, not yet done.'
 };
 
+// How a case study's findings are labelled on the page, by kind.
+const FINDING_LABEL = {
+    finding: 'Finding',
+    recommendation: 'Recommendation'
+};
+
+// How many steps a folded method has, in words: the claims ledger's page
+// scan (tests/claims.test.js) holds every numeral to an entry, and a count
+// of the steps folded right under it is not a figure anyone needs the
+// basis of. The site writes small counts in words anyway.
+const STEP_WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
+const stepCount = n => `${STEP_WORDS[n] || n} step${n === 1 ? '' : 's'}`;
+
 /** The availability chip shown next to every artifact and output. */
 function statusChip(entry) {
     const label = STATUS_LABEL[entry.status] || entry.status;
@@ -121,7 +148,7 @@ function statusChip(entry) {
 // CV) and, where the page is long, a link back to the top. The generated
 // pages get it from pageShell; carbon-ai.html, field-report.html and
 // 404.html are hand-authored and take the same markup between SHELL-*
-// markers (injectShell, below), so --check holds all six to one shell.
+// markers (injectShell, below), so --check holds all seven to one shell.
 // The address, the CV and the roles come from content/profile.json.
 // ------------------------------------------------------------------
 
@@ -221,6 +248,17 @@ function shellCta(facts, { plain = false, base = '', hooks = SHELL_HOOKS.cta } =
 <p class="ca-top"><a href="#top">Back to top</a></p>`;
 }
 
+/**
+ * The footer of every page on carbon-ai.css: what the site counts about its
+ * visits, and every number it prints with its basis, the page it is on
+ * marked as current.
+ */
+function shellFoot({ current = '' } = {}) {
+    const here = (page) => (page === current ? ' aria-current="page"' : '');
+    return `<p><a href="stats.html"${here('stats.html')}>Open counts</a>: what this site counts about its visits, and what it never collects.</p>
+<p><a href="claims.html"${here('claims.html')} data-analytics="claims-foot">Check my numbers</a>: every number on this site, with its basis.</p>`;
+}
+
 // Not deferred, and ahead of the stylesheets: theme.js sets the theme
 // before anything is painted, and a script after a stylesheet would wait
 // for the stylesheet to arrive first.
@@ -286,7 +324,7 @@ ${main}
 ${indentBlock(shellCta(facts), '        ')}
     </main>
     <footer class="ca-foot">
-        <p><a href="stats.html"${current === 'stats.html' ? ' aria-current="page"' : ''}>Open counts</a>: what this site counts about its visits, and what it never collects.</p>
+${indentBlock(shellFoot({ current }), '        ')}
     </footer>
 ${bodyEnd}
 </body>
@@ -316,7 +354,7 @@ const WIDGET_HOSTS = {
     // blind-drilling rate, which has no recorded source and so is labelled
     // illustrative wherever it appears.
     borehole: {
-        title: 'Seven in ten: what reading the ground is worth',
+        title: '<span data-claim="strike-rate">Seven in ten</span>: what reading the ground is worth',
         noun: 'drilling game',
         live: `
                         <p class="dw-intro">This is a resistivity profile like the ones we walked across the Freetown Complex. Low resistivity &mdash; the dips in the curve &mdash; can mean water-bearing fractures. Or clay. Move the rig, pick your spot, drill.</p>
@@ -328,10 +366,10 @@ const WIDGET_HOSTS = {
                         <p class="borehole-result" id="drillResult" aria-live="polite">Drag the rig (or focus the profile and use the arrow keys), then drill.</p>
                         <div class="strike-board">
                             <p class="strike-row"><span class="strike-row-label" id="drillScore">Your holes &middot; drill to fill this row</span><span class="strike-waffle" data-row="you" aria-hidden="true"></span></p>
-                            <p class="strike-row"><span class="strike-row-label">Reading the curve first &middot; 7 in 10, field records</span><span class="strike-waffle" data-row="7" aria-hidden="true"></span></p>
-                            <p class="strike-row"><span class="strike-row-label">Blind drilling &middot; about 3 in 10, illustrative</span><span class="strike-waffle" data-row="3" aria-hidden="true"></span></p>
+                            <p class="strike-row"><span class="strike-row-label">Reading the curve first &middot; <span data-claim="strike-rate">7 in 10</span>, field records</span><span class="strike-waffle" data-row="7" aria-hidden="true"></span></p>
+                            <p class="strike-row"><span class="strike-row-label">Blind drilling &middot; about <span data-claim="blind-siting">3 in 10</span>, illustrative</span><span class="strike-waffle" data-row="3" aria-hidden="true"></span></p>
                         </div>`,
-        summary: 'Reading the resistivity curve first, the boreholes in the field records struck water 70% of the time; the ~30% for blind drilling is illustrative &mdash; not a measured figure.'
+        summary: 'Reading the resistivity curve first, the boreholes in the field records struck water <span data-claim="strike-rate">70%</span> of the time; the <span data-claim="blind-siting">~30%</span> for blind drilling is illustrative &mdash; not a measured figure.'
     },
     flood: {
         title: 'Don&rsquo;t let it become a boat',
@@ -382,16 +420,56 @@ function photoStrip(cs) {
         return `
                         <li><figure class="cs-photo${p.layout ? ` cs-photo-${p.layout}` : ''}">
                             <a href="${esc(p.src)}" data-lightbox="${esc(cs.id)}" data-caption="${esc(p.fullCaption)}"><img src="${esc(p.src)}"${srcset} alt="${esc(p.alt)}" width="${p.width}" height="${p.height}" loading="lazy" decoding="async"></a>
-                            <figcaption>${esc(p.caption)}</figcaption>
+                            <figcaption>${markOnly(p.caption)}</figcaption>
                         </figure></li>`;
     }).join('');
     return `
                 <details class="cs-photos">
                     <summary>${cs.gallery.length} photo${cs.gallery.length === 1 ? '' : 's'}</summary>
-                    <ul class="cs-photos-list">${photos}
+                    <ul class="cs-photos-list" id="${esc(cs.id)}-photos">${photos}
                     </ul>
                 </details>`;
 }
+
+/** A page's inline script without its whole-line comments, which stay in this file. */
+const codeOnly = (js) => js.replace(/^[ \t]*\/\/.*\n/gm, '');
+
+// Printed, the folds are open: paper has no press, and the method, the
+// case studies' closing note and research.html's reproduction notes are
+// folded only for the screen's length. content.css opens them for print
+// where the browser knows ::details-content; this opens them in every
+// browser before it prints (which is what a browser without it needs),
+// and shuts again only what it opened. So on paper every fold is [open],
+// and content.css's print rules match that state. The photo rows stay
+// shut on paper as on screen: their photos load only when a row is opened.
+// An address into a fold opens it too, on arrival and on a later jump: the
+// ledger (claims.html) sends a reader to a figure in a photo row or in the
+// reproduction notes, which a closed fold would hide. The address is inside
+// the fold, not on it, so a browser that opens a fold for its fragment
+// (Chromium does) shows it without this script too.
+const PRINT_FOLDS = `
+    (function () {
+        function reveal() {
+            var t = location.hash && document.getElementById(location.hash.slice(1));
+            var d = t && t.closest('details:not([open])');
+            if (d) { d.open = true; t.scrollIntoView(); }
+        }
+        reveal();
+        addEventListener('hashchange', reveal);
+        var folds = '.cs-method-fold, .cs-footnote details, .rs-repro details';
+        addEventListener('beforeprint', function () {
+            document.querySelectorAll(folds).forEach(function (d) {
+                if (!d.open) { d.open = true; d.setAttribute('data-print-open', ''); }
+            });
+        });
+        addEventListener('afterprint', function () {
+            document.querySelectorAll('[data-print-open]').forEach(function (d) {
+                d.open = false;
+                d.removeAttribute('data-print-open');
+            });
+        });
+    })();
+`;
 
 // The page's lightbox, in its own inline script: case-studies.html has no
 // script.js, and a module fetched on the first press would have to be paid
@@ -512,14 +590,27 @@ function renderCaseStudies(data) {
             ${all.map(l => `<a class="cs-lens" href="case-studies.html${l.id === 'all' ? '' : `?lens=${l.id}`}" data-lens="${esc(l.id)}">${esc(l.shortLabel || l.label)}</a>`).join('\n            ')}
         </nav>`;
 
+    // An output with no case study of its own sits in a view by its
+    // `lenses` (content/research.json), and the research page links it to
+    // that view: the view lists it after its evidence, so a reader who
+    // follows the link finds it, and can follow it back. The "all" view
+    // lists every one of them, with the view it sits in: it is the one a
+    // reader without JavaScript always gets, where the link from the
+    // research page used to land on a page that never named the output.
+    const viewName = (id) => esc((lenses.lenses.find(l => l.id === id) || {}).shortLabel || id);
+    const placedIn = (lensId) => data.research.outputs
+        .filter(o => !o.caseStudy && (o.lenses || []).length && (lensId === 'all' || o.lenses.includes(lensId))).map(o =>
+            `<li>${o.status === 'public' && o.url ? `<a href="${esc(o.url)}">${prose(o.title)}</a>` : prose(o.title)}, ` +
+            `${esc(STATUS_LABEL[o.status].toLowerCase())} ${esc(o.type.toLowerCase())}${lensId === 'all' ? `, in the ${o.lenses.map(viewName).join(' and ')} view` : ''} ` +
+            `(<a href="research.html#${esc(o.id)}">Research outputs</a>)</li>`);
+
     // One panel per lens, all present in the HTML. Without JavaScript the
     // server cannot know which was asked for, so the "all" panel is shown and
     // the rest are hidden — every case study is on the page either way.
     const panels = all.map((l) => {
         const isDefault = l.id === 'all';
-        const evidence = l.evidence
-            ? `<ul class="cs-lens-evidence">${l.evidence.map(e => `<li>${prose(e)}</li>`).join('')}</ul>`
-            : '';
+        const items = (l.evidence || []).map(e => `<li>${prose(e)}</li>`).concat(placedIn(l.id));
+        const evidence = items.length ? `<ul class="cs-lens-evidence">${items.join('')}</ul>` : '';
         const bestFor = l.bestFor ? `<p class="cs-lens-bestfor"><strong>Best fit for:</strong> ${prose(l.bestFor)}</p>` : '';
         return `
         <section class="cs-lens-panel" data-lens-panel="${esc(l.id)}"${isDefault ? '' : ' hidden'} aria-labelledby="lens-${esc(l.id)}-h">
@@ -530,6 +621,15 @@ function renderCaseStudies(data) {
         </section>`;
     }).join('\n');
 
+    // A case study is problem, method, artifact, result and findings. The
+    // method is folded to its one line ("02 Method, four steps") until asked
+    // for: the seventh case study and every case study's findings left no
+    // room under the page's length budget (scripts/check-budget.js), and
+    // the open methods alone are 3.3 screens on a phone and 1.2 on a
+    // desktop. Of the five stages the method is the one that says what was
+    // done rather than what came of it; the rest stays open, the
+    // artifacts' availability above all. A closed <details> needs no
+    // script, and Chrome's find-in-page opens it.
     const card = (cs) => {
         const artifacts = cs.artifacts.map((a) => {
             // An artifact on this page (an interactive below) is linked by its
@@ -551,19 +651,28 @@ function renderCaseStudies(data) {
                     </li>`;
         }).join('');
 
+        // Each result's basis is introduced by whether a reader can check it,
+        // in the homepage card's words. It was "How this is known" over the
+        // basis, then a sentence under it saying what the green rule says: a
+        // line per result, which the findings needed more on a phone.
         const results = cs.results.map(r => `
                     <li class="cs-result${r.verifiable ? ' cs-result-verifiable' : ''}">
                         <p class="cs-result-claim">${prose(r.claim)}</p>
-                        <p class="cs-result-basis"><span class="mono-label">How this is known</span> ${prose(r.basis)}</p>
-                        <p class="cs-result-check">${r.verifiable
-                            ? 'You can check this yourself.'
-                            : 'You cannot check this from outside — it rests on records held elsewhere.'}</p>
+                        <p class="cs-result-basis"><span class="mono-label">${r.verifiable ? 'Checkable from outside' : 'Not checkable from outside'}</span> ${prose(r.basis)}${r.check ? ` Check it: ${checkLink(r.check)}.` : ''}</p>
+                    </li>`).join('');
+
+        // What the work found, and what it says to do: each entry labelled
+        // as one or the other, with its basis under it where it has one.
+        const findings = cs.findings.map(f => `
+                    <li class="cs-finding cs-finding-${f.kind}">
+                        <p><span class="cs-finding-kind mono-label">${FINDING_LABEL[f.kind]}</span> ${prose(f.text)}</p>${f.basis ? `
+                        <p class="cs-finding-basis"><span class="mono-label">Basis</span> ${prose(f.basis)}</p>` : ''}
                     </li>`).join('');
 
         return `
             <article class="cs-card" id="${esc(cs.id)}" data-lenses="${esc((cs.lenses || []).join(' '))}">
                 <header class="cs-card-head">
-                    <p class="cs-card-meta mono-label">${esc(cs.period)} &middot; ${esc(cs.location)}</p>
+                    <p class="cs-card-meta mono-label">${esc(cs.period)}${cs.location ? ` &middot; ${esc(cs.location)}` : ''}</p>
                     <h3>${prose(cs.title)}</h3>
                     <p class="cs-card-sub">${prose(cs.subtitle || '')}</p>
                     <p class="cs-card-org">${prose(cs.organization)}${cs.partner ? ` &middot; with ${prose(cs.partner)}` : ''}${cs.role ? ` &middot; ${prose(cs.role)}` : ''}</p>
@@ -574,10 +683,10 @@ function renderCaseStudies(data) {
                     <p>${prose(cs.problem)}</p>
                 </div>
 
-                <div class="cs-stage">
-                    <h4 class="cs-stage-h"><span class="cs-stage-n">02</span> Method</h4>
+                <details class="cs-stage cs-method-fold">
+                    <summary><h4 class="cs-stage-h"><span class="cs-stage-n">02</span> Method <span class="cs-method-n">${stepCount(cs.method.length)}</span></h4></summary>
                     <ul class="cs-method">${cs.method.map(m => `<li>${prose(m)}</li>`).join('')}</ul>
-                </div>
+                </details>
 
                 <div class="cs-stage">
                     <h4 class="cs-stage-h"><span class="cs-stage-n">03</span> Artifact</h4>
@@ -588,6 +697,12 @@ function renderCaseStudies(data) {
                 <div class="cs-stage">
                     <h4 class="cs-stage-h"><span class="cs-stage-n">04</span> Result</h4>
                     <ul class="cs-results">${results}
+                    </ul>
+                </div>
+
+                <div class="cs-stage">
+                    <h4 class="cs-stage-h"><span class="cs-stage-n">05</span> Findings &amp; recommendations</h4>
+                    <ul class="cs-findings">${findings}
                     </ul>
                 </div>
 ${cs.widget ? widgetHost(cs.widget) : ''}${cs.caveat ? `
@@ -602,8 +717,7 @@ ${panels}
 
         <p class="cs-note">
             Every case study below is on this page in every view &mdash; a lens reorders and frames,
-            it never hides. Each result says how it was measured, and whether you can check it
-            from outside. Where the answer is no, it says so.
+            it never hides. Each result says whether you can check it from outside, and how it is known.
         </p>
 
         <div class="cs-grid" id="csGrid">
@@ -612,22 +726,28 @@ ${cards}
 
         <section class="cs-footnote">
             <h2>Why it is laid out like this</h2>
-            <p>
-                A portfolio that lists outcomes without saying how they were measured is asking to be
-                taken on trust. Splitting each project into <strong>problem &rarr; method &rarr; artifact &rarr;
-                result</strong> makes the weak link visible: a strong method with an internal-only artifact
-                is a different thing from a public tool anyone can run, and both are different from a
-                number with no baseline behind it.
-            </p>
-            <p>
-                The content lives in <code>content/projects.json</code>. A test fails the build if any
-                result loses its basis, if an artifact claims to be public without a working link, or if
-                a link points somewhere this repository has not already vouched for.
-            </p>
+            <details>
+                <summary>The reasoning, and what the build checks</summary>
+                <p>
+                    A portfolio that lists outcomes without saying how they were measured is asking to be
+                    taken on trust. Splitting each project into <strong>problem &rarr; method &rarr; artifact &rarr;
+                    result &rarr; findings</strong> makes the weak link visible: a strong method with an internal-only
+                    artifact is a different thing from a public tool anyone can run, and both from a number with
+                    no baseline behind it.
+                </p>
+                <p>
+                    The content lives in <code>content/projects.json</code>. A test fails the build if a result
+                    loses its basis, a case study its findings, an artifact claims to be public without a working
+                    link, or a link points somewhere this repository has not already vouched for.
+                </p>
+            </details>
         </section>`;
 
-    // Progressive enhancement only: the page is complete without this.
-    const script = `    <script>
+    // Progressive enhancement only: the page is complete without this. It
+    // ships without its comment lines (codeOnly): they are for whoever
+    // reads this generator, and on the page they were 2.2 KB of the 10.7 KB
+    // script, which paid for the print rule that opens the folds on paper.
+    const script = codeOnly(`    <script>
     // Lens switching without a reload. The page already contains every panel
     // and every case study; this reorders and swaps which framing is shown,
     // and keeps the URL shareable. With JavaScript off, each lens link is an
@@ -649,13 +769,17 @@ ${cards}
             });
 
             // Matching case studies rise to the top; the rest keep their order
-            // below. Nothing is removed from the document.
+            // below. Nothing is removed from the document. A card lists its
+            // lenses nearest first, so those the lens is home to lead the
+            // ones it only touches (orderForLens, scripts/lib/content.js).
             var matched = [], rest = [];
+            var rank = function (card) { return (card.getAttribute('data-lenses') || '').split(' ').indexOf(lens); };
             order.forEach(function (card) {
-                var owns = (card.getAttribute('data-lenses') || '').split(' ').indexOf(lens) > -1;
+                var owns = rank(card) > -1;
                 card.classList.toggle('cs-card-secondary', lens !== 'all' && !owns);
                 (lens === 'all' || owns ? matched : rest).push(card);
             });
+            if (lens !== 'all') matched.sort(function (a, b) { return rank(a) - rank(b); });
             // Moved only when the order changes. Every Back runs this, and
             // a link to a game, or back to the top, is a step in history:
             // re-appending a card in place took the focus from the slider
@@ -722,15 +846,15 @@ ${cards}
         }, { rootMargin: '100% 0px' });
         for (var i = 0; i < hosts.length; i++) io.observe(hosts[i]);
     })();
-${LIGHTBOX_SCRIPT}    </script>`;
+${LIGHTBOX_SCRIPT}${PRINT_FOLDS}    </script>`);
 
     return pageShell({
         title: 'Case studies — Moses Kolleh Sesay',
-        description: 'Six projects in water, climate risk and sustainable AI — problem, method, artifact and measurable result, with the basis for every number.',
+        description: 'Seven case studies in water, climate risk, sustainable AI and ESG reporting — problem, method, artifact, result and what each found, with the basis for every number.',
         canonical: `${SITE}case-studies.html`,
-        heroTag: 'PROBLEM &middot; METHOD &middot; ARTIFACT &middot; RESULT',
+        heroTag: 'PROBLEM &middot; METHOD &middot; ARTIFACT &middot; RESULT &middot; FINDINGS',
         heroTitle: 'Case <span class="ca-accent">studies</span>',
-        heroLead: 'Six projects across four countries, each one traced from the question that started it to what it actually produced &mdash; and to how far you can check the result from where you are sitting.',
+        heroLead: 'Seven case studies, each one traced from the question that started it to what it actually produced and found &mdash; and to how far you can check the result from where you are sitting.',
         main,
         bodyEnd: script,
         current: 'case-studies.html',
@@ -742,26 +866,36 @@ ${LIGHTBOX_SCRIPT}    </script>`;
 // research.html
 // ------------------------------------------------------------------
 function renderResearch(data) {
-    const { research } = data;
+    const { research, lenses } = data;
+    const lensName = Object.fromEntries(lenses.lenses.map(l => [l.id, l.shortLabel || l.label]));
 
-    const byType = {};
-    research.outputs.forEach((o) => {
-        (byType[o.type] = byType[o.type] || []).push(o);
-    });
-
-    const counts = content.STATUSES
-        .map(s => ({ status: s, n: research.outputs.filter(o => o.status === s).length }))
-        .filter(c => c.n);
+    // Grouped by what a reader can do with each output (open it, ask for it,
+    // or know who holds it), the question the page is here to answer.
+    // Grouped by type, eleven outputs took eight headings, most of them over
+    // one entry; the type is on each entry's first line.
+    const groups = content.STATUSES
+        .map(s => ({ status: s, outputs: research.outputs.filter(o => o.status === s) }))
+        .filter(g => g.outputs.length);
 
     const summary = `
         <ul class="rs-summary">
-            ${counts.map(c => `<li><strong>${c.n}</strong> ${esc(STATUS_LABEL[c.status].toLowerCase())}</li>`).join('')}
+            ${groups.map(g => `<li><strong>${g.outputs.length}</strong> ${esc(STATUS_LABEL[g.status].toLowerCase())}</li>`).join('')}
         </ul>`;
+
+    // Where an output sits in the portfolio, its case study or else the role
+    // view it is in, at the end of its note rather than on a line of its own.
+    const place = (o) => {
+        if (o.caseStudy) return `<a class="rs-link" href="case-studies.html#${esc(o.caseStudy)}">Read the case study &rarr;</a>`;
+        const lens = (o.lenses || [])[0];
+        return lens ? `<a class="rs-link" href="case-studies.html?lens=${esc(lens)}">The ${esc(lensName[lens])} view &rarr;</a>` : '';
+    };
+    const note = (o) => [o.note && prose(o.note), o.heldBy && `Held by ${prose(o.heldBy)}.`, place(o)].filter(Boolean).join(' ');
 
     const entry = (o) => {
         const title = o.status === 'public' && o.url
             ? `<a href="${esc(o.url)}">${prose(o.title)}</a>`
             : prose(o.title);
+        const after = note(o);
         return `
                 <article class="rs-item" id="${esc(o.id)}">
                     <div class="rs-item-head">
@@ -775,26 +909,29 @@ function renderResearch(data) {
                     ${o.methods && o.methods.length
                         ? `<p class="rs-methods"><span class="mono-label">Methods</span> ${o.methods.map(prose).join(' &middot; ')}</p>`
                         : ''}
-                    ${o.note ? `<p class="rs-note">${prose(o.note)}</p>` : ''}
-                    ${o.heldBy ? `<p class="rs-note">Held by ${prose(o.heldBy)}.</p>` : ''}
-                    ${o.caseStudy ? `<p class="rs-link"><a href="case-studies.html#${esc(o.caseStudy)}">Read the case study &rarr;</a></p>` : ''}
+                    ${after ? `<p class="rs-note">${after}</p>` : ''}
                 </article>`;
     };
 
-    const sections = Object.keys(byType).map(type => `
-            <section class="rs-group">
-                <h2>${esc(byType[type].length > 1 ? plural(type) : type)}</h2>
-                ${byType[type].map(entry).join('\n')}
+    const sections = groups.map(g => `
+            <section class="rs-group" id="rs-${esc(g.status)}">
+                <h2>${esc(STATUS_LABEL[g.status])}</h2>
+                ${g.outputs.map(entry).join('\n')}
             </section>`).join('\n');
 
+    // Folded under its heading: it is for whoever means to run the code, and
+    // open it was a screen of a phone that made room for the repositories.
     const repro = research.reproducibility;
     const reproSection = `
         <section class="rs-repro">
             <h2>${esc(repro.heading)}</h2>
-            <p>${prose(repro.body)}</p>
-            <dl class="rs-commands">
-                ${repro.commands.map(c => `<dt><code>${esc(c.command)}</code></dt><dd>${prose(c.does)}</dd>`).join('\n                ')}
-            </dl>
+            <details>
+                <summary>How, and the commands to run</summary>
+                <p id="reproduce">${prose(repro.body)}</p>
+                <dl class="rs-commands">
+                    ${repro.commands.map(c => `<dt><code>${esc(c.command)}</code></dt><dd>${prose(c.does)}</dd>`).join('\n                    ')}
+                </dl>
+            </details>
         </section>`;
 
     const main = `
@@ -802,10 +939,10 @@ function renderResearch(data) {
             <p>${prose(research.intro)}</p>
             ${summary}
             <p class="rs-key">
-                <strong>Public</strong> means you can open it right now.
-                <strong>On request</strong> means it exists and I hold it &mdash; ask.
-                <strong>Held by the client</strong> means it belongs to the organisation it was made for.
-                No entry on this page names a journal, a conference or a DOI, because none of this work has one.
+                <strong>Public</strong>: open it now.
+                <strong>On request</strong>: it exists and I hold it &mdash; ask.
+                <strong>Held by the client</strong>: it belongs to the organisation it was made for.
+                No entry names a journal, a conference or a DOI, because none of this work has one.
             </p>
         </section>
 ${sections}
@@ -817,8 +954,9 @@ ${reproSection}`;
         canonical: `${SITE}research.html`,
         heroTag: 'WHAT EXISTS &middot; WHERE IT IS &middot; WHO HOLDS IT',
         heroTitle: 'Research <span class="ca-accent">outputs</span>',
-        heroLead: 'Three degrees of research, a consultancy, an internship and a working tool. Some of it is public, some belongs to the organisations it was done for, and the rest is a PDF I will happily send you.',
+        heroLead: 'Three degrees of research, a consultancy, an internship and code on GitHub: some of it public, some held by the organisations it was done for, the rest a PDF I will happily send you.',
         main,
+        bodyEnd: `    <script>${PRINT_FOLDS}    </script>`,
         current: 'research.html',
         profile: data.profile
     });
@@ -876,21 +1014,28 @@ const PAGE_NAMES = {
     'index': 'Homepage',
     'case-studies': 'Case studies',
     'research': 'Research outputs',
-    'carbon-ai': 'AI, Weighed',
+    'carbon-ai': 'EcoPrompt Coach',
     'field-report': 'Field report (text only)',
     'stats': 'Open counts (this page)',
+    'claims': 'Check my numbers',
     '404': 'Page not found (404)'
 };
 // The width of the browser window, which is not always the screen's: a
-// desktop window at half width is in the middle class.
-const VIEWPORT_NAMES = {
-    s: 'Under 600 px, as on a phone',
-    m: '600&ndash;1023 px, a tablet or a narrow window',
-    l: '1024 px and wider, as on a desktop'
-};
+// desktop window at half width is in the middle class. Where the classes
+// break is count.js's, each printed by `rule` (renderStats), marked.
+const viewportNames = (rule) => ({
+    s: `Under ${rule('vpSmall')} px, as on a phone`,
+    m: `${rule('vpSmall')}&ndash;${rule('vpMediumMax')} px, a tablet or a narrow window`,
+    l: `${rule('vpLarge')} px and wider, as on a desktop`
+});
 
-/** The five numbers, defined once for both the empty and the counting page. */
-function fiveNumbers(stats) {
+// The baseline every later change is judged against (docs/plan.md, Phase
+// 1): the first whole weeks of counts. A choice, not a property of the
+// counter, so it is set here, where the page is made.
+const BASELINE_WEEKS = 4;
+
+/** The five numbers, defined once for both the empty and the counting page; `under` is the marked threshold. */
+function fiveNumbers(stats, under) {
     return [
         {
             key: 'contact',
@@ -919,7 +1064,7 @@ function fiveNumbers(stats) {
             share: true,
             name: 'Homepage views that reached Contact',
             def: 'The share of homepage views whose furthest section was <code>#contact</code>, the last one on the page. ' +
-                 'Given only when both counts are 5 or more.'
+                 `Given only when both counts are ${under} or more.`
         },
         {
             key: 'briefUses',
@@ -934,8 +1079,16 @@ function fiveNumbers(stats) {
 function renderStats(data) {
     const { stats, lenses } = data;
     const collecting = stats.status === 'collecting';
-    const five = fiveNumbers(stats);
-    const small = `&lt;${stats.suppressBelow}`;
+    // The counter's rules are printed from its code, each marked with the
+    // rule it is, so tests/claims.test.js can hold the page to the code as
+    // it holds the other pages to the ledger. The threshold is the one the
+    // published figures were suppressed at, and has to be the fetcher's.
+    const rules = Object.assign(content.counterRules(), { baselineWeeks: BASELINE_WEEKS, suppressBelow: stats.suppressBelow });
+    const rule = (key, shown = rules[key]) => `<span data-rule="${key}">${shown}</span>`;
+    const under = rule('suppressBelow');
+    const small = `&lt;${under}`;
+    const VIEWPORT_NAMES = viewportNames(rule);
+    const five = fiveNumbers(stats, under);
 
     const lensNames = {};
     lenses.lenses.forEach((l) => { lensNames[l.id] = l.shortLabel || l.label; });
@@ -982,13 +1135,13 @@ ${five.map((n) => {
                 Every change I plan for this site is a bet about what a recruiter does on it: that the evidence
                 should come sooner, that a shorter homepage gets read further, that a link framed for one kind of
                 role lands better than a general one. Without counts none of those bets can be checked. The first
-                four weeks of these numbers are the baseline every change after them is judged against.
+                ${rule('baselineWeeks', 'four')} weeks of these numbers are the baseline every change after them is judged against.
             </p>
             <p>
                 Every figure but the contact messages is a count of page views. With no id there is no way to tell
-                two pages read by one person from two people reading one page each, so nothing here claims to count
-                people. And the counts are a floor, not a census: a count that reaches the endpoint while it is busy
-                (more than 30 in a minute, or the sheet in use for longer than a second or two) is dropped rather
+                one person reading several pages from several people reading one page each, so nothing here claims
+                to count people. And the counts are a floor, not a census: a count that reaches the endpoint while it is busy
+                (more than ${rule('perMinute')} in a minute, or the sheet in use for longer than ${rule('lockSeconds')} seconds) is dropped rather
                 than kept waiting, so that the contact form never waits behind the counter.
             </p>
         </section>`;
@@ -1001,9 +1154,9 @@ ${five.map((n) => {
                 The counter is built and this page is ready for it, but no totals have reached it yet. Once counting
                 is switched on, a scheduled job reads the daily totals every Monday morning and rebuilds this page.
                 The first weekly figures appear on the Monday after the first full week of counting, Monday to
-                Sunday; the baseline needs four of those.
+                Sunday; the baseline needs ${rule('baselineWeeks', 'four')} of those.
             </p>
-            <p>What will appear here, with every figure under ${stats.suppressBelow} held back:</p>
+            <p>What will appear here, with every figure under ${under} held back:</p>
             <ul class="st-list">
                 <li>the five numbers below, for the last week, for all time, and week by week;</li>
                 <li>page views by page, by role lens and by window width;</li>
@@ -1043,9 +1196,9 @@ ${fiveCards(null)}
                 the Monday after, and the week still running is left out until it has ended.
             </p>
             <p class="st-key">
-                <strong>${small}</strong> means fewer than ${stats.suppressBelow}: too few to publish, and left out of every percentage.
-                <strong>held</strong> means ${stats.suppressBelow} or more, held back because, with the figures beside it, it
-                would give away one that is fewer than ${stats.suppressBelow}.
+                <strong>${small}</strong> means fewer than ${under}: too few to publish, and left out of every percentage.
+                <strong>held</strong> means ${under} or more, held back because, with the figures beside it, it
+                would give away one that is fewer than ${under}.
                 <strong>&mdash;</strong> means there is no figure to give.
             </p>
         </section>`;
@@ -1074,7 +1227,7 @@ ${fiveCards((n) => {
         const weeksSection = !weekRows.length ? '' : `
         <section class="st-block" aria-labelledby="st-weeks-h">
             <h2 id="st-weeks-h">Week by week</h2>
-            <p>One row per Monday-to-Sunday week, newest first. The first four complete weeks are the baseline.</p>
+            <p>One row per Monday-to-Sunday week, newest first. The first ${rule('baselineWeeks', 'four')} complete weeks are the baseline.</p>
 ${table('The five numbers, week by week', ['Week', 'Page views', 'Contact', 'CV', 'Lens links', 'Reached Contact', 'Brief'], weekRows, true)}
         </section>`;
 
@@ -1110,8 +1263,8 @@ ${breakdownTable('vp', 'Page views by window width', 'Window', k => VIEWPORT_NAM
             <h2 id="st-ref-h">Where readers came from</h2>
             <p>
                 The host name of the site a reader followed a link from, and nothing else of its address. Sites with
-                fewer than ${stats.suppressBelow} page views, anything that is not a plain host name, and anything past the top
-                fifteen are counted together. A page view with no referring site (typed, bookmarked, or a link
+                fewer than ${under} page views, anything that is not a plain host name, and anything past the top
+                ${rule('referrersListed', 'fifteen')} are counted together. A page view with no referring site (typed, bookmarked, or a link
                 within this site) is not in this table. None of these is a link: the counter&rsquo;s endpoint is
                 public, and a list of links would be an open invitation to referrer spam.
             </p>
@@ -1153,7 +1306,7 @@ ${table('Mean kilobytes transferred per page view, by page', cols('Page'), byteP
                             <th scope="row">${page === 'other' ? 'Any other name' : esc(PAGE_NAMES[page] || page)}</th>
                             ${cells(pageKb(bytes.week, page), pageKb(bytes.all, page), kb('meanKb'))}
                         </tr>`))}
-            <p>A page with fewer than ${stats.suppressBelow} page views in a period has no figure for it.</p>`;
+            <p>A page with fewer than ${under} page views in a period has no figure for it.</p>`;
         const bytesSection = `
         <section class="st-block" aria-labelledby="st-bytes-h">
             <h2 id="st-bytes-h">Bytes per page view</h2>
@@ -1170,7 +1323,7 @@ ${table('Kilobytes transferred per page view', cols('Per page view'), [
             <p>
                 The mean is every kilobyte counted over every page view. The totals are kept by day, so a median of
                 single page views is not something they can give; the median day is the middle of the daily means,
-                over days with ${stats.suppressBelow} or more page views.
+                over days with ${under} or more page views.
             </p>${bytesByPage}
             <p>
                 This is network transfer only: what the browser reports receiving for the page and everything it
@@ -1199,13 +1352,13 @@ ${table('Kilobytes transferred per page view', cols('Per page view'), [
                 <dd>The page, the role lens in its address if there was one, and the id of the furthest section reached.</dd>
                 <dt><code>features</code></dt>
                 <dd>
-                    Up to 20 names of things used on the page, such as a CV link or the carbon receipt, and, if the
+                    Up to ${rule('featuresMax')} names of things used on the page, such as a CV link or the carbon receipt, and, if the
                     Assay graded a job ad, the grade it gave. Never the ad itself.
                 </dd>
                 <dt><code>ref</code></dt>
                 <dd>The host name of the site you came from; empty if there was none, or if it was this site. An old homepage address for something that has since moved sends you on to its new page with that host name, so the visit is not counted as direct.</dd>
                 <dt><code>vp</code></dt>
-                <dd>The browser window&rsquo;s width as one of three classes: <code>s</code> under 600 px, <code>m</code> up to 1023 px, <code>l</code> wider.</dd>
+                <dd>The browser window&rsquo;s width as one of three classes: <code>s</code> under ${rule('vpSmall')} px, <code>m</code> up to ${rule('vpMediumMax')} px, <code>l</code> wider.</dd>
                 <dt><code>kb</code></dt>
                 <dd>Kilobytes transferred for the page, from the browser&rsquo;s Resource Timing API.</dd>
                 <dt><code>v</code></dt>
@@ -1219,7 +1372,7 @@ ${table('Kilobytes transferred per page view', cols('Per page view'), [
                     theme, low-energy mode, the reading speed, whether you have seen the intro &mdash; and sends none
                     of them anywhere.)
                 </li>
-                <li>No id of any kind, so two page views cannot be tied to each other, or to you.</li>
+                <li>No id of any kind, so page views cannot be tied to each other, or to you.</li>
                 <li>
                     No IP address. The count goes to a Google Apps Script web app, the one the contact form already
                     uses, and Apps Script does not give the script the sender&rsquo;s address, so it cannot be stored
@@ -1237,19 +1390,19 @@ ${table('Kilobytes transferred per page view', cols('Per page view'), [
             </p>
             <h3>How the figures are made safe to publish</h3>
             <p>
-                Any count under ${stats.suppressBelow} is shown as ${small} and left out of every percentage, and referring sites
-                with fewer than ${stats.suppressBelow} page views are counted together. Where the rows of a table add up to a
+                Any count under ${under} is shown as ${small} and left out of every percentage, and referring sites
+                with fewer than ${under} page views are counted together. Where the rows of a table add up to a
                 total shown on this page, as page views by page do, a lone ${small} would be the total less the rest, so
-                the smallest figure beside it is held back as well; a percentage is given only between two figures that
+                the smallest figure beside it is held back as well; a percentage is given only between figures that
                 are both shown. Every figure covers whole weeks, Monday to Sunday, so no single day&rsquo;s count can be
                 taken out of them. Page, lens, section and feature names the site does not use are counted as other, so
                 a made-up count cannot put words on this page. A referring site cannot be checked that way, so it is
-                named only once it reaches ${stats.suppressBelow}, and never as a link.
+                named only once it reaches ${under}, and never as a link.
             </p>
             <p>
-                Two limits, stated plainly. Where two figures are held back together, what they add up to can still
-                be worked out, though not either one. And the all-time totals are rebuilt every week, so comparing two
-                versions of this page can narrow down a weekly change its own column shows as ${small}. No count for a
+                Its limits, stated plainly. Where a pair of figures is held back together, what they add up to can
+                still be worked out, though not either one. And the all-time totals are rebuilt every week, so comparing
+                this page from week to week can narrow down a weekly change its own column shows as ${small}. No count for a
                 single day is ever published.
             </p>
             <h3>Where the raw totals live</h3>
@@ -1269,7 +1422,7 @@ ${privacy}`;
 
     return pageShell({
         title: 'Open counts — Moses Kolleh Sesay',
-        description: 'What this portfolio counts about its own page views and why: five numbers, suppressed below 5, and the exact payload a page view sends. No cookies, no ids, no analytics service.',
+        description: 'What this portfolio counts about its own page views and why: five numbers, small counts held back, and the exact payload a page view sends. No cookies, no ids, no analytics service.',
         canonical: `${SITE}stats.html`,
         heroTag: 'WHAT IS COUNTED &middot; WHY &middot; WHAT NEVER IS',
         heroTitle: 'Open <span class="ca-accent">counts</span>',
@@ -1277,6 +1430,286 @@ ${privacy}`;
         main,
         current: 'stats.html',
         styles: ['stats.css'],
+        profile: data.profile
+    });
+}
+
+// ------------------------------------------------------------------
+// claims.html — Check my numbers
+// ------------------------------------------------------------------
+// Every number the site prints, from content/claims.json: the figure, what
+// it rests on, whether a reader can check it, and where it appears. Built
+// last, from the other pages as this run writes them, so "where it
+// appears" is read off the pages themselves and cannot drift from them.
+// The entries are grouped by the question a sceptical reader asks first:
+// can I check this without taking his word for it?
+
+// The pages that mark figures, by the name the shell's nav gives them.
+const CLAIM_PAGES = {
+    'index.html': 'Home',
+    'case-studies.html': 'Case studies',
+    'research.html': 'Research',
+    'carbon-ai.html': 'EcoPrompt Coach',
+    'field-report.html': 'Field report',
+    '404.html': 'Page not found'
+};
+
+const CHECK_GROUPS = [
+    { key: 'public', title: 'Checkable from outside',
+      intro: 'You can check these yourself. Each says where: a source, a public file, or the case study that says how.' },
+    { key: 'on-request', title: 'On request',
+      intro: 'The evidence is a document I hold, a certificate or a transcript. Ask and I will send it.' },
+    { key: 'not-checkable', title: 'Not checkable from outside',
+      intro: 'These rest on records someone else holds, a client, an employer or the UN, or on no source at all. Each says which, and none is dressed up as more.' }
+];
+
+/**
+ * Where each figure is marked in a page's HTML: claim id → where to send a
+ * reader on that page, { place, fold }, so the ledger links to the place
+ * and not just the page. `place` is "#id" of the nearest element around a
+ * mark that has one (not <main>, which is every page's skip-link target),
+ * or of the heading with an id that opens its part of the page; for a
+ * figure only a view of the case studies shows, "?lens=" and that view;
+ * else ''. A bare link went to the top of a page sixteen screens long.
+ *
+ * A mark can also be on the page and out of sight: in a closed <details>
+ * (a field note, a photo row, the research page's reproduction notes), in
+ * a [hidden] block (the badge's method note, opened by its "?"), or in a
+ * role's depth on the homepage, which style.css folds behind More. A link
+ * that landed there showed nothing: "strike-rate" went to the folded field
+ * note in #about while #projects showed 70% in the open. So a mark in sight
+ * wins; a folded one is used only when there is no other, its place is
+ * inside the fold (each page's script opens a fold its address points
+ * into), and `fold` names it for the "Where" line: the summary, the label
+ * of the control that opens it, or the role's More.
+ *
+ * Scripts, styles, SVG and comments are skipped. An element left unclosed
+ * is closed by its parent's end tag.
+ */
+const VOID_TAGS = /^(?:area|base|br|col|embed|hr|img|input|link|meta|source|track|wbr)$/i;
+function marksIn(html) {
+    const plain = (s) => s.replace(/<[^>]*>/g, '').replace(/&rsquo;/g, '’').replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
+    const text = (from, tag) => {
+        const end = html.indexOf(`</${tag}`, from);
+        return plain(html.slice(from, end < 0 ? from : end));
+    };
+    const attr = (attrs, name) => (attrs.match(new RegExp(`(?:^|\\s)${name}="([^"]*)"`)) || [])[1] || '';
+    // A boolean attribute, not a word inside a quoted value (class="a hidden b").
+    const has = (attrs, name) => new RegExp(`(?:^|\\s)${name}(?=[\\s=/]|$)`).test(attrs.replace(/"[^"]*"/g, '""'));
+    // The control that opens a [hidden] block names it: aria-controls, and its label.
+    const controls = new Map();
+    html.replace(/<(button|a)\b([^>]*)>([\s\S]*?)<\/\1>/g, (whole, tag, attrs, inner) => {
+        const id = attr(attrs, 'aria-controls');
+        if (id) controls.set(id, plain(attr(attrs, 'aria-label') || inner));
+        return whole;
+    });
+    const best = new Map();
+    const open = [];
+    const re = /<!--[\s\S]*?-->|<(script|style|svg|template)\b[\s\S]*?<\/\1\s*>|<(\/?)([a-zA-Z][\w-]*)\b([^>]*)>/g;
+    let m;
+    while ((m = re.exec(html))) {
+        const [, block, closing, tag, attrs] = m;
+        if (block || !tag) continue;
+        const name = tag.toLowerCase();
+        if (closing) {
+            const at = open.map(f => f.tag).lastIndexOf(name);
+            if (at > -1) open.length = at;
+            continue;
+        }
+        const parent = open[open.length - 1];
+        const frame = { tag: name, id: attr(attrs, 'id'), lens: attr(attrs, 'data-lens-panel'), fold: null };
+        if (name === 'details' && !has(attrs, 'open')) frame.fold = { kind: 'details', name: '', photos: /\bcs-photos\b/.test(attr(attrs, 'class')) };
+        else if (has(attrs, 'hidden') && !frame.lens) frame.fold = { kind: 'hidden', name: controls.get(frame.id) || '' };
+        if (/\btimeline-content\b/.test(attr(attrs, 'class'))) frame.card = true;
+        if (parent) {
+            if (name === 'summary' && parent.fold && parent.fold.kind === 'details') parent.fold.name = text(m.index + m[0].length, 'summary');
+            // A heading with an id opens a place, up to the next heading.
+            if (/^h[1-6]$/.test(name)) parent.heading = frame.id;
+            // A role card on the homepage shows its list's first item; the rest wait for More.
+            if (name === 'li' && parent.tag === 'ul' && open.some(f => f.card)) {
+                parent.items = (parent.items || 0) + 1;
+                if (parent.items > 1) frame.fold = { kind: 'role', name: 'More' };
+            }
+        }
+        if (!VOID_TAGS.test(name) && !/\/\s*$/.test(attrs)) open.push(frame);
+        const id = attr(attrs, 'data-claim');
+        if (!id) continue;
+        const chain = VOID_TAGS.test(name) ? open.concat(frame) : open;
+        // A closed <details> hides all but its summary.
+        const folds = chain.map((f, i) => [f, i]).filter(([f, i]) => f.fold && !(f.fold.kind === 'details' && chain[i + 1] && chain[i + 1].tag === 'summary'));
+        let place = '';
+        let at = -1;
+        for (let i = chain.length - 1; i >= 0 && !place; i--) {
+            const f = chain[i];
+            if (f.id && f.tag !== 'main' && f.tag !== 'body') { place = `#${f.id}`; at = i; }
+            else if (f.heading) { place = `#${f.heading}`; at = i; }
+        }
+        // A view's panel is hidden until the view is chosen, so a mark in one
+        // is sent to the view, not to an address inside it.
+        const view = chain.filter(f => f.lens && f.lens !== 'all').pop();
+        if (view) place = `?lens=${view.lens}`;
+        const outer = folds.length ? folds[0] : null;
+        const fold = outer ? outer[0].fold : null;
+        // In sight with an address; in sight in a view; in a fold, addressed
+        // inside it; anything else last.
+        const rank = !fold ? (view ? 1 : place ? 0 : 4) : (place.startsWith('#') && at >= outer[1] ? 2 : 3);
+        const had = best.get(id);
+        if (!had || rank < had.rank) best.set(id, { rank, place, fold: fold ? Object.assign({}, fold) : null });
+    }
+    return new Map(Array.from(best, ([id, b]) => [id, { place: b.place, fold: b.fold }]));
+}
+
+/** The words that say where a folded figure waits: under a summary, behind a control, or a role's More. */
+function foldSaid(fold) {
+    if (!fold) return '';
+    if (fold.kind === 'role') return ', behind a role&rsquo;s More';
+    if (fold.photos) return ', in a photo&rsquo;s caption';
+    if (/\d/.test(fold.name) || !fold.name) return fold.kind === 'details' ? ', in a fold' : ', behind a button';
+    return `, ${fold.kind === 'details' ? 'under' : 'behind'} &ldquo;${esc(fold.name)}&rdquo;`;
+}
+
+/** Where a reader checks a figure, as a link: the host for another site, the page's name for this one. */
+function checkLink(href) {
+    if (/^https?:/.test(href)) return `<a href="${esc(href)}">${esc(new URL(href).host)}</a>`;
+    const page = href.split('#')[0];
+    return `<a href="${esc(href)}">${esc(CLAIM_PAGES[page] || page)}</a>`;
+}
+
+function renderClaims(data, pages) {
+    const { claims, projects } = data;
+    const factors = content.loadFactors();
+    const { BUDGETS } = require('./check-budget.js');
+    const list = claims.claims;
+    const byId = new Map(list.map(c => [c.id, c]));
+    // A cross-reference says the figure as well as what it counts, marked
+    // like any other: "From 10 KB: the text-only field report…".
+    const ref = (c) => `<a href="#claim-${esc(c.id)}"><span data-claim="${esc(c.id)}">${esc(c.value)}</span> ${prose(c.unit)}</a>`;
+
+    const marked = Object.keys(CLAIM_PAGES).filter(p => pages[p]).map(p => [p, marksIn(pages[p])]);
+    const spokenText = [data.narration.intro ? data.narration.intro.text : ''].concat(data.narration.scripts.map(s => s.text)).join(' ').toLowerCase();
+
+    // A source file named once, so a reader of the repository knows where to look.
+    const file = (what, name) => ` <span class="cl-file">${what} <code>${name}</code>.</span>`;
+    const sharesResult = new Map();   // a result already shown in full → the entry that showed it
+
+    const basisOf = (c) => {
+        const b = c.basis;
+        if (b.result !== undefined) {
+            const { cs, result } = content.resultFor(c, projects);
+            const study = `<a href="case-studies.html#${esc(cs.id)}">${prose(cs.title)}</a>`;
+            if (sharesResult.has(result)) return `The same result as ${ref(sharesResult.get(result))}, in ${study}.`;
+            sharesResult.set(result, c);
+            return `${study}, &ldquo;${prose(result.claim)}&rdquo;: ${prose(result.basis)}`;
+        }
+        const note = b.note ? ` ${prose(b.note)}` : '';
+        if (b.profile !== undefined) return `${note.trim()}${file('Recorded in', 'content/profile.json')}`.trim();
+        if (b.factor !== undefined) {
+            if (b.count) return `${note.trim()}${file('Counted in', 'ai-carbon-data.js')}`.trim();
+            // A default, a convention or a judgement is the calculator's own:
+            // the factor's citation would read as the source of the figure.
+            if (b.own) return `<strong>The calculator&rsquo;s own choice.</strong> ${prose(b.own)}${file('One of its inputs, in', 'ai-carbon-data.js')}`;
+            // The factor's own entry carries its source: the nearest object on its path that names one.
+            const steps = b.factor.split('.');
+            const entry = steps.map((_, i) => content.atPath(factors, steps.slice(0, steps.length - i).join('.')))
+                .find(o => o && typeof o === 'object' && 'source' in o);
+            const src = entry && entry.source ? factors.SOURCES[entry.source] : null;
+            const cited = src ? `${prose(src.citation)}${b.url ? `, at ${checkLink(b.url)}` : ''}.` : (entry && entry.note ? prose(entry.note) : '');
+            return `${cited}${note}${file('One of the calculator&rsquo;s inputs, in', 'ai-carbon-data.js')}`.trim();
+        }
+        if (b.source !== undefined) return `<a href="${esc(b.url)}">${prose(b.source)}</a>.${note}`;
+        if (b.budget !== undefined) {
+            const budget = BUDGETS[b.budget];
+            return `The budget &ldquo;${prose(budget ? budget.readme : b.budget)}&rdquo;, measured by <code>npm run budget</code> on every build.${note}`;
+        }
+        if (b.derived !== undefined) {
+            const from = b.from.map(id => byId.get(id)).filter(Boolean).map(ref);
+            return `${prose(b.derived)} From ${from.join(' and ')}.`;
+        }
+        return `<strong>Illustrative.</strong> ${prose(b.illustrative)}`;
+    };
+
+    const entry = (c) => {
+        const checkable = content.checkabilityOf(c, projects);
+        const found = c.basis.result !== undefined ? content.resultFor(c, projects) : null;
+        // A result checked at a source of its own links there; the rest, to the case study that shows how.
+        const href = found ? (found.result.check || `case-studies.html#${found.cs.id}`) : c.check;
+        // The chip is the label; the place to check follows it, unpunctuated.
+        const check = `<span class="cl-check cl-check-${checkable}">${esc(CHECK_GROUPS.find(g => g.key === checkable).title)}</span>${checkable === 'public' && href ? ` ${checkLink(href)}` : ''}`;
+        const places = marked.filter(([, marks]) => marks.has(c.id))
+            .map(([page, marks]) => `<a href="${page}${marks.get(c.id).place}">${esc(CLAIM_PAGES[page])}${foldSaid(marks.get(c.id).fold)}</a>`);
+        if ((c.spoken || []).some(s => spokenText.includes(s.toLowerCase()))) places.push('the narration');
+        return `
+                <li class="cl-item" id="claim-${esc(c.id)}">
+                    <p class="cl-figure"><span class="cl-value" data-claim="${esc(c.id)}">${esc(c.value)}</span> ${prose(c.unit)}</p>
+                    <p class="cl-basis"><span class="mono-label">Basis</span> ${basisOf(c)}</p>
+                    <p class="cl-meta">${check} <span class="cl-where"><span class="mono-label">Where</span> ${places.join(' &middot; ')}</span></p>
+                </li>`;
+    };
+
+    const groups = CHECK_GROUPS.map((g) => {
+        const members = list.filter(c => content.checkabilityOf(c, projects) === g.key);
+        if (!members.length) return '';
+        return `
+        <section class="rs-group cl-group cl-group-${g.key}" aria-labelledby="cl-${g.key}-h">
+            <h2 id="cl-${g.key}-h">${esc(g.title)}</h2>
+            <p class="cl-group-intro">${esc(g.intro)}</p>
+            <ul class="cl-list">${members.map(entry).join('')}
+            </ul>
+        </section>`;
+    }).join('\n');
+
+    // The numerals a page draws from its own structure that are not a count
+    // of what it shows, said from the list the scan skips them by.
+    const drawnList = Object.values(figures.DRAWN).flat().filter(d => d.listed).map(d => esc(d.listed));
+    const drawnSaid = drawnList.length > 1 ? `${drawnList.slice(0, -1).join(', ')}, and ${drawnList[drawnList.length - 1]}` : drawnList.join('');
+    const drawnHere = drawnSaid ? `${drawnSaid.charAt(0).toUpperCase()}${drawnSaid.slice(1)}, ${drawnList.length > 1 ? 'are not claims' : 'is not a claim'} either.` : '';
+
+    const main = `
+        <section class="rs-intro">
+            <p>
+                About my work or about the site itself, each number is here once, with every page it appears
+                on, whether it is written in digits or in words. The pages mark each one with its entry, and a
+                test fails the build if a page prints a number that is not here, or one that disagrees with its
+                entry, in its text, a label or a photo&rsquo;s caption. What the scripts print of their own is
+                read from their source and held to the same list: the field terminal, the Assay, the receipt,
+                the narration player, the coach&rsquo;s tips. So is what the narration says aloud. The open counts
+                page is held another way, below.
+            </p>
+        </section>
+${groups}
+
+        <section class="rs-repro cl-not-listed">
+            <h2>Not on this list</h2>
+            <p>
+                Years and dates, section numbers, the names of standards such as Scope 2 or SDG 13, places&rsquo;
+                coordinates and my phone number are numerals, not claims. So are &ldquo;one&rdquo; and a count of
+                things a page lists in full, which a test holds to the number listed. A photo&rsquo;s description
+                says what is in it, and the field terminal&rsquo;s drill prints a made-up log and says so. The
+                figures the calculators work out in
+                your browser, in the <a href="carbon-ai.html">EcoPrompt Coach</a>, in the chart on the homepage and on the
+                footer&rsquo;s receipt, are model outputs: their inputs are above, and every factor behind them is in
+                the calculator&rsquo;s <a href="carbon-ai.html#evidence">evidence ledger</a>, with its source.
+                &ldquo;An order of magnitude&rdquo; sums up that factor set, how far apart its models are and how
+                far each estimate is good to, and a test holds it there. ${drawnHere}
+            </p>
+            <p>
+                The <a href="stats.html">open counts</a> page is not listed: its counts are the visit counter&rsquo;s
+                own, rewritten each week, and the rules it states, from how many counts a minute it takes to what a
+                page view sends, are printed there from the counter&rsquo;s code, and a test fails the build if one
+                says other than the code. Its sample page view says it is an example.
+            </p>
+        </section>`;
+
+    return pageShell({
+        title: 'Check my numbers — Moses Kolleh Sesay',
+        description: 'The numbers on this portfolio, with what each rests on, where it appears and whether a reader can check it from outside.',
+        canonical: `${SITE}claims.html`,
+        heroTag: 'EVERY NUMBER &middot; ITS BASIS &middot; CAN YOU CHECK IT',
+        heroTitle: 'Check my <span class="ca-accent">numbers</span>',
+        heroLead: 'The numbers on this site, in digits or in words, with what each rests on, where it appears and whether you can check it without taking my word for it.',
+        main,
+        current: 'claims.html',
+        styles: ['claims.css'],
         profile: data.profile
     });
 }
@@ -1559,7 +1992,8 @@ function injectAtAGlance(data, html) {
 // ------------------------------------------------------------------
 // The homepage used to tell each project a second time, by hand: a 45 KB
 // section of dossiers whose years, results and wording could drift from
-// the case studies, and had. Now it shows a teaser per case study, drawn
+// the case studies, and had. Now it shows a teaser per case study (bar any
+// marked homepageCard: false; see onHomepage in scripts/lib/content.js), drawn
 // from the same entry: where and when, the headline result with the one
 // line of its basis and whether a reader can check it, the role lenses it
 // belongs to, its tools, and one link to the whole story. The subtitle is
@@ -1572,7 +2006,7 @@ function renderProjectCards(data) {
     const lensName = {};
     lenses.lenses.forEach((l) => { lensName[l.id] = l.shortLabel || l.label; });
 
-    const cards = projects.caseStudies.map((cs) => {
+    const cards = projects.caseStudies.filter(content.onHomepage).map((cs) => {
         const head = cs.results[0];
         const p = cs.photo;
         // One photo, lazy, drawn as a thumbnail beside the date and title
@@ -1610,13 +2044,139 @@ function injectProjectCards(data, html) {
 }
 
 // ------------------------------------------------------------------
+// index.html — the core log's depths, rewritten in place
+//
+// The experience section logs each role as a layer of a borehole core:
+// depth is time, 10 m a year. The depths were typed in by hand around
+// September 2025, and a year later every one was out by about ten metres.
+// Each layer's interval now comes from its role's dates in profile.json:
+// its top is where the role ended (an open role reaches the surface, 0 m)
+// and its base where it began, so a short role is a thin layer and a gap
+// between roles is a gap in the core. The surface is meta.verifiedOn, the
+// day the record is logged as of, not the day of the build: --check
+// compares bytes, so nothing here may read the clock, and a "Present" role
+// is only logged as current up to that day. Bumping verifiedOn redraws the
+// log; the head says when it was logged.
+//
+// The cards stay hand-authored. Only each layer's depth label and the
+// head's date are written here, matched to the roles in order and by
+// title, so a role added to one and not the other stops the build.
+// ------------------------------------------------------------------
+const METRES_PER_YEAR = 10;
+const monthIndex = (ym) => { const [y, m] = ym.split('-').map(Number); return y * 12 + m - 1; };
+
+function corelogDepths(profile) {
+    const surface = monthIndex(profile.meta.verifiedOn.slice(0, 7));
+    const metres = (months) => Math.round(months * METRES_PER_YEAR / 12);
+    return profile.experience.map((r) => {
+        if (monthIndex(r.start) > surface) throw new Error(`profile.json: "${r.title}" starts after meta.verifiedOn, the core log's surface`);
+        // A role runs to the end of its last month; one that ended in the
+        // month the facts were checked is still at the surface.
+        const top = r.end === null ? 0 : Math.max(0, metres(surface - monthIndex(r.end) - 1));
+        const base = metres(surface - monthIndex(r.start));
+        return { title: r.title, top, base, year: r.start.slice(0, 4) };
+    });
+}
+
+const depthLabel = (d) => `<strong>${d.top === d.base ? d.top : `${d.top}–${d.base}`} m</strong><span>${d.year}</span>`;
+const DEPTH = /(<div class="corelog-depth mono-label">)[\s\S]*?(<\/div>)/g;
+const decodeTitle = (s) => s.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').trim();
+
+function injectCorelog(data, html) {
+    const { profile } = data;
+    const depths = corelogDepths(profile);
+    const [y, m] = profile.meta.verifiedOn.split('-');
+    const HEAD = /(CORE LOG MKS-01 · )[^<]*(<\/span>\s*<span>)[^<]*(<\/span>)/;
+    if (!HEAD.test(html)) throw new Error('index.html: the core log has no "CORE LOG MKS-01 · …" head to date');
+    let next = html.replace(HEAD, `$1LOGGED ${MONTHS[+m - 1].toUpperCase()} ${y}$2SCALE ${METRES_PER_YEAR} m / YEAR$3`);
+    let i = 0;
+    next = next.replace(DEPTH, (whole, open, close, at) => {
+        const d = depths[i++];
+        const title = (next.slice(at).match(/<h3>([\s\S]*?)<\/h3>/) || [])[1];
+        if (!d || decodeTitle(title || '') !== d.title) {
+            throw new Error(`index.html: core-log layer ${i} is "${decodeTitle(title || '?')}", but profile.json's role ${i} is "${d ? d.title : 'missing'}" — keep the two in the same order`);
+        }
+        return open + depthLabel(d) + close;
+    });
+    if (i !== depths.length) throw new Error(`index.html: the core log has ${i} layers for profile.json's ${depths.length} roles`);
+    return next;
+}
+
+// ------------------------------------------------------------------
+// index.html — the certificates and the testimonials, between markers
+//
+// The certificates were typed into index.html, so a verification link
+// added to profile.json would have had to be typed in a second time. Now
+// each comes from profile.certifications, with "Verify" linking the
+// issuer's page once there is one (the CV prints the same list). The
+// testimonials come from content/testimonials.json, each with who said it
+// and where to check it, and are drawn only when there is at least one:
+// with none, the markers stand empty and the page shows nothing. Short
+// markers, like the shell's: they sit in the homepage's first-view bytes.
+// ------------------------------------------------------------------
+function renderCertificates(profile) {
+    const cards = profile.certifications.map((c) => {
+        const verify = c.verifyUrl
+            ? ` &middot; <a href="${esc(c.verifyUrl)}" target="_blank" rel="noopener">Verify<span class="sr-only"> the ${esc(c.name)} certificate with ${esc(new URL(c.verifyUrl).host.replace(/^www\./, ''))}</span></a>`
+            : '';
+        return [
+            '    <div class="education-card certification">',
+            `        <h4 class="cert-title">${esc(c.name)}</h4>`,
+            `        <p class="cert-meta">${esc(c.issuer)} &middot; <span class="mono-label">${esc(c.displayDate)}</span>${verify}</p>`,
+            `        <p class="cert-line">${markOnly(c.covered)}</p>`,
+            '    </div>'
+        ].join('\n');
+    });
+    return ['<div class="cert-grid">', ...cards, '</div>'].join('\n');
+}
+
+const dayName = (d) => { const [y, m, day] = d.split('-'); return `${+day} ${MONTHS[+m - 1]} ${y}`; };
+
+function renderTestimonials(file) {
+    const list = file.testimonials;
+    if (!list.length) return '';
+    const figures = list.map((t) => {
+        const source = t.source.type === 'linkedin'
+            ? `<a href="${esc(t.source.url)}" target="_blank" rel="noopener">Recommendation on LinkedIn<span class="sr-only">, from ${esc(t.name)}</span></a>`
+            : `Quoted with permission given <time datetime="${esc(t.source.permissionDate)}">${dayName(t.source.permissionDate)}</time>; the original on request`;
+        return [
+            '        <figure class="testimonial skills-panel">',
+            `            <blockquote><p>${markOnly(t.quote)}</p></blockquote>`,
+            `            <figcaption class="cert-line"><strong>${esc(t.name)}</strong>, ${esc(t.role)} &middot; ${esc(t.relationship)} &middot; ${source}</figcaption>`,
+            '        </figure>'
+        ].join('\n');
+    });
+    // Dressed in classes the page already styles (the field notes' block
+    // and grid, a skills card, a certificate's line), so the homepage
+    // carries no stylesheet rules for a block it does not draw yet.
+    return [
+        '<div class="fieldnotes testimonials">',
+        '    <p class="panel-label mono-label">What people I have worked with say</p>',
+        '    <div class="fieldnotes-grid">',
+        ...figures,
+        '    </div>',
+        '</div>'
+    ].join('\n');
+}
+
+const homeRegions = (data) => ({
+    CERTIFICATES: renderCertificates(data.profile),
+    TESTIMONIALS: renderTestimonials(data.testimonials)
+});
+
+function injectHomeRegions(data, html) {
+    Object.entries(homeRegions(data)).forEach(([name, block]) => { html = fillRegion(html, 'index.html', name, block); });
+    return html;
+}
+
+// ------------------------------------------------------------------
 // carbon-ai.html, field-report.html, 404.html — the shared shell only
 //
 // Hand-authored, each for a reason of its own: a calculator, a page held to
 // a few kilobytes, a page served at whatever address was missing. None of
 // those is a reason to be a dead end, so each takes the shell between
-// markers, in the flavour it can carry. carbon-ai.html has the full one and
-// theme.js in its <head>. The field report and the 404 page style
+// markers, in the flavour it can carry. carbon-ai.html has the full one,
+// footer included, and theme.js in its <head>. The field report and the 404 page style
 // themselves and run no script but the counter: they take the plain nav
 // and a one-line call to action, with no theme switch (nothing there could
 // drive it); the 404 page's links are root-absolute.
@@ -1628,7 +2188,7 @@ const shellMarkers = (name) => [`<!-- ${name} -->`, `<!-- /${name} -->`];
 
 function shellRegions(page, facts) {
     if (page === 'carbon-ai.html') {
-        return { 'SHELL-HEAD': THEME_SCRIPT, 'SHELL-NAV': shellNav(facts), 'SHELL-CTA': shellCta(facts) };
+        return { 'SHELL-HEAD': THEME_SCRIPT, 'SHELL-NAV': shellNav(facts), 'SHELL-CTA': shellCta(facts), 'SHELL-FOOT': shellFoot() };
     }
     if (page === 'field-report.html') {
         return { 'SHELL-NAV': shellNav(facts, { plain: true }), 'SHELL-CTA': shellCta(facts, { plain: true, hooks: SHELL_HOOKS.fieldReport }) };
@@ -1637,17 +2197,22 @@ function shellRegions(page, facts) {
     return { 'SHELL-NAV': shellNav(facts, { plain: true, base }), 'SHELL-CTA': shellCta(facts, { plain: true, base }) };
 }
 
+// One region between short markers; an empty block leaves them adjacent.
+function fillRegion(html, page, name, block) {
+    const [START, END] = shellMarkers(name);
+    const start = html.indexOf(START);
+    const end = html.indexOf(END);
+    if (start === -1 || end < start) throw new Error(`${page} is missing the ${START} / ${END} markers`);
+    // The block takes the END marker's indent, which has to open its line.
+    const indent = html.slice(html.lastIndexOf('\n', end) + 1, end);
+    if (!/^[ \t]*$/.test(indent)) throw new Error(`${page}: ${END} must start a line of its own`);
+    return html.slice(0, start + START.length) + '\n' + (block ? indentBlock(block, indent) + '\n' : '') + indent + html.slice(end);
+}
+
 function injectShell(data, page) {
     let html = fs.readFileSync(path.join(ROOT, page), 'utf8');
     Object.entries(shellRegions(page, shellFacts(data.profile))).forEach(([name, block]) => {
-        const [START, END] = shellMarkers(name);
-        const start = html.indexOf(START);
-        const end = html.indexOf(END);
-        if (start === -1 || end < start) throw new Error(`${page} is missing the ${START} / ${END} markers`);
-        // The block takes the END marker's indent, which has to open its line.
-        const indent = html.slice(html.lastIndexOf('\n', end) + 1, end);
-        if (!/^[ \t]*$/.test(indent)) throw new Error(`${page}: ${END} must start a line of its own`);
-        html = html.slice(0, start + START.length) + '\n' + indentBlock(block, indent) + '\n' + indent + html.slice(end);
+        html = fillRegion(html, page, name, block);
     });
     return html;
 }
@@ -1664,18 +2229,23 @@ function main() {
         process.exit(1);
     }
 
+    // From here on, every figure prose() prints from content/ is marked.
+    useLedger(data.claims.claims);
+
     const outputs = [
         ['case-studies.html', renderCaseStudies(data)],
         ['research.html', renderResearch(data)],
         ['stats.html', renderStats(data)],
         ['sitemap.xml', renderSitemap(data)],
         ['voice-scripts.js', renderVoiceScripts(data)],
-        ['index.html', injectProjectCards(data, injectAtAGlance(data, injectJsonLd(data)))],
+        ['index.html', injectHomeRegions(data, injectCorelog(data, injectProjectCards(data, injectAtAGlance(data, injectJsonLd(data)))))],
         ['modules/interactives.js', injectAssayFacts(data)],
         ['carbon-ai.html', injectShell(data, 'carbon-ai.html')],
         ['field-report.html', injectShell(data, 'field-report.html')],
         ['404.html', injectShell(data, '404.html')]
     ];
+    // Last: where each figure appears is read off the pages above, as written.
+    outputs.push(['claims.html', renderClaims(data, Object.fromEntries(outputs))]);
 
     const stale = [];
     outputs.forEach(([rel, next]) => {
@@ -1701,7 +2271,7 @@ function main() {
         process.exit(1);
     }
 
-    console.log(`\n  ${data.projects.caseStudies.length} case studies · ${data.research.outputs.length} research outputs · ${data.lenses.lenses.length} lenses · counts ${data.stats.status}\n`);
+    console.log(`\n  ${data.projects.caseStudies.length} case studies · ${data.research.outputs.length} research outputs · ${data.lenses.lenses.length} lenses · ${data.claims.claims.length} claims · counts ${data.stats.status}\n`);
 }
 
 // Run as a script it builds; required (by tests/stats.test.js,
@@ -1710,4 +2280,5 @@ function main() {
 // shell from fixtures without writing anything.
 if (require.main === module) main();
 
-module.exports = { renderStats, EXAMPLE_PAYLOAD, renderAtAGlance, shellFacts, shellRegions, shellMarkers };
+module.exports = { renderStats, EXAMPLE_PAYLOAD, BASELINE_WEEKS, renderAtAGlance, shellFacts, shellRegions, shellMarkers,
+    corelogDepths, injectCorelog, renderCertificates, renderTestimonials, homeRegions, fillRegion, marksIn, CLAIM_PAGES, PAGE_NAMES, useLedger };

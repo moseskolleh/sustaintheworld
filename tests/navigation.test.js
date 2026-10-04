@@ -227,7 +227,7 @@ const countScrolls = (window) => {
         const band = observers.filter(o => o.els.length).pop();
         const watched = (sel) => !!band && Array.from(doc.querySelectorAll(sel)).every(el => band.els.includes(el));
         const CONTROLS = ['.hero-availability', '.hero-cta a', '.contact-form input', '.contact-form textarea', '.btn-submit',
-            '.corelog-more', '.project-link', '#ydiReveal', '.assay-sample', '.assay-open', '.toolkit-proof', '.carbon-badge', '.receipt-btn', '.eco-mode-toggle', '.terminal-toggle'];
+            '.corelog-more', '.project-link', '#ydiReveal', '.assay-sample', '.assay-open', 'a.toolkit-proof', '.carbon-badge', '.receipt-btn', '.eco-mode-toggle', '.terminal-toggle'];
         const missing = CONTROLS.filter(sel => !doc.querySelector(sel) || !watched(sel));
         assert(!!band && missing.length === 0, `Back to top: it watches every control it could sit on, from the hero to the footer (not watched: ${missing.join(', ') || 'none'})`);
         assert(!!band && !band.els.some(el => el.classList.contains('footer') || el.classList.contains('contact-form')),
@@ -252,6 +252,37 @@ const countScrolls = (window) => {
     // already shared for one opened the homepage at its top. jsdom cannot
     // follow location.replace to another page, so this holds the map to
     // the pages (scripts/smoke.js follows each link in Chromium).
+    // --- An address into a fold opens it ---
+    // claims.html's "Where" links send a reader to figures the homepage
+    // keeps out of sight until asked: the badge's method note ([hidden],
+    // opened by its "?"), a role's depth behind its More, a field note's
+    // closed fold. A link to the method note landed at the top of the page,
+    // and one to a role on a card that did not show the figure. Each opens
+    // before the landing now, by the control a reader would press.
+    {
+        const { window, clock } = run('dark', { clock: true, before: (w) => { w.document.querySelector('details.fieldnote').id = 'noteProbe'; } });
+        const doc = window.document;
+        const scrolled = countScrolls(window);
+        const method = doc.getElementById('carbonMethod');
+        const info = doc.getElementById('carbonInfoBtn');
+        assert(method.hidden && info.getAttribute('aria-controls') === 'carbonMethod', 'Folds: the badge\'s "?" names the method note it opens (aria-controls), and the note starts hidden');
+        window.location.hash = '#carbonMethod';
+        await clock.tick(400);
+        assert(!method.hidden && info.getAttribute('aria-expanded') === 'true' && scrolled.carbonMethod >= 1,
+            `Folds: an address into the method note opens it by its "?" and lands there (hidden ${method.hidden}, landed ${scrolled.carbonMethod || 0})`);
+        const role = doc.getElementById('role-undrr');
+        const card = role && role.closest('.timeline-content');
+        assert(!!card && !card.classList.contains('is-open'), 'Folds: the UNDRR role starts shut, its depth behind More');
+        window.location.hash = '#role-undrr';
+        await clock.tick(400);
+        assert(!!card && card.classList.contains('is-open') && card.querySelector('.corelog-more').getAttribute('aria-expanded') === 'true',
+            'Folds: an address into a role opens it by its More');
+        const note = doc.getElementById('noteProbe');
+        window.location.hash = '#noteProbe';
+        await clock.tick(400);
+        assert(note.open, 'Folds: an address into a field note opens its fold');
+    }
+
     {
         const src = fs.readFileSync(path.join(ROOT, 'script.js'), 'utf8');
         const literal = (src.match(/const MOVED = new Map\((\[[\s\S]*?\])\);/) || [])[1];

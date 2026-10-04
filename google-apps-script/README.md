@@ -65,7 +65,7 @@ used, is in the repository's README, under "The visit counter and privacy".
 | Key | What it holds |
 | --- | --- |
 | `v` | `1`, the schema version |
-| `page` | the page's file name without `.html` (`index`, `case-studies`, `research`, `carbon-ai`, `field-report`, `stats`), or `404` |
+| `page` | the page's file name without `.html` (`index`, `case-studies`, `research`, `claims`, `carbon-ai`, `field-report`, `stats`), or `404` |
 | `lens` | the `?lens=` the visit arrived with, or `""` |
 | `deepest` | the id of the furthest top-level part of `<main>` that came on screen, or `""` |
 | `features` | up to 20 distinct names: `data-analytics` hooks clicked, modules fetched on demand (`module-terminal`), `contact-form-submit` |

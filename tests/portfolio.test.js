@@ -116,6 +116,39 @@ const { projects, research, lenses } = data;
     assert(content.checkAvailability('t', { status: 'public', url: 'https://github.com/moseskolleh/promptcoach' }).length === 0, 'Guard: accepts a public entry on a trusted host');
     assert(content.checkAvailability('t', { status: 'on-request' }).length === 0, 'Guard: accepts an on-request entry with no link');
     assert(content.checkAvailability('t', { status: 'internal', heldBy: 'UNDRR' }).length === 0, 'Guard: accepts an internal entry that names its holder');
+
+    // "Checkable from outside" says where. The coastal case's 10,226 and the
+    // Hunan defence were labelled so with no source cited and no public
+    // work, and claims.html filed the same certificate under "on request".
+    const shut = { artifacts: [{ name: 'Thesis', status: 'on-request' }] };
+    const result = { claim: 'A count', basis: 'A property of the model domain', verifiable: true };
+    const says = (cs, r) => content.checkResultCheck('t', cs, r).join(' ');
+    assert(/nowhere to check it/.test(says(shut, result)), 'Guard: rejects a result called checkable with no source and no public work');
+    assert(/not a host/.test(says(shut, { ...result, check: 'https://example.org/marina' })), 'Guard: rejects a result checked at a host the repository does not trust');
+    assert(/drop the check/.test(says(shut, { ...result, verifiable: false, check: 'https://github.com/moseskolleh/WaterProject' })), 'Guard: rejects a check on a result that says it cannot be checked');
+    assert(says(shut, { ...result, check: 'https://github.com/moseskolleh/WaterProject' }) === '' &&
+        says({ artifacts: [{ name: 'Code', status: 'public', url: 'https://github.com/moseskolleh/WaterProject' }] }, result) === '' &&
+        says(shut, { ...result, verifiable: false }) === '',
+        'Guard: accepts a checkable result with a source of its own or public work, and a result that says it cannot be checked');
+    const checkable = data.projects.caseStudies.flatMap(cs => cs.results.filter(r => r.verifiable).map(r => `${cs.id}: ${r.claim.slice(0, 30)}`));
+    assert(!checkable.some(r => /^(?:coastal|water-management):/.test(r)), `Results: the coastal count and the Hunan defence are not called checkable while nothing says where (${checkable.join('; ')})`);
+
+    // A role view needs public work a reader can open beyond this site: a
+    // game on one of its pages is not enough, a repository is, and so is
+    // an output placed in the view by its own `lenses`.
+    const lens = [{ id: 'x' }];
+    const game = { caseStudies: [{ id: 'g', lenses: ['x'], artifacts: [{ name: 'A game', status: 'public', url: 'case-studies.html#play-borehole' }] }] };
+    const repo = { status: 'public', title: 'Code', url: 'https://github.com/moseskolleh/WaterProject' };
+    assert(content.checkLensWork(lens, game, { outputs: [] }).length === 1, 'Guard: rejects a lens whose only public work is a page of this site');
+    assert(content.checkLensWork(lens, game, { outputs: [{ ...repo, lenses: ['x'] }] }).length === 0, 'Guard: accepts a lens with a repository placed in it by its own lenses');
+    assert(content.checkLensWork(lens, game, { outputs: [{ ...repo, caseStudy: 'g' }] }).length === 0, 'Guard: accepts a lens with a repository through one of its case studies');
+    assert(content.checkLensWork(lens, game, { outputs: [{ ...repo, status: 'on-request', url: undefined, caseStudy: 'g' }] }).length === 1, 'Guard: work on request does not count');
+    // A case study counts for the view it leads, its first lens, not one it
+    // only touches: that view opens on other work.
+    const touching = { caseStudies: game.caseStudies.concat({ id: 'h', lenses: ['y', 'x'], artifacts: [{ name: 'Code', status: 'public', url: repo.url }] }) };
+    assert(content.checkLensWork(lens, touching, { outputs: [{ ...repo, caseStudy: 'h' }] }).length === 1 &&
+        content.checkLensWork([{ id: 'y' }], touching, { outputs: [] }).length === 0,
+        'Guard: a repository counts for the view its case study leads, not for one the case study only touches');
 }
 
 // --- research outputs -----------------------------------------------------
@@ -188,9 +221,38 @@ function dom(file) {
     const cards = doc.querySelectorAll('.cs-card');
     assert(cards.length === projects.caseStudies.length, `Page: every case study is rendered (${cards.length}/${projects.caseStudies.length})`);
 
-    // Each card must carry all four stages, in the page as shipped.
-    const stageCounts = Array.from(cards).map(c => c.querySelectorAll('.cs-stage').length);
-    assert(stageCounts.every(n => n === 4), `Page: every card shows all four stages (${stageCounts.join(', ')})`);
+    // Each card must carry all five stages, in the page as shipped: the
+    // method folded to its heading (a closed <details>, so no script is
+    // needed to open it), the other four open.
+    const stageCounts = Array.from(cards).map(c => c.querySelectorAll(':scope > .cs-stage').length);
+    assert(stageCounts.every(n => n === 5), `Page: every card shows all five stages (${stageCounts.join(', ')})`);
+    const folds = Array.from(cards).map(c => c.querySelector(':scope > details.cs-method-fold'));
+    assert(folds.every((d, i) => d && !d.open && d.querySelector('summary h4') && d.querySelectorAll('.cs-method li').length === projects.caseStudies[i].method.length &&
+            d.querySelector('summary').textContent.includes(`${['one', 'two', 'three', 'four', 'five', 'six'][projects.caseStudies[i].method.length - 1]} step`)),
+        'Page: each method is folded under its heading, which says how many steps it has, with every step inside');
+    // The page's own note on its layout is folded under its heading too: the
+    // phone length had no room for it once the wave's repositories, the GAIA
+    // case and every case study's findings were in.
+    const why = doc.querySelector('.cs-footnote');
+    const whyFold = why && why.querySelector(':scope > details');
+    assert(!!whyFold && !whyFold.open && /Why it is laid out like this/.test(why.querySelector(':scope > h2').textContent) &&
+            whyFold.querySelectorAll(':scope > p').length === 2 && /vouched for/.test(whyFold.textContent),
+        'Page: the note on why it is laid out like this keeps its heading in view and folds its two paragraphs');
+
+    // Printed, the folds open (content.css where the browser knows
+    // ::details-content, the page's script elsewhere), the photo rows stay
+    // shut, and after printing only what printing opened shuts again.
+    const photos = doc.querySelector('details.cs-photos');
+    folds[1].open = true;
+    window.dispatchEvent(new window.Event('beforeprint'));
+    const printedOpen = folds.every(d => d.open) && whyFold.open && !photos.open;
+    window.dispatchEvent(new window.Event('afterprint'));
+    const after = folds.map(d => d.open);
+    assert(printedOpen && after[1] && after.filter(Boolean).length === 1 && !whyFold.open,
+        `Print: every method and the closing note open for paper, the photos stay folded, and afterwards only the reader's own open fold stays open (${after.filter(Boolean).length} open)`);
+    folds[1].open = false;
+    const open = Array.from(cards).map(c => Array.from(c.querySelectorAll(':scope > .cs-stage h4')).map(h => h.textContent.replace(/\s+/g, ' ').trim()));
+    assert(open.every(hs => hs.length === 5 && /^05 Findings & recommendations$/.test(hs[4])), `Page: the fifth stage is the findings (${open[0].join(' | ')})`);
 
     const results = doc.querySelectorAll('.cs-result');
     const withBasis = doc.querySelectorAll('.cs-result-basis');
@@ -283,6 +345,137 @@ function dom(file) {
     );
 }
 
+// loadAll with one content file changed in memory, so a guard is shown to
+// fire in the build itself (npm run build:content runs loadAll), not only
+// in the helper it calls. Returns the build's complaint, or null.
+function loadWith(name, change) {
+    const real = fs.readFileSync;
+    const file = path.join(content.CONTENT_DIR, `${name}.json`);
+    fs.readFileSync = function (f, ...rest) {
+        const out = real.call(fs, f, ...rest);
+        if (path.resolve(String(f)) !== file) return out;
+        const json = JSON.parse(out);
+        change(json);
+        return JSON.stringify(json);
+    };
+    try {
+        content.loadAll();
+        return null;
+    } catch (err) {
+        return err.message;
+    } finally {
+        fs.readFileSync = real;
+    }
+}
+
+// --- findings and recommendations ----------------------------------------
+// "Say what he found, not only what he did": every case study carries
+// findings, the build refuses one without, and the page prints each with
+// what it is and its basis.
+{
+    const none = projects.caseStudies.filter(cs => !(cs.findings || []).length).map(cs => cs.id);
+    assert(none.length === 0, `Findings: every case study says what the work found or recommends (${none.join(', ') || 'all do'})`);
+    const noFinding = projects.caseStudies.filter(cs => !cs.findings.some(f => f.kind === 'finding')).map(cs => cs.id);
+    assert(noFinding.length === 0, `Findings: each says at least one thing the work found, not only advice (${noFinding.join(', ') || 'all do'})`);
+
+    const refused = loadWith('projects', (p) => { delete p.caseStudies.find(cs => cs.id === 'un-disaster').findings; });
+    assert(!!refused && /case study "un-disaster": no findings/.test(refused), `Findings: the build refuses a case study without them (${(refused || 'it passed').split('\n')[1] || refused})`);
+
+    const base = projects.caseStudies.find(cs => cs.id === 'coastal');
+    const variant = (change) => { const cs = JSON.parse(JSON.stringify(base)); change(cs); return content.checkFindings('test', cs); };
+    const says = (problems, re) => problems.some(p => re.test(p));
+    const f = (kind, text, basis) => (basis === undefined ? { kind, text } : { kind, text, basis });
+    assert(content.checkFindings('test', base).length === 0, 'Findings: a case study with findings passes');
+    assert(says(variant(cs => { cs.findings = []; }), /no findings/), 'Findings: an empty list is refused');
+    assert(says(variant(cs => { cs.findings = Array(5).fill(f('finding', 'A thing found.')); }), /4 at most/), 'Findings: five is refused; they are short bullets, four at most');
+    assert(says(variant(cs => { cs.findings[0].kind = 'insight'; }), /not one of finding, recommendation/), 'Findings: a kind other than finding or recommendation is refused');
+    assert(says(variant(cs => { cs.findings[0].text = ' '; }), /no text/), 'Findings: one with no text is refused');
+    assert(says(variant(cs => { cs.findings[0].text = 'x'.repeat(241); }), /short bullet/), 'Findings: a paragraph is refused');
+    assert(says(variant(cs => { cs.findings = [f('recommendation', 'Do the thing.')]; }), /only recommendations/), 'Findings: advice with nothing found is refused');
+    assert(says(variant(cs => { cs.findings = [f('finding', 'Exports fell 40% by 2050.')]; }), /figure in it and no basis/), 'Findings: one with a figure and no basis is refused');
+    assert(says(variant(cs => { cs.findings[0].basiss = cs.findings[0].basis; delete cs.findings[0].basis; }), /unknown field "basiss"/), 'Findings: a misspelt field is refused, not dropped from the page');
+    assert(says(variant(cs => { cs.findings[0].basis = ''; }), /basis is empty/), 'Findings: an empty basis is refused');
+    assert(content.checkFindings('t', { findings: [f('finding', 'Low resistivity can mean fractures, or clay.')] }).length === 0,
+        'Findings: one finding with no figure and no basis is allowed — where the evidence is thin, the list is short');
+
+    // On the page, in the order given, each labelled as what it is.
+    const doc = new JSDOM(fs.readFileSync(path.join(ROOT, 'case-studies.html'), 'utf8')).window.document;
+    const wrong = [];
+    projects.caseStudies.forEach((cs) => {
+        const items = Array.from(doc.querySelectorAll(`#${cs.id} .cs-findings > li`));
+        if (items.length !== cs.findings.length) { wrong.push(`${cs.id}: ${items.length} of ${cs.findings.length}`); return; }
+        cs.findings.forEach((fd, i) => {
+            const li = items[i];
+            const label = (li.querySelector('.cs-finding-kind') || {}).textContent;
+            const text = li.querySelector('p').textContent.replace(/\s+/g, ' ').trim();
+            const basis = li.querySelector('.cs-finding-basis');
+            if (label !== (fd.kind === 'finding' ? 'Finding' : 'Recommendation') || !li.classList.contains(`cs-finding-${fd.kind}`)) wrong.push(`${cs.id} ${i + 1}: labelled "${label}"`);
+            if (text !== `${label} ${fd.text}`.replace(/\s+/g, ' ')) wrong.push(`${cs.id} ${i + 1}: text`);
+            if (!!basis !== !!fd.basis || (basis && basis.textContent.replace(/\s+/g, ' ').trim() !== `Basis ${fd.basis}`)) wrong.push(`${cs.id} ${i + 1}: basis`);
+        });
+    });
+    assert(wrong.length === 0, `Findings: each is on its case study, labelled finding or recommendation, with its basis word for word (${wrong.join('; ') || 'all'})`);
+}
+
+// --- the ESG/CSRD lens ------------------------------------------------------
+// The availability line offers ESG roles; a lens with no case behind it
+// would be a claim to a specialism with nothing to show. The ESG case is
+// method and tooling (GAIA), so it says so, and it names no partner.
+{
+    const esg = lenses.lenses.find(l => l.id === 'esg-csrd');
+    assert(!!esg && /ESG/.test(esg.label) && /CSRD/.test(esg.label), `ESG lens: exists, as esg-csrd (${esg && esg.label})`);
+    const members = projects.caseStudies.filter(cs => cs.lenses.includes('esg-csrd'));
+    const home = members.filter(cs => cs.lenses[0] === 'esg-csrd');
+    assert(home.length > 0 && home.every(cs => cs.artifacts.some(a => a.status === 'public')),
+        `ESG lens: at least one case study is its home, and it has a public artifact (${home.map(cs => `${cs.id}: ${cs.artifacts.filter(a => a.status === 'public').length} public`).join(', ') || 'none'})`);
+
+    const gaia = projects.caseStudies.find(cs => cs.id === 'gaia');
+    const urls = gaia ? gaia.artifacts.filter(a => a.status === 'public').map(a => a.url) : [];
+    assert(['https://github.com/moseskolleh/GAIA-Framework-', 'https://moseskolleh.github.io/GAIA-Framework-/', 'carbon-ai.html#anatomy'].every(u => urls.includes(u)),
+        `ESG case: the GAIA repository, its web estimator and Anatomy of a Prompt are its public artifacts (${urls.join(', ')})`);
+    assert(!!gaia && /not a client result/.test(gaia.caveat) && /typed? in|types in/.test(gaia.caveat),
+        'ESG case: says it is method and tooling, and that the tool sees only workloads a user types in');
+    assert(!!gaia && !/Ministry|Ministerie|Digital Society|Prototype E/i.test(JSON.stringify(gaia)),
+        'ESG case: names no partner, and not the prototype deck the framework began in');
+    // Its checkable results rest on what the public repository states.
+    assert(!!gaia && gaia.results.every(r => r.verifiable && /repository/.test(r.basis)), 'ESG case: each result is checkable, and its basis is in the repository');
+
+    // Every lens has a public artifact behind it, and the build says so
+    // when one does not.
+    const refused = loadWith('projects', (p) => {
+        p.caseStudies.filter(cs => cs.lenses.includes('esg-csrd')).forEach(cs => cs.artifacts.forEach((a) => { a.status = 'on-request'; delete a.url; }));
+    });
+    assert(!!refused && /lens "esg-csrd": none of its case studies has a public artifact/.test(refused),
+        'Lenses: the build refuses a lens a reader can open nothing behind');
+
+    // The lens URL opens on the ESG case, and frames the page for it.
+    const html = fs.readFileSync(path.join(ROOT, 'case-studies.html'), 'utf8');
+    const at = (url) => new JSDOM(html, { runScripts: 'dangerously', url }).window.document;
+    const doc = at('https://example.com/case-studies.html?lens=esg-csrd');
+    const ids = Array.from(doc.querySelectorAll('#csGrid > .cs-card')).map(c => c.id);
+    const shown = Array.from(doc.querySelectorAll('[data-lens-panel]')).filter(p => !p.hidden).map(p => p.dataset.lensPanel);
+    assert(ids[0] === 'gaia' && ids.length === projects.caseStudies.length && shown.join() === 'esg-csrd',
+        `Lens URL: ?lens=esg-csrd shows the ESG framing with the ESG case first (${ids.join(', ')})`);
+    assert(ids.slice(0, members.length).every(id => members.some(cs => cs.id === id)) &&
+        doc.querySelectorAll('.cs-card-secondary').length === projects.caseStudies.length - members.length,
+        'Lens URL: the ESG case studies lead, and the rest are set back, not hidden');
+
+    // Nearest lens first: in each lens's view the case studies it is home to
+    // lead the ones it only touches, on the page and in orderForLens alike.
+    const mismatched = lenses.lenses.filter((l) => {
+        const page = Array.from(at(`https://example.com/case-studies.html?lens=${l.id}`).querySelectorAll('#csGrid > .cs-card')).map(c => c.id);
+        const { primary, secondary } = content.orderForLens(projects.caseStudies, l.id);
+        const want = primary.concat(secondary).map(cs => cs.id);
+        const homeFirst = primary.findIndex(cs => cs.lenses[0] !== l.id);
+        const touched = homeFirst < 0 ? [] : primary.slice(homeFirst);
+        return page.join() !== want.join() || touched.some(cs => cs.lenses[0] === l.id);
+    }).map(l => l.id);
+    assert(mismatched.length === 0, `Lens order: each lens's home case studies lead, the same on the page as in orderForLens (${mismatched.join(', ') || 'all four'})`);
+    const climate = content.orderForLens(projects.caseStudies, 'climate-risk').primary.map(cs => cs.id);
+    assert(climate[0] === 'wuppertal' && climate.indexOf('sustainable-ai') > climate.indexOf('un-disaster'),
+        `Lens order: the climate view opens on Wuppertal, not on a case study it only touches (${climate.join(', ')})`);
+}
+
 // --- without JavaScript ---------------------------------------------------
 // The lens links are real navigations, and the page has to be complete before
 // any script runs — a portfolio that needs JS to show its work is a portfolio
@@ -309,6 +502,13 @@ function dom(file) {
     const items = doc.querySelectorAll('.rs-item');
     assert(items.length === research.outputs.length, `Research page: every output is rendered (${items.length}/${research.outputs.length})`);
 
+    // The reproduction notes are folded for the screen, not for paper.
+    const notes = doc.querySelector('.rs-repro details');
+    window.dispatchEvent(new window.Event('beforeprint'));
+    const printed = notes.open;
+    window.dispatchEvent(new window.Event('afterprint'));
+    assert(printed && !notes.open, 'Print: the reproduction notes open for paper and fold again after');
+
     const statuses = doc.querySelectorAll('.rs-item .cs-status');
     assert(statuses.length === research.outputs.length, `Research page: every output shows its availability (${statuses.length}/${research.outputs.length})`);
 
@@ -319,10 +519,28 @@ function dom(file) {
 
     assert(doc.querySelectorAll('.rs-commands dt').length > 0, 'Research page: the reproduction commands are listed');
 
-    // Group headings are plurals a person would write: not "MSc thesiss".
-    const headings = Array.from(doc.querySelectorAll('.rs-group h2')).map(h => h.textContent.trim());
-    const misspelt = headings.filter(h => /(iss|sss|Codes)$/.test(h));
-    assert(misspelt.length === 0, `Research page: group headings are real plurals (${headings.join(', ')})`);
+    // Grouped by what a reader can do with each output, public first: by
+    // type, eleven outputs took eight headings. Each group holds only its own.
+    const groups = Array.from(doc.querySelectorAll('.rs-group'));
+    const order = content.STATUSES.filter(s => research.outputs.some(o => o.status === s));
+    const byId = Object.fromEntries(research.outputs.map(o => [o.id, o]));
+    assert(groups.map(g => g.id).join() === order.map(s => `rs-${s}`).join() &&
+        groups.every(g => Array.from(g.querySelectorAll('.rs-item')).every(it => `rs-${byId[it.id].status}` === g.id)),
+        `Research page: grouped by availability, public first (${groups.map(g => g.querySelector('h2').textContent.trim()).join(', ')})`);
+
+    // Each output says where it sits, at the end of its note: its case
+    // study, or the role view of an output with none.
+    const placed = research.outputs.filter((o) => {
+        const link = doc.querySelector(`#${o.id} .rs-note a.rs-link`);
+        const want = o.caseStudy ? `case-studies.html#${o.caseStudy}` : (o.lenses ? `case-studies.html?lens=${o.lenses[0]}` : null);
+        return want ? !!link && link.getAttribute('href') === want : !link;
+    });
+    assert(placed.length === research.outputs.length, `Research page: each output links its case study or role view, and only those (${placed.length}/${research.outputs.length})`);
+
+    // How to reproduce it is a press away, not a screen of the page.
+    const repro = doc.querySelector('.rs-repro');
+    assert(!!repro && !!repro.querySelector('details:not([open]) > summary') && !!repro.querySelector('details .rs-commands dt') && !!repro.querySelector('h2'),
+        'Research page: the reproduction notes and commands are folded under their heading');
 
     // The intro follows the hero lead; it should not say the same thing again.
     // Compared on runs of three words, so a light rewording still counts.
@@ -334,6 +552,32 @@ function dom(file) {
     const intro = trigrams(doc.querySelector('.rs-intro p').textContent);
     const shared = [...lead].filter(t => intro.has(t)).length / (lead.size || 1);
     assert(shared < 0.25, `Research page: the intro does not repeat the hero lead (${Math.round(shared * 100)}% of its phrasing shared)`);
+}
+
+// --- an address into a fold opens it -------------------------------------
+// claims.html's "Where" links send a reader to a figure in a photo's
+// caption and to two in the reproduction notes. A closed fold showed only
+// its summary, and the research page's link went to the top of the page.
+// The page's script opens the fold its address points into, and lands on it.
+{
+    const arrive = (file, hash) => new JSDOM(fs.readFileSync(path.join(ROOT, file), 'utf8'), {
+        runScripts: 'dangerously',
+        url: `https://example.com/${file}${hash}`,
+        beforeParse: (w) => { w.Element.prototype.scrollIntoView = function () { w.landedOn = this.id; }; }
+    }).window;
+    const research = arrive('research.html', '#reproduce');
+    const notes = research.document.getElementById('reproduce').closest('details');
+    const cases = arrive('case-studies.html', '#un-disaster-photos');
+    const row = cases.document.getElementById('un-disaster-photos').closest('details');
+    const others = Array.from(cases.document.querySelectorAll('details.cs-photos')).filter(d => d !== row && d.open);
+    assert(!!notes && notes.open && research.landedOn === 'reproduce' && !!row && row.open && cases.landedOn === 'un-disaster-photos' && !others.length,
+        'Folds: an address into the reproduction notes or a photo row opens that fold, and only that one, and lands on it');
+    const plain = arrive('case-studies.html', '#un-disaster');
+    assert(!plain.document.getElementById('un-disaster-photos').closest('details').open && !plain.landedOn, 'Folds: an address to a case study opens none of its folds');
+    // Printing still shuts again only what printing opened.
+    research.dispatchEvent(new research.Event('beforeprint'));
+    research.dispatchEvent(new research.Event('afterprint'));
+    assert(notes.open, 'Folds: a fold the reader arrived in stays open after printing');
 }
 
 // --- generated files carry their warning ---------------------------------
@@ -358,11 +602,15 @@ function dom(file) {
     const doc = new JSDOM(fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8')).window.document;
     const cards = Array.from(doc.querySelectorAll('#projects .project-card'));
     const lensName = Object.fromEntries(lenses.lenses.map(l => [l.id, l.shortLabel]));
-    assert(cards.map(c => c.dataset.project).join() === projects.caseStudies.map(cs => cs.id).join(),
-        `Cards: one per case study, in the case studies' order (${cards.map(c => c.dataset.project).join(', ')})`);
+    const shown = projects.caseStudies.filter(content.onHomepage);
+    assert(cards.map(c => c.dataset.project).join() === shown.map(cs => cs.id).join() && shown.length === 6,
+        `Cards: one per case study the homepage shows, in the case studies' order (${cards.map(c => c.dataset.project).join(', ')})`);
+    const kept = projects.caseStudies.filter(cs => !content.onHomepage(cs)).map(cs => cs.id);
+    assert(kept.join() === 'gaia' && kept.every(id => !doc.querySelector(`[data-project="${id}"]`)),
+        `Cards: a case study marked homepageCard: false has no card (${kept.join(', ')})`);
 
     const wrong = [];
-    projects.caseStudies.forEach((cs) => {
+    shown.forEach((cs) => {
         const card = cards.find(c => c.dataset.project === cs.id);
         if (!card) return;
         const text = (sel) => (card.querySelector(sel) || { textContent: '' }).textContent.replace(/\s+/g, ' ').trim();
@@ -383,7 +631,7 @@ function dom(file) {
     // Sustainable AI Framework, read as covering the framework, which the
     // client holds. Where a case study has public work and work held
     // elsewhere, a checkable headline names what can be checked.
-    const unnamed = projects.caseStudies.filter((cs) => {
+    const unnamed = shown.filter((cs) => {
         const head = cs.results[0];
         const open = (cs.artifacts || []).filter(a => a.status === 'public');
         const held = (cs.artifacts || []).filter(a => a.status !== 'public');
@@ -432,7 +680,7 @@ function dom(file) {
     const size = (rel) => webpSize(fs.readFileSync(path.join(ROOT, rel)));
     const doc = new JSDOM(fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8')).window.document;
     const bad = [];
-    projects.caseStudies.forEach((cs) => {
+    projects.caseStudies.filter(content.onHomepage).forEach((cs) => {
         const p = cs.photo;
         const full = size(p.src), thumb = size(p.thumb);
         if (!full || full.width !== p.width || full.height !== p.height) bad.push(`${cs.id}: ${p.src} is ${full && `${full.width}x${full.height}`}, declared ${p.width}x${p.height}`);

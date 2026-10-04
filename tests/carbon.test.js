@@ -179,6 +179,29 @@ function checkResult(label, params) {
     assert(broken.length === 0, `Suggestions never render NaN or impossible percentages (${broken.slice(0, 3).join(' | ') || 'none'})`);
 }
 
+// --- A tip prints what it works out, or what the factor set holds --------
+// The tips once quoted "4–10× more energy per token" (the factor set puts
+// DeepSeek-R1 at two to four times the frontier models), "hyperscalers run
+// 1.10–1.20" and "caching reclaims 20–40%", none of them sourced on the
+// site. tests/claims.test.js holds every string here to the claims ledger;
+// this holds the one figure a tip still quotes to the factor it comes from.
+{
+    const { PUE_FACTOR } = require('../ai-carbon-data.js');
+    const tips = suggest({ ...BASE, modelKey: 'deepseek-r1', inputTokens: 2000, queriesPerDay: 100000, pue: 1.5 });
+    const pue = tips.find(t => /^PUE /.test(t.text));
+    const [lo, hi] = PUE_FACTOR.range;
+    assert(!!pue && pue.text.includes(`from ${lo} `) && pue.text.includes(`to ${hi} `),
+        `Tips: the PUE tip quotes the range the factor set gives PUE, ${lo}–${hi} (${pue ? pue.text : 'no tip'})`);
+    const trim = tips.find(t => /trimming context/.test(t.text));
+    const priced = trim && Number((trim.text.match(/to (\d+) tokens/) || [])[1]);
+    const saving = priced && Math.round((1 - calculate({ ...BASE, modelKey: 'deepseek-r1', inputTokens: priced, queriesPerDay: 100000, pue: 1.5 }).carbonPerQuery_g
+        / calculate({ ...BASE, modelKey: 'deepseek-r1', inputTokens: 2000, queriesPerDay: 100000, pue: 1.5 }).carbonPerQuery_g) * 100);
+    assert(!!trim && trim.text.includes(`saves ${saving}%`), `Tips: the prompt the trimming tip names is the one it priced (${trim ? trim.text : 'no tip'})`);
+    const said = tips.filter(t => /reasoning|caching/i.test(t.text)).map(t => t.text);
+    assert(said.length === 2 && said.every(t => !/\d/.test(t.replace(/DeepSeek-R1/g, '').replace(/[\d,]+ queries\/day/, ''))),
+        `Tips: the reasoning and caching tips state no figure of their own (${said.join(' | ')})`);
+}
+
 // --- The model stays internally consistent -------------------------------
 {
     const dirty = calculate({ ...BASE, regionKey: 'in' });
@@ -725,9 +748,9 @@ const ROUNDED_TO_NOTHING = /^0(\.0+)?$|\b0\.0+ /;
         const { window, errors } = run('dark');
         const home = window.document;
         const section = home.getElementById('ecoprompt');
-        assert(errors.length === 0, `Homepage: "AI, Weighed" renders without errors (${errors.map(String).join('; ') || 'none'})`);
+        assert(errors.length === 0, `Homepage: the EcoPrompt Coach teaser renders without errors (${errors.map(String).join('; ') || 'none'})`);
         assert(!!section.querySelector('#ydi #ydiSvg .ydi-hit') && !section.querySelector('select, #anatomy, .eco-widget'),
-            'Homepage: "AI, Weighed" is You Draw It alone, with no calculator and no Anatomy');
+            'Homepage: the EcoPrompt Coach teaser is You Draw It alone, with no calculator and no Anatomy');
         assert(!!section.querySelector('a[href="carbon-ai.html"]') && !home.getElementById('anatomy'),
             'Homepage: it links to the EcoPrompt Coach, where the calculator and Anatomy are');
         const toAnatomy = Array.from(home.querySelectorAll('a[href*="#anatomy"]')).map(a => a.getAttribute('href'));

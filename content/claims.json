@@ -1,0 +1,354 @@
+{
+  "$comment": [
+    "THE CLAIMS LEDGER — every number the site prints, with its basis.",
+    "",
+    "A figure on a page is marked with the entry it is:",
+    "  <span data-claim=\"water-points\">164</span>",
+    "by hand on the hand-authored pages (index.html, carbon-ai.html,",
+    "field-report.html, 404.html), and by npm run build:content wherever a",
+    "generated page prints one from content/ (scripts/lib/claims.js finds it",
+    "by its value or one of its `forms`). claims.html, 'Check my numbers', is",
+    "built from this file: each figure, where it appears, its basis and",
+    "whether a reader can check it. tests/claims.test.js fails the build on a",
+    "marked figure that disagrees with its entry, an unknown id, an entry",
+    "with no basis, a number on any page, in digits or in words, in its text",
+    "or its labels and captions, that is neither marked nor a year, a date, a",
+    "section number, a standard's name, \"one\", a count of what the page",
+    "shows in full and the like, a size said in words (\"a fifth\", \"twice\")",
+    "that nothing holds, a figure a script prints of its own (the field",
+    "terminal, the Assay, the receipt, the coach's tips) that is not here, and",
+    "a number the narration says aloud that no entry backs.",
+    "",
+    "FIELDS (scripts/lib/content.js refuses anything else)",
+    "",
+    "id         kebab-case; the mark on the page",
+    "value      the figure as the site writes it: \"164\", \"70%\", \"2–8×\"",
+    "unit       what it counts or measures, as claims.html says it after the",
+    "           value; no other figure in it",
+    "forms      optional; other ways the generated pages write it (\"~276\",",
+    "           or in words with what it counts: \"team of six\"); a form in",
+    "           words is marked on its number alone",
+    "spoken     optional; how the narration says it, in words, with what",
+    "           follows (\"a hundred and sixty-four water points\")",
+    "basis      exactly one of",
+    "             result        a case study's id: one of its results states",
+    "                           the figure, and its basis and checkability",
+    "                           are this entry's (not repeated here)",
+    "             profile       a path, or paths, in content/profile.json",
+    "                           (\"experience.4.teamSize\"); a note when the",
+    "                           figure is counted from it rather than read",
+    "             factor        a path in ai-carbon-data.js: a calculator's",
+    "                           input, with its cited source; `count: true`",
+    "                           when the figure is how many entries the path",
+    "                           holds; `own` instead of the citation when the",
+    "                           figure is the calculator's own choice (a",
+    "                           default, a convention, a judgement), saying",
+    "                           which and why",
+    "             source        a cited external source, with its url",
+    "             budget        a budget scripts/check-budget.js measures",
+    "             derived       worked out from other entries (`from`)",
+    "             illustrative  why it has no source; it must say",
+    "                           'illustrative' wherever it is shown",
+    "           and a `note` where a reader needs one. No figure in a note",
+    "           unless it is an entry here.",
+    "checkable  public (a reader can check it from outside: `check` says",
+    "           where), on-request (the evidence is a document Moses holds),",
+    "           or not-checkable (it rests on records held elsewhere). A",
+    "           result's comes from the case study.",
+    "",
+    "Numbers the calculators work out in the browser (the coach on carbon-ai.html, the",
+    "homepage chart, the footer's receipt) are model outputs, not claims:",
+    "their inputs are entries here, where the pages print them, and every",
+    "factor is in the evidence ledger on carbon-ai.html. What those scripts",
+    "print of their own is held here like a page. The open counts on",
+    "stats.html are the visit counter's own measurements, rewritten weekly."
+  ],
+
+  "claims": [
+    {
+      "id": "water-points",
+      "value": "164",
+      "unit": "water points delivered across Sierra Leone",
+      "basis": { "result": "groundwater" },
+      "spoken": ["a hundred and sixty-four water points"]
+    },
+    {
+      "id": "wells-rehabilitated",
+      "value": "100",
+      "unit": "hand-dug wells rehabilitated: part of those water points",
+      "basis": { "result": "groundwater" }
+    },
+    {
+      "id": "boreholes-constructed",
+      "value": "50",
+      "unit": "boreholes constructed: part of those water points",
+      "basis": { "result": "groundwater" }
+    },
+    {
+      "id": "solar-boreholes",
+      "value": "14",
+      "unit": "solar-powered boreholes with storage tanks: the rest of them",
+      "basis": { "result": "groundwater" }
+    },
+    {
+      "id": "strike-rate",
+      "value": "70%",
+      "unit": "aquifer strike rate on the boreholes sited with the resistivity survey",
+      "forms": ["7/10"],
+      "basis": { "result": "groundwater" },
+      "spoken": ["seventy percent", "seventy per cent", "seven holes in ten", "seven times out of ten"]
+    },
+    {
+      "id": "blind-siting",
+      "value": "30%",
+      "unit": "strike rate for blind siting in the same geology: the comparison the borehole game draws",
+      "basis": { "illustrative": "No source for this baseline is recorded. It stays because the comparison is the point of the game, and wherever it is shown it is labelled illustrative." },
+      "checkable": "not-checkable"
+    },
+    {
+      "id": "sub-basins",
+      "value": "10,226",
+      "unit": "river sub-basins modelled with the MARINA-Multi model",
+      "basis": { "result": "coastal" },
+      "spoken": ["ten thousand two hundred and twenty-six sub-basins", "more than ten thousand sub-basins"]
+    },
+    {
+      "id": "hazard-systems",
+      "value": "54",
+      "unit": "global hazard information systems documented for UNDRR",
+      "forms": ["54 hazard systems"],
+      "basis": { "result": "un-disaster" },
+      "spoken": ["fifty-four hazard systems", "fifty-four hazard information systems", "fifty-four global hazard information systems"]
+    },
+    {
+      "id": "coverage-gain",
+      "value": "25%",
+      "unit": "more regional and hazard-type coverage in UNDRR's catalogue of those systems",
+      "basis": { "result": "un-disaster" }
+    },
+    {
+      "id": "gaia-checks",
+      "value": "3,984",
+      "unit": "cross-engine checks passing in GAIA: its workbook, web estimator and reference code giving the same answers",
+      "basis": { "result": "gaia" }
+    },
+    {
+      "id": "masters-degrees",
+      "value": "2",
+      "unit": "master's degrees: Environmental Sciences at Wageningen and Industrial Engineering at Hunan",
+      "basis": { "profile": "education", "note": "The MSc entries in the education record. The degree certificates are the evidence." },
+      "checkable": "on-request",
+      "spoken": ["two master's degrees"]
+    },
+    {
+      "id": "continents",
+      "value": "3",
+      "unit": "continents studied and worked on: Africa, Asia and Europe",
+      "basis": { "profile": ["education", "experience"], "note": "Sierra Leone for the BSc and the drilling work, China for the MSc at Hunan, and the Netherlands and Germany for the MSc at Wageningen, UNDRR in Bonn and the Digital Society School. The degree certificates are the evidence." },
+      "checkable": "on-request",
+      "spoken": ["three continents"]
+    },
+    {
+      "id": "countries",
+      "value": "4",
+      "unit": "countries studied and worked in: Sierra Leone, China, Germany and the Netherlands",
+      "basis": { "profile": ["education", "experience"], "note": "The places of the degrees and roles in the record, as the journey on the homepage follows them. The degree certificates are the evidence for Sierra Leone, China and the Netherlands; for Germany, the UNDRR internship, as I record it." },
+      "checkable": "on-request",
+      "spoken": ["four countries"]
+    },
+    {
+      "id": "wur-grade",
+      "value": "7.8/10",
+      "unit": "grade for the MSc in Environmental Sciences at Wageningen, on the Dutch scale",
+      "basis": { "profile": "education.0.grade", "note": "The transcript is the evidence." },
+      "checkable": "on-request"
+    },
+    {
+      "id": "team-size",
+      "value": "23",
+      "unit": "people in the drilling team managed at Sierra Drilling and Water Supply Enterprise",
+      "basis": { "profile": "experience.4.teamSize", "note": "As I record it; the employer's records are not public." },
+      "checkable": "not-checkable"
+    },
+    {
+      "id": "programme-weeks",
+      "value": "8",
+      "unit": "weeks: the length of the OnePointFive sustainability consulting accelerator",
+      "basis": { "profile": "experience.1.programmeWeeks", "note": "As I record it; no outside record of it is linked yet." },
+      "checkable": "not-checkable"
+    },
+    {
+      "id": "wuppertal-team",
+      "value": "6",
+      "unit": "people in the interdisciplinary team of the Wuppertal flood-resilience consultancy",
+      "forms": ["six-person", "team of six"],
+      "basis": { "profile": "education.0.consultancyTeamSize", "note": "As I record it; the consultancy report is the client's." },
+      "checkable": "not-checkable"
+    },
+    {
+      "id": "undrr-months",
+      "value": "5",
+      "unit": "months with UNDRR in Bonn: the internship, June to October",
+      "forms": ["five months"],
+      "basis": { "profile": "experience.2", "note": "Counted from the internship's dates as I record them; UNDRR holds its own record." },
+      "checkable": "not-checkable"
+    },
+    {
+      "id": "design-principles",
+      "value": "5",
+      "unit": "design principles the sustainable-AI framework came down to, printed as cards",
+      "forms": ["five design principles"],
+      "basis": {
+        "source": "The printed cards, photographed at the Digital Society School",
+        "url": "assets/img/sustainable-ai-6.webp",
+        "note": "The framework itself is the client's and not public; the cards are in the photo, on the case study."
+      },
+      "checkable": "public",
+      "check": "case-studies.html#sustainable-ai"
+    },
+    {
+      "id": "first-view",
+      "value": "276",
+      "unit": "KB over the wire: the homepage's first view, fonts included",
+      "forms": ["~276"],
+      "basis": { "budget": "criticalWire", "note": "The build fails if the homepage outgrows its ceiling or a page quotes another figure, and a real browser checks the estimate in CI." },
+      "checkable": "public",
+      "check": "https://github.com/moseskolleh/sustaintheworld#performance"
+    },
+    {
+      "id": "field-report-kb",
+      "value": "10",
+      "unit": "KB: the text-only field report, as saved",
+      "basis": { "budget": "fieldReport", "note": "The file as saved, uncompressed: the size a reader can check by saving the page." },
+      "checkable": "public",
+      "check": "field-report.html"
+    },
+    {
+      "id": "field-report-carbon",
+      "value": "0.004",
+      "unit": "g CO₂e to send the field report, at the Sustainable Web Design figure",
+      "basis": { "derived": "The field report's size in MB times the grams of CO₂e per MB below, rounded to the nearest thousandth of a gram.", "from": ["field-report-kb", "web-carbon"] },
+      "checkable": "public",
+      "check": "field-report.html"
+    },
+    {
+      "id": "old-images",
+      "value": "22",
+      "unit": "MB of images the homepage loaded on arrival before its redesign",
+      "basis": {
+        "source": "This site's own history: the homepage and its photos at the last commit before they were converted to WebP",
+        "url": "https://github.com/moseskolleh/sustaintheworld/tree/3d7ab78becfe366975e2e6eadafa244d41b420dc",
+        "note": "The hero photos and the profile photo, all fetched on arrival, summed from the files at that commit."
+      },
+      "checkable": "public",
+      "check": "https://github.com/moseskolleh/sustaintheworld/tree/3d7ab78becfe366975e2e6eadafa244d41b420dc"
+    },
+    {
+      "id": "web-carbon",
+      "value": "0.36",
+      "unit": "g CO₂e per MB transferred: the figure the footer's badge, its receipt and the narration player use",
+      "basis": { "factor": "TRANSFER.gramsPerMB.value", "url": "https://sustainablewebdesign.org/estimating-digital-emissions/" },
+      "checkable": "public",
+      "check": "https://sustainablewebdesign.org/estimating-digital-emissions/"
+    },
+    {
+      "id": "median-page",
+      "value": "2.5",
+      "unit": "MB: what the median web page ships, the footer's point of comparison",
+      "basis": { "source": "HTTP Archive, page weight report", "url": "https://httparchive.org/reports/page-weight" },
+      "checkable": "public",
+      "check": "https://httparchive.org/reports/page-weight"
+    },
+    {
+      "id": "gaia-modelled",
+      "value": "117",
+      "unit": "of the current models in GAIA's database whose figures are modelled, not measured",
+      "basis": { "source": "GAIA Framework's roadmap, section 0, “Where GAIA stands”, at version 2.2.0", "url": "https://github.com/moseskolleh/GAIA-Framework-/blob/main/ROADMAP.md" },
+      "checkable": "public",
+      "check": "https://github.com/moseskolleh/GAIA-Framework-/blob/main/ROADMAP.md"
+    },
+    {
+      "id": "gaia-models",
+      "value": "119",
+      "unit": "current models in GAIA's database",
+      "basis": { "source": "GAIA Framework's roadmap, section 0, “Where GAIA stands”, at version 2.2.0", "url": "https://github.com/moseskolleh/GAIA-Framework-/blob/main/ROADMAP.md" },
+      "checkable": "public",
+      "check": "https://github.com/moseskolleh/GAIA-Framework-/blob/main/ROADMAP.md"
+    },
+    {
+      "id": "answer-tokens",
+      "value": "1,000",
+      "unit": "tokens in the answer the homepage chart prices each model at",
+      "basis": { "factor": "MODELS", "note": "Each model's published energy is per 1k tokens, adapted from Jegham et al. (2025); the chart quotes it as it is." },
+      "checkable": "public",
+      "check": "carbon-ai.html#evidence"
+    },
+    {
+      "id": "output-weight",
+      "value": "4",
+      "unit": "input tokens' worth of energy the calculator charges for each output token",
+      "basis": { "factor": "TOKEN_ENERGY.outputMultiplier", "own": "The middle of the range below: a judgement, not a measurement." },
+      "checkable": "public",
+      "check": "carbon-ai.html#evidence"
+    },
+    {
+      "id": "output-weight-range",
+      "value": "2–8×",
+      "unit": "the plausible range for that charge, in input tokens",
+      "basis": { "factor": "TOKEN_ENERGY.range", "own": "Its reading of how much more an output token costs than an input one, which varies with batch size, sequence length and cache reuse: a judgement, not a figure quoted from a source." },
+      "checkable": "public",
+      "check": "carbon-ai.html#evidence"
+    },
+    {
+      "id": "reference-mix",
+      "value": "50/50",
+      "unit": "split of input and output tokens at which the calculator reproduces the published per-1k-token figures",
+      "basis": { "factor": "TOKEN_ENERGY.referenceMix", "own": "A calibration convention, not a measurement: the mix at which the calculator gives back the published per-1k figures unchanged." },
+      "checkable": "public",
+      "check": "carbon-ai.html#evidence"
+    },
+    {
+      "id": "coach-models",
+      "value": "10",
+      "unit": "models in the calculator's factor set, each with its published energy",
+      "forms": ["ten models"],
+      "basis": { "factor": "MODELS", "count": true, "note": "The models the coach and the homepage chart can price." },
+      "checkable": "public",
+      "check": "ai-carbon-data.js"
+    },
+    {
+      "id": "coach-regions",
+      "value": "13",
+      "unit": "grid regions in the calculator's factor set, each with its carbon intensity",
+      "forms": ["thirteen grid regions"],
+      "basis": { "factor": "REGIONS", "count": true, "note": "The grids the coach can place a query on." },
+      "checkable": "public",
+      "check": "ai-carbon-data.js"
+    },
+    {
+      "id": "coach-cooling",
+      "value": "4",
+      "unit": "cooling profiles in the calculator's factor set, for data-centre water",
+      "forms": ["four cooling profiles"],
+      "basis": { "factor": "WUE_PROFILES", "count": true, "note": "The kinds of data centre the coach can count water for." },
+      "checkable": "public",
+      "check": "ai-carbon-data.js"
+    },
+    {
+      "id": "bottle",
+      "value": "500",
+      "unit": "mL: the water bottle the calculator counts water in",
+      "basis": { "factor": "EQUIVALENTS.BOTTLE_WATER_ML.value" },
+      "checkable": "public",
+      "check": "carbon-ai.html#evidence"
+    },
+    {
+      "id": "default-pue",
+      "value": "1.2",
+      "unit": "data-centre overhead (PUE) the calculator assumes until you change it",
+      "basis": { "factor": "PUE_FACTOR.value", "own": "A default, not a survey's figure: below the industry average the Uptime Institute's survey reports and above the fleet figure Google discloses, for a modern facility short of a flagship one. Change it in the calculator." },
+      "checkable": "public",
+      "check": "carbon-ai.html#evidence"
+    }
+  ]
+}

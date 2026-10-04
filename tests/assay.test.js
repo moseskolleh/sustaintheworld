@@ -153,8 +153,22 @@ function resolves(href) {
     const qgis = a.met.find(m => m.label === 'QGIS');
     assert(qgis && qgis.ev.length === 1 && resolves(qgis.ev[0].href),
         `WASH ad: QGIS is matched to where the page shows it (${qgis && qgis.ev[0].t})`);
+    // The toolkit says its GIS proof is on request, with no public GIS
+    // project yet: the Assay showed that line with a green tick.
+    assert(qgis && qgis.ev[0].part === true && /no public/.test(qgis.ev[0].t), `WASH ad: QGIS's proof, with no public project, is marked partial (${qgis && qgis.ev[0].t})`);
+    const python = a.met.find(m => m.label === 'Python');
+    assert(!python || python.ev.every(e => !e.part), 'WASH ad: a proof with public work behind it is not marked partial');
     const years = a.met.find(m => /year of experience/.test(m.label));
     assert(years && years.ev[0].href === '#experience', `WASH ad: "at least one year" is met, pointing at the experience section (${years && years.ev[0].t})`);
+
+    const input = doc.getElementById('assayInput');
+    const result = doc.getElementById('assayResult');
+    input.value = ADS.wash;
+    doc.getElementById('assayRun').click();
+    const rowOf = (label) => Array.from(result.querySelectorAll('.assay-matches .assay-row')).find(r => r.querySelector('.assay-req').textContent === label);
+    const drawn = rowOf('QGIS');
+    assert(!!drawn && !!drawn.querySelector('.assay-ev a.assay-part') && Array.from(result.querySelectorAll('.assay-matches .assay-ev a:not(.assay-part)')).length > 0,
+        'Page: the QGIS row\'s proof is drawn partial (style.css gives it the amber "?"), the rest ticked');
 }
 
 // ===================================================================
@@ -399,16 +413,15 @@ function resolves(href) {
         }
     });
 
-    // The strengths' own evidence lines: every number in them is on the
-    // homepage or in content/.
-    const everywhere = indexHtml + fs.readdirSync(path.join(ROOT, 'content'))
-        .map(f => fs.readFileSync(path.join(ROOT, 'content', f), 'utf8')).join('\n');
-    const unsupported = [];
+    // The strengths' own evidence lines link somewhere real. Their figures
+    // ("164 water points", "a 70% aquifer strike rate") are held to the
+    // claims ledger, entry by entry, in tests/claims.test.js: asking only
+    // whether each number appeared somewhere on the site let 164 become 200.
+    const broken = [];
     A.RULES.strengths.forEach(s => s.ev.forEach((e) => {
-        (e.t.match(/\d[\d,]*%?/g) || []).forEach((n) => { if (!everywhere.includes(n)) unsupported.push(`${n} (${e.t.slice(0, 40)})`); });
-        if (e.href && !resolves(e.href)) unsupported.push(`link ${e.href}`);
+        if (e.href && !resolves(e.href)) broken.push(`link ${e.href} (${e.t.slice(0, 40)})`);
     }));
-    assert(unsupported.length === 0, `Evidence: every number in a strength's evidence is on the site, every link resolves (${unsupported.join('; ') || 'all'})`);
+    assert(broken.length === 0, `Evidence: every link in a strength's evidence resolves (${broken.join('; ') || 'all'})`);
 }
 
 // ===================================================================

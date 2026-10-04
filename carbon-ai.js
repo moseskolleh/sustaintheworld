@@ -1,7 +1,7 @@
 // ===================================================================
-// ECOPROMPT COACH — web companion
-// Mirrors the calculation model of github.com/moseskolleh/promptcoach
-// (Digital Society School). Energy, water, and carbon per LLM query.
+// ECOPROMPT COACH — this site's edition
+// Energy, water, and carbon per LLM query. The maintained tool, with its
+// own method and data, is github.com/moseskolleh/promptcoach.
 //
 // Model benchmarks adapted from:
 //   Jegham, Abedin, Ali, et al. (2025) "How Hungry is AI? Benchmarking
@@ -159,7 +159,7 @@ function suggest(rawParams) {
         if (params.inputTokens + params.outputTokens === 0) {
             tips.push({
                 icon: 'fa-scissors',
-                text: 'Set input or output tokens above zero — a query with no tokens has no footprint to reduce.'
+                text: 'Add some input or output tokens — a query with no tokens has no footprint to reduce.'
             });
         }
         return tips;
@@ -206,37 +206,43 @@ function suggest(rawParams) {
 
     // 3. Long inputs warning.
     if (params.inputTokens > 1500) {
-        const trimmed = calculate({ ...params, inputTokens: 500 });
+        const trimTo = 500;
+        const trimmed = calculate({ ...params, inputTokens: trimTo });
         const saving = pct(1 - trimmed.carbonPerQuery_g / baseline.carbonPerQuery_g);
         if (saving !== null && saving > 0) {
             tips.push({
                 icon: 'fa-scissors',
-                text: `Your prompt is ${params.inputTokens.toLocaleString()} tokens — trimming context to 500 tokens saves ${saving}% per call.`
+                text: `Your prompt is ${params.inputTokens.toLocaleString()} tokens — trimming context to ${trimTo} tokens saves ${saving}% per call.`
             });
         }
     }
 
-    // 4. Reasoning model warning.
+    // A tip prints only what it works out or the factor set holds: these
+    // three once quoted ranges nothing sourced (tests/claims.test.js).
+
+    // 4. Reasoning model warning: why, as the factor's own note says it.
     if (params.modelKey === 'deepseek-r1') {
         tips.push({
             icon: 'fa-brain',
-            text: `Reasoning models burn 4–10× more energy per token. Reserve <strong>DeepSeek-R1</strong> for genuinely hard problems; route simple chat to a non-reasoning model.`
+            text: `Reasoning models spend hidden output tokens before they answer. Reserve <strong>DeepSeek-R1</strong> for genuinely hard problems; route simple chat to a non-reasoning model.`
         });
     }
 
-    // 5. PUE high.
+    // 5. PUE high, against the range the factor set gives it.
     if (params.pue > 1.4) {
+        const [lo, hi] = _AICD.PUE_FACTOR.range;
         tips.push({
             icon: 'fa-temperature-low',
-            text: `PUE ${params.pue} is on the high side. Modern hyperscalers run 1.10–1.20; older facilities pull 1.5+.`
+            text: `PUE ${params.pue} is on the high side: the evidence ledger runs from ${lo} (a hyperscaler fleet) to ${hi} (about the industry average).`
         });
     }
 
-    // 6. Cache / batch nudge for very high volume.
+    // 6. Cache / batch nudge for very high volume. Neither is modelled, so
+    // what they save is not guessed at.
     if (params.queriesPerDay >= 10000) {
         tips.push({
             icon: 'fa-database',
-            text: `At ${params.queriesPerDay.toLocaleString()} queries/day, prompt caching and request batching typically reclaim 20–40% of energy.`
+            text: `At ${params.queriesPerDay.toLocaleString()} queries/day, try prompt caching and request batching; the calculator models neither.`
         });
     }
 

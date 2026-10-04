@@ -23,6 +23,7 @@ const PAGES = [
     'case-studies.html',
     'research.html',
     'stats.html',
+    'claims.html',
     'field-report.html',
     '404.html'
 ];

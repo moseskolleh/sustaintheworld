@@ -45,7 +45,7 @@
             note: 'Per-query inference benchmarks across commercial and open models. Figures below are adapted to a per-1k-token basis.'
         },
         luccioni2023: {
-            citation: 'Luccioni, Viguier & Ligozat (2023), "Power Hungry Processing: Watts Driving the Cost of AI Deployment?"',
+            citation: 'Luccioni, Jernite & Strubell (2023), "Power Hungry Processing: Watts Driving the Cost of AI Deployment?"',
             published: '2023',
             kind: 'peer-reviewed',
             note: 'Task-level inference energy; the basis for treating generation as far costlier than classification.'
@@ -113,7 +113,7 @@
             citation: 'Sustainable Web Design, "Estimating Digital Emissions" (model v3)',
             published: '2023',
             kind: 'methodology',
-            note: 'The 0.36 g CO₂e/MB constant used for page and audio weight elsewhere on this site.'
+            note: 'Its grams per MB weigh pages and audio elsewhere on this site too.'
         }
     };
 

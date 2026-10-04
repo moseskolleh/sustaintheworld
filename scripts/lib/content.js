@@ -28,6 +28,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const figures = require('./claims.js');
 
 const ROOT = path.join(__dirname, '..', '..');
 const CONTENT_DIR = path.join(ROOT, 'content');
@@ -39,11 +40,25 @@ const TRUSTED_HOSTS = [
     'moseskolleh.github.io',
     'linkedin.com',
     'www.linkedin.com',
+    // Where two issuers publish a certificate's verification page (see
+    // VERIFY_HOSTS below): Coursera for the Google certificate, and the
+    // Corporate Finance Institute's own credential site.
+    'coursera.org',
+    'www.coursera.org',
+    'credentials.corporatefinanceinstitute.com',
     'sustainablewebdesign.org',
     'httparchive.org'
 ];
 
 const STATUSES = ['public', 'on-request', 'internal', 'planned'];
+
+// A certification's verifyUrl (content/profile.json) has to be the issuer's
+// own page for that certificate, which a reader can trust where they would
+// not trust a screenshot. A trusted host is not enough: a GitHub or LinkedIn
+// page is Moses saying so, not the issuer. Masterschool's and the UN System
+// Staff College's hosts join this list with the first URL from them, once
+// someone has opened it.
+const VERIFY_HOSTS = ['coursera.org', 'www.coursera.org', 'credentials.corporatefinanceinstitute.com'];
 
 function load(name) {
     const file = path.join(CONTENT_DIR, `${name}.json`);
@@ -119,6 +134,15 @@ function checkAvailability(label, entry) {
 // by modules/dossier.js into the host the generator writes for it.
 const WIDGETS = ['borehole', 'flood'];
 
+// Whether a case study has a card on the homepage (and so a line in the
+// field report, its text edition). Every one does unless `homepageCard` is
+// false. The homepage shows six projects, each with a photo and a result
+// from the work itself; GAIA, the ESG case study, is method and tooling
+// with no photo, and a seventh card would start a third row on a desktop
+// page held to a length budget (scripts/check-budget.js). A case study
+// kept off it is still on case-studies.html in every lens, and leads its own.
+const onHomepage = (cs) => cs.homepageCard !== false;
+
 /**
  * What the homepage's teaser card needs from a case study: the lines it
  * prints, a headline result with a one-line basis, and one photo a reader
@@ -159,6 +183,46 @@ function checkCard(at, cs) {
     if (cs.widget !== undefined && !WIDGETS.includes(cs.widget)) {
         problems.push(`${at}: widget "${cs.widget}" is not one of ${WIDGETS.join(', ')}`);
     }
+    return problems;
+}
+
+// ------------------------------------------------------------------
+// Findings and recommendations — what the work found, not only what it did
+//
+// A case study that stops at its results says what was produced; a reader
+// hiring for judgement wants what it showed, and what to do about it. So
+// every case study carries `findings`: one to four short entries, each a
+// "finding" (what the work showed) or a "recommendation" (what it says to
+// do), at least one of them a finding. Two to four is the aim; one where
+// the evidence is thin, because a padded list is a list of guesses. Each
+// says it in a sentence or two, and may carry a `basis` as a result does;
+// one with a figure in it must, since a number without one is a boast. The
+// shape is closed: a misspelt "basis" would otherwise drop the evidence
+// from the page without a word.
+// ------------------------------------------------------------------
+const FINDING_KINDS = ['finding', 'recommendation'];
+const FINDING_KEYS = ['kind', 'text', 'basis'];
+const FINDINGS_MAX = 4;
+const FINDING_LIMIT = 240;   // characters: a short bullet, not a paragraph
+
+function checkFindings(at, cs) {
+    const list = cs.findings;
+    if (!Array.isArray(list) || !list.length) {
+        return [`${at}: no findings — say what the work found or recommends, not only what it did (one to ${FINDINGS_MAX} entries)`];
+    }
+    const problems = [];
+    if (list.length > FINDINGS_MAX) problems.push(`${at}: ${list.length} findings; ${FINDINGS_MAX} at most, each a short bullet`);
+    list.forEach((f, i) => {
+        const where = `${at}, finding ${i + 1}`;
+        if (!f || typeof f !== 'object' || Array.isArray(f)) { problems.push(`${where}: is not a finding`); return; }
+        Object.keys(f).filter(k => !FINDING_KEYS.includes(k)).forEach(k => problems.push(`${where}: unknown field "${k}"`));
+        if (!FINDING_KINDS.includes(f.kind)) problems.push(`${where}: kind "${f.kind}" is not one of ${FINDING_KINDS.join(', ')}`);
+        if (!(typeof f.text === 'string' && f.text.trim())) problems.push(`${where}: no text`);
+        else if (f.text.length > FINDING_LIMIT) problems.push(`${where}: ${f.text.length} characters; a finding is a short bullet, ${FINDING_LIMIT} at most`);
+        if (f.basis !== undefined && !(typeof f.basis === 'string' && f.basis.trim())) problems.push(`${where}: basis is empty — leave it out, or say where the finding comes from`);
+        if (/\d/.test(f.text || '') && f.basis === undefined) problems.push(`${where}: has a figure in it and no basis — say where it comes from`);
+    });
+    if (!list.some(f => f && f.kind === 'finding')) problems.push(`${at}: only recommendations — say at least one thing the work found`);
     return problems;
 }
 
@@ -324,6 +388,32 @@ function checkAtAGlance(glance, languages) {
 // them in a public Action log, and an unsuppressed count is exactly the thing
 // that must not appear there.
 // ------------------------------------------------------------------
+/**
+ * The counter's rules, as its code sets them: how many counts a minute the
+ * endpoint takes, how long one waits for the sheet, the suppression
+ * threshold, how many referring sites are named, how many features a page
+ * view sends and where the window-width classes break. stats.html states
+ * each, and printed them typed in: the page could say 30 a minute of an
+ * endpoint set to 20 and nothing would notice. renderStats prints them from
+ * here, marked, and tests/claims.test.js holds each mark to this. A
+ * constant renamed or rewritten so it cannot be read fails the build.
+ */
+function counterRules() {
+    const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
+    const take = (rel, re, what) => {
+        const m = read(rel).match(re);
+        if (!m) throw new Error(`${rel}: ${what} cannot be read (${re}); stats.html prints it from there`);
+        return m.slice(1).map(Number);
+    };
+    const [perMinute] = take('google-apps-script/Code.gs', /\bvar COUNT_MAX_PER_MINUTE = (\d+);/, 'COUNT_MAX_PER_MINUTE');
+    const [lockMs] = take('google-apps-script/Code.gs', /\bvar COUNT_LOCK_TIMEOUT_MS = (\d+);/, 'COUNT_LOCK_TIMEOUT_MS');
+    const [suppressBelow] = take('scripts/fetch-stats.js', /\bconst SUPPRESS_BELOW = (\d+);/, 'SUPPRESS_BELOW');
+    const [referrersListed] = take('scripts/fetch-stats.js', /\bconst REFERRERS_LISTED = (\d+);/, 'REFERRERS_LISTED');
+    const [featuresMax] = take('count.js', /features\.length < (\d+)/, 'the cap on features');
+    const [vpSmall, vpLarge] = take('count.js', /vp: w < (\d+) \? 's' : w < (\d+) \? 'm' : 'l'/, 'the window-width classes');
+    return { perMinute, lockSeconds: lockMs / 1000, suppressBelow, referrersListed, featuresMax, vpSmall, vpMediumMax: vpLarge - 1, vpLarge };
+}
+
 const STATS_STATUSES = ['not-collecting', 'collecting'];
 const STATS_MIN_SUPPRESSION = 5;
 const STATS_HELD = 'held';
@@ -638,6 +728,396 @@ function checkStats(stats) {
     return problems;
 }
 
+// ------------------------------------------------------------------
+// The record's two dates (profile.meta)
+//
+// `verifiedOn` is the day the record is logged as of: the core log's
+// surface, and where the staleness notice counts from. `confirmedOn` is
+// Moses's own word that the ongoing facts still hold, null until he gives
+// it. The CV printed "Facts last verified" and the first date, which no one
+// had confirmed; it prints "Facts last confirmed" from the second alone, so
+// a date that is not a day, or one still to come, would print a
+// confirmation nobody gave. (realDay is the testimonials' check, below.)
+// ------------------------------------------------------------------
+function checkMeta(meta) {
+    const isDay = (d) => typeof d === 'string' && realDay(d);
+    const problems = [];
+    if (!meta || !isDay(meta.verifiedOn)) problems.push(`profile meta: verifiedOn must be a day, as YYYY-MM-DD (${meta && meta.verifiedOn})`);
+    if (!meta || !('confirmedOn' in meta)) problems.push('profile meta: confirmedOn is missing; it is null until Moses confirms the ongoing facts himself');
+    else if (meta.confirmedOn !== null) {
+        if (!isDay(meta.confirmedOn)) problems.push(`profile meta: confirmedOn must be null or a day, as YYYY-MM-DD (${meta.confirmedOn})`);
+        // A calendar day, not an instant: the build's clock is UTC, and Moses
+        // in Amsterdam setting his own today before 01:00 or 02:00 was told
+        // it was still to come. The latest day anywhere on Earth is UTC+14.
+        else if (meta.confirmedOn > new Date(Date.now() + 14 * 3600e3).toISOString().slice(0, 10)) problems.push(`profile meta: confirmedOn ${meta.confirmedOn} is still to come`);
+    }
+    return problems;
+}
+
+// ------------------------------------------------------------------
+// profile.certifications — each with what it covered, and optionally
+// where the issuer says so
+//
+// The homepage and the CV print every certificate from here (npm run
+// build:content, npm run cv). `verifyUrl` is the issuer's page for this
+// certificate. It is absent until Moses supplies one: not null, not "TBC",
+// because a placeholder link reads as a link. Present, it must be an https
+// address on one of VERIFY_HOSTS.
+// ------------------------------------------------------------------
+const CERT_FIELDS = ['name', 'issuer', 'displayDate', 'year', 'covered'];
+
+function checkCertifications(certifications) {
+    if (!Array.isArray(certifications) || !certifications.length) return ['profile: certifications must be a list'];
+    const problems = [];
+    certifications.forEach((entry, i) => {
+        const c = entry && typeof entry === 'object' ? entry : {};
+        const at = `profile: certification ${i + 1}${c.name ? ` ("${c.name}")` : ''}`;
+        CERT_FIELDS.forEach((k) => {
+            if (!(typeof c[k] === 'string' && c[k].trim()) || PLACEHOLDER.test(c[k])) problems.push(`${at}: no ${k}`);
+        });
+        if (!('verifyUrl' in c)) return;
+        let url = null;
+        try { url = new URL(c.verifyUrl); } catch (e) { /* reported below */ }
+        if (!url || url.protocol !== 'https:') {
+            problems.push(`${at}: verifyUrl ${JSON.stringify(c.verifyUrl)} is not an https address — leave the field out until there is one`);
+        } else if (!VERIFY_HOSTS.includes(url.host) || !TRUSTED_HOSTS.includes(url.host)) {
+            problems.push(`${at}: verifyUrl points at ${url.host}, which is not an issuer's verification host — ` +
+                'add it to VERIFY_HOSTS and TRUSTED_HOSTS in scripts/lib/content.js only once you have opened the page yourself');
+        }
+    });
+    return problems;
+}
+
+// ------------------------------------------------------------------
+// content/testimonials.json — a quote with no source is a claim
+//
+// Anyone can write a kind sentence and put a name under it. Each entry
+// therefore says where a reader can check it: a LinkedIn recommendation
+// (the recommendations address of a linkedin.com profile, where it is
+// shown), or "on request", with the date the person gave permission to be
+// quoted. No other kind of source is accepted, and an entry without one is
+// refused. The homepage
+// shows them only when there is at least one, and it is held to a length
+// (LENGTH in scripts/check-budget.js), so each quote is an excerpt of at
+// most 200 characters. Measured in Chromium on the homepage before the rest
+// of wave 4, two at that length added 0.40 of a 1440x900 screen and 0.77 of
+// a 390x844 one, against 0.43 and 0.78 to spare. With wave 4 merged the
+// homepage was 9.42 and 16.46 screens (16.49 once the GIS proof said its
+// maps are on request), and stand-ins at that length took it to 9.80 and
+// 16.86 with one quote, 9.80 and 17.18 with two, over the 9.79 and 17.09
+// ceilings: room has to be made first, and smoke.js's length check says so.
+// ------------------------------------------------------------------
+const TESTIMONIAL_KEYS = ['quote', 'name', 'role', 'relationship', 'source'];
+const TESTIMONIAL_LIMITS = { entries: 3, quote: 200 };
+const LINKEDIN_HOSTS = ['linkedin.com', 'www.linkedin.com'];
+// The recommendations a profile has received, where the quote is shown: a
+// bare profile address is anyone's page, the quoted person's own included,
+// and does not show the recommendation at all.
+const LINKEDIN_PATH = /^\/in\/[A-Za-z0-9_%-]+\/details\/recommendations\/?$/;
+const ISO_DAY = /^(\d{4})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
+const realDay = (d) => ISO_DAY.test(d) && new Date(`${d}T00:00:00Z`).toISOString().slice(0, 10) === d;
+
+function checkTestimonials(file) {
+    if (!file || !Array.isArray(file.testimonials)) return ['testimonials: content/testimonials.json needs a "testimonials" list (empty is fine)'];
+    const list = file.testimonials;
+    const problems = [];
+    if (list.length > TESTIMONIAL_LIMITS.entries) {
+        problems.push(`testimonials: ${list.length} entries; the homepage has room for ${TESTIMONIAL_LIMITS.entries}`);
+    }
+    list.forEach((t, i) => {
+        const at = `testimonial ${i + 1}${t && t.name ? ` (${t.name})` : ''}`;
+        if (!t || typeof t !== 'object') { problems.push(`${at}: is not an object`); return; }
+        Object.keys(t).filter(k => !TESTIMONIAL_KEYS.includes(k)).forEach(k => problems.push(`${at}: unknown field "${k}"`));
+        ['quote', 'name', 'role', 'relationship'].forEach((k) => {
+            if (!(typeof t[k] === 'string' && t[k].trim()) || PLACEHOLDER.test(t[k])) problems.push(`${at}: no ${k}`);
+        });
+        if (typeof t.quote === 'string' && t.quote.length > TESTIMONIAL_LIMITS.quote) {
+            problems.push(`${at}: the quote is ${t.quote.length} characters; at most ${TESTIMONIAL_LIMITS.quote}`);
+        }
+        const s = t.source;
+        if (!s || typeof s !== 'object') { problems.push(`${at}: no source — say where a reader can check it, or leave the quote out`); return; }
+        if (s.type === 'linkedin') {
+            Object.keys(s).filter(k => !['type', 'url'].includes(k)).forEach(k => problems.push(`${at}: a LinkedIn source has no field "${k}"`));
+            let url = null;
+            try { url = new URL(s.url); } catch (e) { /* reported below */ }
+            if (!url || url.protocol !== 'https:' || !LINKEDIN_HOSTS.includes(url.host) || !LINKEDIN_PATH.test(url.pathname) || url.hash) {
+                problems.push(`${at}: a LinkedIn source needs the https address of the recommendations on a linkedin.com profile, …/in/<name>/details/recommendations/ (got ${JSON.stringify(s.url)})`);
+            }
+        } else if (s.type === 'on-request') {
+            Object.keys(s).filter(k => !['type', 'permissionDate'].includes(k)).forEach(k => problems.push(`${at}: an on-request source has no field "${k}"`));
+            if (!realDay(String(s.permissionDate))) {
+                problems.push(`${at}: an on-request source needs the date permission was given, as YYYY-MM-DD (got ${JSON.stringify(s.permissionDate)})`);
+            }
+        } else {
+            problems.push(`${at}: source type ${JSON.stringify(s.type)} is not "linkedin" or "on-request"`);
+        }
+    });
+    return problems;
+}
+
+// ------------------------------------------------------------------
+// A figure in someone else's words
+//
+// The homepage holds every number it prints to the claims ledger, a
+// testimonial's and a certificate's line included: the build marks a
+// figure the ledger holds, and tests/claims.test.js fails on one it does
+// not. A quote is someone's own words and is never edited, so a figure in
+// it that the ledger does not hold, or holds written another way, is
+// refused here, by name, rather than by a scan of the page later: give it
+// an entry, or a `forms` entry for how the quote writes it ("team of 23"),
+// or choose another excerpt.
+// ------------------------------------------------------------------
+function checkQuotedFigures({ testimonials, certifications }, claims) {
+    const problems = [];
+    const say = (at, text) => figures.unheld(text, claims).forEach((n) => {
+        problems.push(`${at}: "${n}" is a figure the claims ledger does not hold as written; add it to content/claims.json (an entry, or a form of one), or quote another excerpt`);
+    });
+    ((testimonials && testimonials.testimonials) || []).forEach((t, i) => { if (t && typeof t.quote === 'string') say(`testimonial ${i + 1}${t.name ? ` (${t.name})` : ''}`, t.quote); });
+    (certifications || []).forEach((c) => { if (c && typeof c.covered === 'string') say(`certificate "${c.name}"`, c.covered); });
+    return problems;
+}
+
+// ------------------------------------------------------------------
+// content/claims.json — the claims ledger
+//
+// Every number the site prints, with its basis. The page side (each
+// figure marked, every numeral accounted for) is tests/claims.test.js's;
+// what can be checked from the files alone is checked here, on every
+// build: the shape is closed, every entry has exactly one basis, the basis
+// exists and says the same number, and nothing is called checkable from
+// outside without saying where. The build fails on a figure with no basis
+// rather than publish it.
+// ------------------------------------------------------------------
+const CHECKABLE = ['public', 'on-request', 'not-checkable'];
+const BASIS_KINDS = ['result', 'profile', 'factor', 'source', 'budget', 'derived', 'illustrative'];
+const CLAIM_KEYS = ['id', 'value', 'unit', 'forms', 'spoken', 'basis', 'checkable', 'check'];
+const BASIS_EXTRA = { factor: ['url', 'note', 'count', 'own'], source: ['url', 'note'], derived: ['from'], profile: ['note'], budget: ['note'] };
+const CLAIM_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+/** The calculators' inputs, as the pages load them. */
+const loadFactors = () => require(path.join(ROOT, 'ai-carbon-data.js'));
+
+/** A value at a dotted path ("experience.4.teamSize"), or undefined. */
+const atPath = (obj, dotted) => String(dotted).split('.').reduce((o, k) => (o === null || o === undefined ? undefined : o[k]), obj);
+
+/**
+ * Whether a text states a claim's figure, written as the ledger writes it.
+ * A single digit is looked for on its own, outside a longer number.
+ */
+function mentions(text, claim) {
+    if (figures.markable(claim.value)) return figures.marker([claim])(text).some(([, id]) => id === claim.id);
+    return new RegExp(`(?<![\\d.,])${claim.value}(?![\\d.,%])`).test(String(text));
+}
+
+/** The case-study result a `result` basis rests on: the first to state the figure. */
+function resultFor(claim, projects) {
+    const cs = projects.caseStudies.find(c => c.id === (claim.basis && claim.basis.result));
+    if (!cs) return null;
+    const result = (cs.results || []).find(r => mentions(`${r.claim} ${r.basis}`, claim));
+    return result ? { cs, result } : null;
+}
+
+/**
+ * "Checkable from outside" has to say where, as the ledger's other public
+ * entries do: the result's own `check` (a source a reader opens, on a host
+ * the repository trusts, or a page of this site) or public work in its case
+ * study a reader can open. Two results were labelled checkable with nowhere
+ * to look: a model's sub-basin count, whose source was never cited, and a
+ * degree whose certificate claims.html files as on request.
+ */
+function checkResultCheck(at, cs, r) {
+    const which = `${at}: result "${(r.claim || '').slice(0, 40)}"`;
+    if (r.check !== undefined) {
+        const bad = urlProblem(r.check);
+        if (bad) return [`${which}: check ${bad}`];
+        if (r.verifiable !== true) return [`${which}: has a check, so it is checkable — say verifiable: true, or drop the check`];
+        return [];
+    }
+    const open = (cs.artifacts || []).some(a => a.status === 'public' && a.url);
+    if (r.verifiable === true && !open) {
+        return [`${which}: is called checkable from outside with nowhere to check it — give it a check (the address of a source that shows it), publish the work that does, or make it not verifiable`];
+    }
+    return [];
+}
+
+/** How checkable a claim is: a result's is the case study's own. */
+function checkabilityOf(claim, projects) {
+    if (claim.basis && claim.basis.result) {
+        const found = resultFor(claim, projects);
+        return found ? (found.result.verifiable ? 'public' : 'not-checkable') : null;
+    }
+    return claim.checkable;
+}
+
+/** What a calculator input amounts to, for comparing with the ledger. */
+function factorQuantity(f, count) {
+    // A count of a factor set's entries: its models, its grid regions.
+    if (count) return f && typeof f === 'object' ? { n: Object.keys(f).length } : null;
+    if (typeof f === 'number') return { n: f };
+    if (Array.isArray(f) && f.length === 2 && f.every(n => typeof n === 'number')) return { lo: f[0], hi: f[1] };
+    if (f && typeof f.input === 'number' && typeof f.output === 'number') return { n: f.input / f.output, ratio: true };
+    return null;
+}
+
+function checkClaims(ledger, { profile, projects, factors }) {
+    const at = 'content/claims.json';
+    if (!ledger || !Array.isArray(ledger.claims) || !ledger.claims.length) return [`${at}: needs a "claims" list`];
+    const problems = [];
+    const ids = new Set();
+    const shownBy = new Map();
+    ledger.claims.forEach((c, i) => {
+        const where = `${at}: claim ${c && c.id ? `"${c.id}"` : i + 1}`;
+        if (!c || typeof c !== 'object') { problems.push(`${where}: is not an entry`); return; }
+        Object.keys(c).filter(k => !CLAIM_KEYS.includes(k))
+            .forEach(k => problems.push(`${where}: unknown field "${k}" (${CLAIM_KEYS.join(', ')})`));
+        if (!CLAIM_ID.test(c.id || '')) problems.push(`${where}: id must be kebab-case`);
+        else if (ids.has(c.id)) problems.push(`${where}: duplicate id`);
+        ids.add(c.id);
+
+        const value = figures.quantity(c.value || '');
+        if (typeof c.value !== 'string' || !value) {
+            problems.push(`${where}: value "${c.value}" is not one figure as the page writes it`);
+            return;
+        }
+        if (typeof c.unit !== 'string' || !c.unit.trim()) problems.push(`${where}: no unit — what does ${c.value} count?`);
+        else if (/\d/.test(figures.plain(c.unit).replace(/per[- ]1k/g, '').replace(/CO₂/g, ''))) {
+            problems.push(`${where}: the unit has a figure in it; give that figure an entry of its own`);
+        }
+
+        // Every other way of writing it has to come to the same thing.
+        ['forms', 'spoken'].forEach((key) => {
+            if (c[key] === undefined) return;
+            if (!Array.isArray(c[key]) || !c[key].length || c[key].some(s => typeof s !== 'string' || !s.trim())) {
+                problems.push(`${where}: ${key} must be a list of phrases`);
+                return;
+            }
+            c[key].filter(s => !figures.agrees(value, s))
+                .forEach(s => problems.push(`${where}: ${key === 'spoken' ? 'the narration\'s' : 'the form'} "${s}" does not say ${c.value}`));
+            if (key === 'spoken') c[key].filter(s => /\d/.test(s)).forEach(s => problems.push(`${where}: "${s}" is spoken, so it is written in words`));
+        });
+        // The marker finds a figure in content/ by how it is written (a bare
+        // pair of digits with its unit's first word); two entries written
+        // alike would leave it guessing.
+        [c.value].concat(c.forms || []).filter(figures.markable).forEach((s) => {
+            const key = figures.pattern(s, c).toLowerCase();
+            if (shownBy.has(key) && shownBy.get(key) !== c.id) problems.push(`${where}: "${s}" is also how "${shownBy.get(key)}" is written; the pages could not tell them apart`);
+            shownBy.set(key, c.id);
+        });
+
+        const b = c.basis;
+        const kinds = b && typeof b === 'object' ? BASIS_KINDS.filter(k => b[k] !== undefined) : [];
+        if (kinds.length !== 1) {
+            problems.push(`${where}: needs exactly one basis (${BASIS_KINDS.join(', ')}); a number with no basis is a boast`);
+            return;
+        }
+        const kind = kinds[0];
+        Object.keys(b).filter(k => k !== kind && !(BASIS_EXTRA[kind] || []).includes(k))
+            .forEach(k => problems.push(`${where}: a ${kind} basis has no field "${k}"`));
+        if (b.note !== undefined && (typeof b.note !== 'string' || !b.note.trim())) problems.push(`${where}: the basis note is empty`);
+
+        if (kind === 'result') {
+            const found = resultFor(c, projects);
+            if (!projects.caseStudies.some(cs => cs.id === b.result)) problems.push(`${where}: no case study "${b.result}"`);
+            else if (!found) problems.push(`${where}: no result of case study "${b.result}" states ${c.value}`);
+            if (c.checkable !== undefined || c.check !== undefined) {
+                problems.push(`${where}: a result's checkability and link are the case study's; leave checkable and check out`);
+            }
+        } else if (kind === 'profile') {
+            const paths = [].concat(b.profile);
+            paths.forEach((p) => {
+                if (typeof p !== 'string' || atPath(profile, p) === undefined) problems.push(`${where}: profile.json has no ${p}`);
+            });
+            const field = paths.length === 1 ? atPath(profile, paths[0]) : undefined;
+            // Months counted from a role's dates ("five months with UNDRR")
+            // move with them: start and end month, both counted.
+            const span = field && /^\d{4}-\d{2}$/.test(field.start || '') && /^\d{4}-\d{2}$/.test(field.end || '')
+                ? (field.end.slice(0, 4) - field.start.slice(0, 4)) * 12 + (field.end.slice(5) - field.start.slice(5)) + 1 : null;
+            if (span !== null && /^months\b/.test(c.unit || '') && !figures.agrees(value, { n: span })) {
+                problems.push(`${where}: ${paths[0]} runs ${field.start} to ${field.end}, ${span} months, not ${c.value}`);
+            }
+            if (field !== undefined && field !== null && typeof field !== 'object') {
+                if (!figures.agrees(value, String(field).split(' ')[0])) problems.push(`${where}: profile.json's ${paths[0]} is ${field}, not ${c.value}`);
+            } else if (!b.note) {
+                problems.push(`${where}: counted from profile.json rather than read from it, so it needs a note saying how`);
+            }
+        } else if (kind === 'factor') {
+            const f = typeof b.factor === 'string' ? atPath(factors, b.factor) : undefined;
+            if (b.count !== undefined && b.count !== true) problems.push(`${where}: count is true (the figure is how many entries ${b.factor} has) or left out`);
+            // A default, a convention or a judgement is the calculator's own,
+            // and says so rather than wearing the factor's citation.
+            if (b.own !== undefined && (typeof b.own !== 'string' || !b.own.trim() || b.note !== undefined)) problems.push(`${where}: own says why the calculator chose the figure, in place of a note`);
+            const q = factorQuantity(f, b.count === true);
+            if (f === undefined) problems.push(`${where}: ai-carbon-data.js has no ${b.factor}`);
+            else if (q && !figures.agrees(value, q)) problems.push(`${where}: ai-carbon-data.js's ${b.factor} is not ${c.value}`);
+            else if (!q && !b.note) problems.push(`${where}: ${b.factor} is not one number, so the basis needs a note saying how ${c.value} follows from it`);
+            if (b.url !== undefined) {
+                const bad = urlProblem(b.url);
+                if (bad) problems.push(`${where}: the factor's url ${bad}`);
+            }
+        } else if (kind === 'source') {
+            if (typeof b.source !== 'string' || !b.source.trim()) problems.push(`${where}: the source has no name`);
+            const bad = urlProblem(b.url);
+            if (bad) problems.push(`${where}: a cited source needs its url, and this one ${bad}`);
+        } else if (kind === 'budget') {
+            if (typeof b.budget !== 'string' || !b.budget) problems.push(`${where}: names no budget`);
+        } else if (kind === 'derived') {
+            if (typeof b.derived !== 'string' || !b.derived.trim()) problems.push(`${where}: a derived figure says how it is worked out`);
+            if (!Array.isArray(b.from) || !b.from.length) problems.push(`${where}: a derived figure names the entries it comes from`);
+        } else if (kind === 'illustrative') {
+            if (typeof b.illustrative !== 'string' || !b.illustrative.trim()) problems.push(`${where}: an illustrative figure says why it has no source`);
+            if (c.checkable !== 'not-checkable') problems.push(`${where}: an illustrative figure has nothing to check it against: checkable is "not-checkable"`);
+        }
+
+        if (kind !== 'result') {
+            if (!CHECKABLE.includes(c.checkable)) problems.push(`${where}: checkable must be one of ${CHECKABLE.join(', ')}`);
+            if (c.checkable === 'public') {
+                const bad = c.check ? urlProblem(c.check) : 'is missing';
+                if (bad) problems.push(`${where}: is checkable from outside, so it says where — its check ${bad}`);
+            } else if (c.check !== undefined) {
+                problems.push(`${where}: is "${c.checkable}" but carries a link to check it, which reads as checkable`);
+            }
+        }
+    });
+    // Derived figures come from entries that exist.
+    ledger.claims.forEach((c) => {
+        const from = c && c.basis && c.basis.derived !== undefined ? c.basis.from || [] : [];
+        from.filter(id => id === c.id || !ids.has(id))
+            .forEach(id => problems.push(`${at}: claim "${c.id}" is derived from "${id}", which is ${id === c.id ? 'itself' : 'not an entry'}`));
+    });
+    return problems;
+}
+
+/**
+ * The public work a role view holds as its own: the public artifacts of the
+ * case studies it is home to (those that list it first, and so lead the
+ * view), and the public research outputs of those case studies or placed in
+ * the view by their own `lenses`, which its panel lists (renderCaseStudies,
+ * build-content.js). A case study that only touches a lens leads another
+ * view, and its work counts there: the sustainable-AI case lists the climate
+ * lens third, and its repositories are not climate work. Each as
+ * { name, url }. Every lens needs one that is not a page of this site
+ * (checkLensWork).
+ */
+function publicWorkFor(lensId, projects, research) {
+    const ids = projects.caseStudies.filter(cs => (cs.lenses || [])[0] === lensId).map(cs => cs.id);
+    const artifacts = projects.caseStudies.filter(cs => ids.includes(cs.id))
+        .flatMap(cs => (cs.artifacts || []).filter(a => a.status === 'public').map(a => ({ name: a.name, url: a.url })));
+    const outputs = research.outputs.filter(o => o.status === 'public' && (ids.includes(o.caseStudy) || (o.lenses || []).includes(lensId)))
+        .map(o => ({ name: o.title, url: o.url }));
+    return artifacts.concat(outputs);
+}
+
+/**
+ * A lens whose work a reader can open none of is a claim to take on trust.
+ * This site's own pages do not count: the water lens had two games here and
+ * nothing else a reader could open. Returns problems, like the rest.
+ */
+function checkLensWork(lensList, projects, research) {
+    return lensList
+        .filter(l => !publicWorkFor(l.id, projects, research).some(w => localPath(w.url) === null))
+        .map(l => `lens "${l.id}": no public work beyond this site's own pages belongs to it — a lens needs an artifact or research output a reader can open elsewhere`);
+}
+
 /**
  * Reads everything and returns it validated, or throws with every problem
  * listed at once — one run of the build should tell you all of them.
@@ -649,8 +1129,11 @@ function loadAll() {
     const lenses = load('lenses');
     const narration = load('narration');
     const stats = load('stats');
+    const testimonials = load('testimonials');
+    const claims = load('claims');
 
     const problems = checkStats(stats);
+    problems.push(...checkClaims(claims, { profile, projects, factors: loadFactors() }));
     const lensIds = lenses.lenses.map(l => l.id);
 
     // --- case studies ---------------------------------------------------
@@ -677,6 +1160,7 @@ function loadAll() {
             if (typeof r.verifiable !== 'boolean') {
                 problems.push(`${at}: result "${(r.claim || '').slice(0, 40)}" does not say whether a reader can check it`);
             }
+            problems.push(...checkResultCheck(at, cs, r));
         });
 
         (cs.artifacts || []).forEach((a, i) => {
@@ -688,8 +1172,15 @@ function loadAll() {
             if (!lensIds.includes(l)) problems.push(`${at}: unknown lens "${l}"`);
         });
 
-        problems.push(...checkCard(at, cs));
+        // On the homepage unless it says otherwise (onHomepage, above); off
+        // it, nothing needs the card's photo, tags or brief.
+        if (cs.homepageCard !== undefined && typeof cs.homepageCard !== 'boolean') {
+            problems.push(`${at}: homepageCard must be true or false (leave it out for true)`);
+        }
+        if (onHomepage(cs)) problems.push(...checkCard(at, cs));
+        else if (!cs.subtitle) problems.push(`${at}: missing subtitle (the case study prints it)`);
         problems.push(...checkGallery(at, cs));
+        problems.push(...checkFindings(at, cs));
     });
 
     // Each interactive has one home: its ids are page-wide.
@@ -716,6 +1207,14 @@ function loadAll() {
         if (o.caseStudy && !caseStudyIds.includes(o.caseStudy)) {
             problems.push(`${at}: references unknown case study "${o.caseStudy}"`);
         }
+        // An output with no case study of its own can still belong to a role
+        // view; one that has a case study takes the case study's.
+        if (o.lenses !== undefined && (!Array.isArray(o.lenses) || !o.lenses.length || o.caseStudy)) {
+            problems.push(`${at}: lenses must be a list of lens ids, and only on an output with no case study`);
+        }
+        (Array.isArray(o.lenses) ? o.lenses : []).forEach((l) => {
+            if (!lensIds.includes(l)) problems.push(`${at}: unknown lens "${l}"`);
+        });
 
         // A venue that looks like a journal without a DOI is the exact shape
         // of an overclaim, so anything asserting peer review has to prove it.
@@ -735,7 +1234,14 @@ function loadAll() {
         // A lens nothing matches is a claim to a specialism with no work behind it.
         const matching = projects.caseStudies.filter(cs => (cs.lenses || []).includes(l.id));
         if (!matching.length) problems.push(`${at}: no case study belongs to it`);
+        // And one whose work a reader can open none of is a specialism they
+        // have to take on trust (the plan's test for Phase 3: every lens has
+        // at least one public artifact behind it).
+        else if (!matching.some(cs => (cs.artifacts || []).some(a => a.status === 'public'))) {
+            problems.push(`${at}: none of its case studies has a public artifact — a reader can open nothing behind it`);
+        }
     });
+    problems.push(...checkLensWork(lenses.lenses, projects, research));
 
     // --- narration ---------------------------------------------------------
     narration.scripts.forEach((s) => {
@@ -756,25 +1262,40 @@ function loadAll() {
         }
     }
 
+    // --- the record's dates ---------------------------------------------
+    problems.push(...checkMeta(profile.meta));
+
     // --- languages (optional) ------------------------------------------
     problems.push(...checkLanguages(profile.languages));
 
     // --- the at-a-glance strip -------------------------------------------
     problems.push(...checkAtAGlance(profile.atAGlance, profile.languages));
 
+    // --- certificates and testimonials: what a reader can check ----------
+    problems.push(...checkCertifications(profile.certifications));
+    problems.push(...checkTestimonials(testimonials));
+    problems.push(...checkQuotedFigures({ testimonials, certifications: profile.certifications }, claims.claims));
+
     if (problems.length) {
         throw new Error(`content failed validation:\n  - ${problems.join('\n  - ')}`);
     }
 
-    return { profile, projects, research, lenses, narration, stats, lensIds };
+    return { profile, projects, research, lenses, narration, stats, testimonials, claims, lensIds };
 }
 
-/** Case studies for a lens: matching ones first, the rest after. Never filtered. */
+/**
+ * Case studies for a lens: matching ones first, the rest after. Never
+ * filtered. A case study lists its lenses nearest first, so among the
+ * matching ones, those the lens is home to (listed first) lead, and those it
+ * only touches follow, each group in file order. The page's own script
+ * (build-content.js) orders the cards by the same rule.
+ */
 function orderForLens(caseStudies, lensId) {
     if (!lensId || lensId === 'all') return { primary: caseStudies.slice(), secondary: [] };
+    const rank = cs => (cs.lenses || []).indexOf(lensId);
     return {
-        primary: caseStudies.filter(cs => (cs.lenses || []).includes(lensId)),
-        secondary: caseStudies.filter(cs => !(cs.lenses || []).includes(lensId))
+        primary: caseStudies.filter(cs => rank(cs) > -1).sort((a, b) => rank(a) - rank(b)),
+        secondary: caseStudies.filter(cs => rank(cs) === -1)
     };
 }
 
@@ -786,10 +1307,15 @@ module.exports = {
     WIDGETS,
     load,
     loadAll,
+    counterRules,
     urlProblem,
     checkAvailability,
+    checkResultCheck,
     checkCard,
     checkGallery,
+    checkFindings,
+    FINDING_KINDS,
+    onHomepage,
     PHOTO_LAYOUTS,
     checkLanguages,
     checkAtAGlance,
@@ -797,5 +1323,21 @@ module.exports = {
     glanceLanguages,
     checkStats,
     peel,
-    orderForLens
+    orderForLens,
+    publicWorkFor,
+    checkLensWork,
+    checkMeta,
+    VERIFY_HOSTS,
+    checkCertifications,
+    TESTIMONIAL_LIMITS,
+    checkTestimonials,
+    checkQuotedFigures,
+    CHECKABLE,
+    BASIS_KINDS,
+    checkClaims,
+    loadFactors,
+    atPath,
+    mentions,
+    resultFor,
+    checkabilityOf
 };

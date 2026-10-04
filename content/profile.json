@@ -19,13 +19,18 @@
     "with it. Edit here first, run npm run build:content, then make the pages",
     "match; the test tells you which ones are behind.",
     "",
-    "`verifiedOn` is the date a human last confirmed the ongoing facts (the",
-    "'Present' role in particular) were still true. The test prints a loud notice",
-    "when it goes stale."
+    "`verifiedOn` is the date the record is logged as of: the core log's",
+    "surface, and the date the test counts from when it prints a loud notice",
+    "that the ongoing facts (the 'Present' role in particular) are due a check.",
+    "It is not, by itself, Moses's word that they are still true.",
+    "`confirmedOn` is: the day Moses himself last confirmed the ongoing facts,",
+    "and only he sets it. It is null until he does; the CV says the facts were",
+    "confirmed, and when, only once it is set (owner checklist F5)."
   ],
 
   "meta": {
     "verifiedOn": "2026-08-05",
+    "confirmedOn": null,
     "staleAfterMonths": 6
   },
 
@@ -35,8 +40,10 @@
     "email": "moseskollehsesay@gmail.com",
     "locality": "Amsterdam",
     "country": "NL",
-    "coordinates": "52.3676° N, 4.9041° E"
+    "coordinates": "52.3676° N, 4.9041° E",
+    "phone": "+31 659 361 423"
   },
+  "$phone": "The number the homepage's contact card publishes (index.html, a tel: link); tests/content.test.js holds the two together, and the CV prints it in its header. Take it off both or neither.",
 
   "$knowsAbout": "Feeds JSON-LD. Keep it to areas with case-study evidence behind them — a schema.org claim is still a claim.",
   "knowsAbout": [
@@ -101,7 +108,7 @@
     "displayDates": "Sept 2025 — Present"
   },
 
-  "$figures": "A figure on a page needs a basis in content/. A case-study result carries its own; a record fact about a role or a degree (a team's headcount, a programme's length, a grade) sits on the entry it describes, here, and tests/content.test.js holds the pages to it. An outcome rate (a completion percentage, an efficiency gain, people reached) is not a record fact: it needs a method, and without one it stays off the site.",
+  "$figures": "A figure on a page needs a basis in content/. A case-study result carries its own; a record fact about a role or a degree (a team's headcount, a programme's length, a grade; the Wuppertal consultancy's team, part of the Wageningen degree) sits on the entry it describes, here, and tests/content.test.js holds the pages to it. An outcome rate (a completion percentage, an efficiency gain, people reached) is not a record fact: it needs a method, and without one it stays off the site.",
 
   "experience": [
     {
@@ -149,7 +156,8 @@
       "institution": "Wageningen University & Research",
       "displayDates": "2021 — 2024",
       "textEditionDates": "2021–2024",
-      "grade": "7.8/10 (Dutch scale)"
+      "grade": "7.8/10 (Dutch scale)",
+      "consultancyTeamSize": 6
     },
     {
       "degree": "MSc Industrial Engineering",
@@ -165,41 +173,58 @@
     }
   ],
 
+  "$certifications": [
+    "The homepage's certificates (between the CERTIFICATES markers in",
+    "index.html) and the CV are printed from this list: name, issuer, date and",
+    "`covered`, one line on what it covered.",
+    "",
+    "verifyUrl is optional and absent until Moses supplies it: the issuer's",
+    "own page for this certificate (Coursera's for the Google one, CFI's",
+    "credential site for theirs). With one, the homepage and the CV link it",
+    "as 'Verify'. Leave the field out rather than writing null or 'TBC' —",
+    "the build refuses a placeholder, and an address that is not https or",
+    "not on an issuer's host (VERIFY_HOSTS in scripts/lib/content.js)."
+  ],
   "certifications": [
     {
       "name": "ESG Specialist Program",
       "issuer": "Corporate Finance Institute",
       "displayDate": "Sep 2024",
-      "year": "2024"
+      "year": "2024",
+      "covered": "ESG investing, financial strategy and reporting; risk and opportunity analysis"
     },
     {
       "name": "Google Advanced Data Analytics",
       "issuer": "Google — Coursera",
       "displayDate": "Jan 2024",
-      "year": "2024"
+      "year": "2024",
+      "covered": "Machine learning and regression models; statistical methods and visualisation"
     },
     {
       "name": "Data Analytics Training",
       "issuer": "Masterschool",
       "displayDate": "Dec 2023",
-      "year": "2023"
+      "year": "2023",
+      "covered": "SQL, Python, Excel, Tableau; real-world business cases"
     },
     {
       "$comment": "Was on field-report.html only until this file forced the two to agree.",
       "name": "Synergizing DRR & Climate Change Adaptation",
       "issuer": "UN System Staff College",
       "displayDate": "2023",
-      "year": "2023"
+      "year": "2023",
+      "covered": "Disaster risk reduction and adaptation, jointly; Sendai Framework in practice"
     }
   ],
 
   "$pages": "Drives sitemap.xml. lastmod is set by hand when a page's content changes — a build timestamp would claim every page changed on every deploy, which is the fastest way to teach a crawler to ignore the field.",
   "pages": [
-    { "path": "index.html", "loc": "https://moseskolleh.github.io/sustaintheworld/", "lastmod": "2026-10-03", "changefreq": "monthly", "priority": "1.0" },
-    { "path": "case-studies.html", "loc": "https://moseskolleh.github.io/sustaintheworld/case-studies.html", "lastmod": "2026-10-03", "changefreq": "monthly", "priority": "0.9" },
-    { "path": "research.html", "loc": "https://moseskolleh.github.io/sustaintheworld/research.html", "lastmod": "2026-10-03", "changefreq": "monthly", "priority": "0.8" },
-    { "path": "carbon-ai.html", "loc": "https://moseskolleh.github.io/sustaintheworld/carbon-ai.html", "lastmod": "2026-10-03", "changefreq": "monthly", "priority": "0.8" },
-    { "path": "field-report.html", "loc": "https://moseskolleh.github.io/sustaintheworld/field-report.html", "lastmod": "2026-09-28", "changefreq": "monthly", "priority": "0.3" },
-    { "path": "stats.html", "loc": "https://moseskolleh.github.io/sustaintheworld/stats.html", "lastmod": "2026-10-03", "changefreq": "weekly", "priority": "0.2" }
+    { "path": "index.html", "loc": "https://moseskolleh.github.io/sustaintheworld/", "lastmod": "2026-10-04", "changefreq": "monthly", "priority": "1.0" },
+    { "path": "case-studies.html", "loc": "https://moseskolleh.github.io/sustaintheworld/case-studies.html", "lastmod": "2026-10-04", "changefreq": "monthly", "priority": "0.9" },
+    { "path": "research.html", "loc": "https://moseskolleh.github.io/sustaintheworld/research.html", "lastmod": "2026-10-04", "changefreq": "monthly", "priority": "0.8" },
+    { "path": "carbon-ai.html", "loc": "https://moseskolleh.github.io/sustaintheworld/carbon-ai.html", "lastmod": "2026-10-04", "changefreq": "monthly", "priority": "0.8" },
+    { "path": "field-report.html", "loc": "https://moseskolleh.github.io/sustaintheworld/field-report.html", "lastmod": "2026-10-04", "changefreq": "monthly", "priority": "0.3" },
+    { "path": "claims.html", "loc": "https://moseskolleh.github.io/sustaintheworld/claims.html", "lastmod": "2026-10-04", "changefreq": "monthly", "priority": "0.5" },
+    { "path": "stats.html", "loc": "https://moseskolleh.github.io/sustaintheworld/stats.html", "lastmod": "2026-10-04", "changefreq": "weekly", "priority": "0.2" }
   ]
 }

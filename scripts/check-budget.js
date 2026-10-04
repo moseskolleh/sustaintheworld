@@ -113,7 +113,7 @@ const BUDGETS = {
         readme: "Recorded narration: Moses's introduction (sized for his 60–90 s take)",
         hold: 'sized for his recording, which is not made yet'
     },
-    // The footer calls it "the whole portfolio in 9 KB"; this is what keeps
+    // The footer calls it "the whole portfolio in 10 KB"; this is what keeps
     // that true.
     fieldReport: {
         label: 'Text-only field report, the HTML file as saved (uncompressed)',
@@ -156,15 +156,27 @@ const BUDGETS = {
         max: 99 * KB,
         readme: 'Research outputs page, over the wire (fonts included)'
     },
-    // "AI, Weighed" carries its calculator and the emission-factor data on
-    // arrival, so it is the heaviest page after the homepage and it went
+    // "Check my numbers": every figure in the claims ledger, its basis and
+    // where it appears, so it grows by an entry with every figure the site
+    // gains. Set when the page was made (October 2026) at its measure plus
+    // 5%, as the ratchet would set it: a new budget, not a raised one. The
+    // three GAIA entries the wave's other lanes brought, and the review's
+    // longer "Where" lines, still fit under it, so it was left where it
+    // was (`npm run budget` says by how much).
+    claimsWire: {
+        label: 'Check my numbers (claims.html), over the wire (with fonts)',
+        max: 101 * KB,
+        readme: 'Check my numbers (`claims.html`), over the wire (fonts included)'
+    },
+    // The EcoPrompt Coach's page carries its calculator and the emission-factor
+    // data on arrival, so it is the heaviest page after the homepage and it went
     // unbudgeted until a real browser measured it at 106 KB. The ceiling is
     // that measurement plus 5%, not the usual headroom: budgets only ratchet
     // down, and this one starts where the page already is.
     carbonAiWire: {
-        label: 'AI, Weighed (carbon-ai.html), over the wire (with fonts)',
+        label: 'EcoPrompt Coach (carbon-ai.html), over the wire (with fonts)',
         max: 111 * KB,
-        readme: 'AI, Weighed (`carbon-ai.html`), over the wire (fonts included)'
+        readme: 'EcoPrompt Coach (`carbon-ai.html`), over the wire (fonts included)'
     }
 };
 
@@ -176,6 +188,7 @@ const PAGE_BUDGETS = {
     'case-studies.html': 'caseStudiesWire',
     'research.html': 'researchWire',
     'carbon-ai.html': 'carbonAiWire',
+    'claims.html': 'claimsWire',
     'stats.html': 'statsWire',
     'field-report.html': 'fieldReportWire'
 };
@@ -201,9 +214,13 @@ const PAGE_BUDGETS = {
 // measured plus 5%, like the rest. Every other page's is what it measured
 // when the budget was set (28 September 2026, with the shared nav and
 // closing call to action every page but the homepage now has, in Chromium
-// 141, the build CI pins) plus 5%. stats.html is held drawn full, as the
-// smoke's fixture draws a busy quarter: that is the page the weekly Action
-// will commit, and the page as committed today is shorter.
+// 141, the build CI pins) plus 5%, and claims.html's the same way, set in
+// the wave that made it: on 3 October 2026 once its lanes had merged, and
+// set again the next day, before the wave closed, once the review had put
+// the figures written in words on the list (36 entries, not 30).
+// stats.html is held drawn full, as the smoke's fixture draws a busy
+// quarter: that is the page the weekly Action will commit, and the page as
+// committed today is shorter.
 // ------------------------------------------------------------------
 const VIEWPORTS = {
     '1440x900': { width: 1440, height: 900, label: 'desktop' },
@@ -213,6 +230,7 @@ const LENGTH = {
     'index.html': { '1440x900': 9.79, '390x844': 17.09 },
     'case-studies.html': { '1440x900': 11.85, '390x844': 19.78 },
     'carbon-ai.html': { '1440x900': 7.07, '390x844': 13.38 },
+    'claims.html': { '1440x900': 7.54, '390x844': 13.53 },
     'research.html': { '1440x900': 5.86, '390x844': 8.99 },
     'stats.html': { '1440x900': 10.97, '390x844': 16.25 },
     'field-report.html': { '1440x900': 4.4, '390x844': 7.44 },
@@ -418,6 +436,7 @@ function measure() {
         statsWire: pageWire('stats.html'),
         researchWire: pageWire('research.html'),
         carbonAiWire: pageWire('carbon-ai.html'),
+        claimsWire: pageWire('claims.html'),
         largestImage: images.reduce((n, f) => Math.max(n, sizeOf(f) || 0), 0),
         allImages: images.reduce((n, f) => n + (sizeOf(f) || 0), 0),
         introAudio: audio.reduce((n, f) => n + (sizeOf(f) || 0), 0),

@@ -54,7 +54,8 @@
 //     button, or a recording fetched unasked
 //   - an Assay that grades a mismatched ad well, or sends anything; one
 //     whose box is not folded behind a named button, by pointer and keys
-//   - an experience card that is not short, or whose More sits on its text
+//   - an experience card that is not short, or whose More sits on its text;
+//     a core-log layer whose depths wrap or run onto the core
 //   - a case-study game fetched before a reader nears it, that will not
 //     play, whose labels are under 11px on a phone or run past its edge,
 //     that moves the page under a reader when it arrives above them, or
@@ -335,9 +336,14 @@ async function visit(context, page, rel, origin) {
     await exerciseCpu(browser, origin);
     await exerciseJourneyAndChart(browser, origin);
     await exerciseStatsPage(browser, origin);
+    await checkClaimMarks(browser, origin);
+    await claimsLandInSight(browser, origin);
+    await notFoundLinks(browser, origin);
+    await printFolds(browser, origin);
+    await printPalette(browser, origin);
 
     // The top nav at every desktop width: one line per item, nothing past the
-    // right edge. It used to wrap "Case studies" and "AI, Weighed" at every
+    // right edge. It used to wrap "Case studies" and the coach's link at every
     // width and clip Contact off-screen up to 1373px — and body's
     // overflow-x:hidden meant nothing else would ever have noticed.
     {
@@ -1011,6 +1017,17 @@ async function exerciseCaseStudyGames(page, r) {
         else bad(`case-studies.html at ${width}px: game labels past the drawing's edge: ${m.cut.join(', ')}`);
         if (m.wide) bad(`case-studies.html at ${width}px: the page scrolls sideways`);
     }
+    // A wide card sets its artifacts and its results side by side (one to a
+    // row left most of a 1,100px card empty); a phone keeps one to a row.
+    for (const [width, rowsOf] of [[1280, () => 1], [390, n => n]]) {
+        await page.setViewportSize({ width, height: 800 });
+        const got = await page.evaluate(() => ['.cs-artifacts', '.cs-results'].map((sel) => {
+            const items = Array.from(document.querySelectorAll(`#gaia ${sel} > li`));
+            return { n: items.length, rows: new Set(items.map(li => Math.round(li.getBoundingClientRect().top))).size };
+        }));
+        if (got.every(g => g.n > 1 && g.rows === rowsOf(g.n))) ok(`case-studies.html at ${width}px: the GAIA case's artifacts and results are ${width > 900 ? 'side by side' : 'one to a row'}`);
+        else bad(`case-studies.html at ${width}px: artifacts and results in ${got.map(g => `${g.rows} rows of ${g.n}`).join(', ')}`);
+    }
     await page.setViewportSize({ width: 1280, height: 800 });
     if (r.errors.length) r.errors.forEach(e => bad(e)); else ok('the games played without an error');
     if (r.foreign.length) r.foreign.forEach(f => bad(`left the origin: ${f}`));
@@ -1018,6 +1035,34 @@ async function exerciseCaseStudyGames(page, r) {
     await holdReaderBelowGame(page.context().browser(), new URL(page.url()).origin);
     await keepFocusInGames(page.context().browser(), new URL(page.url()).origin);
     await exercisePhotos(page.context().browser(), new URL(page.url()).origin);
+    await openEsgLens(page.context().browser(), new URL(page.url()).origin);
+}
+
+// The ESG lens, as a shared link opens it on a phone: its framing shown,
+// its own case (GAIA) first with what it found on show, the sustainable-AI
+// case that only touches the lens after it, and every other case study
+// still on the page, set back rather than hidden.
+async function openEsgLens(browser, origin) {
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const page = await context.newPage();
+    const errors = [];
+    page.on('pageerror', e => errors.push(String(e.message || e)));
+    await page.goto(`${origin}/case-studies.html?lens=esg-csrd`, { waitUntil: 'load' });
+    const got = await page.evaluate(() => ({
+        ids: Array.from(document.querySelectorAll('#csGrid > .cs-card')).map(c => c.id),
+        set: Array.from(document.querySelectorAll('#csGrid > .cs-card-secondary')).map(c => c.id),
+        others: Array.from(document.querySelectorAll('#csGrid > .cs-card')).filter(c => !c.dataset.lenses.split(' ').includes('esg-csrd')).length,
+        panels: Array.from(document.querySelectorAll('[data-lens-panel]')).filter(p => p.getClientRects().length).map(p => p.getAttribute('data-lens-panel')),
+        current: (document.querySelector('.cs-lens[aria-current="true"]') || {}).textContent,
+        findings: Array.from(document.querySelectorAll('#gaia .cs-findings > li')).filter(li => li.getClientRects().length).length
+    }));
+    const lead = got.ids.slice(0, 2).join();
+    if (lead === 'gaia,sustainable-ai' && got.set.length === got.others && got.set.every(id => got.ids.indexOf(id) > 1) && got.panels.join() === 'esg-csrd' && /ESG/.test(got.current || '') && got.findings > 0 && !errors.length) {
+        ok(`case-studies.html?lens=esg-csrd at 390px: the ESG framing, then GAIA and the sustainable-AI case, ${got.findings} of GAIA's findings on show, and the other ${got.set.length} set back, not hidden`);
+    } else {
+        bad(`case-studies.html?lens=esg-csrd: cards ${got.ids.join(', ')} (${got.set.length} set back), panels ${got.panels.join(', ') || 'none'}, current "${got.current}", ${got.findings} findings shown${errors.length ? `, errors: ${errors.join('; ')}` : ''}`);
+    }
+    await context.close();
 }
 
 // Two ways the focus fell to <body> on this page, and the next Tab went to
@@ -1721,7 +1766,7 @@ async function exerciseNavigation(browser, origin) {
     // project cards' links), the toolkit's proof links. The experience
     // cards' More buttons are new, and the Assay's open button (its sample
     // chips are folded away until it is pressed).
-    const GUARDED = ['.hero-availability', '.hero-cta .btn', '.corelog-more', '#ydiReveal', '.assay-open', '.project-link', '.toolkit-proof',
+    const GUARDED = ['.hero-availability', '.hero-cta .btn', '.corelog-more', '#ydiReveal', '.assay-open', '.project-link', 'a.toolkit-proof',
         '.btn-submit', '.carbon-badge', '.receipt-btn', '.footer-fieldreport a', '.eco-mode-toggle', '.terminal-toggle'];
     const covered = [];
     let passes = 0;
@@ -1855,6 +1900,205 @@ async function exerciseStatsPage(browser, origin) {
 }
 
 // ------------------------------------------------------------------
+// Check my numbers: the figures as a reader sees them
+// ------------------------------------------------------------------
+// tests/claims.test.js holds the HTML as shipped to the claims ledger
+// (content/claims.json). A script can still change a marked figure after
+// load: the hero's figures count up to theirs. So each page that marks
+// figures is read here once its scripts have run and the count-up has
+// ended, every mark against its entry; and the ledger page, a list of
+// long entries, on the narrowest phones.
+async function checkClaimMarks(browser, origin) {
+    const figures = require('./lib/claims.js');
+    const ledger = JSON.parse(fs.readFileSync(path.join(ROOT, 'content', 'claims.json'), 'utf8')).claims;
+    const value = new Map(ledger.map(c => [c.id, c.value]));
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    const page = await context.newPage();
+    for (const rel of ['index.html', 'case-studies.html', 'research.html', 'carbon-ai.html', 'field-report.html', 'claims.html']) {
+        await page.goto(`${origin}/${rel}`, { waitUntil: 'load' });
+        if (rel === 'index.html') {
+            await page.waitForFunction(() => !document.querySelector('.hero-stat-number[aria-hidden]')
+                && [...document.querySelectorAll('.hero-stat-number')].every(c => c.textContent === c.dataset.target), null, { timeout: 6000 }).catch(() => null);
+        }
+        const marks = await page.evaluate(() => [...document.querySelectorAll('[data-claim]')].map(el => [el.getAttribute('data-claim'), el.textContent.trim()]));
+        const wrong = marks.filter(([id, shown]) => !value.has(id) || !figures.agrees(value.get(id), shown)).map(([id, shown]) => `${id} "${shown}"`);
+        if (!marks.length) bad(`${rel}: no figure is marked with its ledger entry`);
+        else if (wrong.length) bad(`${rel}: once its scripts have run, ${wrong.length} marked figure(s) disagree with the ledger: ${wrong.join(', ')}`);
+        else ok(`${rel}: once its scripts have run, all ${marks.length} marked figures say what the ledger says`);
+        // A mark is an element, so in a flex or grid row it becomes an item
+        // of its own: "Seven in ten: what reading the ground is worth" split
+        // into two columns on a phone, the mark one and the words after it
+        // the other. A mark sits in running text, never beside a loose line
+        // of words in a flex or grid box.
+        const split = await page.evaluate(() => [...document.querySelectorAll('[data-claim]')].filter((el) => {
+            const box = el.parentElement;
+            return /flex|grid/.test(getComputedStyle(box).display) && [...box.childNodes].some(n => n.nodeType === 3 && n.textContent.trim());
+        }).map(el => `"${el.parentElement.textContent.trim().slice(0, 50)}"`));
+        if (split.length) bad(`${rel}: a marked figure is a flex or grid item beside loose words, which lay out as columns: ${split.join(', ')}`);
+        else ok(`${rel}: every marked figure sits in running text, none a flex or grid item beside loose words`);
+    }
+    for (const width of [320, 390]) {
+        await page.setViewportSize({ width, height: 800 });
+        await page.goto(`${origin}/claims.html`, { waitUntil: 'load' });
+        await page.evaluate(() => document.fonts.ready);
+        if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) bad(`claims.html at ${width}px: the page scrolls sideways`);
+        else ok(`claims.html at ${width}px: every entry fits, nothing scrolls sideways`);
+    }
+    await context.close();
+}
+
+// claims.html's "Where" links each go to the figure on its page. They went
+// to the top of pages up to sixteen screens long, or to places where the
+// figure was folded away: the badge's [hidden] method note, a closed field
+// note while #projects showed the same 70%, a role's depth behind More, a
+// photo row, the research page's reproduction notes. tests/claims.test.js
+// holds the addresses in the HTML; here each is followed as a reader would,
+// scripts on, and a mark of the figure has to be drawn in the place it
+// lands on, with that place in the window.
+async function claimsLandInSight(browser, origin) {
+    // Reduced motion: the homepage glides to a far target over a second or
+    // more, and the landing is what is checked, not the glide.
+    const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
+    const page = await context.newPage();
+    await page.goto(`${origin}/claims.html`, { waitUntil: 'load' });
+    const links = await page.evaluate(() => [...document.querySelectorAll('li.cl-item')]
+        .flatMap(li => [...li.querySelectorAll('.cl-where a')].map(a => [li.id.replace(/^claim-/, ''), a.getAttribute('href')])));
+    const byHref = new Map();
+    links.filter(([, href]) => href !== '404.html').forEach(([id, href]) => byHref.set(href, (byHref.get(href) || []).concat(id)));
+    const missed = [];
+    for (const [href, ids] of byHref) {
+        await page.goto(`${origin}/${href}`, { waitUntil: 'load' });
+        // The homepage lands a task after load, waits for what it opens, and
+        // lands again as sections swap their estimated heights for real ones.
+        let last = null;
+        for (let i = 0; i < 20; i++) {
+            await page.waitForTimeout(250);
+            const now = await page.evaluate(() => [scrollY, document.documentElement.scrollHeight].join());
+            if (i > 2 && now === last) break;
+            last = now;
+        }
+        const out = await page.evaluate((list) => {
+            const hash = decodeURIComponent(location.hash.slice(1));
+            const lens = new URLSearchParams(location.search).get('lens');
+            const place = hash ? document.getElementById(hash) : document.querySelector(`[data-lens-panel="${lens}"]`);
+            if (!place) return list.map(id => `${id}: nothing at ${location.hash || location.search}`);
+            const region = [place];
+            if (/^H[1-6]$/.test(place.tagName)) {
+                for (let el = place.nextElementSibling; el && !(/^H[1-6]$/.test(el.tagName) && el.tagName <= place.tagName); el = el.nextElementSibling) region.push(el);
+            }
+            const top = place.getBoundingClientRect().top;
+            const inWindow = top > -innerHeight && top < innerHeight;
+            return list.filter((id) => {
+                const marks = region.flatMap(el => (el.matches(`[data-claim="${id}"]`) ? [el] : []).concat([...el.querySelectorAll(`[data-claim="${id}"]`)]));
+                return !inWindow || !marks.some(el => el.checkVisibility({ visibilityProperty: true }) && el.getClientRects().length > 0);
+            }).map(id => `${id}: not in sight at ${location.pathname.split('/').pop()}${location.search}${location.hash}${inWindow ? '' : ' (the page did not land there)'}`);
+        }, ids);
+        missed.push(...out);
+    }
+    if (missed.length) bad(`claims.html: ${missed.length} "Where" link(s) land where the figure is not in sight: ${missed.join('; ')}`);
+    else ok(`claims.html: all ${links.length - links.filter(([, h]) => h === '404.html').length} "Where" links land with the figure in sight (${byHref.size} addresses followed, scripts on)`);
+    await context.close();
+}
+
+// The 404 page's links: a fourth, "check my numbers", wrapped onto a row
+// of its own on a desktop, under three. Two rows of two there, within the
+// page's column; a phone stacks them.
+async function notFoundLinks(browser, origin) {
+    const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const page = await context.newPage();
+    await page.goto(`${origin}/404.html`, { waitUntil: 'load' });
+    await page.evaluate(() => document.fonts.ready);
+    const rows = await page.evaluate(() => {
+        const by = new Map();
+        document.querySelectorAll('.links a').forEach((a) => { const t = Math.round(a.getBoundingClientRect().top); by.set(t, (by.get(t) || 0) + 1); });
+        return [...by.values()];
+    });
+    const wide = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
+    if (rows.length === 2 && rows.every(n => n === 2) && !wide) ok('404.html at 1440px: its four links sit in two rows of two');
+    else bad(`404.html at 1440px: its links fall into rows of ${rows.join(', ')}${wide ? ', and the page scrolls sideways' : ''}`);
+    await context.close();
+}
+
+// Printed, or saved as a PDF, the case studies and the research page keep
+// what they fold for the screen's length: every method, the closing note,
+// the commands to reproduce the work. Chromium prints a closed <details> as
+// its summary alone, which is what those folds printed until content.css
+// opened them for print. The photo rows stay folded on paper as on screen.
+// The PDF is read back as the CV's test reads the CV.
+async function printFolds(browser, origin) {
+    if (!CHROMIUM) return ok(`printed folds: not printed in ${BROWSER} (page.pdf is headless Chromium's) — the Chromium run reads them`);
+    const { pdfText } = require('./lib/pdf-text.js');
+    const { projects, research } = require('./lib/content.js').loadAll();
+    const alnum = (s) => String(s).replace(/[^A-Za-z0-9]/g, '');
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const page = await context.newPage();
+    const pages = [
+        ['case-studies.html', projects.caseStudies.map(cs => cs.method[cs.method.length - 1]).concat('A portfolio that lists outcomes without saying'),
+            [projects.caseStudies.find(cs => cs.gallery).gallery[0].caption]],
+        ['research.html', [research.reproducibility.body, research.reproducibility.commands[0].does], []]
+    ];
+    for (const [rel, kept, folded] of pages) {
+        await page.goto(`${origin}/${rel}`, { waitUntil: 'load' });
+        const text = alnum(pdfText(await page.pdf({ format: 'A4' })).pages.join(' '));
+        const lost = kept.filter(w => !text.includes(alnum(w).slice(0, 40)));
+        const shown = folded.filter(w => text.includes(alnum(w).slice(0, 40)));
+        if (lost.length || shown.length) bad(`${rel} printed: ${lost.length ? `drops ${lost.map(w => `"${w.slice(0, 40)}…"`).join(', ')}` : ''}${shown.length ? ` prints the folded photo row ("${shown[0].slice(0, 40)}…")` : ''}`);
+        else ok(`${rel} printed: all ${kept.length} folded passages are on paper${folded.length ? ', and the photo rows stay folded' : ''}`);
+        const shut = await page.evaluate(() => Array.from(document.querySelectorAll('details')).filter(d => d.open).length);
+        if (shut) bad(`${rel}: printing left ${shut} fold(s) open on screen`);
+    }
+    await context.close();
+}
+
+// Printed from the dark theme, the browser dropped the dark backgrounds and
+// kept the dark theme's text: the lime figures on claims.html came out at
+// about 1.3:1 on white paper, the headings pale grey. The print rules put
+// the light palette back. Each page is printed (print media) from the dark
+// theme here, and every line of text that would go on paper has to read on
+// white at 4.5:1. The PDF check above prints the light theme and reads
+// text; this reads colour, and opacity with it: printed soon after arriving,
+// the homepage's sections were still waiting to fade in, at opacity 0, and
+// paper got their headings and white space while this read their colour
+// and passed them. So each colour is laid over white at the opacity it
+// reaches paper with, its ancestors' included. The field report styles
+// itself inline, lime and pale grey from a dark system, and is read too.
+async function printPalette(browser, origin) {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, colorScheme: 'dark' });
+    await context.addInitScript(() => { try { localStorage.setItem('theme', 'dark'); } catch (e) { /* the system's dark stands */ } });
+    const page = await context.newPage();
+    for (const rel of ['index.html', 'case-studies.html', 'claims.html', 'carbon-ai.html', 'research.html', 'stats.html', 'field-report.html']) {
+        await page.goto(`${origin}/${rel}`, { waitUntil: 'load' });
+        await page.emulateMedia({ media: 'print', colorScheme: 'dark' });
+        // Switching media here starts the colour transitions a card has on
+        // screen (the journey's cards ease every property over 0.3 s), and
+        // read at once, a heading was still white. Paper gets where they
+        // end, so they are run to the end first.
+        await page.evaluate(() => document.getAnimations().filter(a => a instanceof CSSTransition).forEach(a => a.finish()));
+        const faint = await page.evaluate(() => {
+            const rgb = (c) => (c.match(/[\d.]+/g) || []).map(Number);
+            const lum = ([r, g, b]) => [r, g, b].map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; })
+                .reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0);
+            const out = [];
+            document.querySelectorAll('main h1, main h2, main h3, main h4, main p, main li, main dd, main figcaption, main [data-claim], main .cl-value').forEach((el) => {
+                if (!el.getClientRects().length || ![...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) return;
+                const c = rgb(getComputedStyle(el).color);
+                if (c.length > 3 && c[3] === 0) return;
+                let shown = c.length > 3 ? c[3] : 1;
+                for (let up = el; up; up = up.parentElement) shown *= Number(getComputedStyle(up).opacity);
+                const onWhite = c.slice(0, 3).map(v => 255 - (255 - v) * shown);
+                const ratio = 1.05 / (lum(onWhite) + 0.05);
+                if (ratio < 4.5) out.push(`"${el.textContent.trim().slice(0, 30)}" ${getComputedStyle(el).color}${shown < 1 ? ` at opacity ${shown.toFixed(2)}` : ''} (${ratio.toFixed(2)}:1)`);
+            });
+            return out;
+        });
+        await page.emulateMedia({ media: 'screen' });
+        if (faint.length) bad(`${rel} printed from the dark theme: ${faint.length} line(s) faint on white paper, e.g. ${faint.slice(0, 4).join('; ')}`);
+        else ok(`${rel} printed from the dark theme: every line of text reads on white paper at 4.5:1 or better`);
+    }
+    await context.close();
+}
+
+// ------------------------------------------------------------------
 // The shorter sections: experience as short cards, the Assay under the
 // form behind one button
 // ------------------------------------------------------------------
@@ -1868,7 +2112,7 @@ async function exerciseStatsPage(browser, origin) {
 // disclosure shows may wait on a transition.
 async function exerciseSections(browser, origin) {
     console.log('  index.html — experience as short cards, the Assay under the form');
-    for (const [width, height] of [[320, 700], [390, 844], [1280, 800]]) {
+    for (const [width, height] of [[320, 700], [390, 844], [700, 900], [1280, 800]]) {
         const ctx = await browser.newContext({ viewport: { width, height }, reducedMotion: 'reduce' });
         const page = await ctx.newPage();
         await page.goto(`${origin}/index.html`, { waitUntil: 'load' });
@@ -1904,6 +2148,14 @@ async function exerciseSections(browser, origin) {
                 tags: cards.filter(c => shown(c.querySelector('.tags'))).length,
                 buttons: cards.filter(c => shown(c.querySelector('.corelog-more'))).length,
                 depths: Array.from(document.querySelectorAll('#experience .corelog-depth')).filter(shown).length,
+                // Each layer's interval ("68–73 m", build-content.js) on one
+                // line, and clear of the core drawn beside it.
+                crowded: Array.from(document.querySelectorAll('#experience .corelog-depth strong')).filter(shown).filter((s) => {
+                    const r = document.createRange();
+                    r.selectNodeContents(s);
+                    const lines = new Set(Array.from(r.getClientRects()).map(t => Math.round(t.top))).size;
+                    return lines > 1 || r.getBoundingClientRect().right > s.closest('.corelog-item').querySelector('.corelog-strata').getBoundingClientRect().left;
+                }).map(s => s.textContent),
                 off: cards.filter(c => c.getBoundingClientRect().right > innerWidth + 0.5 || c.getBoundingClientRect().left < -0.5).length,
                 screens: +(document.getElementById('experience').getBoundingClientRect().height / innerHeight).toFixed(2),
                 small,
@@ -1920,6 +2172,8 @@ async function exerciseSections(browser, origin) {
         else ok(`${tag}: each More button in its card's corner, over none of its text`);
         if (width < 600 ? x.depths === 0 : x.depths === x.n) ok(`${tag}: ${width < 600 ? 'the depth column gives its width to the text' : 'the core log keeps its depths'}`);
         else bad(`${tag}: ${x.depths} depth labels shown`);
+        if (x.crowded.length) bad(`${tag}: a layer's depths wrap or run onto the core (${x.crowded.join(', ')})`);
+        else if (width >= 600) ok(`${tag}: each layer's depths on one line, clear of the core`);
         const ceiling = { 390: 2.5, 1280: 1.6 }[width];
         if (ceiling && x.screens > ceiling) bad(`${tag}: ${x.screens} screens tall; short cards should keep it under ${ceiling} (5.3 and 2.6 as the full log)`);
         // One card opened and closed again, by its button.
@@ -2029,7 +2283,7 @@ async function exerciseHomepage(page, r, origin) {
     const li = await loadedNow();
     if (li.interactives) ok('interactives loaded as section 05 came into range'); else bad('interactives did not load near section 05');
     const dots = await page.$$eval('#ydiSvg .ydi-guess-dot', (d) => d.length);
-    if (dots > 0) ok(`"AI, Weighed": You Draw It drawn (${dots} points to guess)`); else bad('"AI, Weighed": You Draw It is empty');
+    if (dots > 0) ok(`EcoPrompt Coach teaser: You Draw It drawn (${dots} points to guess)`); else bad('EcoPrompt Coach teaser: You Draw It is empty');
 
     // The backtick opens the terminal.
     await page.keyboard.press('`');
@@ -2810,6 +3064,14 @@ async function axeView(browser, origin, view, note, trouble) {
                 await attempt(`${rel}: axe with the games played`, async () => {
                     await playGames(page);
                     for (const host of ['#play-borehole', '#play-flood']) note(rel, 'the games played', view, await axeRun(page, host));
+                });
+                // The method is folded until asked for, so on arrival axe
+                // sees only its heading: opened from the keyboard, its steps.
+                await attempt(`${rel}: a method opened with Enter, and axe on it`, async () => {
+                    await page.evaluate(() => { const s = document.querySelector('#gaia .cs-method-fold > summary'); s.scrollIntoView({ block: 'center' }); s.focus(); });
+                    await page.keyboard.press('Enter');
+                    if (!await page.evaluate(() => document.querySelector('#gaia .cs-method-fold').open)) throw new Error('Enter on the method\'s heading did not open it');
+                    note(rel, 'a method open', view, await axeRun(page, '#gaia .cs-method-fold'));
                 });
                 await attempt(`${rel}: axe on a row of photos and the lightbox`, async () => {
                     await page.evaluate(() => { const d = document.querySelector('#wuppertal details.cs-photos'); d.open = true; d.scrollIntoView({ block: 'center' }); });

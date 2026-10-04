@@ -8,17 +8,12 @@
 // Loaded on demand by script.js (mks.load('dispatch')), whose ON-DEMAND
 // MODULES section says when, and why it declares nothing at the top level.
 // ===================================================================
-// Two things can speak here, and each says what it costs.
-//
-//   browser voice — window.speechSynthesis reads any section aloud. Zero
-//                   bytes over the wire, so it is the default.
-//   Moses         — one recording, his own introduction, in his own voice.
-//                   Offered only when assets/audio/voice-manifest.json lists
-//                   it, fetched only when asked for, labelled with its weight.
-//
-// Nothing here plays a recording that is not of him, and nothing ever
-// autoplays. Why the ten stock-voice section tracks before it were retired
-// is in README.md, rather than in every visitor's download.
+// Two things speak, each labelled with what it costs: the browser voice,
+// zero bytes over the wire and the default, and Moses's own recorded
+// introduction, once voice-manifest.json lists it. Nothing plays a
+// recording not of him, and nothing autoplays. README.md (Narration) has
+// the table, and why the stock-voice tracks were retired: there rather than
+// in every visitor's download.
 (() => {
     // The storage adapter is script.js's; a module reaches it through mks.
     const mks = window.mks;
@@ -59,11 +54,9 @@
     const listenBtn = listenWrap && document.getElementById('listenBtn');
 
     // ---------------------------------------------------------------
-    // Voice choice. Offline voices are strongly preferred: Chrome's default
-    // network voices round-trip audio through Google's servers, which would
-    // quietly make the "0 KB" claim false. When only a network voice is
-    // available the label says so rather than printing a number the page
-    // cannot stand behind.
+    // Voice choice. Offline voices first: Chrome's default network voices
+    // stream audio through Google's servers, which would make "0 KB" false,
+    // so with only a network voice the label prints no number.
     // ---------------------------------------------------------------
     let chosenVoice = null;
     let voiceIsLocal = false;
@@ -117,21 +110,19 @@
     };
 
     // ---------------------------------------------------------------
-    // What the numbers mean.
-    //
-    // The Sustainable Web Design model converts *transferred bytes* into
-    // grams of CO₂e. That is the only thing it converts. It does not include
-    // the energy your device spends decoding audio, driving a speaker, or —
-    // for the browser voice — synthesising speech in the first place.
-    // So every figure here says "transfer", and the browser voice is
-    // "0 KB transferred", never "0 g" — it is not free, only free of network.
+    // What the numbers mean (README.md, Narration): the Sustainable Web
+    // Design model weighs transferred bytes and nothing else, so every figure
+    // here says "transfer", and the browser voice is "0 KB transferred",
+    // never "0 g": free of network, not free. Its grams per MB are the
+    // badge's (mks.carbon), never a copy.
     // ---------------------------------------------------------------
+    const { gramsPerMB } = mks.carbon;
     const TRANSFER_NOTE =
-        'Estimated network-transfer emissions only (Sustainable Web Design model: 0.36 g CO₂e per MB). ' +
+        `Estimated network-transfer emissions only (Sustainable Web Design model: ${gramsPerMB} g CO₂e per MB). ` +
         'The energy your device spends synthesising, decoding and playing the audio is real and is not included.';
 
     const kb = bytes => Math.round(bytes / 1024);
-    const gramsOf = t => (typeof t.grams === 'number' ? t.grams : (t.bytes / (1024 * 1024)) * 0.36);
+    const gramsOf = t => (typeof t.grams === 'number' ? t.grams : t.bytes / 1048576 * gramsPerMB);
 
     const weightLabel = (id) => {
         const t = id === 'intro' ? introTrack() : null;

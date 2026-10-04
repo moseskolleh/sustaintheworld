@@ -29,10 +29,10 @@ dt{color:#9fe870;margin-top:1em}
 dd{margin:0 0 .4em 2ch}
 ul{padding-left:3ch}
 .dim{opacity:.65}
-@media (prefers-color-scheme:light){
+@media (prefers-color-scheme:light),print{
 body{background:#fdfdfb;color:#2a332a}
 .dim{opacity:1;color:#555d55}
-a{color:#1e7a1e}h1,h2{color:#1e7a1e}dt{color:#256e25}
+a,h1,h2{color:#1e7a1e}dt{color:#256e25}
 hr{border-top-color:#ccc}}
 </style>
 <script defer src="count.js"></script>
@@ -45,20 +45,19 @@ hr{border-top-color:#ccc}}
 <h1>FIELD REPORT — MOSES KOLLEH SESAY</h1>
 <p class="dim">Sustainability &amp; Climate Analyst · Amsterdam, NL (52.3676° N, 4.9041° E)<br>
 This is the text-only edition of <a href="index.html">the full site</a> —
-same content, a few kilobytes, no images, and no JavaScript except a small visit counter. Every gram of CO&#8322;e counted.</p>
+its record in a few kilobytes, no images, and no JavaScript except a small visit counter.</p>
 
 <h2>Who</h2>
 <p>Geologist by training, sustainability analyst by conviction. I've drilled for water in
 Sierra Leone, modelled river pollution for the world's coasts, supported the UN's
-disaster-risk work — and now I'm teaching AI to tread lightly on the planet. Dual
-master's degrees (Environmental Sciences, Wageningen; Industrial Engineering, Hunan),
-BSc Geology first class. Water, climate, and the data that connects them.</p>
+disaster-risk work — and now I'm teaching AI to tread lightly on the planet. Water,
+climate, and the data that connects them.</p>
 
-<h2>The journey</h2>
+<h2 id="journey">The journey</h2>
 <dl>
 <dt>2013–2019 · Freetown, Sierra Leone · 8.4657° N, 13.2317° W</dt>
-<dd>BSc Geology (first class, top of class). Led drilling crews: 164 water points —
-100 hand-dug wells rehabilitated, 50 boreholes constructed, 14 solar-powered boreholes.</dd>
+<dd>BSc Geology (first class, top of class). Led drilling crews: <span data-claim="water-points">164</span> water points —
+<span data-claim="wells-rehabilitated">100</span> hand-dug wells rehabilitated, <span data-claim="boreholes-constructed">50</span> boreholes constructed, <span data-claim="solar-boreholes">14</span> solar-powered boreholes.</dd>
 <dt>2019–2021 · Changsha, China · 28.2282° N, 112.9388° E</dt>
 <dd>MSc Industrial Engineering, Hunan University, full MOFCOM scholarship. Thesis:
 soft-path water management — thinking beyond cement, steel and pipes.</dd>
@@ -66,14 +65,14 @@ soft-path water management — thinking beyond cement, steel and pipes.</dd>
 <dd>Climate Change Adaptation Intern, UN Office for Disaster Risk Reduction (UNDRR).</dd>
 <dt>2021–2024 · Wageningen, Netherlands · 51.9692° N, 5.6654° E</dt>
 <dd>MSc Environmental Sciences (Water Systems &amp; Global Change), Wageningen African
-Scholarship Programme. Modelled river export of pollutants across 10,226 sub-basins
+Scholarship Programme. Modelled river export of pollutants across <span data-claim="sub-basins">10,226</span> sub-basins
 worldwide; fieldwork consultancy in Wuppertal, DE.</dd>
 <dt>2025–now · Amsterdam, Netherlands · 52.3676° N, 4.9041° E</dt>
 <dd>Researcher, Sustainable AI — Digital Society School (AUAS), partnered with the Dutch
 Ministry of Finance.</dd>
 </dl>
 
-<h2>Experience log</h2>
+<h2 id="log">Experience log</h2>
 <dl>
 <dt>Researcher, Sustainable AI — Digital Society School, Amsterdam · Sep 2025–now</dt>
 <dd>Framework + working prototype weighing the benefits of generative AI against its
@@ -82,44 +81,47 @@ footprints of AI workloads — electricity, hardware, data-centre water — agai
 CSRD/ESRS disclosure logic. Decision-support tool for managers and everyday users.
 Anchored in UN SDG 12 and 13.</dd>
 <dt>Sustainability Consulting Accelerator (Cohort 7) — OnePointFive · 2025</dt>
-<dd>Eight-week net-zero intensive: Scope 1–3 GHG inventories, materiality assessments,
+<dd><span data-claim="programme-weeks">Eight</span>-week net-zero intensive: Scope 1–3 GHG inventories, materiality assessments,
 transition plans. SBTi, CDP, GHG Protocol, ISO 14000, IFRS S1/S2, TCFD, TNFD.</dd>
 <dt>Climate Change Adaptation Intern — UNDRR, Bonn · Jun–Oct 2023</dt>
 <dd>Audited Caribbean disaster-loss data feeding the Sendai Framework Monitor. Documented
-54 global hazard information systems (+25% regional and hazard-type coverage). Wrote the
+<span data-claim="hazard-systems">54</span> global hazard information systems (+<span data-claim="coverage-gain">25%</span> regional and hazard-type coverage). Wrote the
 disaster &amp; climate-risk factsheet for Trinidad and Tobago, produced for national
 policy use.</dd>
 <dt>Field Operations Manager — Team &amp; Team International, Freetown · 2019</dt>
-<dd>14 solar-powered boreholes with storage tanks. 70% aquifer-detection rate with
+<dd><span data-claim="solar-boreholes">14</span> solar-powered boreholes with storage tanks. <span data-claim="strike-rate">70%</span> aquifer-detection rate with
 electrical-resistivity surveys and pumping tests. Streamlined borehole design (Excel +
 QGIS).</dd>
 <dt>Operations Supervisor — Sierra Drilling &amp; Water Supply, Freetown · 2018–2019</dt>
-<dd>Managed a drilling team of 23. 50 boreholes constructed, 100 hand-dug
+<dd>Managed a drilling team of <span data-claim="team-size">23</span>. <span data-claim="boreholes-constructed">50</span> boreholes constructed, <span data-claim="wells-rehabilitated">100</span> hand-dug
 wells rehabilitated.</dd>
 </dl>
 
-<h2>Projects</h2>
+<h2 id="projects">Projects</h2>
 <dl>
 <dt>[1] Sustainable Generative AI · Amsterdam, 2025–now</dt>
 <dd>How can an organisation use generative AI and still keep its climate promises? A
 decision framework and prototype for the Dutch Ministry of Finance.</dd>
-<dt>[2] Coastal Water Pollution · Wageningen, 2023–2024</dt>
-<dd>MARINA-Multi model across 10,226 river sub-basins worldwide; socioeconomic drivers of
+<dt>[2] GAIA — Green AI Assessment · open source, 2025–2026</dt>
+<dd>Method and tooling that put AI's footprint on a sustainability report's lines,
+uncertainty included.</dd>
+<dt>[3] Coastal Water Pollution · Wageningen, 2023–2024</dt>
+<dd>MARINA-Multi model across <span data-claim="sub-basins">10,226</span> river sub-basins worldwide; socioeconomic drivers of
 pollution; future storylines for Africa's coastal waters — from "Clean Coast" to
 "Dirty Delta".</dd>
-<dt>[3] Flood-Resilient Wuppertal · Germany, 2023</dt>
-<dd>"Preventing the Schwebebahn from becoming a boat." In a six-person team, assessed
+<dt>[4] Flood-Resilient Wuppertal · Germany, 2023</dt>
+<dd>"Preventing the Schwebebahn from becoming a boat." In a <span data-claim="wuppertal-team">six</span>-person team, assessed
 flood risk to the city and its suspended railway after the catastrophic July 2021 flood;
 presented a climate-resilience roadmap to municipal stakeholders.</dd>
-<dt>[4] UN Disaster Risk Reduction · Bonn, 2023</dt>
+<dt>[5] UN Disaster Risk Reduction · Bonn, 2023</dt>
 <dd>Data integrity for the Sendai Framework Monitor and the Losses &amp; Damages Tracking
-System; 54 hazard information systems; Trinidad and Tobago factsheet.</dd>
-<dt>[5] Soft-Path Water Management · Changsha, 2020–2021</dt>
+System; <span data-claim="hazard-systems">54</span> hazard information systems; Trinidad and Tobago factsheet.</dd>
+<dt>[6] Soft-Path Water Management · Changsha, 2020–2021</dt>
 <dd>Water security beyond cement, steel and pipes: managing demand, capturing and
 reusing water close to where it's used, community stewardship. Freetown as case study.</dd>
-<dt>[6] Groundwater Potential Mapping · Freetown, 2016–2017</dt>
+<dt>[7] Groundwater Potential Mapping · Freetown, 2016–2017</dt>
 <dd>Electrical-resistivity surveys and GIS potential maps in the Freetown Complex's hard
-gabbro. Validated in the field: a 70% strike rate, from field records rather than a
+gabbro. Validated in the field: a <span data-claim="strike-rate">70%</span> strike rate, from field records rather than a
 controlled trial.</dd>
 </dl>
 
@@ -139,16 +141,19 @@ controlled trial.</dd>
 </ul>
 
 <h2>Toolkit</h2>
-<p>Python (pandas, NumPy) · SQL · R · QGIS/ArcGIS · GeoPandas · Tableau ·
+<p>Python (pandas, NumPy) · SQL · R · QGIS/ArcGIS · Tableau ·
 advanced Excel · GHG accounting (Scope 1–3) · LCA · materiality · CSRD/ESRS · GRI ·
 IFRS S1/S2 · TCFD · TNFD · SBTi · CDP · Sendai Framework · electrical-resistivity
 surveying · borehole siting &amp; design</p>
 
 <h2>Evidence</h2>
 <ul>
-<li><a href="case-studies.html">Case studies</a> — problem, method, artifact and result for each of the six projects, with the basis for every number</li>
-<li><a href="research.html">Research outputs</a> — theses, reports, datasets and code, and who holds the parts that are not public</li>
-<li><a href="carbon-ai.html">EcoPrompt Coach</a> — the AI footprint tool, with a full evidence ledger behind every factor</li>
+<li><a href="case-studies.html">Case studies</a> — problem, method, artifact, result and findings for seven case studies, with the basis for every number</li>
+<li><a href="research.html">Research outputs</a> — theses, reports, datasets and code, and who holds what is not public</li>
+<li><a href="carbon-ai.html">EcoPrompt Coach</a> — the AI footprint tool, with an evidence ledger behind every factor</li>
+<li><a href="claims.html">Check my numbers</a> — every number on this site, with its basis and whether you can check it</li>
+<li>Code on <a href="https://github.com/moseskolleh">GitHub</a> — WaterProject, GAIA-Framework-, climatematch-pipeline,
+A-B-Testing-at-Globox, SustainableAIPrototypes, promptcoach</li>
 </ul>
 
 <h2>Contact</h2>
@@ -159,10 +164,9 @@ surveying · borehole siting &amp; design</p>
 GitHub: <a href="https://github.com/moseskolleh">github.com/moseskolleh</a></p>
 
 <hr>
-<p class="dim">Why this page exists: the full site already ships a fraction of the median
-web page's weight and weighs each visit live in your browser. This edition takes the idea
-to its logical end — the whole portfolio, no images, a few kilobytes, and one small
-script whose only job is to count the visit, without cookies (<a href="stats.html">what it sends</a>).</p>
+<p class="dim">Why this page exists: the full site weighs each visit live in your browser;
+this edition takes the idea to its end. Its one script counts the visit, without cookies
+(<a href="stats.html">what it sends</a>).</p>
 </main>
 </body>
 </html>

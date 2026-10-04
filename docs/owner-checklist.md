@@ -5,23 +5,29 @@ state, evidence only he holds, a recording only he can make, and checks on
 accounts only he can open. It grows from the "What only Moses can supply" table
 in [docs/plan.md](plan.md) and from what each wave of work found. An item is
 ticked only once it can be seen to be done: in the repository, on the live
-site, or by Moses saying so. Nothing below is ticked yet.
+site, or by Moses saying so. One item is ticked, S7, because the repository
+shows it done; nothing else is yet.
 
 Each item says what is needed, where it goes, what it unlocks, and how to
 check it. A path such as `content/profile.json` → `experience[4].teamSize`
 means that file, then that field (lists count from 0). After editing anything
 in `content/`, run `npm run build:content` and then `npm test`.
 
-Last updated with wave 3 of the plan (Phase 2, the recruiter-first homepage,
-and Phase 6 step 8, the carbon receipt on every pull request), 2026-09-28.
-Wave 1 covered Phase 0 and the narration steps of Phases 2.5 and 4.3; wave 2
-covered Phase 1 (the visit counter and open counts) and Phase 6 steps 3, 6
-and 7. Waves 1 and 2 are on `main` (pull requests #48 and #49, the second
-merged 2026-09-27); wave 3 is the Phase 2 pull request S7 is about.
+Last updated with wave 4 of the plan (Phase 3, closing the proof gaps),
+2026-10-03. Wave 1 covered Phase 0 and the narration steps of Phases 2.5 and
+4.3; wave 2 covered Phase 1 (the visit counter and open counts) and Phase 6
+steps 3, 6 and 7; wave 3 covered Phase 2 (the recruiter-first homepage) and
+Phase 6 step 8. Waves 1 to 3 are on `main` (pull requests #48, #49 and #50,
+the last merged 2026-10-03). Wave 4 is in pull request #51 and
+not on `main` yet. Its items are in four groups headed "wave 4" below: the
+ESG case and the findings (G), your public repositories (R), the claims
+ledger (N), and the CV, the ministry's name, the certificates and the
+testimonials (D1–D3 and L1). It also adds to F5 (the "Present" role) and E1
+(the 30%).
 
-**Now that wave 2 is on `main`** (and so on the live site once GitHub Pages
-has rebuilt), run the one-line check at the top of S1, and if you can, do C2
-(publish the current `Code.gs`, which includes the visit counter). The
+**Now that waves 2 and 3 are on `main`** (and on the live site: GitHub Pages
+rebuilt from `main` on 2026-10-03), run the one-line check at the top of S1, and if you can,
+do C2 (publish the current `Code.gs`, which includes the visit counter). The
 site's visit counter, on every page since #49 was merged, posts to the same
 deployment as the contact form, and the 2025 versions of
 the script would record every page view as a message and email it to you; if
@@ -294,21 +300,17 @@ README under "The visit counter and privacy".
   - *Unlocks:* Phase 1 is done, and Phase 2 can be judged against real
     figures ("How to know it worked" in the plan).
 
-- [ ] **S7. Decide when the Phase 2 homepage redesign goes live.**
-  - *Why:* the baseline in S6 is a baseline of whichever homepage is live
-    while it is counted. To judge the redesign against the page it replaces,
-    the counter has to run on the current homepage for those four weeks
-    first. Nothing in the code holds the redesign back; merging its pull
-    request publishes it.
-  - *Options:* hold the Phase 2 pull request until S6 is recorded (the
-    comparison the plan asks for), or ship it sooner and judge it against
-    its own first four weeks (no before-and-after, but a baseline for every
-    later change).
-  - *Where:* your merge of the Phase 2 (Wave 3) pull request; note the choice
-    under Phase 1, step 5 in `docs/plan.md` → "Progress". `stats.html` says
-    only that the first four weeks are the baseline for every change after
-    them, which holds whichever you choose; it does not promise a
-    before-and-after.
+- [x] **S7. Decide when the Phase 2 homepage redesign goes live.**
+  - *Done:* pull request #50 merged the redesign into `main` on 2026-10-03,
+    six days after the counter reached `main` (#49, 2026-09-27), so before
+    four full weeks of the old homepage could have been counted. S6's
+    baseline is therefore the redesigned homepage's own first four weeks:
+    Phase 2 is judged against those, with no before-and-after, and every
+    later change against them too. `stats.html` promises nothing more.
+  - *Why it mattered:* the baseline in S6 is a baseline of whichever
+    homepage is live while it is counted.
+  - *Left for you:* when you record S6, say in the plan's "Progress", under
+    Phase 1, step 5, that the four weeks are of the redesigned homepage.
   - *Check:* the figures in `docs/plan.md` match `content/stats.json` →
     `weeks` for the same four weeks.
 
@@ -390,7 +392,7 @@ limits allow.
       for it. That addition is the site's wording, not yours yet: confirm
       it, or correct it. The same words open the hero's "Open to …" line
       and the closing call to action on the case studies, research, open
-      counts and AI, Weighed pages ("Open to …: write to me at …"). The
+      counts and EcoPrompt Coach pages ("Open to …: write to me at …"). The
       homepage's Contact section says the same in its own words, written
       by hand in `index.html` ("Open to roles & consulting in
       sustainability, climate risk, ESG and sustainable AI"), and so does
@@ -427,13 +429,40 @@ limits allow.
     experience": the gap row lists exactly the roles you count, and "Not
     counted" names the rest.
 
-- [ ] **F5. Is the Digital Society School role still current?** (Phase 3.10)
-  - *Where:* `content/profile.json` → `meta.verifiedOn` (now `2026-08-05`).
-    Set it to the day you confirm; if the role has ended, give its end month
-    for `currentRole` and `experience[0]`.
+- [ ] **F5. Is the Digital Society School role still current?** (Phase 3.10;
+  wave 4 made it matter more)
+  - *Why ask:* the site says "Present", and the public record has gone
+    quiet. The `SustainableAIPrototypes` repository, whose README is titled
+    for the Ministry of Finance initiative, was last changed on 2025-11-26.
+    The `promptcoach` README says the "original prototype [was] developed
+    at the Digital Society School with Ministry of Finance (NL) partners",
+    and its `docs/legacy/` holds the EcoPrompt Coach handover document,
+    dated January 2026. A handover reads like an ending; only you can say.
+  - *Where:* `content/profile.json` → `meta.confirmedOn` (now `null`) and
+    `meta.verifiedOn` (now `2026-08-05`). Set both to the day you confirm.
+    `confirmedOn` is yours alone: it is your word that the facts still
+    hold, and nobody else sets it. `verifiedOn` was set when this file was
+    written, not by you, so it is only the day the record is logged as of. If the role has ended, say when: its end
+    month goes in `currentRole` and `experience[0]`, and the pages that call
+    it current change with them, by hand, in one commit: "Sept 2025 —
+    Present" in `index.html`'s experience card, "Sep 2025–now" and
+    "2025–now" in `field-report.html`, and "At the surface, as last logged,
+    I'm a researcher…" in the experience script of `content/narration.json`
+    (the notice `npm test` prints names the same places).
+  - *Then:* `npm run build:content`, then `npm run cv`, and commit
+    `content/profile.json`, `index.html`, `assets/Moses_Kolleh_Sesay_CV.pdf`
+    and `assets/cv.hash` together. Since wave 4 the day you set is also the
+    surface of the core log: every layer's depth is measured from it, and
+    its head reads "LOGGED" and that month (today "LOGGED AUG 2026"). Once
+    `confirmedOn` is set, the CV ends "Facts last confirmed" and that day;
+    until then it makes no such claim (it used to print "Facts last
+    verified" and the logged day, which nobody had confirmed).
+    `tests/cv.test.js` fails until the CV is printed again.
   - *Unlocks:* the one open-ended fact on the site stays true. `npm test`
-    prints a notice once `verifiedOn` is more than six months old.
-  - *Check:* `npm test` prints no staleness notice.
+    prints a notice once `verifiedOn` is more than six months old (from
+    early February 2027 as it stands).
+  - *Check:* `npm test` passes and prints no staleness notice; the core
+    log's head shows the month you set.
 
 ---
 
@@ -441,13 +470,17 @@ limits allow.
 
 - [ ] **E1. A source for the ~30% blind-siting strike rate** (Freetown hard-rock geology).
   - *What:* whose records, how many boreholes, when.
-  - *Where:* `content/projects.json` → the `groundwater` case study →
-    `results[0].basis`, which today says no source is recorded.
+  - *Where:* `content/claims.json` → the `blind-siting` entry, whose basis
+    is `illustrative` and checkability `not-checkable` since wave 4 (it says
+    no source is recorded): give it a `source` basis with the reference, and
+    a URL if there is one. `content/projects.json` → the `groundwater` case
+    study → `results[0].basis` says the same and changes with it.
   - *Unlocks:* the "illustrative — not a measured figure" labels on the Seven
     in Ten widget (the borehole game and its scoreboard, on the groundwater
     case study; its copy is `WIDGET_HOSTS.borehole` in
-    `scripts/build-content.js`) can be replaced by the basis. Without one, the
-    labels stay (`tests/widgets.test.js` requires them).
+    `scripts/build-content.js`) can be replaced by the basis, and
+    `claims.html` lists the 30% as sourced. Without one, the labels stay
+    (`tests/widgets.test.js` requires them).
   - *Check:* the basis names the source; the labels are changed in the same
     commit, and `npm test` passes.
 
@@ -554,7 +587,8 @@ already on the site; confirm it or give the right value.
 *Check for K1, K2, K4 and K6:* change the value in `content/`, run
 `npm run build:content`, and `npm test` names every page that still disagrees.
 K3 has no test behind it: the field report and the case study's `role` and
-`method[0]` are changed together, by hand.
+`method[0]` are changed together, by hand. K1's and K2's figures are also in
+the claims ledger since wave 4; N1 and N2 ask for the evidence behind them.
 
 ---
 
@@ -585,13 +619,230 @@ anything.
     `npm run build:content`.
   - *Cost:* open, the six rows make `case-studies.html` about 940px longer
     than folded at 1440×900 (1,288px against 348px), about a screen, which
-    takes it past its length ceiling (11.28 screens measured, 11.85 allowed),
+    takes it past its length ceiling (11.55 screens measured with wave 4's
+    seventh case study and findings, 11.85 allowed),
     and a reader who only scrolls would fetch up to 2.2 MB of photos.
     Something of equal length would have to come off the page first, since
     ceilings are not raised.
   - *Check:* nothing to check while they stay folded. Opened, each case
     study shows its photos without a press, and `npm run smoke` passes its
     length check once something of equal length has gone.
+
+---
+
+## Confirm the ESG case and the findings (Phase 3.2 and 3.3, wave 4)
+
+Wave 4 added a seventh case study, GAIA, behind a new ESG & CSRD lens, and
+a "Findings & recommendations" stage to every case study. Each sentence is
+drawn from the GAIA repository or from what the site already said.
+
+- [ ] **G1. GAIA and the ministry's framework.**
+  - *What:* the sustainable-AI case study lists its "Sustainability
+    assessment framework for AI use cases" as held by the client ("not mine
+    to publish unilaterally"); GAIA, public under your own MIT licence,
+    answers a related question. The GAIA case names no partner and does
+    not say where GAIA began. Confirm GAIA is yours to publish, and whether
+    it is that framework; if it is, the sustainable-AI artifact should say
+    so rather than "held by the client".
+  - *Where:* `content/projects.json` → `gaia` and `sustainable-ai` →
+    `artifacts`.
+  - *Why it matters:* the notes this wave worked from say GAIA began as
+    "Prototype E" in the prototype deck of the Digital Society School's
+    ministry project, so a reader who knows both could take the public one
+    for the held one. When the lanes merged,
+    GAIA was taken off the sustainable-AI case study's artifacts and kept
+    only on its own case, so that case no longer implies the answer.
+  - *Also:* whether the ministry may be named at all is D2.
+- [ ] **G2. The GAIA case's own facts.** Your role ("Author and
+  maintainer"), its period ("2025 — 2026"), and that the web estimator at
+  moseskolleh.github.io/GAIA-Framework-/ is live (it could not be reached
+  from where this was built). `content/projects.json` → `gaia`.
+- [ ] **G3. The findings.** Confirm each, and say more where you can. The
+  plan names three that the site does not yet state:
+  - which socioeconomic drivers dominated in the coastal thesis (and their
+    effect sizes, if the thesis can be cited). Today the coastal finding says
+    only that the thesis sets them out;
+  - which interventions the Wuppertal report recommended (if the
+    municipality agrees). Today the Wuppertal case has no recommendation:
+    one that named no measure came off;
+  - the decision criteria the sustainable-AI framework gives the ministry,
+    if the framework, which the client holds, may be quoted and the ministry
+    may be named (D2). Today the case gives the five design principles
+    instead.
+  `content/projects.json` → `caseStudies[i].findings`; one to four each,
+  and `npm test` refuses a figure without a basis.
+- [ ] **G4. The method, folded.** Each case study's method now opens on a
+  press ("02 Method, four steps"), to make room for the findings and the
+  seventh case under the page's length ceiling. Open, the seven methods add
+  about 3.3 screens on a phone and 1.2 on a desktop, past the ceiling, so
+  something of equal length would have to come off first. For the same
+  reason the page's closing note, "Why it is laid out like this", keeps its
+  heading and folds its two paragraphs. Today the page is 11.55 screens at
+  1440×900 and 19.67 at 390×844, against ceilings of 11.85 and 19.78.
+  - *Where:* to show the methods open, `renderCaseStudies` in
+    `scripts/build-content.js`; then `npm run build:content`, and
+    `npm run smoke` says whether the page still fits.
+
+---
+
+## Your public repositories, as the site shows them (Phase 3.1 and 3.4, wave 4)
+
+Wave 4 put your six public repositories on the site, each described only as
+far as the repository itself shows: WaterProject, GAIA-Framework-,
+climatematch-pipeline, A-B-Testing-at-Globox, SustainableAIPrototypes and
+promptcoach (`content/research.json`, and as artifacts in
+`content/projects.json`). The homepage toolkit's proof links point at them.
+The coach has one name, EcoPrompt Coach, and the site links its maintained
+app as the canonical tool. These are the questions only you can answer.
+
+- [ ] **R1. WaterProject names third-party clients.** Its examples name a
+  private client and three organisations it worked for or with, in
+  `examples/README.md` and the example scripts beside it. The site names
+  none of them, and this checklist does not either: the repository is
+  where to look.
+  - *What:* decide whether the public repository should keep those names.
+    This is a change in WaterProject, not in this site.
+  - *Unlocks:* nothing on this site waits for it; it is the same consent
+    question as D2, asked of another repository.
+  - *Check:* a search of the WaterProject repository for the client and
+    organisation names in `examples/` finds only what you have agreed to.
+- [ ] **R2. The SQL label, "PostgreSQL · MySQL".** The homepage's toolkit
+  labels SQL that way, but its proof, the GloBox A/B test, is plain SQL that
+  shows neither.
+  - *Where:* `index.html`, the toolkit's SQL row
+    (`<span class="toolkit-sub">PostgreSQL · MySQL</span>`). Confirm the
+    label, or drop it (the line then reads "SQL" alone), or point the proof
+    at public work that uses them.
+  - *Check:* `npm test` passes; the CV prints the toolkit from the
+    homepage, so run `npm run cv` after changing it.
+- [ ] **R3. A public machine-learning project, if there is one.** Machine
+  learning's proof says "Google Advanced Data Analytics certificate; no
+  public project yet" and links nowhere.
+  - *What:* a public notebook or repository of yours that shows it.
+  - *Where:* a new public output in `content/research.json` (a `github.com`
+    URL is already trusted), then the toolkit's machine-learning row in
+    `index.html` becomes a link to it, as the others are; the skills
+    narration in `content/narration.json` says "no public project yet" and
+    changes with it. R7 asks the same of GIS.
+  - *Check:* `npm test` passes; `npm run cv` again.
+- [ ] **R4. Is the Tableau Public dashboard still live?** Tableau's only
+  evidence is the GloBox README's link to it
+  (`public.tableau.com/views/Data_Sprint_MasterSchool_Project/...`). The
+  site links the repository, and says the README links a dashboard.
+  - *Check:* open the link in the GloBox README. If it is gone, Tableau's
+    proof has nothing behind it: say so, and the row is reworded or
+    dropped.
+- [ ] **R5. Are the apps the site points to live?**
+  - *The EcoPrompt Coach app,* <https://moseskolleh.github.io/promptcoach/>:
+    `carbon-ai.html` and the homepage's section 05 link it directly, as the
+    maintained version. It could not be reached from where this was built.
+  - *WaterProject's standalone web app:* its README says GitHub Pages has
+    to be pointed at its `docs/` folder once, so the site says only "the
+    repo links a browser app" and links the repository, not the app. If it
+    is live, say so; linking the Streamlit app
+    (`waterproject.streamlit.app`) as well would need its host added to
+    `TRUSTED_HOSTS` in `scripts/lib/content.js`.
+  - *GAIA's web estimator* is G2.
+  - *Check:* each address opens the app.
+- [ ] **R6. A licence for climatematch-pipeline** (your choice). It has no
+  licence file, and its entry in `content/research.json` says so ("code on
+  GitHub, with no licence file").
+  - *Where:* a `LICENSE` file in that repository; then that `note` in
+    `content/research.json` drops the words, and `npm run build:content`.
+  - *Check:* `research.html` no longer says it has none.
+- [ ] **R7. Public GIS work, if there is any.** The toolkit's QGIS & ArcGIS
+  row links the groundwater case study and says "on request; no public GIS
+  project yet": its maps are on request, and WaterProject, the case study's
+  one public repository, shows no QGIS or ArcGIS work (it mentions them
+  only as a planned import in `docs/geolibre_integration.md`).
+  - *What:* a public map, project file or repository of yours that shows
+    QGIS or ArcGIS work, or permission to publish one of the groundwater
+    maps.
+  - *Where:* a public artifact on the groundwater case study in
+    `content/projects.json` whose name or note says it is QGIS or ArcGIS
+    work (or a new output in `content/research.json`); then the row in
+    `index.html` drops "on request; no public GIS project yet", and the
+    skills narration in `content/narration.json` with it.
+  - *Check:* `npm test` passes (`tests/content.test.js` accepts a case
+    study as a proof only when a public artifact of it names the tool);
+    `npm run cv` again.
+
+---
+
+## The claims ledger: figures only you can evidence (Phase 3.6, wave 4)
+
+`content/claims.json` now holds every figure the site prints, with its one
+basis and whether a reader can check it: public (with where), on request, or
+not checkable from outside. [`claims.html`](../claims.html), "Check my
+numbers", lists them all. Some of those labels are promises only you can
+keep, and some figures could move to "public" with a link only you have.
+
+- [ ] **N1. Will you send the evidence for the four "on request" figures?**
+  The two master's degrees, the three continents, the four countries and the
+  Wageningen GPA of 7.8/10 (K1) are marked on request, on the understanding
+  that you will send the degree certificates and the transcript when a
+  reader asks. For Germany, one of the four countries, the evidence is the
+  UNDRR internship, as you record it, not a degree: say if you hold a
+  document for it.
+  - *Where:* `content/claims.json` → the `masters-degrees`, `continents`,
+    `countries` and `wur-grade` entries → `checkable`. If you would not send
+    them, each becomes `not-checkable`.
+  - *Check:* `npm test` passes, and `claims.html` lists each where it
+    belongs.
+- [ ] **N2. A link or a document for the figures nobody can check.** These
+  are labelled not checkable from outside today:
+  - the team of 23 at Sierra Drilling and the 8-week OnePointFive programme
+    (K2): `content/claims.json` → `team-size` and `programme-weeks`;
+  - the six people in the Wuppertal consultancy team and the five months
+    with UNDRR, which the site writes in words and which are entries now:
+    `wuppertal-team` (from `education[0].consultancyTeamSize` in
+    `content/profile.json`) and `undrr-months` (counted from the
+    internship's dates; the build fails if the two disagree). Confirm both;
+  - the 164 water points (100 wells rehabilitated, 50 boreholes, 14 solar)
+    and the 70% strike rate, from the field records: these are the
+    groundwater case study's results, so their checkability is set there,
+    in `content/projects.json` → `groundwater` → `results[i].verifiable`
+    (true or false), and the ledger follows it.
+  - *What:* a public link, or a document you will send on request.
+  - *Unlocks:* the team size and the programme's length move to "public"
+    with the link, or to "on request". A result has only two states: with a
+    public link its `verifiable` becomes `true` and its `check` holds the
+    link (the build refuses a result called checkable with no `check` and no
+    public work in its case study); records you would send on request can
+    be named in its `basis`,
+    but it stays "not checkable from outside" unless results are given an
+    on-request state (a small change to `scripts/lib/content.js`; say if
+    you want it).
+  - *Check:* `npm test` passes; `claims.html` shows the new label.
+- [ ] **N3. The footer's "~22 MB".** The homepage footer now says "Before
+  this redesign, this page loaded ~22 MB of images on arrival". It said
+  "~25 MB", which no record supported; 22 MB is the four hero photos and
+  the profile photo as they were at commit `3d7ab78`
+  (`content/claims.json` → `old-images`).
+  - *What:* confirm the corrected line, or say what the 25 came from.
+  - *Check:* nothing to change if you confirm it.
+- [ ] **N4. Two results that were labelled checkable, with nowhere to
+  check them.** The coastal case's "10,226 sub-basins modelled" and the
+  soft-path case's "Successfully defended at Hunan University, May 2021"
+  said "Checkable from outside" on the homepage cards, the case studies,
+  the CV and in the narration, while the site cited no source for the
+  count, and `claims.html` filed the same degree certificate under "on
+  request". Both now say "not checkable from outside".
+  - *What:* for the count, open Wageningen University's MARINA page,
+    `https://www.wur.nl/en/research/products-services/marina-model-assess-river-inputs-pollutants-seas`.
+    A web search shows it saying the model "is applicable for 10,226
+    sub-basins of the world", but nobody building the site could open it.
+    If it says so, it is the place to check the figure. For the degree, an
+    outside route to verify it, if you have one (an online verification
+    report from China's degree authority, for example).
+  - *Where:* `content/projects.json` → `coastal` or `water-management` →
+    `results[0]`: add `"check": "<the address>"` and set `verifiable` to
+    `true`; add the host to `TRUSTED_HOSTS` in `scripts/lib/content.js`,
+    with a line saying you opened it. Then `npm run build:content` and
+    `npm run cv`, and in `content/narration.json` the projects script's
+    "You cannot check that…" line for it.
+  - *Check:* `npm test` passes; the card says "Checkable from outside", and
+    `claims.html` links the address.
 
 ---
 
@@ -631,26 +882,114 @@ anything.
 
 ---
 
-## Documents
+## The CV, consent, certificates and testimonials (Phase 3.5, 3.7 and 3.8, wave 4)
 
-- [ ] **D1. Update or regenerate the CV PDF.**
-  - *Why:* `assets/Moses_Kolleh_Sesay_CV.pdf` was made on 2025-11-17. It still
-    says "10,000+ beneficiaries", "95% project completion rate", "efficiency
-    by 15%" and "directly informing national policy", all of which the site
-    removed or restated in wave 1 (see E2, E3, E5).
-  - *Where:* replace the file at the same path (`content/profile.json` →
-    `links.cv` points at it). Phase 3.7 will generate it from `content/`
-    instead.
-  - *Check:* the PDF carries none of those four phrases unless E2, E3 or E5
-    has given it a basis.
+- [ ] **D1. Read the generated CV, and say what it should add.**
+  - *Why:* the CV made on 2025-11-17 still said "10,000+ beneficiaries", "95%
+    project completion rate", "efficiency by 15%", "3+ years" and Power BI.
+    Since wave 4, `npm run cv` prints `assets/Moses_Kolleh_Sesay_CV.pdf` from
+    `content/` and the homepage, so it says only what the site says, and the
+    tests fail if it falls behind. Two things on the old one are not on it:
+    the Ministry of Finance as the partner (D2), and the relevant courses
+    under each degree, which the site does not list. Your phone number is on
+    it, because the homepage's contact card publishes it; it is
+    `person.phone` in `content/profile.json`, and a test holds the homepage
+    to it.
+  - *Where:* anything you want on it goes on the site first (`content/profile.json`
+    or the homepage), then `npm run cv`. If you would rather not publish the
+    phone number, take it off both: the contact card in `index.html` and
+    `person.phone`.
+  - *Check:* `npm test` passes (`tests/cv.test.js`), and the PDF reads as you
+    would want a recruiter to read it.
+- [ ] **D2. May the site and the CV name the Ministry of Finance as the partner?**
+  - *Why:* the plan says partner names stay out without their consent, and
+    the site has named the ministry since before this plan. The old CV did
+    too. The new CV leaves it off until you confirm the ministry has agreed
+    to be named, and wave 4 added no new mention anywhere on the site.
+  - *Where it is named today:*
+    - `carbon-ai.html`'s hero tag, "DIGITAL SOCIETY SCHOOL · MINISTRY OF
+      FINANCE (NL)";
+    - the sustainable-AI case study: `content/projects.json` →
+      `sustainable-ai` → `partner`, and its held framework's `heldBy`
+      ("Digital Society School / Ministry of Finance"), on
+      `case-studies.html`;
+    - `content/lenses.json` → the `sustainable-ai` lens's first evidence
+      line;
+    - `content/profile.json` → `currentRole.partner`, and on the homepage
+      (`index.html`, written by hand) the journey's Amsterdam stop, Field
+      Note 03 and the experience card's "Partner" line;
+    - the narration's introduction and experience scripts
+      (`content/narration.json`);
+    - the field terminal's projects list (`modules/terminal.js`) and the
+      Assay's evidence line (`modules/interactives.js`);
+    - three times in `field-report.html`.
+  - *Off the site:* the `SustainableAIPrototypes` repository's README is
+    titled "Ministry of Finance - Sustainable AI Initiative", and the
+    `promptcoach` README names "Ministry of Finance (NL) partners"; the site
+    now links both.
+  - *Where:* tell us yes or no. Yes: the CV can name it, from
+    `currentRole.partner`, and the two checks in `tests/cv.test.js` that
+    keep it off the CV go. No: every mention above comes off in one commit
+    ("a ministry", or the Digital Society School alone), and the two
+    READMEs are yours to change.
+- [ ] **D3. A verification link for each certificate** (Phase 3.8).
+  - *Why:* four certificates are listed with nothing a reader can check them
+    against. Each can link the issuer's own page for it, on the homepage and
+    the CV, as "Verify".
+  - *Where:* `content/profile.json` → `certifications[i].verifyUrl`, one https
+    address each, then `npm run build:content && npm run cv`. Leave the field
+    out where there is none (never `null` or "TBC"; the build refuses them).
+    - `certifications[0]`, ESG Specialist Program (Corporate Finance
+      Institute): its page on `credentials.corporatefinanceinstitute.com`,
+      already accepted.
+    - `certifications[1]`, Google Advanced Data Analytics (Coursera):
+      `coursera.org/verify/...` or `coursera.org/account/accomplishments/...`,
+      already accepted.
+    - `certifications[2]`, Data Analytics Training (Masterschool), and
+      `certifications[3]`, Synergizing DRR & Climate Change Adaptation (UN
+      System Staff College): their hosts are not known yet. Send the link,
+      and its host is added to `VERIFY_HOSTS` and `TRUSTED_HOSTS` in
+      `scripts/lib/content.js` once someone has opened it.
+  - *Check:* `npm test` passes, and each Verify link opens the certificate.
+- [ ] **L1. Two or three testimonials, with permission** (Phase 3.5; its
+  number is from when it was listed under later phases).
+  - *What:* two or three people you have worked with, each agreeing to be
+    quoted, with an excerpt of at most 200 characters.
+  - *Where:* `content/testimonials.json` → `testimonials`, one entry each
+    (the file's comment gives the shape):
+    - `quote`: the excerpt, at most 200 characters;
+    - `name`, and `role`: theirs, as they would want it shown;
+    - `relationship`: how they know your work ("managed me at …");
+    - `source`: either `{ "type": "linkedin", "url": "…" }`, their
+      recommendation's address on linkedin.com: the recommendations page
+      of your profile, `https://www.linkedin.com/in/<you>/details/recommendations/`,
+      where the quote is shown (a bare profile address is refused), or
+      `{ "type": "on-request", "permissionDate": "YYYY-MM-DD" }`, the day
+      they agreed, if it is not public and you will put a reader in touch.
+    Then `npm run build:content`.
+  - *Unlocks:* the testimonials block under the core log on the homepage.
+    Until there is one entry it shows nothing at all. The build refuses a
+    quote without a source, a fourth entry or a quote over 200 characters,
+    and one that states a figure the claims ledger does not hold as the
+    quote writes it: "164 water points" is fine, and is marked like any
+    other; "a team of 23" needs a form, `"team of 23"`, on the team-size
+    entry in `content/claims.json` (the build names the figure).
+  - *Room:* none yet, at full length. The homepage is 9.42 of 9.79 screens
+    at 1440×900 and 16.49 of 17.09 at 390×844. Measured on this branch when
+    it was 16.46 on a phone, with stand-in quotes of 200 characters, one
+    takes it to 9.80 on a desktop,
+    just over (on a phone, 16.86, within), and two to 9.80 and 17.18, over
+    both. So before the first goes in, about a hundredth of a desktop screen
+    has to come off the homepage, and for two, about a tenth of
+    a phone screen as well; shorter quotes cost less. `npm run smoke`
+    measures it and fails a page over its ceiling, which only moves down.
+  - *Check:* `npm test` passes and the homepage shows each quote with who
+    said it and where to check it.
 
 ---
 
 ## Later phases
 
-- [ ] **L1. Two or three testimonials, with permission** (Phase 3.5). Each
-  with a LinkedIn recommendation URL, or "on request" and the date permission
-  was given; they go in `content/testimonials.json`, which Phase 3.5 creates.
 - [ ] **L2. One Field Note a month** (Phase 5.2), starting with the six topics
   in the plan.
 - [ ] **L3. A custom domain, and a decision on `moseskolleh.github.io`**
