@@ -18,7 +18,7 @@ Last updated with wave 4 of the plan (Phase 3, closing the proof gaps),
 4.3; wave 2 covered Phase 1 (the visit counter and open counts) and Phase 6
 steps 3, 6 and 7; wave 3 covered Phase 2 (the recruiter-first homepage) and
 Phase 6 step 8. Waves 1 to 3 are on `main` (pull requests #48, #49 and #50,
-the last merged 2026-10-03). Wave 4 is on the branch `wave/w4-integrate` and
+the last merged 2026-10-03). Wave 4 is in pull request #51 and
 not on `main` yet. Its items are in four groups headed "wave 4" below: the
 ESG case and the findings (G), your public repositories (R), the claims
 ledger (N), and the CV, the ministry's name, the certificates and the

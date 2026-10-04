@@ -556,7 +556,7 @@ rule makes that cheap.
 ## Progress
 
 What the plan's branch implements so far, step by step, as it stands on
-`wave/w4-integrate`, checked against the code and the test runs on
+the branch of pull request #51 (wave 4), checked against the code and the test runs on
 2026-10-04 (`npm test`: 2,386 passing assertions in twenty-eight suites, the
 figure the runner prints at the end; `npm run smoke -- --require` in
 Chromium: passed, and its length check measured every page within its
@@ -565,9 +565,9 @@ by 2026-09-27, where CI's Chromium and Firefox smoke jobs passed), and so is
 wave 3 (Phase 2 and Phase 6 step 8; pull request #50, merged 2026-10-03,
 where all three CI jobs passed on its last run; GitHub Pages rebuilt from
 `main` the same day).
-Wave 4 (Phase 3) is on `wave/w4-integrate` and not on `main` yet; it starts
-from `628e542`, so `main`'s one later commit, `03c8c21` (the journey map's
-names measured by their glyphs, for Firefox), is not in it yet.
+Wave 4 (Phase 3) is in pull request #51 and not on `main` yet; it is built
+on `main` at `284ccd3`, so it carries `03c8c21` (the journey map's names
+measured by their glyphs, for Firefox).
 ✓ done · ◐ partial, with the reason · ✗ waiting on Moses. Everything
 Moses has to supply is listed, with where it goes, in
 [owner-checklist.md](owner-checklist.md).
@@ -776,7 +776,7 @@ screens at 1440×900 and 16.31 at 390×844, from 19.4 and 32.7 when this plan
 was written (18.78 and 32.18 when the wave began); `index.html` was 84 KB on
 disk (21 KB gzipped), from 134 KB; the homepage's first view was 275 KB over
 the wire, from 282 KB. After wave 4 it is 9.42 and 16.49 screens and 276 KB
-(283,035 bytes), within the same ceilings.
+(283,023 bytes), within the same ceilings.
 What the wave needs from Moses is in the owner checklist: F1–F3 (the
 strip's facts) and P1 and P2 (two choices to confirm); S7, when it went
 live, is done.
@@ -959,8 +959,8 @@ source of its own (`check`) or public work in its case study, and both say
 "not checkable from outside" until Moses supplies one (N4). So 3 of 15
 results across seven case studies are checkable today, each at a public
 repository, and 10 of 16 outputs are public, 4 of them this site's own
-pages. No ceiling was raised: the homepage's first view grew 943 bytes
-(282,092 → 283,035), past one rounding line and short of the next, and is
+pages. No ceiling was raised: the homepage's first view grew 949 bytes
+(282,074 → 283,023), past one rounding line and short of the next, and is
 quoted as 276 KB everywhere. 136 of those bytes are the light palette
 restated for print, since a reader printing from the dark theme got lime
 figures and pale-grey text on white paper; about 90 open what hides a
@@ -970,7 +970,7 @@ space; neither had a saving of the same size that kept the stylesheet's
 and the script's comments. The on-demand total paid for the narration
 player's shared constant by moving two comment blocks of
 `modules/dispatch.js` that restated the README to a pointer at it. `case-studies.html` grew most (106,779 →
-111,373 bytes, 243 under its ceiling once its inline script shipped
+111,490 bytes, 126 under its ceiling once its inline script shipped
 without its comment lines; 11.54 and 19.74 screens against 11.85 and
 19.78), and
 `research.html` is 8.97 screens on a phone against 8.99. `claims.html` is
