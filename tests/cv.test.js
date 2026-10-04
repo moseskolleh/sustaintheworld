@@ -75,6 +75,9 @@ function assert(cond, msg) {
         need('name', profile.person.name);
         need('title', profile.person.jobTitle);
         need('email', profile.person.email);
+        // The homepage's contact card publishes a phone number; the CV, which
+        // says what the site says, carries it too (owner checklist D1).
+        if (profile.person.phone) need('phone', profile.person.phone);
         need('site', bare(profile.links.site));
         need('LinkedIn', bare(profile.links.linkedin));
         need('GitHub', bare(profile.links.github));
@@ -129,7 +132,6 @@ function assert(cond, msg) {
             { re: /\d\+ years/i, why: 'years of experience is not a figure the site states' },
             { re: /certified across|highly sought|mastered/i, why: 'wording the site dropped' },
             { re: /advised the (?:UN|United Nations)/i, why: 'the UN role was an internship' },
-            { re: /\+\d[\d ]{7,}/, why: 'the site publishes no phone number' },
             { re: /Ministry of Finance|Ministerie/i, why: 'naming the partner on the CV waits on the owner (consent)' },
             { re: /Dr\.? Timbo|\bACF\b|Living Water International|WiNGiN|Matthijs|\bJop\b|Rezaei/i, why: 'a client or partner named in the repositories, not cleared' }
         ];
@@ -193,6 +195,11 @@ function assert(cond, msg) {
         assert(model.profile.length === 2 && model.skills.toolkit.length >= 6 && model.skills.toolkit.every(t => t.name && t.proof),
             'Model: the profile is the hero\'s two sentences, and every tool comes with its proof');
         assert(!JSON.stringify(model).includes(profile.currentRole.partner), 'Model: the partner is not named (owner checklist: consent)');
+        // The CV copies the homepage's words into its own order, Skills last,
+        // after the certificates: a proof that says where to look on the
+        // homepage ("certificate, below") points the wrong way on paper.
+        const pointing = model.skills.toolkit.filter(t => /\b(?:below|above)\b/i.test(t.proof)).map(t => `${t.name}: "${t.proof}"`);
+        assert(pointing.length === 0, `Model: no toolkit proof points up or down the page, which the CV orders differently (${pointing.join('; ') || 'none does'})`);
 
         // A role the homepage has no card for stops the build, rather than
         // printing a role with nothing under it.

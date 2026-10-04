@@ -61,15 +61,16 @@
         <header class="ca-hero">
             <div class="ca-hero-tag">EVERY NUMBER &middot; ITS BASIS &middot; CAN YOU CHECK IT</div>
             <h1>Check my <span class="ca-accent">numbers</span></h1>
-            <p>Every number on this site, with what it rests on, where it appears and whether you can check it without taking my word for it.</p>
+            <p>Every number on this site, in digits or in words, with what it rests on, where it appears and whether you can check it without taking my word for it.</p>
         </header>
 
         <section class="rs-intro">
             <p>
                 About my work or about the site itself, each number is here once, with every page it appears
-                on. The pages mark each one with its entry, and a test fails the build if a page prints a
-                number that is not here, or one that disagrees with its entry. What the narration says aloud
-                is held to the same list.
+                on, whether it is written in digits or in words. The pages mark each one with its entry, and a
+                test fails the build if a page prints a number that is not here, or one that disagrees with its
+                entry, in its text, a label or a photo&rsquo;s caption. The field terminal on the homepage is
+                held to the same list, and so is what the narration says aloud.
             </p>
         </section>
 
@@ -80,82 +81,102 @@
                 <li class="cl-item" id="claim-sub-basins">
                     <p class="cl-figure"><span class="cl-value" data-claim="sub-basins">10,226</span> river sub-basins modelled with the MARINA-Multi model</p>
                     <p class="cl-basis"><span class="mono-label">Basis</span> <a href="case-studies.html#coastal">Coastal Water Pollution Dynamics</a>, &ldquo;<span data-claim="sub-basins">10,226</span> sub-basins modelled&rdquo;: The sub-basin count of the MARINA-Multi model configuration used &mdash; a property of the model domain, not an estimate.</p>
-                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span>: <a href="case-studies.html#coastal">Case studies</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html#journey">Home</a> &middot; <a href="case-studies.html">Case studies</a> &middot; <a href="research.html#msc-wur">Research</a> &middot; <a href="field-report.html">Field report</a> &middot; the narration</span></p>
+                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span> <a href="case-studies.html#coastal">Case studies</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html#journey">Home</a> &middot; <a href="case-studies.html">Case studies</a> &middot; <a href="research.html#msc-wur">Research</a> &middot; <a href="field-report.html">Field report</a> &middot; the narration</span></p>
                 </li>
                 <li class="cl-item" id="claim-gaia-checks">
                     <p class="cl-figure"><span class="cl-value" data-claim="gaia-checks">3,984</span> cross-engine checks passing in GAIA: its workbook, web estimator and reference code giving the same answers</p>
-                    <p class="cl-basis"><span class="mono-label">Basis</span> <a href="case-studies.html#gaia">GAIA &mdash; Green AI Assessment</a>, &ldquo;The workbook, the web estimator and the reference code give the same answers: <span data-claim="gaia-checks">3,984</span> cross-engine checks pass&rdquo;: tests/test_engine.py, in the repository, runs the three on the same cases and fails if any disagrees; its roadmap records <span data-claim="gaia-checks">3,984</span> passing at version 2.2.0. An engineering fact, not a result for any organisation.</p>
-                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span>: <a href="case-studies.html#gaia">Case studies</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="case-studies.html#gaia">Case studies</a></span></p>
+                    <p class="cl-basis"><span class="mono-label">Basis</span> <a href="case-studies.html#gaia">GAIA &mdash; Green AI Assessment</a>, &ldquo;The workbook, the web estimator and the reference code give the same answers: <span data-claim="gaia-checks">3,984</span> cross-engine checks pass&rdquo;: tests/test_engine.py, in the repository, runs them on the same cases and fails if any disagrees; its roadmap records <span data-claim="gaia-checks">3,984</span> passing at version 2.2.0. An engineering fact, not a result for any organisation.</p>
+                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span> <a href="case-studies.html#gaia">Case studies</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="case-studies.html#gaia">Case studies</a></span></p>
+                </li>
+                <li class="cl-item" id="claim-design-principles">
+                    <p class="cl-figure"><span class="cl-value" data-claim="design-principles">5</span> design principles the sustainable-AI framework came down to, printed as cards</p>
+                    <p class="cl-basis"><span class="mono-label">Basis</span> <a href="assets/img/sustainable-ai-6.webp">The printed cards, photographed at the Digital Society School</a>. The framework itself is the client's and not public; the cards are in the photo, on the case study.</p>
+                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span> <a href="case-studies.html#sustainable-ai">Case studies</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="case-studies.html#sustainable-ai">Case studies</a></span></p>
                 </li>
                 <li class="cl-item" id="claim-first-view">
                     <p class="cl-figure"><span class="cl-value" data-claim="first-view">276</span> KB over the wire: the homepage's first view, fonts included</p>
                     <p class="cl-basis"><span class="mono-label">Basis</span> The budget &ldquo;First view of the homepage, over the wire (fonts included)&rdquo;, measured by <code>npm run budget</code> on every build. The build fails if the homepage outgrows its ceiling or a page quotes another figure, and a real browser checks the estimate in CI.</p>
-                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span>: <a href="https://github.com/moseskolleh/sustaintheworld#performance">github.com</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html">Home</a> &middot; <a href="case-studies.html">Case studies</a></span></p>
+                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span> <a href="https://github.com/moseskolleh/sustaintheworld#performance">github.com</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html">Home</a> &middot; <a href="case-studies.html">Case studies</a></span></p>
                 </li>
                 <li class="cl-item" id="claim-field-report-kb">
                     <p class="cl-figure"><span class="cl-value" data-claim="field-report-kb">10</span> KB: the text-only field report, as saved</p>
                     <p class="cl-basis"><span class="mono-label">Basis</span> The budget &ldquo;Text-only field report, the HTML file (the size the footer quotes)&rdquo;, measured by <code>npm run budget</code> on every build. The file as saved, uncompressed: the size a reader can check by saving the page.</p>
-                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span>: <a href="field-report.html">Field report</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html">Home</a> &middot; <a href="404.html">Page not found</a></span></p>
+                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span> <a href="field-report.html">Field report</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html">Home</a> &middot; <a href="404.html">Page not found</a></span></p>
                 </li>
                 <li class="cl-item" id="claim-field-report-carbon">
                     <p class="cl-figure"><span class="cl-value" data-claim="field-report-carbon">0.004</span> g CO₂e to send the field report, at the Sustainable Web Design figure</p>
-                    <p class="cl-basis"><span class="mono-label">Basis</span> The field report's size in MB times the grams of CO₂e per MB below, rounded to the nearest thousandth of a gram. From <a href="#claim-field-report-kb">KB: the text-only field report, as saved</a> and <a href="#claim-web-carbon">g CO₂e per MB transferred: the figure the footer's badge and receipt use</a>.</p>
-                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span>: <a href="field-report.html">Field report</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html">Home</a></span></p>
+                    <p class="cl-basis"><span class="mono-label">Basis</span> The field report's size in MB times the grams of CO₂e per MB below, rounded to the nearest thousandth of a gram. From <a href="#claim-field-report-kb"><span data-claim="field-report-kb">10</span> KB: the text-only field report, as saved</a> and <a href="#claim-web-carbon"><span data-claim="web-carbon">0.36</span> g CO₂e per MB transferred: the figure the footer's badge and receipt use</a>.</p>
+                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span> <a href="field-report.html">Field report</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html">Home</a></span></p>
                 </li>
                 <li class="cl-item" id="claim-old-images">
                     <p class="cl-figure"><span class="cl-value" data-claim="old-images">22</span> MB of images the homepage loaded on arrival before its redesign</p>
-                    <p class="cl-basis"><span class="mono-label">Basis</span> <a href="https://github.com/moseskolleh/sustaintheworld/tree/3d7ab78becfe366975e2e6eadafa244d41b420dc">This site's own history: the homepage and its photos at the last commit before they were converted to WebP</a>. The four hero photos and the profile photo, all fetched on arrival, summed from the files at that commit. With the photos it fetched only on a scroll, the page used nearly twice as much.</p>
-                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span>: <a href="https://github.com/moseskolleh/sustaintheworld/tree/3d7ab78becfe366975e2e6eadafa244d41b420dc">github.com</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html">Home</a></span></p>
+                    <p class="cl-basis"><span class="mono-label">Basis</span> <a href="https://github.com/moseskolleh/sustaintheworld/tree/3d7ab78becfe366975e2e6eadafa244d41b420dc">This site's own history: the homepage and its photos at the last commit before they were converted to WebP</a>. The hero photos and the profile photo, all fetched on arrival, summed from the files at that commit. With the photos it fetched only on a scroll, the page used nearly twice as much.</p>
+                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span> <a href="https://github.com/moseskolleh/sustaintheworld/tree/3d7ab78becfe366975e2e6eadafa244d41b420dc">github.com</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html">Home</a></span></p>
                 </li>
                 <li class="cl-item" id="claim-web-carbon">
                     <p class="cl-figure"><span class="cl-value" data-claim="web-carbon">0.36</span> g CO₂e per MB transferred: the figure the footer's badge and receipt use</p>
                     <p class="cl-basis"><span class="mono-label">Basis</span> Sustainable Web Design, &quot;Estimating Digital Emissions&quot; (model v3), at <a href="https://sustainablewebdesign.org/estimating-digital-emissions/">sustainablewebdesign.org</a>. <span class="cl-file">One of the calculator&rsquo;s inputs, in <code>ai-carbon-data.js</code>.</span></p>
-                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span>: <a href="https://sustainablewebdesign.org/estimating-digital-emissions/">sustainablewebdesign.org</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html">Home</a></span></p>
+                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span> <a href="https://sustainablewebdesign.org/estimating-digital-emissions/">sustainablewebdesign.org</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html">Home</a></span></p>
                 </li>
                 <li class="cl-item" id="claim-median-page">
                     <p class="cl-figure"><span class="cl-value" data-claim="median-page">2.5</span> MB: what the median web page ships, the footer's point of comparison</p>
                     <p class="cl-basis"><span class="mono-label">Basis</span> <a href="https://httparchive.org/reports/page-weight">HTTP Archive, page weight report</a>.</p>
-                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span>: <a href="https://httparchive.org/reports/page-weight">httparchive.org</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html">Home</a></span></p>
+                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span> <a href="https://httparchive.org/reports/page-weight">httparchive.org</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html">Home</a></span></p>
                 </li>
                 <li class="cl-item" id="claim-gaia-modelled">
                     <p class="cl-figure"><span class="cl-value" data-claim="gaia-modelled">117</span> of the current models in GAIA's database whose figures are modelled, not measured</p>
                     <p class="cl-basis"><span class="mono-label">Basis</span> <a href="https://github.com/moseskolleh/GAIA-Framework-/blob/main/ROADMAP.md">GAIA Framework's roadmap, section 0, “Where GAIA stands”, at version 2.2.0</a>.</p>
-                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span>: <a href="https://github.com/moseskolleh/GAIA-Framework-/blob/main/ROADMAP.md">github.com</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="case-studies.html#gaia">Case studies</a></span></p>
+                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span> <a href="https://github.com/moseskolleh/GAIA-Framework-/blob/main/ROADMAP.md">github.com</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="case-studies.html#gaia">Case studies</a></span></p>
                 </li>
                 <li class="cl-item" id="claim-gaia-models">
                     <p class="cl-figure"><span class="cl-value" data-claim="gaia-models">119</span> current models in GAIA's database</p>
                     <p class="cl-basis"><span class="mono-label">Basis</span> <a href="https://github.com/moseskolleh/GAIA-Framework-/blob/main/ROADMAP.md">GAIA Framework's roadmap, section 0, “Where GAIA stands”, at version 2.2.0</a>.</p>
-                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span>: <a href="https://github.com/moseskolleh/GAIA-Framework-/blob/main/ROADMAP.md">github.com</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="case-studies.html#gaia">Case studies</a></span></p>
+                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span> <a href="https://github.com/moseskolleh/GAIA-Framework-/blob/main/ROADMAP.md">github.com</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="case-studies.html#gaia">Case studies</a></span></p>
                 </li>
                 <li class="cl-item" id="claim-answer-tokens">
                     <p class="cl-figure"><span class="cl-value" data-claim="answer-tokens">1,000</span> tokens in the answer the homepage chart prices each model at</p>
-                    <p class="cl-basis"><span class="mono-label">Basis</span> Each model's published energy is per thousand tokens, adapted from Jegham et al. (2025); the chart quotes it as it is. <span class="cl-file">One of the calculator&rsquo;s inputs, in <code>ai-carbon-data.js</code>.</span></p>
-                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span>: <a href="carbon-ai.html#evidence">EcoPrompt Coach</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html#ecoprompt">Home</a> &middot; <a href="research.html">Research</a></span></p>
+                    <p class="cl-basis"><span class="mono-label">Basis</span> Each model's published energy is per 1k tokens, adapted from Jegham et al. (2025); the chart quotes it as it is. <span class="cl-file">One of the calculator&rsquo;s inputs, in <code>ai-carbon-data.js</code>.</span></p>
+                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span> <a href="carbon-ai.html#evidence">EcoPrompt Coach</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html#ecoprompt">Home</a> &middot; <a href="research.html">Research</a></span></p>
                 </li>
                 <li class="cl-item" id="claim-output-weight">
                     <p class="cl-figure"><span class="cl-value" data-claim="output-weight">4</span> input tokens' worth of energy the calculator charges for each output token</p>
-                    <p class="cl-basis"><span class="mono-label">Basis</span> Luccioni, Jernite &amp; Strubell (2023), &quot;Power Hungry Processing: Watts Driving the Cost of AI Deployment?&quot;. The middle of the range below. <span class="cl-file">One of the calculator&rsquo;s inputs, in <code>ai-carbon-data.js</code>.</span></p>
-                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span>: <a href="carbon-ai.html#evidence">EcoPrompt Coach</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="carbon-ai.html">EcoPrompt Coach</a></span></p>
+                    <p class="cl-basis"><span class="mono-label">Basis</span> <strong>The calculator&rsquo;s own choice.</strong> The middle of the range below: a judgement, not a measurement. <span class="cl-file">One of its inputs, in <code>ai-carbon-data.js</code>.</span></p>
+                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span> <a href="carbon-ai.html#evidence">EcoPrompt Coach</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="carbon-ai.html">EcoPrompt Coach</a></span></p>
                 </li>
                 <li class="cl-item" id="claim-output-weight-range">
                     <p class="cl-figure"><span class="cl-value" data-claim="output-weight-range">2–8×</span> the plausible range for that charge, in input tokens</p>
-                    <p class="cl-basis"><span class="mono-label">Basis</span> Luccioni, Jernite &amp; Strubell (2023), &quot;Power Hungry Processing: Watts Driving the Cost of AI Deployment?&quot;. <span class="cl-file">One of the calculator&rsquo;s inputs, in <code>ai-carbon-data.js</code>.</span></p>
-                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span>: <a href="carbon-ai.html#evidence">EcoPrompt Coach</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="carbon-ai.html">EcoPrompt Coach</a></span></p>
+                    <p class="cl-basis"><span class="mono-label">Basis</span> <strong>The calculator&rsquo;s own choice.</strong> Its reading of how much more an output token costs than an input one, which varies with batch size, sequence length and cache reuse: a judgement, not a figure quoted from a source. <span class="cl-file">One of its inputs, in <code>ai-carbon-data.js</code>.</span></p>
+                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span> <a href="carbon-ai.html#evidence">EcoPrompt Coach</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="carbon-ai.html">EcoPrompt Coach</a></span></p>
                 </li>
                 <li class="cl-item" id="claim-reference-mix">
                     <p class="cl-figure"><span class="cl-value" data-claim="reference-mix">50/50</span> split of input and output tokens at which the calculator reproduces the published per-1k-token figures</p>
-                    <p class="cl-basis"><span class="mono-label">Basis</span> Luccioni, Jernite &amp; Strubell (2023), &quot;Power Hungry Processing: Watts Driving the Cost of AI Deployment?&quot;. <span class="cl-file">One of the calculator&rsquo;s inputs, in <code>ai-carbon-data.js</code>.</span></p>
-                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span>: <a href="carbon-ai.html#evidence">EcoPrompt Coach</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="carbon-ai.html">EcoPrompt Coach</a></span></p>
+                    <p class="cl-basis"><span class="mono-label">Basis</span> <strong>The calculator&rsquo;s own choice.</strong> A calibration convention, not a measurement: the mix at which the calculator gives back the published per-1k figures unchanged. <span class="cl-file">One of its inputs, in <code>ai-carbon-data.js</code>.</span></p>
+                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span> <a href="carbon-ai.html#evidence">EcoPrompt Coach</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="carbon-ai.html">EcoPrompt Coach</a></span></p>
+                </li>
+                <li class="cl-item" id="claim-coach-models">
+                    <p class="cl-figure"><span class="cl-value" data-claim="coach-models">10</span> models in the calculator's factor set, each with its published energy</p>
+                    <p class="cl-basis"><span class="mono-label">Basis</span> The models the coach and the homepage chart can price. <span class="cl-file">Counted in <code>ai-carbon-data.js</code>.</span></p>
+                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span> <a href="ai-carbon-data.js">ai-carbon-data.js</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="research.html#carbon-data">Research</a></span></p>
+                </li>
+                <li class="cl-item" id="claim-coach-regions">
+                    <p class="cl-figure"><span class="cl-value" data-claim="coach-regions">13</span> grid regions in the calculator's factor set, each with its carbon intensity</p>
+                    <p class="cl-basis"><span class="mono-label">Basis</span> The grids the coach can place a query on. <span class="cl-file">Counted in <code>ai-carbon-data.js</code>.</span></p>
+                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span> <a href="ai-carbon-data.js">ai-carbon-data.js</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="research.html#carbon-data">Research</a></span></p>
+                </li>
+                <li class="cl-item" id="claim-coach-cooling">
+                    <p class="cl-figure"><span class="cl-value" data-claim="coach-cooling">4</span> cooling profiles in the calculator's factor set, for data-centre water</p>
+                    <p class="cl-basis"><span class="mono-label">Basis</span> The kinds of data centre the coach can count water for. <span class="cl-file">Counted in <code>ai-carbon-data.js</code>.</span></p>
+                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span> <a href="ai-carbon-data.js">ai-carbon-data.js</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="research.html#carbon-data">Research</a></span></p>
                 </li>
                 <li class="cl-item" id="claim-bottle">
                     <p class="cl-figure"><span class="cl-value" data-claim="bottle">500</span> mL: the water bottle the calculator counts water in</p>
                     <p class="cl-basis"><span class="mono-label">Basis</span> A definition, not an estimate. <span class="cl-file">One of the calculator&rsquo;s inputs, in <code>ai-carbon-data.js</code>.</span></p>
-                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span>: <a href="carbon-ai.html#evidence">EcoPrompt Coach</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="carbon-ai.html">EcoPrompt Coach</a></span></p>
+                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span> <a href="carbon-ai.html#evidence">EcoPrompt Coach</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="carbon-ai.html">EcoPrompt Coach</a></span></p>
                 </li>
                 <li class="cl-item" id="claim-default-pue">
                     <p class="cl-figure"><span class="cl-value" data-claim="default-pue">1.2</span> data-centre overhead (PUE) the calculator assumes until you change it</p>
-                    <p class="cl-basis"><span class="mono-label">Basis</span> Uptime Institute, Global Data Center Survey. <span class="cl-file">One of the calculator&rsquo;s inputs, in <code>ai-carbon-data.js</code>.</span></p>
-                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span>: <a href="carbon-ai.html#evidence">EcoPrompt Coach</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="research.html">Research</a></span></p>
+                    <p class="cl-basis"><span class="mono-label">Basis</span> <strong>The calculator&rsquo;s own choice.</strong> A default, not a survey's figure: below the industry average the Uptime Institute's survey reports and above the fleet figure Google discloses, for a modern facility short of a flagship one. Change it in the calculator. <span class="cl-file">One of its inputs, in <code>ai-carbon-data.js</code>.</span></p>
+                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span> <a href="carbon-ai.html#evidence">EcoPrompt Coach</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="research.html">Research</a></span></p>
                 </li>
             </ul>
         </section>
@@ -166,7 +187,7 @@
             <ul class="cl-list">
                 <li class="cl-item" id="claim-masters-degrees">
                     <p class="cl-figure"><span class="cl-value" data-claim="masters-degrees">2</span> master's degrees: Environmental Sciences at Wageningen and Industrial Engineering at Hunan</p>
-                    <p class="cl-basis"><span class="mono-label">Basis</span> The two MSc entries in the education record. The degree certificates are the evidence. <span class="cl-file">Recorded in <code>content/profile.json</code>.</span></p>
+                    <p class="cl-basis"><span class="mono-label">Basis</span> The MSc entries in the education record. The degree certificates are the evidence. <span class="cl-file">Recorded in <code>content/profile.json</code>.</span></p>
                     <p class="cl-meta"><span class="cl-check cl-check-on-request">On request</span> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html">Home</a> &middot; the narration</span></p>
                 </li>
                 <li class="cl-item" id="claim-continents">
@@ -176,7 +197,7 @@
                 </li>
                 <li class="cl-item" id="claim-countries">
                     <p class="cl-figure"><span class="cl-value" data-claim="countries">4</span> countries studied and worked in: Sierra Leone, China, Germany and the Netherlands</p>
-                    <p class="cl-basis"><span class="mono-label">Basis</span> The places of the degrees and roles in the record, as the journey on the homepage follows them. The degree certificates are the evidence. <span class="cl-file">Recorded in <code>content/profile.json</code>.</span></p>
+                    <p class="cl-basis"><span class="mono-label">Basis</span> The places of the degrees and roles in the record, as the journey on the homepage follows them. The degree certificates are the evidence for Sierra Leone, China and the Netherlands; for Germany, the UNDRR internship, as I record it. <span class="cl-file">Recorded in <code>content/profile.json</code>.</span></p>
                     <p class="cl-meta"><span class="cl-check cl-check-on-request">On request</span> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html#journey">Home</a> &middot; the narration</span></p>
                 </li>
                 <li class="cl-item" id="claim-wur-grade">
@@ -193,22 +214,22 @@
             <ul class="cl-list">
                 <li class="cl-item" id="claim-water-points">
                     <p class="cl-figure"><span class="cl-value" data-claim="water-points">164</span> water points delivered across Sierra Leone</p>
-                    <p class="cl-basis"><span class="mono-label">Basis</span> <a href="case-studies.html#groundwater">Groundwater Potential Mapping</a>, &ldquo;Method carried into the borehole siting that followed, part of <span data-claim="water-points">164</span> water points delivered across Sierra Leone&rdquo;: The boreholes behind the strike rate above were sited with the survey method in the Team &amp; Team International fieldwork. They are part of the <span data-claim="water-points">164</span> water points &mdash; <span data-claim="wells-rehabilitated">100</span> hand-dug wells rehabilitated, <span data-claim="boreholes-constructed">50</span> boreholes constructed, <span data-claim="solar-boreholes">14</span> solar-powered boreholes, itemised and summing to <span data-claim="water-points">164</span> &mdash; but not all of them: a rehabilitated well needs no siting, and no survey siting is recorded for the other boreholes. The mapping informed siting; it is not the sole cause of the outcome.</p>
+                    <p class="cl-basis"><span class="mono-label">Basis</span> <a href="case-studies.html#groundwater">Groundwater Potential Mapping</a>, &ldquo;Method carried into the borehole siting that followed, part of <span data-claim="water-points">164</span> water points delivered across Sierra Leone&rdquo;: The boreholes behind the <span data-claim="strike-rate">70%</span> strike rate were sited with the survey method in the Team &amp; Team International fieldwork. They are part of the <span data-claim="water-points">164</span> water points &mdash; <span data-claim="wells-rehabilitated">100</span> hand-dug wells rehabilitated, <span data-claim="boreholes-constructed">50</span> boreholes constructed, <span data-claim="solar-boreholes">14</span> solar-powered boreholes, itemised and summing to <span data-claim="water-points">164</span> &mdash; but not all of them: a rehabilitated well needs no siting, and no survey siting is recorded for the other boreholes. The mapping informed siting; it is not the sole cause of the outcome.</p>
                     <p class="cl-meta"><span class="cl-check cl-check-not-checkable">Not checkable from outside</span> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html">Home</a> &middot; <a href="case-studies.html">Case studies</a> &middot; <a href="research.html#field-notes">Research</a> &middot; <a href="field-report.html">Field report</a> &middot; the narration</span></p>
                 </li>
                 <li class="cl-item" id="claim-wells-rehabilitated">
                     <p class="cl-figure"><span class="cl-value" data-claim="wells-rehabilitated">100</span> hand-dug wells rehabilitated: part of those water points</p>
-                    <p class="cl-basis"><span class="mono-label">Basis</span> The same result as <a href="#claim-water-points">water points delivered across Sierra Leone</a>, in <a href="case-studies.html#groundwater">Groundwater Potential Mapping</a>.</p>
+                    <p class="cl-basis"><span class="mono-label">Basis</span> The same result as <a href="#claim-water-points"><span data-claim="water-points">164</span> water points delivered across Sierra Leone</a>, in <a href="case-studies.html#groundwater">Groundwater Potential Mapping</a>.</p>
                     <p class="cl-meta"><span class="cl-check cl-check-not-checkable">Not checkable from outside</span> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html#about">Home</a> &middot; <a href="case-studies.html">Case studies</a> &middot; <a href="field-report.html">Field report</a></span></p>
                 </li>
                 <li class="cl-item" id="claim-boreholes-constructed">
                     <p class="cl-figure"><span class="cl-value" data-claim="boreholes-constructed">50</span> boreholes constructed: part of those water points</p>
-                    <p class="cl-basis"><span class="mono-label">Basis</span> The same result as <a href="#claim-water-points">water points delivered across Sierra Leone</a>, in <a href="case-studies.html#groundwater">Groundwater Potential Mapping</a>.</p>
+                    <p class="cl-basis"><span class="mono-label">Basis</span> The same result as <a href="#claim-water-points"><span data-claim="water-points">164</span> water points delivered across Sierra Leone</a>, in <a href="case-studies.html#groundwater">Groundwater Potential Mapping</a>.</p>
                     <p class="cl-meta"><span class="cl-check cl-check-not-checkable">Not checkable from outside</span> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html#about">Home</a> &middot; <a href="case-studies.html">Case studies</a> &middot; <a href="field-report.html">Field report</a></span></p>
                 </li>
                 <li class="cl-item" id="claim-solar-boreholes">
                     <p class="cl-figure"><span class="cl-value" data-claim="solar-boreholes">14</span> solar-powered boreholes with storage tanks: the rest of them</p>
-                    <p class="cl-basis"><span class="mono-label">Basis</span> The same result as <a href="#claim-water-points">water points delivered across Sierra Leone</a>, in <a href="case-studies.html#groundwater">Groundwater Potential Mapping</a>.</p>
+                    <p class="cl-basis"><span class="mono-label">Basis</span> The same result as <a href="#claim-water-points"><span data-claim="water-points">164</span> water points delivered across Sierra Leone</a>, in <a href="case-studies.html#groundwater">Groundwater Potential Mapping</a>.</p>
                     <p class="cl-meta"><span class="cl-check cl-check-not-checkable">Not checkable from outside</span> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html#about">Home</a> &middot; <a href="case-studies.html">Case studies</a> &middot; <a href="field-report.html">Field report</a></span></p>
                 </li>
                 <li class="cl-item" id="claim-strike-rate">
@@ -233,13 +254,23 @@
                 </li>
                 <li class="cl-item" id="claim-team-size">
                     <p class="cl-figure"><span class="cl-value" data-claim="team-size">23</span> people in the drilling team managed at Sierra Drilling and Water Supply Enterprise</p>
-                    <p class="cl-basis"><span class="mono-label">Basis</span> The employer's records, which are not public. <span class="cl-file">Recorded in <code>content/profile.json</code>.</span></p>
+                    <p class="cl-basis"><span class="mono-label">Basis</span> As I record it; the employer's records are not public. <span class="cl-file">Recorded in <code>content/profile.json</code>.</span></p>
                     <p class="cl-meta"><span class="cl-check cl-check-not-checkable">Not checkable from outside</span> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html#experience">Home</a> &middot; <a href="field-report.html">Field report</a></span></p>
                 </li>
                 <li class="cl-item" id="claim-programme-weeks">
                     <p class="cl-figure"><span class="cl-value" data-claim="programme-weeks">8</span> weeks: the length of the OnePointFive sustainability consulting accelerator</p>
                     <p class="cl-basis"><span class="mono-label">Basis</span> As I record it; no outside record of it is linked yet. <span class="cl-file">Recorded in <code>content/profile.json</code>.</span></p>
-                    <p class="cl-meta"><span class="cl-check cl-check-not-checkable">Not checkable from outside</span> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html#experience">Home</a></span></p>
+                    <p class="cl-meta"><span class="cl-check cl-check-not-checkable">Not checkable from outside</span> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html#experience">Home</a> &middot; <a href="field-report.html">Field report</a></span></p>
+                </li>
+                <li class="cl-item" id="claim-wuppertal-team">
+                    <p class="cl-figure"><span class="cl-value" data-claim="wuppertal-team">6</span> people in the interdisciplinary team of the Wuppertal flood-resilience consultancy</p>
+                    <p class="cl-basis"><span class="mono-label">Basis</span> As I record it; the consultancy report is the client's. <span class="cl-file">Recorded in <code>content/profile.json</code>.</span></p>
+                    <p class="cl-meta"><span class="cl-check cl-check-not-checkable">Not checkable from outside</span> <span class="cl-where"><span class="mono-label">Where</span> <a href="case-studies.html">Case studies</a> &middot; <a href="field-report.html">Field report</a></span></p>
+                </li>
+                <li class="cl-item" id="claim-undrr-months">
+                    <p class="cl-figure"><span class="cl-value" data-claim="undrr-months">5</span> months with UNDRR in Bonn: the internship, June to October</p>
+                    <p class="cl-basis"><span class="mono-label">Basis</span> Counted from the internship's dates as I record them; UNDRR holds its own record. <span class="cl-file">Recorded in <code>content/profile.json</code>.</span></p>
+                    <p class="cl-meta"><span class="cl-check cl-check-not-checkable">Not checkable from outside</span> <span class="cl-where"><span class="mono-label">Where</span> <a href="case-studies.html#un-disaster">Case studies</a></span></p>
                 </li>
             </ul>
         </section>
@@ -248,7 +279,10 @@
             <h2>Not on this list</h2>
             <p>
                 Years and dates, section numbers, the names of standards such as Scope 2 or SDG 13, places&rsquo;
-                coordinates and my phone number are numerals, not claims. The figures the calculators work out in
+                coordinates and my phone number are numerals, not claims. So are &ldquo;one&rdquo; and a count of
+                things a page lists in full, which a test holds to the number listed. A photo&rsquo;s description
+                says what is in it, and the field terminal&rsquo;s drill prints a made-up log and says so. The
+                figures the calculators work out in
                 your browser, in the <a href="carbon-ai.html">EcoPrompt Coach</a>, in the chart on the homepage and on the
                 footer&rsquo;s receipt, are model outputs: their inputs are above, and every factor behind them is in
                 the calculator&rsquo;s <a href="carbon-ai.html#evidence">evidence ledger</a>. The

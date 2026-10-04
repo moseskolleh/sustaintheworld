@@ -83,6 +83,10 @@ const fieldText = plain(fieldReport);
         index.includes(profile.person.email) && fieldReport.includes(profile.person.email),
         'Links: the contact email matches profile.json on both editions'
     );
+    // The phone number the CV prints is the one the homepage publishes.
+    const tel = (index.match(/href="tel:([^"]+)"[\s\S]*?<p>([^<]+)<\/p>/) || []).slice(1);
+    assert(!!profile.person.phone && tel[0] === profile.person.phone.replace(/[^\d+]/g, '') && tel[1].replace(/&nbsp;/g, ' ') === profile.person.phone,
+        `Links: the homepage's phone number, its link and its text, matches profile.json (${tel.join(' / ') || 'none'})`);
     assert(
         fs.existsSync(path.join(ROOT, profile.links.cv)),
         `Links: the CV named in profile.json exists (${profile.links.cv})`
@@ -333,7 +337,8 @@ const fieldText = plain(fieldReport);
         { re: /certified across/i, why: 'there is one ESG certificate, not a set of frameworks' },
         { re: /well above local averages|against roughly 30%/i, why: 'leans on the blind-drilling baseline, which has no recorded source' },
         { re: /if a skill is listed, there's a project behind it/i, why: 'Life Cycle Assessment, Carbon Markets and Circular Economy are listed with no project behind them' },
-        { re: /anywhere in the E\.?U\b/i, why: 'relocation and EU right to work are not stated on the site (owner checklist F2, F3)' }
+        { re: /anywhere in the E\.?U\b/i, why: 'relocation and EU right to work are not stated on the site (owner checklist F2, F3)' },
+        { re: /GeoPandas|GeoAI/i, why: 'not in the homepage\'s toolkit, so the CV printed from it left them off; the field report kept GeoPandas' }
     ];
     const found = [];
     Object.entries(pages).forEach(([page, text]) => {
@@ -495,6 +500,27 @@ const fieldText = plain(fieldReport);
         .filter(w => /^https?:\/\//.test(w.url))]);
     assert(bare.every(([, work]) => work.length > 0),
         `Lenses: each has public work beyond this site (${bare.map(([id, work]) => `${id}: ${work.length}`).join(', ')})`);
+
+    // A lens's own work, not work borrowed from a case study that only
+    // touches it: without climatematch-pipeline the climate view's only
+    // repositories were the sustainable-AI case's, which lists the climate
+    // lens third, and the guard still passed.
+    const without = { outputs: research.outputs.filter(o => o.id !== 'climatematch-pipeline') };
+    const left = content.checkLensWork(lenses, { caseStudies: projects }, without);
+    assert(left.length === 1 && /lens "climate-risk"/.test(left[0]),
+        `Lenses: without climatematch-pipeline the climate view has no public work of its own, and the build says so (${left.join('; ') || 'it passed'})`);
+
+    // And the view shows it. research.html links an output with no case
+    // study to the view its lenses name; that view's panel lists it, linked,
+    // and links back to its entry, so the link lands on something.
+    const cs = new (require('jsdom').JSDOM)(read('case-studies.html')).window.document;
+    const unshown = research.outputs.filter(o => !o.caseStudy).flatMap(o => (o.lenses || []).map(l => [o, l])).filter(([o, l]) => {
+        const panel = cs.querySelector(`[data-lens-panel="${l}"]`);
+        return !panel || !(o.status !== 'public' || panel.querySelector(`.cs-lens-evidence a[href="${o.url}"]`))
+            || !panel.querySelector(`.cs-lens-evidence a[href="research.html#${o.id}"]`);
+    }).map(([o, l]) => `${o.id} in ${l}`);
+    assert(research.outputs.some(o => o.lenses) && unshown.length === 0,
+        `Lenses: each output placed in a view by its lenses is listed, linked, in that view's panel (${unshown.join(', ') || 'all are'})`);
 
     // Research outputs that are this site itself stay, but no longer make up
     // most of the public list.

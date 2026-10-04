@@ -9,16 +9,25 @@
 //   · a marked figure disagrees with its entry, or names no entry;
 //   · an entry has no basis, or a basis that does not say the same number
 //     (scripts/lib/content.js; the bad ledgers below prove it still fires);
-//   · a numeral on any page is neither marked nor one of the kinds that are
-//     not claims (a year, a section number, a standard's name…), each
-//     printed with its page and the words around it, so fixing is easy;
+//   · a number on any page, in digits or in words, in its text or in the
+//     labels, titles, photo descriptions and captions a reader is shown, is
+//     neither marked nor one of the kinds that are not claims (a year, a
+//     section number, a standard's name, "one", a count of what the page
+//     shows in full…), each printed with its page and the words around it,
+//     so fixing is easy;
+//   · a count of what a page shows in full ("seven case studies") is not
+//     the count content/ holds;
+//   · the field terminal (modules/terminal.js) prints a figure the ledger
+//     does not hold, or the footer's badge prints a fixed one;
 //   · the narration says a number in words that no entry backs;
 //   · claims.html leaves an entry out, or says it appears somewhere it
 //     does not.
 //
 // The scan reads the pages as shipped, with no script run, so a number a
 // calculator works out in the browser is not on them: those hosts are named
-// below, and must hold no figure of their own in the HTML.
+// below, and must hold no figure of their own in the HTML. What the scripts
+// print of their own, the terminal's lines and the badge's, is read from
+// their source.
 //
 // Run with: node tests/claims.test.js
 
@@ -160,6 +169,7 @@ const RUNTIME = {
 const COUNTED = {
     'index.html': [['.corelog-depth, .corelog-head', 'the core log\'s depth scale: time drawn as depth']],
     'case-studies.html': [['.cs-photos > summary', 'a count of the photos in the row, made from the gallery'],
+        ['.cs-method-n', 'a count of the method\'s steps, made from the list it folds'],
         ['.flood-ticks', 'the river slider\'s steps, on a schematic not drawn to scale']],
     'research.html': [['.rs-summary', 'a count of the entries the page lists, made from them']]
 };
@@ -169,25 +179,55 @@ const SKIP = 'script, style, svg, template, noscript, [data-claim]';
 const BLOCK = 'span, p, li, dd, dt, h1, h2, h3, h4, h5, h6, td, th, figcaption, summary, label, a, button, div, section, header, footer, main, body';
 const NUMERAL = /(?<![A-Za-z\d.,])(?:\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?)/g;
 
-/** Every numeral in `root`'s text outside `skip`, with the words around it and the reason it is let through, if any. */
+/** Every number in `root`'s text outside `skip`, in digits or in words, with the words around it and the reason it is let through, if any. */
 function numerals(doc, root, skip) {
     const found = [];
     const walk = doc.createTreeWalker(root, 4 /* NodeFilter.SHOW_TEXT */);
     for (let node = walk.nextNode(); node; node = walk.nextNode()) {
-        if (!/\d/.test(node.textContent) || node.parentElement.closest(skip)) continue;
+        if (!/[\dA-Za-z]/.test(node.textContent) || node.parentElement.closest(skip)) continue;
         const block = node.parentElement.closest(BLOCK) || root;
         let offset = 0;
         const inner = doc.createTreeWalker(block, 4);
         for (let t = inner.nextNode(); t && t !== node; t = inner.nextNode()) offset += t.textContent.length;
         const text = block.textContent;
+        const words = (at, end) => text.slice(Math.max(0, at - 40), end + 40).replace(/\s+/g, ' ').trim();
         NUMERAL.lastIndex = 0;
         let m;
         while ((m = NUMERAL.exec(node.textContent))) {
             const at = offset + m.index;
-            const words = text.slice(Math.max(0, at - 40), at + m[0].length + 40).replace(/\s+/g, ' ').trim();
-            found.push({ numeral: m[0], words, why: figures.exemptAt(text, at, at + m[0].length) });
+            found.push({ numeral: m[0], words: words(at, at + m[0].length), why: figures.exemptAt(text, at, at + m[0].length) });
         }
+        figures.wordRuns(node.textContent).forEach((r) => {
+            const run = Object.assign({}, r, { index: offset + r.index, end: offset + r.end });
+            found.push({ numeral: r.text, words: words(run.index, run.end), why: figures.wordExempt(text, run) });
+        });
     }
+    return found;
+}
+
+/**
+ * The same for a text that cannot carry a mark (an attribute, a string a
+ * script prints): a figure the ledger knows is the one the marker finds
+ * there, written as the ledger writes it, so "15 solar-powered boreholes"
+ * is caught where "14" is not.
+ */
+const cut = figures.marker(CLAIMS);
+function numeralsIn(text, why = () => null) {
+    const marked = [];
+    let at = 0;
+    cut(text).forEach(([t, id]) => { if (id) marked.push([at, at + t.length]); at += t.length; });
+    const inMark = (a, b) => marked.some(([x, y]) => x <= a && y >= b);
+    const found = [];
+    const words = (a, b) => text.slice(Math.max(0, a - 40), b + 40).replace(/\s+/g, ' ').trim();
+    NUMERAL.lastIndex = 0;
+    let m;
+    while ((m = NUMERAL.exec(text))) {
+        const [a, b] = [m.index, m.index + m[0].length];
+        if (!inMark(a, b)) found.push({ numeral: m[0], words: words(a, b), why: figures.exemptAt(text, a, b) || why(text, a, b) });
+    }
+    figures.wordRuns(text).forEach((r) => {
+        if (!inMark(r.index, r.end)) found.push({ numeral: r.text, words: words(r.index, r.end), why: figures.wordExempt(text, r) || why(text, r.index, r.end, r) });
+    });
     return found;
 }
 
@@ -209,6 +249,16 @@ function numerals(doc, root, skip) {
     assert(JSON.stringify(found) === '["302","2","20","8"]', `Scan: lets through a version, a GRI line, a span of scopes, a return period, a section and an ISO date as names, and catches the same numbers as counts (${found.join(', ')})`);
 }
 
+// In words: the count is a figure unless it is "one" or a count of what
+// the page shows in full; the same words marked are let by.
+{
+    const doc = new JSDOM('<main><p>A team of six, one thread, Net Zero, seven case studies and a <span data-claim="wuppertal-team">six</span>-person team.</p><p>Five months, and the four modules, Ground, Assess, Interpret and Act.</p></main>').window.document;
+    const found = numerals(doc, doc.body, SKIP).filter(n => !n.why).map(n => n.numeral);
+    assert(JSON.stringify(found) === '["six","Five"]', `Scan: catches a count in words, and lets "one", a name and a count of what is shown by (${found.join(', ')})`);
+    const attr = numeralsIn('164 water points: 100 hand-dug wells rehabilitated, 50 boreholes constructed, 15 solar-powered boreholes, for six weeks').filter(n => !n.why).map(n => n.numeral);
+    assert(JSON.stringify(attr) === '["15","six"]', `Scan: in a label, a figure written as the ledger writes it passes and one it does not hold is caught (${attr.join(', ')})`);
+}
+
 PAGES.forEach((page) => {
     const doc = docs[page];
     const runtime = RUNTIME[page] || [];
@@ -217,7 +267,23 @@ PAGES.forEach((page) => {
     const unmarked = numerals(doc, doc.body, skip).filter(n => !n.why);
     unmarked.forEach(n => console.log(`  unmarked: ${page}: ${n.numeral} in "…${n.words}…"`));
     assert(unmarked.length === 0,
-        `${page}: every numeral is marked with its ledger entry, or is a year, a date, a section number, a standard's name or the like (${unmarked.length} unmarked${unmarked.length ? ', listed above' : ''})`);
+        `${page}: every number, in digits or in words, is marked with its ledger entry, or is a year, a date, a section number, a standard's name, "one", a count of what the page shows, or the like (${unmarked.length} unmarked${unmarked.length ? ', listed above' : ''})`);
+
+    // What a reader is shown or told that is not text: a label, a tooltip,
+    // a photo's caption in the lightbox, a photo's description, the page's
+    // description. The impact bar's tooltips once said "14 solar-powered
+    // boreholes" where nothing held them to the ledger.
+    const inAttrs = [];
+    const described = () => 'a photo\'s description, saying what is in it';
+    doc.querySelectorAll('[title], [aria-label], [data-caption], img[alt], meta[name="description"], meta[property="og:description"], meta[name="twitter:description"]').forEach((el) => {
+        if (el.closest(['script, style, template'].concat(runtime).join(', '))) return;
+        ['title', 'aria-label', 'data-caption', 'alt', 'content'].filter(a => el.hasAttribute(a)).forEach((a) => {
+            numeralsIn(el.getAttribute(a), a === 'alt' ? (t, x, y, run) => (run ? described() : null) : undefined)
+                .filter(n => !n.why).forEach(n => inAttrs.push(`${a}: ${n.numeral} in "…${n.words}…"`));
+        });
+    });
+    inAttrs.forEach(n => console.log(`  unmarked: ${page}: ${n}`));
+    assert(inAttrs.length === 0, `${page}: every number in a label, a title, a caption or a description is one the ledger holds, written as it writes it, or the like (${inAttrs.length} not${inAttrs.length ? ', listed above' : ''})`);
 
     // A host the scan skips has to earn it: present, and with no figure typed into it.
     const typed = [];
@@ -246,6 +312,105 @@ PAGES.forEach((page) => {
         });
     });
     assert(unlabelled.length === 0, `Illustrative: every illustrative figure is labelled so where it is shown (${unlabelled.join('; ') || 'all are'})`);
+}
+
+// A count of what a page shows in full is let through as one, so it has to
+// be that count: "seven case studies" with an eighth in projects.json would
+// be a figure nobody holds.
+{
+    const said = PAGES.map(p => docs[p].body.textContent + ' ' + docs[p].head.textContent)
+        .concat([data.narration.intro ? data.narration.intro.text : ''], data.narration.scripts.map(x => x.text))
+        .concat(literals(read('modules/terminal.js'))).join(' ');
+    const wrong = [];
+    let checked = 0;
+    const held = Object.assign({ page: p => docs[p], source: read }, data);
+    figures.SHOWN_IN_FULL.filter(c => c.count).forEach((c) => {
+        c.re.lastIndex = 0;
+        let m;
+        while ((m = c.re.exec(said))) {
+            checked++;
+            const n = figures.wordRuns(m[0])[0].value;
+            if (n !== c.count(held)) wrong.push(`"${m[0]}" where there are ${c.count(held)} (${c.what})`);
+        }
+    });
+    assert(checked > 5 && figures.SHOWN_IN_FULL.every(c => c.count || c.named) && wrong.length === 0, `Counts: each count of what a page shows in full is the count of what it shows (${checked} said; ${wrong.join('; ') || 'all agree'})`);
+}
+
+// ===================================================================
+// What the scripts print of their own
+// ===================================================================
+/** The string literals in a script's source, a template's ${…} read as a gap (its own literals are taken too). */
+function literals(src) {
+    const out = [];
+    let i = 0;
+    const quoted = (q) => {
+        let j = i + 1;
+        let buf = '';
+        while (j < src.length && src[j] !== q) {
+            if (src[j] === '\\') { buf += src[j + 1]; j += 2; } else buf += src[j++];
+        }
+        i = j + 1;
+        return buf;
+    };
+    const template = () => {
+        let j = i + 1;
+        let buf = '';
+        while (j < src.length && src[j] !== '`') {
+            if (src[j] === '\\') { buf += src[j + 1]; j += 2; continue; }
+            if (src[j] === '$' && src[j + 1] === '{') {
+                let depth = 1;
+                let k = j + 2;
+                while (k < src.length && depth) {
+                    const ch = src[k];
+                    if (ch === "'" || ch === '"' || ch === '`') { i = k; out.push(ch === '`' ? template() : quoted(ch)); k = i; continue; }
+                    if (ch === '{') depth++;
+                    if (ch === '}') depth--;
+                    k++;
+                }
+                buf += ' ';
+                j = k;
+                continue;
+            }
+            buf += src[j++];
+        }
+        i = j + 1;
+        return buf;
+    };
+    while (i < src.length) {
+        const ch = src[i];
+        if (ch === '/' && src[i + 1] === '/') { i = src.indexOf('\n', i); if (i < 0) break; }
+        else if (ch === '/' && src[i + 1] === '*') i = src.indexOf('*/', i) + 2;
+        else if (ch === "'" || ch === '"') out.push(quoted(ch));
+        else if (ch === '`') out.push(template());
+        else i++;
+    }
+    return out;
+}
+
+// The field terminal on the homepage (press `) prints the record in its own
+// words: 164 water points, 10,226 sub-basins, a 70% strike rate, "odds are
+// 7/10". Nothing read them, so they could drift from the ledger unseen.
+{
+    const src = read('modules/terminal.js');
+    const strings = literals(src);
+    assert(strings.some(t => /164 water points/.test(t)) && strings.some(t => /odds are 7\/10/.test(t)), `Terminal: its printed lines are read from the source (${strings.length} strings)`);
+    // The drill command's log is a game: its depths are made up, and its
+    // first line says so. Only a depth in metres is let by, and only there.
+    const drill = literals(src.slice(src.indexOf('drill: ('), src.indexOf('cv: (')));
+    const madeUp = drill.some(t => /made-up/.test(t));
+    assert(madeUp, `Terminal: the drill's log says it is made up (${drill[0]})`);
+    const depth = (text, a, b) => (madeUp && drill.includes(text) && /^\s*m\b/.test(text.slice(b)) ? 'a depth in the drill\'s made-up log' : null);
+    const loose = strings.flatMap(t => numeralsIn(t, depth).filter(n => !n.why).map(n => `${n.numeral} in "${n.words}"`));
+    loose.forEach(n => console.log(`  unmarked: modules/terminal.js: ${n}`));
+    assert(loose.length === 0, `Terminal: every figure it prints is one the ledger holds, written as it writes it (${loose.length} not${loose.length ? ', listed above' : ''})`);
+
+    // The footer's badge prints what this visit weighed, worked out in the
+    // browser; when the browser cannot say, it printed a fixed "under ~1 MB
+    // per visit" that nothing held. It prints no figure of its own now.
+    const script = read('script.js');
+    const badge = [...script.matchAll(/badgeText\.textContent\s*=\s*(['"`][\s\S]*?['"`]);/g)].map(m => literals(m[1]).join(' '));
+    const fixed = badge.flatMap(t => numeralsIn(t).filter(n => !n.why).map(n => `${n.numeral} in "${n.words}"`));
+    assert(badge.length >= 2 && fixed.length === 0, `Badge: the footer's badge prints only what it measures, no fixed figure (${badge.length} lines; ${fixed.join('; ') || 'none fixed'})`);
 }
 
 // ===================================================================

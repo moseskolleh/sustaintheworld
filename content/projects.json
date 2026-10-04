@@ -137,8 +137,8 @@
       "results": [
         {
           "claim": "A working decision-support prototype, not a slide deck",
-          "basis": "The EcoPrompt Coach is public and runnable — every number it prints is derived in ai-carbon-data.js, which carries a source, publication date, uncertainty range and review date per factor.",
-          "brief": "The EcoPrompt Coach prototype is public and runnable, and every factor it uses carries its source.",
+          "basis": "The team's browser prototypes, a prompt coach and dashboard among them, are public on GitHub as Sustainable AI Prototypes, whose README records my role. This site's EcoPrompt Coach is a separate edition, with its own code.",
+          "brief": "The team's prototypes are public on GitHub as Sustainable AI Prototypes, with my role in its README.",
           "verifiable": true
         },
         {
@@ -215,7 +215,7 @@
       "results": [
         {
           "claim": "The workbook, the web estimator and the reference code give the same answers: 3,984 cross-engine checks pass",
-          "basis": "tests/test_engine.py, in the repository, runs the three on the same cases and fails if any disagrees; its roadmap records 3,984 passing at version 2.2.0. An engineering fact, not a result for any organisation.",
+          "basis": "tests/test_engine.py, in the repository, runs them on the same cases and fails if any disagrees; its roadmap records 3,984 passing at version 2.2.0. An engineering fact, not a result for any organisation.",
           "verifiable": true
         },
         {
@@ -233,7 +233,7 @@
         },
         {
           "kind": "finding",
-          "text": "One score hid more than it showed: GAIA 1.0 added watt-hours, litres and grams with invented weights. Version 2 has no composite: a grade per task class, with a frugality flag beside it.",
+          "text": "One score hid more than it showed: GAIA 1.0 added watt-hours, litres and grams with invented weights. Version 2 has no composite: each use case's energy per request is graded against its task class's bands, with a frugality flag beside it.",
           "basis": "DECISIONS.md and the 2.0.0 changelog entry, in the repository."
         },
         {
@@ -319,8 +319,8 @@
       "findings": [
         {
           "kind": "finding",
-          "text": "What rivers carry to the coast follows socioeconomic drivers: set against income, urbanisation and agriculture, the model's output showed which dominate.",
-          "basis": "The thesis's regression, on request; effect sizes are not restated, as they cannot be checked without it."
+          "text": "The thesis sets out which of income, urbanisation and agriculture dominate what rivers carry to the coast, and by how much; the effect sizes are not restated here, as they cannot be checked without it.",
+          "basis": "The thesis's regression of the model's output, on request."
         },
         {
           "kind": "recommendation",
@@ -414,11 +414,6 @@
           "kind": "finding",
           "text": "Flood vulnerability in Wuppertal is social as well as hydraulic: the workshops mapped land use, housing inequality and social cohesion among its drivers.",
           "basis": "The stakeholder workshops, one of them in the photos below."
-        },
-        {
-          "kind": "recommendation",
-          "text": "Cost-effective interventions for the critical infrastructure found vulnerable, set out as a roadmap the municipality could act on.",
-          "basis": "The consultancy report, held by the client, which names them; none is claimed as implemented."
         }
       ],
 
@@ -523,7 +518,7 @@
         { "src": "assets/img/soft-path-2.webp", "width": 900, "height": 1200,
           "alt": "Moses in graduation gown at Hunan University",
           "caption": "Graduation day at Hunan University.",
-          "fullCaption": "Graduation day at Hunan University — the close of two years in China on a full MOFCOM scholarship." },
+          "fullCaption": "Graduation day at Hunan University — the close of the master's years in China, on a full MOFCOM scholarship." },
         { "src": "assets/img/soft-path-4.webp", "width": 900, "height": 1200,
           "alt": "Moses seated at a conference table with his name plate",
           "caption": "At the table — representing graduate researchers at Hunan University.",
@@ -665,7 +660,7 @@
         },
         {
           "claim": "Method carried into the borehole siting that followed, part of 164 water points delivered across Sierra Leone",
-          "basis": "The boreholes behind the strike rate above were sited with the survey method in the Team & Team International fieldwork. They are part of the 164 water points — 100 hand-dug wells rehabilitated, 50 boreholes constructed, 14 solar-powered boreholes, itemised and summing to 164 — but not all of them: a rehabilitated well needs no siting, and no survey siting is recorded for the other boreholes. The mapping informed siting; it is not the sole cause of the outcome.",
+          "basis": "The boreholes behind the 70% strike rate were sited with the survey method in the Team & Team International fieldwork. They are part of the 164 water points — 100 hand-dug wells rehabilitated, 50 boreholes constructed, 14 solar-powered boreholes, itemised and summing to 164 — but not all of them: a rehabilitated well needs no siting, and no survey siting is recorded for the other boreholes. The mapping informed siting; it is not the sole cause of the outcome.",
           "verifiable": false
         }
       ],

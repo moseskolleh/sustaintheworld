@@ -181,11 +181,14 @@ html:not(.js) .cs-lenses { display: none; }
 .cs-method-fold .cs-stage-h { margin: 0; }
 .cs-method-fold .cs-stage-h::after {
     content: '+';
+    /* The sign is decoration: the fold says open or shut itself. Where the
+       empty alternative is not understood, the line above stands. */
+    content: '+' / '';
     font-family: var(--font-mono, 'IBM Plex Mono', monospace);
     font-size: 1rem;
     letter-spacing: 0;
 }
-.cs-method-fold[open] .cs-stage-h::after { content: '\2212'; }
+.cs-method-fold[open] .cs-stage-h::after { content: '\2212'; content: '\2212' / ''; }
 .cs-method-n {
     font-weight: 400;
     color: var(--text-secondary);
@@ -633,6 +636,16 @@ html.lightbox-open { overflow: hidden; }
     .rs-item { padding: 12px 14px; margin-bottom: 8px; }
     .rs-intro, .rs-group { margin-bottom: 24px; }
     .rs-repro, .cs-footnote { padding: 18px 18px; }
+}
+/* Printed, the folds are open: paper has no press. The method, the
+   closing note and the reproduction notes are folded for the screen's
+   length alone; an inline script opens them where ::details-content is not
+   known (PRINT_FOLDS, build-content.js). The photo rows stay shut. */
+@media print {
+    .cs-method-fold::details-content,
+    .cs-footnote details::details-content,
+    .rs-repro details::details-content { content-visibility: visible; display: block; }
+    .cs-method-fold .cs-stage-h::after { content: none; }
 }
 /* Low-energy and reduced-motion visitors get no transitions to pay for. */
 @media (prefers-reduced-motion: reduce) {

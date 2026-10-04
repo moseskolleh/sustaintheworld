@@ -213,9 +213,10 @@ const PAGE_BUDGETS = {
 // measured plus 5%, like the rest. Every other page's is what it measured
 // when the budget was set (28 September 2026, with the shared nav and
 // closing call to action every page but the homepage now has, in Chromium
-// 141, the build CI pins) plus 5%, and claims.html's when it was added, on
-// 3 October 2026, the same way: measured once the wave that made it had
-// merged, with the GAIA figures its other lanes brought on the list.
+// 141, the build CI pins) plus 5%, and claims.html's the same way, set in
+// the wave that made it: on 3 October 2026 once its lanes had merged, and
+// set again the next day, before the wave closed, once the review had put
+// the figures written in words on the list (36 entries, not 30).
 // stats.html is held drawn full, as the smoke's fixture draws a busy
 // quarter: that is the page the weekly Action will commit, and the page as
 // committed today is shorter.
@@ -228,7 +229,7 @@ const LENGTH = {
     'index.html': { '1440x900': 9.79, '390x844': 17.09 },
     'case-studies.html': { '1440x900': 11.85, '390x844': 19.78 },
     'carbon-ai.html': { '1440x900': 7.07, '390x844': 13.38 },
-    'claims.html': { '1440x900': 6.57, '390x844': 11.54 },
+    'claims.html': { '1440x900': 7.54, '390x844': 13.53 },
     'research.html': { '1440x900': 5.86, '390x844': 8.99 },
     'stats.html': { '1440x900': 10.97, '390x844': 16.25 },
     'field-report.html': { '1440x900': 4.4, '390x844': 7.44 },

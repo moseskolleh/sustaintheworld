@@ -652,13 +652,20 @@ drawn from the GAIA repository or from what the site already said.
   maintainer"), its period ("2025 — 2026"), and that the web estimator at
   moseskolleh.github.io/GAIA-Framework-/ is live (it could not be reached
   from where this was built). `content/projects.json` → `gaia`.
-- [ ] **G3. The findings.** Confirm each, and say more where you can: which
-  socioeconomic drivers dominated in the coastal thesis (and their effect
-  sizes, if the thesis can be cited), and which interventions the Wuppertal
-  report recommended (if the municipality agrees). Today those two say only
-  that the thesis and the report hold them. `content/projects.json` →
-  `caseStudies[i].findings`; one to four each, and `npm test` refuses a
-  figure without a basis.
+- [ ] **G3. The findings.** Confirm each, and say more where you can. The
+  plan names three that the site does not yet state:
+  - which socioeconomic drivers dominated in the coastal thesis (and their
+    effect sizes, if the thesis can be cited). Today the coastal finding says
+    only that the thesis sets them out;
+  - which interventions the Wuppertal report recommended (if the
+    municipality agrees). Today the Wuppertal case has no recommendation:
+    one that named no measure came off;
+  - the decision criteria the sustainable-AI framework gives the ministry,
+    if the framework, which the client holds, may be quoted and the ministry
+    may be named (D2). Today the case gives the five design principles
+    instead.
+  `content/projects.json` → `caseStudies[i].findings`; one to four each,
+  and `npm test` refuses a figure without a basis.
 - [ ] **G4. The method, folded.** Each case study's method now opens on a
   press ("02 Method, four steps"), to make room for the findings and the
   seventh case under the page's length ceiling. Open, the seven methods add
@@ -703,8 +710,8 @@ app as the canonical tool. These are the questions only you can answer.
   - *Check:* `npm test` passes; the CV prints the toolkit from the
     homepage, so run `npm run cv` after changing it.
 - [ ] **R3. A public machine-learning project, if there is one.** Machine
-  learning's proof says "Google Advanced Data Analytics certificate, below;
-  no public project yet" and links nowhere.
+  learning's proof says "Google Advanced Data Analytics certificate; no
+  public project yet" and links nowhere.
   - *What:* a public notebook or repository of yours that shows it.
   - *Where:* a new public output in `content/research.json` (a `github.com`
     URL is already trusted), then the toolkit's machine-learning row in
@@ -752,7 +759,9 @@ keep, and some figures could move to "public" with a link only you have.
   The two master's degrees, the three continents, the four countries and the
   Wageningen GPA of 7.8/10 (K1) are marked on request, on the understanding
   that you will send the degree certificates and the transcript when a
-  reader asks.
+  reader asks. For Germany, one of the four countries, the evidence is the
+  UNDRR internship, as you record it, not a degree: say if you hold a
+  document for it.
   - *Where:* `content/claims.json` → the `masters-degrees`, `continents`,
     `countries` and `wur-grade` entries → `checkable`. If you would not send
     them, each becomes `not-checkable`.
@@ -762,6 +771,11 @@ keep, and some figures could move to "public" with a link only you have.
   are labelled not checkable from outside today:
   - the team of 23 at Sierra Drilling and the 8-week OnePointFive programme
     (K2): `content/claims.json` → `team-size` and `programme-weeks`;
+  - the six people in the Wuppertal consultancy team and the five months
+    with UNDRR, which the site writes in words and which are entries now:
+    `wuppertal-team` (from `education[0].consultancyTeamSize` in
+    `content/profile.json`) and `undrr-months` (counted from the
+    internship's dates; the build fails if the two disagree). Confirm both;
   - the 164 water points (100 wells rehabilitated, 50 boreholes, 14 solar)
     and the 70% strike rate, from the field records: these are the
     groundwater case study's results, so their checkability is set there,
@@ -829,12 +843,16 @@ keep, and some figures could move to "public" with a link only you have.
     project completion rate", "efficiency by 15%", "3+ years" and Power BI.
     Since wave 4, `npm run cv` prints `assets/Moses_Kolleh_Sesay_CV.pdf` from
     `content/` and the homepage, so it says only what the site says, and the
-    tests fail if it falls behind. Three things on the old one are not on it,
-    because the site does not say them: your phone number, the Ministry of
-    Finance as the partner (D2), and the relevant courses under each degree.
+    tests fail if it falls behind. Two things on the old one are not on it:
+    the Ministry of Finance as the partner (D2), and the relevant courses
+    under each degree, which the site does not list. Your phone number is on
+    it, because the homepage's contact card publishes it; it is
+    `person.phone` in `content/profile.json`, and a test holds the homepage
+    to it.
   - *Where:* anything you want on it goes on the site first (`content/profile.json`
-    or the homepage), then `npm run cv`. A phone number would need a new
-    `person.phone` field: say if you want one published.
+    or the homepage), then `npm run cv`. If you would rather not publish the
+    phone number, take it off both: the contact card in `index.html` and
+    `person.phone`.
   - *Check:* `npm test` passes (`tests/cv.test.js`), and the PDF reads as you
     would want a recruiter to read it.
 - [ ] **D2. May the site and the CV name the Ministry of Finance as the partner?**

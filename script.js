@@ -1378,7 +1378,8 @@ console.log('%cEmail: moseskollehsesay@gmail.com', 'color: #7CFC00; font-size: 1
             });
         } catch (e) { /* older browsers: leave the badge quiet */ }
         if (!bytes) {
-            badgeText.textContent = 'Built to stay light — under ~1 MB per visit';
+            // No measure, so no figure: a fixed one would be a claim nothing holds.
+            badgeText.textContent = 'Built to stay light — this browser does not say what it fetched';
             return;
         }
         const mb = bytes / (1024 * 1024);

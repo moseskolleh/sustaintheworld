@@ -813,7 +813,7 @@ function checkTestimonials(file) {
 const CHECKABLE = ['public', 'on-request', 'not-checkable'];
 const BASIS_KINDS = ['result', 'profile', 'factor', 'source', 'budget', 'derived', 'illustrative'];
 const CLAIM_KEYS = ['id', 'value', 'unit', 'forms', 'spoken', 'basis', 'checkable', 'check'];
-const BASIS_EXTRA = { factor: ['url', 'note'], source: ['url', 'note'], derived: ['from'], profile: ['note'], budget: ['note'] };
+const BASIS_EXTRA = { factor: ['url', 'note', 'count', 'own'], source: ['url', 'note'], derived: ['from'], profile: ['note'], budget: ['note'] };
 const CLAIM_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 /** The calculators' inputs, as the pages load them. */
@@ -849,7 +849,9 @@ function checkabilityOf(claim, projects) {
 }
 
 /** What a calculator input amounts to, for comparing with the ledger. */
-function factorQuantity(f) {
+function factorQuantity(f, count) {
+    // A count of a factor set's entries: its models, its grid regions.
+    if (count) return f && typeof f === 'object' ? { n: Object.keys(f).length } : null;
     if (typeof f === 'number') return { n: f };
     if (Array.isArray(f) && f.length === 2 && f.every(n => typeof n === 'number')) return { lo: f[0], hi: f[1] };
     if (f && typeof f.input === 'number' && typeof f.output === 'number') return { n: f.input / f.output, ratio: true };
@@ -892,11 +894,13 @@ function checkClaims(ledger, { profile, projects, factors }) {
                 .forEach(s => problems.push(`${where}: ${key === 'spoken' ? 'the narration\'s' : 'the form'} "${s}" does not say ${c.value}`));
             if (key === 'spoken') c[key].filter(s => /\d/.test(s)).forEach(s => problems.push(`${where}: "${s}" is spoken, so it is written in words`));
         });
-        // The marker finds a figure in content/ by how it is written; two
-        // entries written alike would leave it guessing.
+        // The marker finds a figure in content/ by how it is written (a bare
+        // pair of digits with its unit's first word); two entries written
+        // alike would leave it guessing.
         [c.value].concat(c.forms || []).filter(figures.markable).forEach((s) => {
-            if (shownBy.has(s) && shownBy.get(s) !== c.id) problems.push(`${where}: "${s}" is also how "${shownBy.get(s)}" is written; the pages could not tell them apart`);
-            shownBy.set(s, c.id);
+            const key = figures.pattern(s, c).toLowerCase();
+            if (shownBy.has(key) && shownBy.get(key) !== c.id) problems.push(`${where}: "${s}" is also how "${shownBy.get(key)}" is written; the pages could not tell them apart`);
+            shownBy.set(key, c.id);
         });
 
         const b = c.basis;
@@ -923,6 +927,13 @@ function checkClaims(ledger, { profile, projects, factors }) {
                 if (typeof p !== 'string' || atPath(profile, p) === undefined) problems.push(`${where}: profile.json has no ${p}`);
             });
             const field = paths.length === 1 ? atPath(profile, paths[0]) : undefined;
+            // Months counted from a role's dates ("five months with UNDRR")
+            // move with them: start and end month, both counted.
+            const span = field && /^\d{4}-\d{2}$/.test(field.start || '') && /^\d{4}-\d{2}$/.test(field.end || '')
+                ? (field.end.slice(0, 4) - field.start.slice(0, 4)) * 12 + (field.end.slice(5) - field.start.slice(5)) + 1 : null;
+            if (span !== null && /^months\b/.test(c.unit || '') && !figures.agrees(value, { n: span })) {
+                problems.push(`${where}: ${paths[0]} runs ${field.start} to ${field.end}, ${span} months, not ${c.value}`);
+            }
             if (field !== undefined && field !== null && typeof field !== 'object') {
                 if (!figures.agrees(value, String(field).split(' ')[0])) problems.push(`${where}: profile.json's ${paths[0]} is ${field}, not ${c.value}`);
             } else if (!b.note) {
@@ -930,7 +941,11 @@ function checkClaims(ledger, { profile, projects, factors }) {
             }
         } else if (kind === 'factor') {
             const f = typeof b.factor === 'string' ? atPath(factors, b.factor) : undefined;
-            const q = factorQuantity(f);
+            if (b.count !== undefined && b.count !== true) problems.push(`${where}: count is true (the figure is how many entries ${b.factor} has) or left out`);
+            // A default, a convention or a judgement is the calculator's own,
+            // and says so rather than wearing the factor's citation.
+            if (b.own !== undefined && (typeof b.own !== 'string' || !b.own.trim() || b.note !== undefined)) problems.push(`${where}: own says why the calculator chose the figure, in place of a note`);
+            const q = factorQuantity(f, b.count === true);
             if (f === undefined) problems.push(`${where}: ai-carbon-data.js has no ${b.factor}`);
             else if (q && !figures.agrees(value, q)) problems.push(`${where}: ai-carbon-data.js's ${b.factor} is not ${c.value}`);
             else if (!q && !b.note) problems.push(`${where}: ${b.factor} is not one number, so the basis needs a note saying how ${c.value} follows from it`);
@@ -972,13 +987,18 @@ function checkClaims(ledger, { profile, projects, factors }) {
 }
 
 /**
- * What a reader of one role view can open: the public artifacts of its case
- * studies, and the public research outputs that belong to it, through their
- * case study or their own `lenses`. Each as { name, url }. Every lens needs
- * one that is not a page of this site (checkLensWork).
+ * The public work a role view holds as its own: the public artifacts of the
+ * case studies it is home to (those that list it first, and so lead the
+ * view), and the public research outputs of those case studies or placed in
+ * the view by their own `lenses`, which its panel lists (renderCaseStudies,
+ * build-content.js). A case study that only touches a lens leads another
+ * view, and its work counts there: the sustainable-AI case lists the climate
+ * lens third, and its repositories are not climate work. Each as
+ * { name, url }. Every lens needs one that is not a page of this site
+ * (checkLensWork).
  */
 function publicWorkFor(lensId, projects, research) {
-    const ids = projects.caseStudies.filter(cs => (cs.lenses || []).includes(lensId)).map(cs => cs.id);
+    const ids = projects.caseStudies.filter(cs => (cs.lenses || [])[0] === lensId).map(cs => cs.id);
     const artifacts = projects.caseStudies.filter(cs => ids.includes(cs.id))
         .flatMap(cs => (cs.artifacts || []).filter(a => a.status === 'public').map(a => ({ name: a.name, url: a.url })));
     const outputs = research.outputs.filter(o => o.status === 'public' && (ids.includes(o.caseStudy) || (o.lenses || []).includes(lensId)))

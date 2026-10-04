@@ -124,6 +124,9 @@ function cvModel(data, indexHtml) {
         jobTitle: profile.person.jobTitle,
         contact: [
             { text: profile.person.email, href: `mailto:${profile.person.email}` },
+            // The homepage publishes it, so the CV, which says what the site
+            // says, prints it too, unbroken across a line as the homepage's is.
+            ...(profile.person.phone ? [{ text: profile.person.phone.replace(/ /g, '\u00a0'), href: `tel:${profile.person.phone.replace(/[^\d+]/g, '')}` }] : []),
             { text: bare(site), href: site },
             { text: bare(profile.links.linkedin), href: profile.links.linkedin },
             { text: bare(profile.links.github), href: profile.links.github },

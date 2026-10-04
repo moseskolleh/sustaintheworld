@@ -944,18 +944,22 @@ live, is done.
 
 **Phase 3 — wave 4.** Built, and its "done when" holds: every lens has
 public work beyond the site's own pages (the validator refuses one that has
-none), the claims-ledger test is green, and the CV is generated. Not done as
-a phase: the testimonials (3.5), the certificates' links (3.8) and the
+none, and each lens's own is shown in its view), the claims-ledger test is
+green, and the CV is generated. Not done as a phase: the findings the plan
+names (3.3), the testimonials (3.5), the certificates' links (3.8) and the
 "Present" role (3.10) wait on Moses. Where the plan began, 3 of 12
 case-study results were checkable from outside and 3 of 5 "public" research
 outputs were the portfolio itself; now 5 of 15 results across seven case
 studies are, and 10 of 16 outputs are public, 4 of them this site's own
-pages. No ceiling was raised: the homepage's first view grew 529 bytes
-(282,092 → 282,621), past the rounding line, and is quoted as 276 KB
-everywhere; `case-studies.html` grew most (106,779 → 111,501 bytes, 115
-under its ceiling; 11.55 and 19.67 screens against 11.85 and 19.78), and
+pages. No ceiling was raised: the homepage's first view grew 557 bytes
+(282,092 → 282,649), past the rounding line, and is quoted as 276 KB
+everywhere; `case-studies.html` grew most (106,779 → 111,050 bytes, 566
+under its ceiling once its inline script shipped without its comment
+lines; 11.51 and 19.58 screens against 11.85 and 19.78), and
 `research.html` is 8.97 screens on a phone against 8.99. `claims.html` is
-new, with ceilings of 101 KB and 6.57 and 11.54 screens. What the wave needs
+new, with ceilings of 101 KB and 7.54 and 13.53 screens, set at what it
+measured plus 5% once the review had put the figures written in words on
+it (36 entries). What the wave needs
 from Moses is in the owner checklist: R1–R6 (his repositories), G1–G4 (the
 ESG case and the findings), N1–N3 (the ledger's evidence), D1–D3 and L1 (the
 CV, the ministry's name, the certificates, the testimonials) and F5.
@@ -965,16 +969,21 @@ CV, the ministry's name, the certificates, the testimonials) and F5.
    WaterProject (also the first public code on the groundwater case study,
    and so behind the water lens), GAIA-Framework- (its own case study, step
    2), climatematch-pipeline (no case study of its own: a new `lenses` field
-   puts it in the climate-risk view, and its note says it has no licence
-   file), A-B-Testing-at-Globox, and SustainableAIPrototypes and promptcoach
+   places it in the climate-risk view, whose panel lists it after the
+   lens's evidence, and its note says it has no licence file),
+   A-B-Testing-at-Globox, and SustainableAIPrototypes and promptcoach
    (both public artifacts of the sustainable-AI case study). The toolkit's
    proofs point at them: Python at WaterProject, QGIS at the groundwater case
    study, SQL at the GloBox test, Tableau at the same repository, whose
    README links a Tableau Public dashboard, and JavaScript at promptcoach. Machine learning, shown by a
    certificate alone, says "no public project yet" and links nowhere, and
    Power BI is claimed nowhere (a test keeps it so). `checkLensWork` in
-   `scripts/lib/content.js` refuses a lens with no public work beyond the
-   site's own pages. `research.html` groups its outputs by availability
+   `scripts/lib/content.js` refuses a lens with no public work of its own
+   beyond the site's own pages: the artifacts of the case studies that list
+   it first, and the outputs placed in it. (Counting every case study that
+   touched a lens let the climate view pass on the sustainable-AI case's
+   repositories; without climatematch-pipeline it now fails.)
+   `research.html` groups its outputs by availability
    (public, on request, held by the client), each note ending with its case
    study or lens, the reproduction notes folded. No partner is newly named.
    WaterProject's apps and the Tableau dashboard are reached through their
@@ -997,20 +1006,23 @@ CV, the ministry's name, the certificates, the testimonials) and F5.
    view on Wuppertal and the water view on its three water-first studies.
    ✗ Moses: whether GAIA is his to publish and whether it is the ministry
    project's held framework, and the GAIA case's own facts (G1, G2).
-3. ✓ **Findings and recommendations.** Every case study carries `findings`:
+3. ◐ **Findings and recommendations.** Every case study carries `findings`:
    one to four entries, each a finding or a recommendation (at least one a
    finding), with a basis wherever there is a figure. The validator refuses
    a case study without them, and they render as stage 05. They come only
    from the field notes, the case studies' own text, photo captions, the
    climate lens and the GAIA repository, so where the evidence is thin the
-   list is short: UNDRR has one; the sustainable-AI case gives its five
-   design principles, not the ministry's decision criteria, which nothing on
-   the site records; the coastal drivers and the Wuppertal measures say only
-   that the thesis and the report hold them. To make room under the page's
-   length ceiling each method is folded behind a press ("02 Method, four
-   steps"), and so is the page's closing note. ✗ Moses: confirm the
-   findings, and supply the coastal drivers and the Wuppertal measures if
-   they can be cited (G3); the folded method (G4).
+   list is short: UNDRR has one, and Wuppertal one, its recommendation
+   having named no measure. Partial because none of the three findings this
+   step names is on the site: the coastal finding says only that the thesis
+   sets out which drivers dominate; Wuppertal has no measure; the
+   sustainable-AI case gives its five design principles, not the ministry's
+   decision criteria, which nothing on the site records. To make room under
+   the page's length ceiling each method is folded behind a press ("02
+   Method, four steps"), and so is the page's closing note; printed, both
+   open. ✗ Moses: confirm the findings, and supply the coastal drivers, the
+   Wuppertal measures and, if the framework may be quoted and the ministry
+   named, its decision criteria (G3); the folded method (G4).
 4. ✓ **One name for one tool.** "AI, Weighed" is gone from every page, the
    README, the budget labels, the open counts' page names, smoke and the
    tests (`content.test.js` fails if it comes back): the tool is EcoPrompt
@@ -1035,7 +1047,7 @@ CV, the ministry's name, the certificates, the testimonials) and F5.
    quotes of 200 characters, one takes the homepage to 9.80 screens at
    1440×900 against a 9.79 ceiling, and two to 9.80 and 17.18 at 390×844
    against 17.09, so room has to be made first.
-6. ✓ **Check my numbers.** `content/claims.json` holds the 30 figures the
+6. ✓ **Check my numbers.** `content/claims.json` holds the 36 figures the
    site prints, each with its value, what it counts, exactly one basis (a
    case-study result, a `profile.json` field, an `ai-carbon-data.js`
    factor, a source with its URL, a budget, a figure derived from others, or
@@ -1048,15 +1060,23 @@ CV, the ministry's name, the certificates, the testimonials) and F5.
    the hero's figures and from every footer. `tests/claims.test.js` fails on
    a mark that disagrees with its entry, an entry with no basis, a number
    the narration says that no entry backs, and an unmarked numeral on any
-   page but `stats.html` (whose counts are the counter's own). The allowlist
-   is wider than years: `EXEMPT` in `scripts/lib/claims.js` also passes
-   dates, section numbers, standards' names, versions, return periods and
-   the like, each narrowly, and a test feeds it the same numbers counting
-   something. Not ledgered: the calculators' outputs (their inputs are),
-   and numbers written as words on the pages ("six-person team", "four
-   certificates"), which the scan does not read; the journey's "Four
-   countries, three continents" is marked by hand, and the narration's
-   words are held to the ledger. Two figures were corrected: "~25 MB of images" had no basis and is now "~22 MB on
+   page but `stats.html` (whose counts are the counter's own), in digits or
+   in words, in the text or in the labels, tooltips, photo captions and
+   descriptions a reader is shown; the field terminal's lines are read from
+   its source and held to the ledger, and the footer's badge prints no
+   fixed figure. The allowlist is wider than years: `EXEMPT` in
+   `scripts/lib/claims.js` also passes dates, section numbers, standards'
+   names, versions, return periods and the like, each narrowly, and a test
+   feeds it the same numbers counting something; `WORD_EXEMPT` passes "one"
+   and a count of what the page shows in full, which a test holds to the
+   number shown. A count in words that is a figure is an entry, so
+   the Wuppertal team of six, the five months at UNDRR, the five design
+   principles and the factor set's models, grid regions and cooling
+   profiles are on the list (36 entries). Not ledgered: the calculators'
+   outputs (their inputs are). Where the calculator's input is its own
+   choice (the default PUE, the reference mix, the output weight and its
+   range), the ledger says so rather than giving the factor's citation as
+   its source. Two figures were corrected: "~25 MB of images" had no basis and is now "~22 MB on
    arrival", measured at commit `3d7ab78`; the field report is quoted at
    10 KB and ≈0.004 g. ✗ Moses: the evidence behind the on-request and
    not-checkable figures, the 22 MB line (N1–N3), and a source for the 30%
@@ -1072,8 +1092,10 @@ CV, the ministry's name, the certificates, the testimonials) and F5.
    claims, no name not yet cleared, no number `content/` lacks; and
    `assets/cv.hash` fails it once `content/` or the homepage has moved on
    without a new print. The old CV's "10,000+", 95%, 15%, "3+ years" and
-   Power BI are gone. Left off until Moses says: his phone number and the
-   ministry's name. ✗ Moses: read it (D1); the ministry (D2).
+   Power BI are gone. His phone number is on it, as the homepage's contact
+   card publishes it (`person.phone`, held to the card by a test). Left off
+   until Moses says: the ministry's name. ✗ Moses: read it (D1); the
+   ministry (D2).
 8. ◐ **Certificates link to their verification pages.** Built: an optional
    `verifyUrl` per certification in `profile.json`; the homepage's
    certificate cards are generated from the list, with a "Verify" link

@@ -23,7 +23,7 @@ const { JSDOM } = require('jsdom');
 
 const content = require('../scripts/lib/content.js');
 const fetchStats = require('../scripts/fetch-stats.js');
-const { renderStats, EXAMPLE_PAYLOAD } = require('../scripts/build-content.js');
+const { renderStats, EXAMPLE_PAYLOAD, PAGE_NAMES } = require('../scripts/build-content.js');
 
 const ROOT = content.ROOT;
 const SMALL = fetchStats.SMALL;
@@ -127,6 +127,12 @@ function fixtureRows() {
 }
 
 const known = fetchStats.knownNames();
+// Every page a count can name has a name to print: claims.html counted as
+// "claims", and stats.html printed the bare key beside "EcoPrompt Coach".
+{
+    const unnamed = Array.from(known.pages).filter(k => !PAGE_NAMES[k]);
+    assert(known.pages.has('claims') && unnamed.length === 0, `Known: every page the counter knows has a name on stats.html (${unnamed.join(', ') || `${known.pages.size} named`})`);
+}
 const cleaned = fetchStats.cleanRows(fixtureRows(), known, TODAY);
 const stats = fetchStats.transform(cleaned.rows, { today: TODAY, known });
 

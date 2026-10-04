@@ -85,7 +85,7 @@
         },
         drill: (args, done) => {
             const steps = [
-                'spudding in…',
+                'spudding in… (a made-up log)',
                 '── 12 m  laterite, red-brown, moist',
                 '── 26 m  saprolite, weathered gabbro',
                 '── 38 m  fractured gabbro — conductivity rising',

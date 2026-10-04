@@ -21,7 +21,7 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 - **Role-specific lenses**: `case-studies.html?lens=water`, `?lens=climate-risk`, `?lens=sustainable-ai`, `?lens=esg-csrd` — shareable views that reframe the portfolio for one kind of role. They **reorder and frame, they never filter**: every case study stays on the page in every view, because a view that hides inconvenient work is a CV that lies by omission. Without JavaScript the switcher steps aside and every case study shows in the default view
 - **No dead ends**: every page but the homepage shares one small nav (Home, Case studies, Research, CV, Contact, with the page you are on marked) and ends with a way to reach Moses: his address, the contact form and the CV. The pages built on `carbon-ai.css` have the homepage's light theme and its switch, and keep the reader's choice from page to page (`theme.js`, before the first paint); with nothing chosen they follow the system's setting, with or without JavaScript. The homepage follows it only with JavaScript: without, it stays dark, because following the system there would put a second copy of every light-theme rule in its first view. The text-only field report and the 404 page take the nav and the call to action as plain lines, and no script
 - **[Research outputs](research.html)**: theses, reports, datasets, code and tools, grouped by whether you can open them: public, on request, or held by the client. The public ones lead with Moses's own repositories on GitHub (a groundwater toolkit, the GAIA Green AI framework, a CMIP6 extremes pipeline, an A/B test in SQL and Python, the sustainable-AI prototypes and the maintained EcoPrompt Coach), each described only as far as the repository itself shows. No DOI, journal or conference is named anywhere, because none of this work has one — and a test fails the build if one ever appears without proof
-- **[Check my numbers](claims.html)**: every figure the site prints, from the hero's 164 water points to the first view's weight, with what it counts, the one basis it rests on and whether a reader can check it (public, with where; on request; or not checkable from outside). Each figure on a page is marked with its entry in `content/claims.json`, and `npm test` fails on a figure the ledger does not hold. See [Every number has a basis](#every-number-has-a-basis-the-claims-ledger)
+- **[Check my numbers](claims.html)**: every figure the site prints, in digits or in words, from the hero's 164 water points and the Wuppertal "team of six" to the first view's weight, with what it counts, the one basis it rests on and whether a reader can check it (public, with where; on request; or not checkable from outside). Each figure on a page is marked with its entry in `content/claims.json`, and `npm test` fails on a figure the ledger does not hold, on a page, in its labels and captions, or in the field terminal. See [Every number has a basis](#every-number-has-a-basis-the-claims-ledger)
 - **A CV printed from the same facts**: `npm run cv` prints `assets/Moses_Kolleh_Sesay_CV.pdf` from `content/` and the homepage's own words, so it says what the site says, and a test fails once it falls behind them. See [The CV](#the-cv)
 - **[Open counts](stats.html)**: what the site's own cookieless counter has counted, rebuilt weekly — the five numbers that say whether the site works, page views by page, lens and window width, referrers, features used and bytes per page view, in whole weeks. Every count under 5 reads `<5`, a figure that would let one be worked out by subtraction reads `held`, and the page prints the exact payload a page view sends. See [Open counts](#open-counts)
 - **Borehole core-log experience timeline**: career history logged the way a geologist logs a core — depth is time, every layer is a chapter. Each role is a short card (dates, role, organisation, one line), the rest a press away
@@ -252,8 +252,8 @@ npm run voice -- --clone path/to/sample # make a voice model (add --sections to 
 
 The API key is used only there, on your machine; it never reaches the browser.
 Fish Audio bills 1 credit per UTF-8 byte of text, so the cost is known before
-anything is sent: the eight sections are ~8,300 credits today (8,324 on
-2026-10-03), and the dry run
+anything is sent: the eight sections are ~8,300 credits today (8,297 on
+2026-10-04), and the dry run
 prints the exact figure. Scripts are hashed, so fixing one sentence re-renders
 one file. `scripts/lib/voice-signature.js` is
 the one definition of "has this track already been rendered?", shared by the
@@ -410,10 +410,15 @@ The suites, and the failure each one exists to prevent:
 - **`claims.test.js`** — the claims ledger (see [Every number has a
   basis](#every-number-has-a-basis-the-claims-ledger)): every figure marked
   on every page agrees with its entry in `content/claims.json`, and the
-  hero's count-up ends on it; no numeral on any page is unmarked unless it
-  is a year, a date, a section number, a standard's name or the like, and
-  each one that is gets printed with its page and the words around it; the
-  calculators' hosts, which the scan skips, hold no figure of their own;
+  hero's count-up ends on it; no number on any page, in digits or in words,
+  in its text or in a label, tooltip, photo caption or description, is
+  unmarked unless it is a year, a date, a section number, a standard's name,
+  "one", a count of what the page shows in full (held to that count) or the
+  like, and each one that is gets printed with its page and the words
+  around it; the field terminal's lines hold only the ledger's figures (its
+  drill's depths a made-up log that says so), and the footer's badge no
+  fixed one; the calculators' hosts, which the scan skips, hold no figure
+  of their own;
   every number the narration says in words is an entry's; each figure the
   budget measures is what it measures today; `claims.html` lists every
   entry, where the pages mark it and how to check it; and the validator is
@@ -422,7 +427,8 @@ The suites, and the failure each one exists to prevent:
 - **`portfolio.test.js`** — every case study has all five stages and every
   result a basis; every case study says what it found, and the build refuses
   one that does not; no artifact claims to be public without a working link,
-  and no lens stands without a public artifact behind it; the lenses reorder
+  and no lens stands without public work of its own behind it, shown in its
+  view; the folds open when a page is printed; the lenses reorder
   without ever dropping a case study, each lens's home case studies first
   (`?lens=esg-csrd` opens on GAIA); and the validator is fed deliberately
   fabricated links and findings to prove it still rejects them. The homepage's
@@ -652,9 +658,13 @@ should fail the build rather than ship. `scripts/lib/content.js` refuses:
   otherwise.
 - **A role view with nothing a reader can open.** Every lens in
   `content/lenses.json` needs at least one public artifact or research output
-  beyond this site's own pages, through its case studies or an output's own
-  `lenses`. The water view had two games here and nothing else until the
-  groundwater toolkit's repository joined it.
+  of its own beyond this site's own pages: from a case study that lists it
+  first, or an output its own `lenses` place there, which the view's panel
+  lists. A case study that only touches a lens does not count for it: the
+  climate view passed on the sustainable-AI case's repositories until
+  climatematch-pipeline, its own, was shown in it. The water view had two
+  games here and nothing else until the groundwater toolkit's repository
+  joined it.
 - **A testimonial without a source** (`content/testimonials.json`): a
   LinkedIn recommendation's address on linkedin.com, or "on request" with
   the date permission was given.
@@ -714,10 +724,16 @@ page's footer.
 
 `tests/claims.test.js` fails on a mark that disagrees with its entry, an
 entry with no basis or one that says another number, a number the narration
-says in words that no entry backs, and a numeral on any page that is
-neither marked nor a year, a date, a section number, a standard's name, a
-place's coordinates, the phone number or another kind listed in
-`scripts/lib/claims.js` (`EXEMPT`). The numbers the calculators work out in
+says in words that no entry backs, and a number on any page, in digits or
+in words, in its text or its labels, tooltips, photo captions and
+descriptions, that is neither marked nor a year, a date, a section number,
+a standard's name, a place's coordinates, the phone number, "one", a count
+of what the page shows in full ("seven case studies", held to the count in
+`content/`) or another kind listed in `scripts/lib/claims.js` (`EXEMPT`,
+`WORD_EXEMPT`). A count in words is a figure like any other: "team of
+six" is an entry, marked on its number, as "164" is. The field terminal's
+lines are read from `modules/terminal.js` and held to the ledger the same
+way. The numbers the calculators work out in
 the browser (the coach on `carbon-ai.html`, the homepage's chart, the
 footer's receipt) are model outputs, not claims: their hosts are skipped
 by name, must hold no figure in the HTML, and their inputs are entries
@@ -725,8 +741,9 @@ where the pages print them. The open counts on `stats.html` are the
 counter's own.
 
 To add a figure: give it an entry, mark it on the page (`npm run
-build:content` marks it in generated pages), and run `npm test`; an
-unmarked numeral is printed with its page and the words around it.
+build:content` marks it in generated pages, by its value or a `forms`
+phrase such as "five months"), and run `npm test`; an unmarked number is
+printed with its page and the words around it.
 
 ### Keeping the profile honest over time
 
@@ -974,10 +991,10 @@ did.
 | Recorded narration: Moses's introduction (sized for his 60–90 s take) | 0 KB | 800 KB |
 | Text-only field report, the HTML file (the size the footer quotes) | ~10 KB | 11 KB |
 | Text-only field report, over the wire (with its visit counter) | ~6 KB | 8 KB |
-| Case studies page, over the wire (fonts included) | ~109 KB | 109 KB |
-| Open counts page, over the wire (fonts included; sized for a full page) | ~96 KB | 103 KB |
-| Research outputs page, over the wire (fonts included) | ~96 KB | 99 KB |
-| Check my numbers (`claims.html`), over the wire (fonts included) | ~97 KB | 101 KB |
+| Case studies page, over the wire (fonts included) | ~108 KB | 109 KB |
+| Open counts page, over the wire (fonts included; sized for a full page) | ~97 KB | 103 KB |
+| Research outputs page, over the wire (fonts included) | ~97 KB | 99 KB |
+| Check my numbers (`claims.html`), over the wire (fonts included) | ~98 KB | 101 KB |
 | EcoPrompt Coach (`carbon-ai.html`), over the wire (fonts included) | ~111 KB | 111 KB |
 <!-- BUDGET-TABLE:END -->
 
@@ -1057,7 +1074,7 @@ weekly Action will commit).
 | `index.html` | 9.79 screens | 17.09 screens |
 | `case-studies.html` | 11.85 screens | 19.78 screens |
 | `carbon-ai.html` | 7.07 screens | 13.38 screens |
-| `claims.html` | 6.57 screens | 11.54 screens |
+| `claims.html` | 7.54 screens | 13.53 screens |
 | `research.html` | 5.86 screens | 8.99 screens |
 | `stats.html` | 10.97 screens | 16.25 screens |
 | `field-report.html` | 4.4 screens | 7.44 screens |

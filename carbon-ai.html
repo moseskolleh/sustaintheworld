@@ -237,7 +237,7 @@
                 <strong>Input and output tokens are priced differently.</strong> Reading a prompt is prefill —
                 the whole thing goes through the model in one parallel pass. Writing an answer is decode —
                 one token per forward pass, reloading the weights each time. An output token is modelled as
-                four input tokens, a figure with a plausible range of <span data-claim="output-weight-range">2–8×</span>. The published per-1k-token
+                <span data-claim="output-weight">four</span> input tokens, a figure with a plausible range of <span data-claim="output-weight-range">2–8×</span>. The published per-1k-token
                 benchmarks are reproduced exactly at a <span data-claim="reference-mix">50/50</span> split, so this refines the numbers rather than
                 inflating them.
             </p>

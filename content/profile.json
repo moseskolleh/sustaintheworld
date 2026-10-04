@@ -35,8 +35,10 @@
     "email": "moseskollehsesay@gmail.com",
     "locality": "Amsterdam",
     "country": "NL",
-    "coordinates": "52.3676° N, 4.9041° E"
+    "coordinates": "52.3676° N, 4.9041° E",
+    "phone": "+31 659 361 423"
   },
+  "$phone": "The number the homepage's contact card publishes (index.html, a tel: link); tests/content.test.js holds the two together, and the CV prints it in its header. Take it off both or neither.",
 
   "$knowsAbout": "Feeds JSON-LD. Keep it to areas with case-study evidence behind them — a schema.org claim is still a claim.",
   "knowsAbout": [
@@ -101,7 +103,7 @@
     "displayDates": "Sept 2025 — Present"
   },
 
-  "$figures": "A figure on a page needs a basis in content/. A case-study result carries its own; a record fact about a role or a degree (a team's headcount, a programme's length, a grade) sits on the entry it describes, here, and tests/content.test.js holds the pages to it. An outcome rate (a completion percentage, an efficiency gain, people reached) is not a record fact: it needs a method, and without one it stays off the site.",
+  "$figures": "A figure on a page needs a basis in content/. A case-study result carries its own; a record fact about a role or a degree (a team's headcount, a programme's length, a grade; the Wuppertal consultancy's team, part of the Wageningen degree) sits on the entry it describes, here, and tests/content.test.js holds the pages to it. An outcome rate (a completion percentage, an efficiency gain, people reached) is not a record fact: it needs a method, and without one it stays off the site.",
 
   "experience": [
     {
@@ -149,7 +151,8 @@
       "institution": "Wageningen University & Research",
       "displayDates": "2021 — 2024",
       "textEditionDates": "2021–2024",
-      "grade": "7.8/10 (Dutch scale)"
+      "grade": "7.8/10 (Dutch scale)",
+      "consultancyTeamSize": 6
     },
     {
       "degree": "MSc Industrial Engineering",
@@ -211,12 +214,12 @@
 
   "$pages": "Drives sitemap.xml. lastmod is set by hand when a page's content changes — a build timestamp would claim every page changed on every deploy, which is the fastest way to teach a crawler to ignore the field.",
   "pages": [
-    { "path": "index.html", "loc": "https://moseskolleh.github.io/sustaintheworld/", "lastmod": "2026-10-03", "changefreq": "monthly", "priority": "1.0" },
-    { "path": "case-studies.html", "loc": "https://moseskolleh.github.io/sustaintheworld/case-studies.html", "lastmod": "2026-10-03", "changefreq": "monthly", "priority": "0.9" },
-    { "path": "research.html", "loc": "https://moseskolleh.github.io/sustaintheworld/research.html", "lastmod": "2026-10-03", "changefreq": "monthly", "priority": "0.8" },
-    { "path": "carbon-ai.html", "loc": "https://moseskolleh.github.io/sustaintheworld/carbon-ai.html", "lastmod": "2026-10-03", "changefreq": "monthly", "priority": "0.8" },
-    { "path": "field-report.html", "loc": "https://moseskolleh.github.io/sustaintheworld/field-report.html", "lastmod": "2026-10-03", "changefreq": "monthly", "priority": "0.3" },
-    { "path": "claims.html", "loc": "https://moseskolleh.github.io/sustaintheworld/claims.html", "lastmod": "2026-10-03", "changefreq": "monthly", "priority": "0.5" },
+    { "path": "index.html", "loc": "https://moseskolleh.github.io/sustaintheworld/", "lastmod": "2026-10-04", "changefreq": "monthly", "priority": "1.0" },
+    { "path": "case-studies.html", "loc": "https://moseskolleh.github.io/sustaintheworld/case-studies.html", "lastmod": "2026-10-04", "changefreq": "monthly", "priority": "0.9" },
+    { "path": "research.html", "loc": "https://moseskolleh.github.io/sustaintheworld/research.html", "lastmod": "2026-10-04", "changefreq": "monthly", "priority": "0.8" },
+    { "path": "carbon-ai.html", "loc": "https://moseskolleh.github.io/sustaintheworld/carbon-ai.html", "lastmod": "2026-10-04", "changefreq": "monthly", "priority": "0.8" },
+    { "path": "field-report.html", "loc": "https://moseskolleh.github.io/sustaintheworld/field-report.html", "lastmod": "2026-10-04", "changefreq": "monthly", "priority": "0.3" },
+    { "path": "claims.html", "loc": "https://moseskolleh.github.io/sustaintheworld/claims.html", "lastmod": "2026-10-04", "changefreq": "monthly", "priority": "0.5" },
     { "path": "stats.html", "loc": "https://moseskolleh.github.io/sustaintheworld/stats.html", "lastmod": "2026-10-03", "changefreq": "weekly", "priority": "0.2" }
   ]
 }

@@ -127,6 +127,12 @@ const { projects, research, lenses } = data;
     assert(content.checkLensWork(lens, game, { outputs: [{ ...repo, lenses: ['x'] }] }).length === 0, 'Guard: accepts a lens with a repository placed in it by its own lenses');
     assert(content.checkLensWork(lens, game, { outputs: [{ ...repo, caseStudy: 'g' }] }).length === 0, 'Guard: accepts a lens with a repository through one of its case studies');
     assert(content.checkLensWork(lens, game, { outputs: [{ ...repo, status: 'on-request', url: undefined, caseStudy: 'g' }] }).length === 1, 'Guard: work on request does not count');
+    // A case study counts for the view it leads, its first lens, not one it
+    // only touches: that view opens on other work.
+    const touching = { caseStudies: game.caseStudies.concat({ id: 'h', lenses: ['y', 'x'], artifacts: [{ name: 'Code', status: 'public', url: repo.url }] }) };
+    assert(content.checkLensWork(lens, touching, { outputs: [{ ...repo, caseStudy: 'h' }] }).length === 1 &&
+        content.checkLensWork([{ id: 'y' }], touching, { outputs: [] }).length === 0,
+        'Guard: a repository counts for the view its case study leads, not for one the case study only touches');
 }
 
 // --- research outputs -----------------------------------------------------
@@ -216,6 +222,19 @@ function dom(file) {
     assert(!!whyFold && !whyFold.open && /Why it is laid out like this/.test(why.querySelector(':scope > h2').textContent) &&
             whyFold.querySelectorAll(':scope > p').length === 2 && /vouched for/.test(whyFold.textContent),
         'Page: the note on why it is laid out like this keeps its heading in view and folds its two paragraphs');
+
+    // Printed, the folds open (content.css where the browser knows
+    // ::details-content, the page's script elsewhere), the photo rows stay
+    // shut, and after printing only what printing opened shuts again.
+    const photos = doc.querySelector('details.cs-photos');
+    folds[1].open = true;
+    window.dispatchEvent(new window.Event('beforeprint'));
+    const printedOpen = folds.every(d => d.open) && whyFold.open && !photos.open;
+    window.dispatchEvent(new window.Event('afterprint'));
+    const after = folds.map(d => d.open);
+    assert(printedOpen && after[1] && after.filter(Boolean).length === 1 && !whyFold.open,
+        `Print: every method and the closing note open for paper, the photos stay folded, and afterwards only the reader's own open fold stays open (${after.filter(Boolean).length} open)`);
+    folds[1].open = false;
     const open = Array.from(cards).map(c => Array.from(c.querySelectorAll(':scope > .cs-stage h4')).map(h => h.textContent.replace(/\s+/g, ' ').trim()));
     assert(open.every(hs => hs.length === 5 && /^05 Findings & recommendations$/.test(hs[4])), `Page: the fifth stage is the findings (${open[0].join(' | ')})`);
 
@@ -466,6 +485,13 @@ function loadWith(name, change) {
 
     const items = doc.querySelectorAll('.rs-item');
     assert(items.length === research.outputs.length, `Research page: every output is rendered (${items.length}/${research.outputs.length})`);
+
+    // The reproduction notes are folded for the screen, not for paper.
+    const notes = doc.querySelector('.rs-repro details');
+    window.dispatchEvent(new window.Event('beforeprint'));
+    const printed = notes.open;
+    window.dispatchEvent(new window.Event('afterprint'));
+    assert(printed && !notes.open, 'Print: the reproduction notes open for paper and fold again after');
 
     const statuses = doc.querySelectorAll('.rs-item .cs-status');
     assert(statuses.length === research.outputs.length, `Research page: every output shows its availability (${statuses.length}/${research.outputs.length})`);

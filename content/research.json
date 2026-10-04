@@ -23,9 +23,11 @@
     "repository itself shows: no result its README states as a target, no",
     "standard it maps to called 'compliance', and no client or partner it names.",
     "`lenses` places an output with no case study of its own in a role view",
-    "(content/lenses.json ids); every lens must have at least one public piece",
-    "of work beyond this site's own pages, here or among its case studies'",
-    "artifacts (scripts/lib/content.js, checkLensWork)."
+    "(content/lenses.json ids), whose panel on case-studies.html lists it after",
+    "the lens's evidence. Every lens must have at least one public piece of",
+    "work of its own beyond this site's pages: an output placed in it, or an",
+    "artifact of a case study that lists it first (scripts/lib/content.js,",
+    "checkLensWork)."
   ],
 
   "intro": "This page says which is which — because a portfolio that lists outputs without saying whether anyone can read them is a list of assertions.",
@@ -213,7 +215,7 @@
       "year": "2026",
       "status": "public",
       "url": "index.html#notes",
-      "summary": "Short essays connecting the three threads: what 164 water points taught me about data, why I wrote a pessimistic future on purpose, and what to do about the footprint of a prompt.",
+      "summary": "Short essays connecting water, climate and AI: what 164 water points taught me about data, why I wrote a pessimistic future on purpose, and what to do about the footprint of a prompt.",
       "methods": [],
       "note": "Written for the site, not peer-reviewed."
     },

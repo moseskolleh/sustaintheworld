@@ -85,6 +85,8 @@ let cutFigures = (s) => [[String(s == null ? '' : s), null]];
 const prose = (s) => cutFigures(s)
     .map(([text, id]) => (id ? `<span data-claim="${id}">${esc(text)}</span>` : typeset(esc(text))))
     .join('');
+// Marked, but not typeset: a photo's caption keeps its characters as written.
+const markOnly = (s) => cutFigures(s).map(([text, id]) => (id ? `<span data-claim="${id}">${esc(text)}</span>` : esc(text))).join('');
 
 const slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
@@ -350,7 +352,7 @@ const WIDGET_HOSTS = {
     // blind-drilling rate, which has no recorded source and so is labelled
     // illustrative wherever it appears.
     borehole: {
-        title: 'Seven in ten: what reading the ground is worth',
+        title: '<span data-claim="strike-rate">Seven in ten</span>: what reading the ground is worth',
         noun: 'drilling game',
         live: `
                         <p class="dw-intro">This is a resistivity profile like the ones we walked across the Freetown Complex. Low resistivity &mdash; the dips in the curve &mdash; can mean water-bearing fractures. Or clay. Move the rig, pick your spot, drill.</p>
@@ -416,7 +418,7 @@ function photoStrip(cs) {
         return `
                         <li><figure class="cs-photo${p.layout ? ` cs-photo-${p.layout}` : ''}">
                             <a href="${esc(p.src)}" data-lightbox="${esc(cs.id)}" data-caption="${esc(p.fullCaption)}"><img src="${esc(p.src)}"${srcset} alt="${esc(p.alt)}" width="${p.width}" height="${p.height}" loading="lazy" decoding="async"></a>
-                            <figcaption>${esc(p.caption)}</figcaption>
+                            <figcaption>${markOnly(p.caption)}</figcaption>
                         </figure></li>`;
     }).join('');
     return `
@@ -426,6 +428,32 @@ function photoStrip(cs) {
                     </ul>
                 </details>`;
 }
+
+/** A page's inline script without its whole-line comments, which stay in this file. */
+const codeOnly = (js) => js.replace(/^[ \t]*\/\/.*\n/gm, '');
+
+// Printed, the folds are open: paper has no press, and the method, the
+// case studies' closing note and research.html's reproduction notes are
+// folded only for the screen's length. content.css opens them for print
+// where the browser knows ::details-content; this does it where it does
+// not, and shuts again only what it opened. The photo rows stay shut on
+// paper as on screen: their photos load only when a row is opened.
+const PRINT_FOLDS = `
+    (function () {
+        var folds = '.cs-method-fold, .cs-footnote details, .rs-repro details';
+        addEventListener('beforeprint', function () {
+            document.querySelectorAll(folds).forEach(function (d) {
+                if (!d.open) { d.open = true; d.setAttribute('data-print-open', ''); }
+            });
+        });
+        addEventListener('afterprint', function () {
+            document.querySelectorAll('[data-print-open]').forEach(function (d) {
+                d.open = false;
+                d.removeAttribute('data-print-open');
+            });
+        });
+    })();
+`;
 
 // The page's lightbox, in its own inline script: case-studies.html has no
 // script.js, and a module fetched on the first press would have to be paid
@@ -546,14 +574,21 @@ function renderCaseStudies(data) {
             ${all.map(l => `<a class="cs-lens" href="case-studies.html${l.id === 'all' ? '' : `?lens=${l.id}`}" data-lens="${esc(l.id)}">${esc(l.shortLabel || l.label)}</a>`).join('\n            ')}
         </nav>`;
 
+    // An output with no case study of its own sits in a view by its
+    // `lenses` (content/research.json), and the research page links it to
+    // that view: the view lists it after its evidence, so a reader who
+    // follows the link finds it, and can follow it back.
+    const placedIn = (lensId) => data.research.outputs.filter(o => !o.caseStudy && (o.lenses || []).includes(lensId)).map(o =>
+        `<li>${o.status === 'public' && o.url ? `<a href="${esc(o.url)}">${prose(o.title)}</a>` : prose(o.title)}, ` +
+        `${esc(STATUS_LABEL[o.status].toLowerCase())} ${esc(o.type.toLowerCase())} (<a href="research.html#${esc(o.id)}">Research outputs</a>)</li>`);
+
     // One panel per lens, all present in the HTML. Without JavaScript the
     // server cannot know which was asked for, so the "all" panel is shown and
     // the rest are hidden — every case study is on the page either way.
     const panels = all.map((l) => {
         const isDefault = l.id === 'all';
-        const evidence = l.evidence
-            ? `<ul class="cs-lens-evidence">${l.evidence.map(e => `<li>${prose(e)}</li>`).join('')}</ul>`
-            : '';
+        const items = (l.evidence || []).map(e => `<li>${prose(e)}</li>`).concat(placedIn(l.id));
+        const evidence = items.length ? `<ul class="cs-lens-evidence">${items.join('')}</ul>` : '';
         const bestFor = l.bestFor ? `<p class="cs-lens-bestfor"><strong>Best fit for:</strong> ${prose(l.bestFor)}</p>` : '';
         return `
         <section class="cs-lens-panel" data-lens-panel="${esc(l.id)}"${isDefault ? '' : ' hidden'} aria-labelledby="lens-${esc(l.id)}-h">
@@ -686,8 +721,11 @@ ${cards}
             </details>
         </section>`;
 
-    // Progressive enhancement only: the page is complete without this.
-    const script = `    <script>
+    // Progressive enhancement only: the page is complete without this. It
+    // ships without its comment lines (codeOnly): they are for whoever
+    // reads this generator, and on the page they were 2.2 KB of the 10.7 KB
+    // script, which paid for the print rule that opens the folds on paper.
+    const script = codeOnly(`    <script>
     // Lens switching without a reload. The page already contains every panel
     // and every case study; this reorders and swaps which framing is shown,
     // and keeps the URL shareable. With JavaScript off, each lens link is an
@@ -786,7 +824,7 @@ ${cards}
         }, { rootMargin: '100% 0px' });
         for (var i = 0; i < hosts.length; i++) io.observe(hosts[i]);
     })();
-${LIGHTBOX_SCRIPT}    </script>`;
+${LIGHTBOX_SCRIPT}${PRINT_FOLDS}    </script>`);
 
     return pageShell({
         title: 'Case studies — Moses Kolleh Sesay',
@@ -896,6 +934,7 @@ ${reproSection}`;
         heroTitle: 'Research <span class="ca-accent">outputs</span>',
         heroLead: 'Three degrees of research, a consultancy, an internship and code on GitHub: some of it public, some held by the organisations it was done for, the rest a PDF I will happily send you.',
         main,
+        bodyEnd: `    <script>${PRINT_FOLDS}    </script>`,
         current: 'research.html',
         profile: data.profile
     });
@@ -956,6 +995,7 @@ const PAGE_NAMES = {
     'carbon-ai': 'EcoPrompt Coach',
     'field-report': 'Field report (text only)',
     'stats': 'Open counts (this page)',
+    'claims': 'Check my numbers',
     '404': 'Page not found (404)'
 };
 // The width of the browser window, which is not always the screen's: a
@@ -1424,7 +1464,9 @@ function renderClaims(data, pages) {
     const { BUDGETS } = require('./check-budget.js');
     const list = claims.claims;
     const byId = new Map(list.map(c => [c.id, c]));
-    const ref = (c) => `<a href="#claim-${esc(c.id)}">${prose(c.unit)}</a>`;
+    // A cross-reference says the figure as well as what it counts, marked
+    // like any other: "From 10 KB: the text-only field report…".
+    const ref = (c) => `<a href="#claim-${esc(c.id)}"><span data-claim="${esc(c.id)}">${esc(c.value)}</span> ${prose(c.unit)}</a>`;
 
     const marked = Object.keys(CLAIM_PAGES).filter(p => pages[p]).map(p => [p, marksIn(pages[p])]);
     const spokenText = [data.narration.intro ? data.narration.intro.text : ''].concat(data.narration.scripts.map(s => s.text)).join(' ').toLowerCase();
@@ -1445,6 +1487,10 @@ function renderClaims(data, pages) {
         const note = b.note ? ` ${prose(b.note)}` : '';
         if (b.profile !== undefined) return `${note.trim()}${file('Recorded in', 'content/profile.json')}`.trim();
         if (b.factor !== undefined) {
+            if (b.count) return `${note.trim()}${file('Counted in', 'ai-carbon-data.js')}`.trim();
+            // A default, a convention or a judgement is the calculator's own:
+            // the factor's citation would read as the source of the figure.
+            if (b.own) return `<strong>The calculator&rsquo;s own choice.</strong> ${prose(b.own)}${file('One of its inputs, in', 'ai-carbon-data.js')}`;
             // The factor's own entry carries its source: the nearest object on its path that names one.
             const steps = b.factor.split('.');
             const entry = steps.map((_, i) => content.atPath(factors, steps.slice(0, steps.length - i).join('.')))
@@ -1469,7 +1515,8 @@ function renderClaims(data, pages) {
         const checkable = content.checkabilityOf(c, projects);
         const found = c.basis.result !== undefined ? content.resultFor(c, projects) : null;
         const href = found ? `case-studies.html#${found.cs.id}` : c.check;
-        const check = `<span class="cl-check cl-check-${checkable}">${esc(CHECK_GROUPS.find(g => g.key === checkable).title)}</span>${checkable === 'public' && href ? `: ${checkLink(href)}` : ''}`;
+        // The chip is the label; the place to check follows it, unpunctuated.
+        const check = `<span class="cl-check cl-check-${checkable}">${esc(CHECK_GROUPS.find(g => g.key === checkable).title)}</span>${checkable === 'public' && href ? ` ${checkLink(href)}` : ''}`;
         const places = marked.filter(([, marks]) => marks.has(c.id))
             .map(([page, marks]) => `<a href="${page}${marks.get(c.id) ? `#${marks.get(c.id)}` : ''}">${esc(CLAIM_PAGES[page])}</a>`);
         if ((c.spoken || []).some(s => spokenText.includes(s.toLowerCase()))) places.push('the narration');
@@ -1497,9 +1544,10 @@ function renderClaims(data, pages) {
         <section class="rs-intro">
             <p>
                 About my work or about the site itself, each number is here once, with every page it appears
-                on. The pages mark each one with its entry, and a test fails the build if a page prints a
-                number that is not here, or one that disagrees with its entry. What the narration says aloud
-                is held to the same list.
+                on, whether it is written in digits or in words. The pages mark each one with its entry, and a
+                test fails the build if a page prints a number that is not here, or one that disagrees with its
+                entry, in its text, a label or a photo&rsquo;s caption. The field terminal on the homepage is
+                held to the same list, and so is what the narration says aloud.
             </p>
         </section>
 ${groups}
@@ -1508,7 +1556,10 @@ ${groups}
             <h2>Not on this list</h2>
             <p>
                 Years and dates, section numbers, the names of standards such as Scope 2 or SDG 13, places&rsquo;
-                coordinates and my phone number are numerals, not claims. The figures the calculators work out in
+                coordinates and my phone number are numerals, not claims. So are &ldquo;one&rdquo; and a count of
+                things a page lists in full, which a test holds to the number listed. A photo&rsquo;s description
+                says what is in it, and the field terminal&rsquo;s drill prints a made-up log and says so. The
+                figures the calculators work out in
                 your browser, in the <a href="carbon-ai.html">EcoPrompt Coach</a>, in the chart on the homepage and on the
                 footer&rsquo;s receipt, are model outputs: their inputs are above, and every factor behind them is in
                 the calculator&rsquo;s <a href="carbon-ai.html#evidence">evidence ledger</a>. The
@@ -1522,7 +1573,7 @@ ${groups}
         canonical: `${SITE}claims.html`,
         heroTag: 'EVERY NUMBER &middot; ITS BASIS &middot; CAN YOU CHECK IT',
         heroTitle: 'Check my <span class="ca-accent">numbers</span>',
-        heroLead: 'Every number on this site, with what it rests on, where it appears and whether you can check it without taking my word for it.',
+        heroLead: 'Every number on this site, in digits or in words, with what it rests on, where it appears and whether you can check it without taking my word for it.',
         main,
         current: 'claims.html',
         styles: ['claims.css'],
@@ -2097,4 +2148,4 @@ function main() {
 if (require.main === module) main();
 
 module.exports = { renderStats, EXAMPLE_PAYLOAD, renderAtAGlance, shellFacts, shellRegions, shellMarkers,
-    corelogDepths, injectCorelog, renderCertificates, renderTestimonials, homeRegions, fillRegion, marksIn, CLAIM_PAGES };
+    corelogDepths, injectCorelog, renderCertificates, renderTestimonials, homeRegions, fillRegion, marksIn, CLAIM_PAGES, PAGE_NAMES };

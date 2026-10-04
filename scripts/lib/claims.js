@@ -14,9 +14,10 @@
 //   scripts/lib/content.js     checks that each entry's other forms, and
 //                              what the narration says aloud, come to the
 //                              entry's own value (quantity)
-//   tests/claims.test.js       finds every numeral on every page and fails
-//                              on one that is neither marked nor one of the
-//                              EXEMPT kinds below
+//   tests/claims.test.js       finds every number on every page, in digits
+//                              or in words, and fails on one that is
+//                              neither marked nor one of the EXEMPT (or, in
+//                              words, WORD_EXEMPT) kinds below
 //
 // So the rules live here, once. A figure is compared by what it amounts
 // to, not by how it is written: "70%", "7 in 10", "7 times out of 10" and
@@ -189,60 +190,104 @@ function exemptAt(text, index, end) {
 }
 
 // ------------------------------------------------------------------
-// Numbers the narration says that are not claims
+// Numbers in words that are not claims
 //
-// The spoken page says its figures in words ("a hundred and sixty-four
-// water points"), and every one has to be an entry's `spoken` phrase. These
-// are the words that are numbers without being figures: years, "one" as in
-// "one thread", the ordinals of a spoken list, and counts of things the
-// section shows in full, so the listener could count them on the page.
+// The site writes small counts in words ("a team of six", "four
+// certificates"), and the narration says every figure that way ("a hundred
+// and sixty-four water points"). A count in words that is a figure is a
+// ledger entry like any other: the pages mark it, and the narration's has
+// to be an entry's `spoken` phrase. These are the words that are numbers
+// without being figures: "one" as in "one thread", a name (net zero), the
+// ordinals of a spoken list, and counts of things the page or the section
+// shows in full, so the reader could count them there.
 // ------------------------------------------------------------------
 const SMALL = '(?:one|two|three|four|five|six|seven|eight|nine|ten)';
-const SPOKEN_EXEMPT = [
-    { why: 'a year, said aloud', test: (run) => run.value >= 1900 && run.value < 2100 },
-    { why: '"one", a word before it is a count', test: (run) => run.value === 1 && /^one$/i.test(run.text) },
-    { why: 'a list ordinal ("One, the sustainable A.I. framework")', re: new RegExp(`(?:^|[.:!?]\\s+)(?:And\\s+)?${SMALL},`, 'gi') },
-    { why: 'the name of a standard (Scopes 1 to 3)', re: /\bscopes? one to three\b/gi },
-    { why: 'a count of what the section shows, every one of them on the page',
-      re: /\b(?:six projects|three field notes|three smallest models|two of them|three degrees|four certificates)\b/gi }
+
+// Each says what it counts and how to count it (in content/, on a page, or
+// in a script's source): tests/claims.test.js holds the words to that
+// number, so "seven case studies" cannot outlive an eighth. Where the things
+// follow the count in the same breath ("four modules, Ground, Assess,
+// Interpret and Act"), the sentence is its own check.
+const SHOWN_IN_FULL = [
+    { re: /\bsix projects\b/gi, what: 'the homepage\'s project cards',
+      count: d => d.projects.caseStudies.filter(cs => cs.homepageCard !== false).length },
+    { re: /\bseven case studies\b/gi, what: 'the case studies', count: d => d.projects.caseStudies.length },
+    { re: /\bthree degrees\b/gi, what: 'the degrees', count: d => d.profile.education.length },
+    { re: /\bfour certificates\b/gi, what: 'the certificates', count: d => d.profile.certifications.length },
+    { re: /\btwo of them you can play with\b/gi, what: 'the case studies with a game', count: d => d.projects.caseStudies.filter(cs => cs.widget).length },
+    { re: /\bthree field notes\b/gi, what: 'the homepage\'s field notes', count: d => d.page('index.html').querySelectorAll('#notes .fieldnote').length },
+    { re: /\bthree smallest models\b/gi, what: 'the models the homepage chart plots before the reader draws',
+      count: d => Number((d.source('modules/interactives.js').match(/\bconst KNOWN = (\d+);/) || [])[1]) },
+    { re: /\bfour modules, Ground, Assess, Interpret and Act\b/g, what: 'GAIA\'s modules, named after the count', named: true },
+    { re: /\bfive things to try\b/gi, what: 'the links of the homepage\'s play index, after it',
+      count: d => d.page('index.html').querySelectorAll('.play-index a').length }
+];
+const shownInFull = { why: 'a count of what the page shows in full, every one of them on it', res: SHOWN_IN_FULL.map(c => c.re) };
+const ONE = { why: '"one", a word before it is a count', test: (run) => run.value === 1 && /^one$/i.test(run.text) };
+
+/** On the pages (tests/claims.test.js reads them with these). */
+const WORD_EXEMPT = [
+    ONE,
+    { why: 'a name: net zero', res: [/\bnet[- ]zero\b/gi] },
+    shownInFull
 ];
 
-/** Why a run of number words the narration says is not a figure, or null. */
-function spokenExempt(text, run) {
-    for (const rule of SPOKEN_EXEMPT) {
+/** In the narration, which also says years and the ordinals of its lists. */
+const SPOKEN_EXEMPT = [
+    { why: 'a year, said aloud', test: (run) => run.value >= 1900 && run.value < 2100 },
+    ONE,
+    { why: 'a list ordinal ("One, the sustainable A.I. framework")', res: [new RegExp(`(?:^|[.:!?]\\s+)(?:And\\s+)?${SMALL},`, 'gi')] },
+    { why: 'the name of a standard (Scopes 1 to 3)', res: [/\bscopes? one to three\b/gi] },
+    shownInFull
+];
+
+/** Why a run of number words in `text` is not a figure, by `rules`, or null. */
+function wordExemptBy(rules, text, run) {
+    for (const rule of rules) {
         if (rule.test && rule.test(run)) return rule.why;
-        if (!rule.re) continue;
-        rule.re.lastIndex = 0;
-        let m;
-        while ((m = rule.re.exec(text))) {
-            if (m.index <= run.index && m.index + m[0].length >= run.end) return rule.why;
+        for (const re of rule.res || []) {
+            re.lastIndex = 0;
+            let m;
+            while ((m = re.exec(text))) {
+                if (m.index <= run.index && m.index + m[0].length >= run.end) return rule.why;
+            }
         }
     }
     return null;
 }
+const spokenExempt = (text, run) => wordExemptBy(SPOKEN_EXEMPT, text, run);
+const wordExempt = (text, run) => wordExemptBy(WORD_EXEMPT, text, run);
 
 // ------------------------------------------------------------------
 // Marking figures in content/ text
 //
 // The generated pages print figures straight from content/ — a result's
-// "70% aquifer strike rate", a lens's "~276 KB". Each is found here by how
-// the ledger writes it (its value or one of its `forms`) and wrapped in the
-// entry's mark, so a generated page is held to the ledger as the
-// hand-authored ones are. A single digit is never matched: in running
-// prose it is far more often a word than a figure, and the site writes
-// small counts in words anyway. A bare two-digit number is matched only
-// with the first word of its entry's unit after it ("54 global", "10 KB"):
-// plenty of other things come in tens and fifties. Words are not matched.
+// "70% aquifer strike rate", a lens's "~276 KB", a team "of six". Each is
+// found here by how the ledger writes it (its value or one of its `forms`)
+// and wrapped in the entry's mark, so a generated page is held to the
+// ledger as the hand-authored ones are. A single digit is never matched: in
+// running prose it is far more often a word than a figure. A bare
+// two-digit number is matched only with the first word of its entry's unit
+// after it ("54 global", "10 KB"): plenty of other things come in tens and
+// fifties, and two entries may share one so (10 KB, 10 models). A number
+// in words is matched only as a form that says what it counts ("team of
+// six", "five months"), never on its own, and the mark covers the number
+// alone; its first letter may be a capital, as at the start of a sentence.
 // ------------------------------------------------------------------
-const markable = (shown) => /\d/.test(shown) && !/^\d$/.test(shown);
+const wordForm = (shown) => !/\d/.test(shown) && wordRuns(shown).length > 0 && /[\s-]/.test(shown.trim());
+const markable = (shown) => (/\d/.test(shown) && !/^\d$/.test(shown)) || wordForm(shown);
 
-/** The displays the marker looks for: a map of written figure → claim id. */
+/** The displays the marker looks for: each written figure with its claim id, longest first. */
 function displays(claims) {
-    const map = new Map();
+    const list = [];
     claims.forEach((c) => {
-        [c.value].concat(c.forms || []).filter(markable).forEach(shown => map.set(shown, c.id));
+        [c.value].concat(c.forms || []).filter(markable).forEach((shown) => {
+            list.push({ shown, id: c.id });
+            const capital = shown.charAt(0).toUpperCase() + shown.slice(1);
+            if (wordForm(shown) && capital !== shown) list.push({ shown: capital, id: c.id });
+        });
     });
-    return map;
+    return list.sort((a, b) => b.shown.length - a.shown.length);
 }
 
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -260,11 +305,12 @@ function pattern(shown, claim) {
  * longer number ("164" in "1640"), or one of the EXEMPT kinds, is left.
  */
 function marker(claims) {
-    const map = displays(claims);
-    if (!map.size) return (s) => [[String(s), null]];
+    const list = displays(claims);
+    if (!list.length) return (s) => [[String(s == null ? '' : s), null]];
     const byId = new Map(claims.map(c => [c.id, c]));
-    const shown = Array.from(map.keys()).sort((a, b) => b.length - a.length);
-    const alternatives = shown.map(s => pattern(s, byId.get(map.get(s))));
+    // One group per display, so a match says which it was: "10" before
+    // "KB" and "10" before "models" are two entries.
+    const alternatives = list.map(d => `(${pattern(d.shown, byId.get(d.id))})`);
     const re = new RegExp(`(?<![\\w.,~≈+/–-])(?:${alternatives.join('|')})(?![\\w%×/]|[.,]\\d)`, 'g');
     return (s) => {
         const text = String(s == null ? '' : s);
@@ -274,13 +320,21 @@ function marker(claims) {
         re.lastIndex = 0;
         while ((m = re.exec(text))) {
             if (exemptAt(text, m.index, m.index + m[0].length)) continue;
-            if (m.index > at) out.push([text.slice(at, m.index), null]);
-            out.push([m[0], map.get(m[0])]);
-            at = m.index + m[0].length;
+            const id = list[m.slice(1).findIndex(g => g !== undefined)].id;
+            // A form with words in it ("team of six", "54 hazard systems")
+            // marks its number and leaves the words around it.
+            let [from, to] = [m.index, m.index + m[0].length];
+            if (/[A-Za-z]/.test(m[0])) {
+                const found = numbers(m[0]).found;
+                [from, to] = [m.index + found[0].index, m.index + found[found.length - 1].end];
+            }
+            if (from > at) out.push([text.slice(at, from), null]);
+            out.push([text.slice(from, to), id]);
+            at = to;
         }
         if (at < text.length || !out.length) out.push([text.slice(at), null]);
         return out;
     };
 }
 
-module.exports = { wordRuns, numbers, quantity, agrees, EXEMPT, exemptAt, SPOKEN_EXEMPT, spokenExempt, markable, displays, marker, plain };
+module.exports = { wordRuns, numbers, quantity, agrees, EXEMPT, exemptAt, SHOWN_IN_FULL, WORD_EXEMPT, wordExempt, SPOKEN_EXEMPT, spokenExempt, markable, displays, pattern, marker, plain };

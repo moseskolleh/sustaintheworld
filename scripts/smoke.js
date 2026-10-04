@@ -337,6 +337,7 @@ async function visit(context, page, rel, origin) {
     await exerciseJourneyAndChart(browser, origin);
     await exerciseStatsPage(browser, origin);
     await checkClaimMarks(browser, origin);
+    await printFolds(browser, origin);
 
     // The top nav at every desktop width: one line per item, nothing past the
     // right edge. It used to wrap "Case studies" and the coach's link at every
@@ -1928,6 +1929,36 @@ async function checkClaimMarks(browser, origin) {
         await page.evaluate(() => document.fonts.ready);
         if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) bad(`claims.html at ${width}px: the page scrolls sideways`);
         else ok(`claims.html at ${width}px: every entry fits, nothing scrolls sideways`);
+    }
+    await context.close();
+}
+
+// Printed, or saved as a PDF, the case studies and the research page keep
+// what they fold for the screen's length: every method, the closing note,
+// the commands to reproduce the work. Chromium prints a closed <details> as
+// its summary alone, which is what those folds printed until content.css
+// opened them for print. The photo rows stay folded on paper as on screen.
+// The PDF is read back as the CV's test reads the CV.
+async function printFolds(browser, origin) {
+    const { pdfText } = require('./lib/pdf-text.js');
+    const { projects, research } = require('./lib/content.js').loadAll();
+    const alnum = (s) => String(s).replace(/[^A-Za-z0-9]/g, '');
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const page = await context.newPage();
+    const pages = [
+        ['case-studies.html', projects.caseStudies.map(cs => cs.method[cs.method.length - 1]).concat('A portfolio that lists outcomes without saying'),
+            [projects.caseStudies.find(cs => cs.gallery).gallery[0].caption]],
+        ['research.html', [research.reproducibility.body, research.reproducibility.commands[0].does], []]
+    ];
+    for (const [rel, kept, folded] of pages) {
+        await page.goto(`${origin}/${rel}`, { waitUntil: 'load' });
+        const text = alnum(pdfText(await page.pdf({ format: 'A4' })).pages.join(' '));
+        const lost = kept.filter(w => !text.includes(alnum(w).slice(0, 40)));
+        const shown = folded.filter(w => text.includes(alnum(w).slice(0, 40)));
+        if (lost.length || shown.length) bad(`${rel} printed: ${lost.length ? `drops ${lost.map(w => `"${w.slice(0, 40)}…"`).join(', ')}` : ''}${shown.length ? ` prints the folded photo row ("${shown[0].slice(0, 40)}…")` : ''}`);
+        else ok(`${rel} printed: all ${kept.length} folded passages are on paper${folded.length ? ', and the photo rows stay folded' : ''}`);
+        const shut = await page.evaluate(() => Array.from(document.querySelectorAll('details')).filter(d => d.open).length);
+        if (shut) bad(`${rel}: printing left ${shut} fold(s) open on screen`);
     }
     await context.close();
 }

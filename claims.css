@@ -28,7 +28,6 @@
     border-left: 3px solid var(--border);
     border-radius: 6px;
     background: var(--card-bg);
-    scroll-margin-top: 80px;
 }
 .cl-group-public .cl-item { border-left-color: var(--primary-green); }
 .cl-group-on-request .cl-item { border-left-color: var(--amber); }
@@ -74,6 +73,10 @@
 .cl-check-on-request { color: var(--amber); border-color: var(--amber); }
 
 .cl-where { display: inline-block; }
+
+/* The closing note sits in content.css's rs-repro frame, whose paragraph
+   rule now reads only inside its fold; this one is not folded. */
+.cl-not-listed > p { margin: 0; font-size: 0.92rem; line-height: 1.7; }
 
 @media (max-width: 640px) {
     .cl-item { padding: 12px 14px; }
