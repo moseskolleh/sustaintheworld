@@ -224,10 +224,61 @@ const SHOWN_IN_FULL = [
     { re: /\bfour modules, Ground, Assess, Interpret and Act\b/g, what: 'GAIA\'s modules, named after the count', named: true },
     { re: /\btwo ESRS lines quantified\b/g, what: 'Anatomy of a Prompt\'s Scope 2 and cooling water, named just before the count', named: true },
     { re: /\bfive things to try\b/gi, what: 'the links of the homepage\'s play index, after it',
-      count: d => d.page('index.html').querySelectorAll('.play-index a').length }
+      count: d => d.page('index.html').querySelectorAll('.play-index a').length },
+    { re: /\bfive numbers\b/gi, what: 'the open counts page\'s measures, a card each',
+      count: d => d.page('stats.html').querySelectorAll('.st-five > .st-card').length },
+    { re: /\bthree classes\b/gi, what: 'the window-width classes a page view sends, s, m and l, each named on the page',
+      count: d => (d.source('scripts/fetch-stats.js').match(/\bconst VIEWPORTS = \[([^\]]*)\]/) || ['', ''])[1].split(',').filter(s => s.trim()).length }
 ];
 const shownInFull = { why: 'a count of what the page shows in full, every one of them on it', res: SHOWN_IN_FULL.map(c => c.re) };
+
+// ------------------------------------------------------------------
+// Numerals a page draws from its own structure
+//
+// The core log's depth scale, a photo row's count, the flood game's river
+// steps: numerals that are not claims about anything, which the scan
+// (tests/claims.test.js) skips by selector, each with its reason. A count
+// of what the page shows is already in claims.html's "Not on this list";
+// the rest say there what they are (`listed`), from here, so the page and
+// the test cannot name different exceptions. `once` marks a host that is
+// on its page only in one state of it.
+// ------------------------------------------------------------------
+const DRAWN = {
+    'index.html': [
+        { sel: '.corelog-depth, .corelog-head', why: 'the core log\'s depth scale: time drawn as depth',
+          listed: 'the core log’s depths, which draw time as depth from the dates beside them' }],
+    'case-studies.html': [
+        { sel: '.cs-photos > summary', why: 'a count of the photos in the row, made from the gallery' },
+        { sel: '.cs-method-n', why: 'a count of the method\'s steps, made from the list it folds' },
+        { sel: '.flood-ticks', why: 'the river slider\'s steps, on a schematic not drawn to scale',
+          listed: 'the flood game’s river steps, on a schematic not drawn to scale' }],
+    'research.html': [{ sel: '.rs-summary', why: 'a count of the entries the page lists, made from them' }],
+    // The open counts page: its counts are the counter's, rewritten each
+    // week, and its rules are marked [data-rule] and held to the code.
+    'stats.html': [
+        { sel: '.st-table-wrap, .st-values, .st-status', why: 'the visit counter\'s own counts, rewritten each week', once: 'counting has started' },
+        { sel: '.st-payload', why: 'the example of what a page view sends, which the page says is one' }]
+};
 const ONE = { why: '"one", a word before it is a count', test: (run) => run.value === 1 && /^one$/i.test(run.text) };
+
+/**
+ * The fold a figure waits in on its page, or null: a closed <details> (its
+ * summary is in sight), a [hidden] block (not a view's panel, which its
+ * view shows), or a role on the homepage past its first line, which
+ * style.css folds behind More until the card is open. build-content.js's
+ * marksIn finds the same three in the HTML, to send claims.html's "Where"
+ * links to a figure in sight; this reads a page's DOM, in jsdom
+ * (tests/claims.test.js) or in a browser (scripts/smoke.js).
+ */
+function foldAround(el) {
+    const shut = el.closest('details:not([open])');
+    const summary = el.closest('summary');
+    if (shut && !(summary && summary.parentElement === shut)) return shut;
+    const hidden = el.closest('[hidden]:not([data-lens-panel])');
+    if (hidden) return hidden;
+    const item = el.closest('.timeline-content:not(.is-open) ul > li:nth-child(n+2)');
+    return item ? item.closest('.timeline-content') : null;
+}
 
 // ------------------------------------------------------------------
 // Sizes in words
@@ -411,4 +462,4 @@ function unheld(text, claims) {
     return out;
 }
 
-module.exports = { unheld, wordRuns, sizeRuns, numbers, quantity, agrees, EXEMPT, exemptAt, SHOWN_IN_FULL, HELD_SIZES, WORD_EXEMPT, wordExempt, SPOKEN_EXEMPT, spokenExempt, markable, displays, pattern, marker, plain };
+module.exports = { unheld, wordRuns, sizeRuns, numbers, quantity, agrees, EXEMPT, exemptAt, SHOWN_IN_FULL, DRAWN, foldAround, HELD_SIZES, WORD_EXEMPT, wordExempt, SPOKEN_EXEMPT, spokenExempt, markable, displays, pattern, marker, plain };

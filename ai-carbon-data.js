@@ -113,7 +113,7 @@
             citation: 'Sustainable Web Design, "Estimating Digital Emissions" (model v3)',
             published: '2023',
             kind: 'methodology',
-            note: 'The 0.36 g CO₂e/MB constant used for page and audio weight elsewhere on this site.'
+            note: 'Its grams per MB weigh pages and audio elsewhere on this site too.'
         }
     };
 

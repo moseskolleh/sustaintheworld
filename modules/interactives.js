@@ -349,10 +349,11 @@ window.mks.share = (() => {
         ['#education li, #education .cert-line', '#education', (el) => `Covered in ${up(el, '.education-card', 'h3, .cert-title')}: ${clean(el)}`],
         ['#skills .skills-checklist li, #skills .frameworks-list li', '#skills', () => 'Listed under Skills & Education']
     ];
+    // A proof with "no public" work behind it is partial, not ticked.
     function toolEvidence(tool, doc) {
         for (const [sel, href, say] of (doc ? SOURCES : [])) {
             const el = Array.from(doc.querySelectorAll(sel)).find(e => matches(clean(e), tool));
-            if (el) return [{ t: say(el), href }];
+            if (el) { const t = say(el); return [{ t, href, part: /no public/.test(t) }]; }
         }
         return null;
     }
@@ -578,7 +579,7 @@ window.mks.share = (() => {
     const block = (cls, heading, rows) => (rows.length
         ? `<div class="assay-map ${cls}"><div class="mono-label assay-map-h">${heading}</div>${rows.join('')}</div>` : '');
     const evidence = (list) => list.map(e => (e.href
-        ? `<a href="${escHtml(e.href)}">${escHtml(e.t)}</a>`
+        ? `<a href="${escHtml(e.href)}"${e.part ? ' class="assay-part"' : ''}>${escHtml(e.t)}</a>`
         : `<span>${escHtml(e.t)}</span>`)).join('');
 
     const assay = () => {

@@ -476,7 +476,7 @@
                             <h3>Climate Change Adaptation Intern</h3>
                             <h4>United Nations Office for Disaster Risk Reduction · Bonn, Germany</h4>
                         </div>
-                        <ul>
+                        <ul id="role-undrr">
                             <li>Audited disaster-loss data for Caribbean countries feeding the Sendai Framework Monitor</li>
                             <li>Documented <span data-claim="hazard-systems">54</span> global hazard information systems, expanding regional and hazard-type coverage by <span data-claim="coverage-gain">25%</span></li>
                             <li>Wrote the disaster and climate-risk factsheet for Trinidad and Tobago, produced for national policy use</li>
@@ -577,9 +577,9 @@
                     <img class="project-photo" src="assets/img/coastal-pollution-1.webp" srcset="assets/img/coastal-pollution-1-480.webp 480w, assets/img/coastal-pollution-1.webp 900w" sizes="80px" alt="Moses presenting the 'Dirty Delta' storyline at Wageningen University" width="900" height="675" loading="lazy" decoding="async">
                     <div class="project-meta"><span class="mono-label">2023 — 2024 &middot; Wageningen, NL</span></div>
                     <h3>Coastal Water Pollution Dynamics</h3>
-                    <div class="project-result project-result-checkable">
+                    <div class="project-result">
                         <p class="project-claim"><span data-claim="sub-basins">10,226</span> sub-basins modelled</p>
-                        <p class="project-basis"><span class="mono-label">Checkable from outside</span> A property of the model domain used, not an estimate.</p>
+                        <p class="project-basis"><span class="mono-label">Not checkable from outside</span> A property of the model domain used, not an estimate; the thesis is on request.</p>
                     </div>
                     <div class="project-tags">
                         <ul class="project-lenses" aria-label="Role lenses"><li>Water</li><li>Climate &amp; DRR</li></ul>
@@ -619,9 +619,9 @@
                     <img class="project-photo" src="assets/img/soft-path-3.webp" srcset="assets/img/soft-path-3-480.webp 480w, assets/img/soft-path-3.webp 900w" sizes="80px" alt="Moses defending his master's thesis at Hunan University" width="900" height="675" loading="lazy" decoding="async">
                     <div class="project-meta"><span class="mono-label">2020 — 2021 &middot; Changsha, CN</span></div>
                     <h3>Soft Path Water Management</h3>
-                    <div class="project-result project-result-checkable">
+                    <div class="project-result">
                         <p class="project-claim">Successfully defended at Hunan University, May 2021</p>
-                        <p class="project-basis"><span class="mono-label">Checkable from outside</span> Degree awarded: MSc Industrial Engineering, 2021.</p>
+                        <p class="project-basis"><span class="mono-label">Not checkable from outside</span> Degree awarded: MSc Industrial Engineering, 2021; the certificate is on request.</p>
                     </div>
                     <div class="project-tags">
                         <ul class="project-lenses" aria-label="Role lenses"><li>Water</li></ul>
@@ -948,7 +948,7 @@
     </main>
 
     <!-- Footer -->
-    <footer class="footer">
+    <footer class="footer" id="footer">
         <div class="container">
             <div class="footer-content">
                 <div class="footer-logo">MK<span class="logo-accent">S</span></div>
@@ -959,7 +959,7 @@
                 <div class="carbon-badge" id="carbonBadge">
                     <span class="blink-dot" aria-hidden="true"></span>
                     <span id="carbonBadgeText">Weighing this page&hellip;</span>
-                    <button type="button" class="carbon-badge-info" id="carbonInfoBtn" aria-label="How this is calculated" aria-expanded="false">?</button>
+                    <button type="button" class="carbon-badge-info" id="carbonInfoBtn" aria-label="How this is calculated" aria-expanded="false" aria-controls="carbonMethod">?</button>
                 </div>
                 <div class="carbon-method" id="carbonMethod" hidden>
                     <p>Measured live in your browser via the Resource Timing API: each asset's transferred size, or its compressed size when served from cache &mdash; so a repeat visit is never flattered into looking lighter than it is. Converted with the

@@ -81,8 +81,13 @@
         .pair { display: grid; grid-template-columns: 1fr 1fr; column-gap: 14pt; }
         .url { font-family: 'IBM Plex Mono', monospace; font-size: 7.6pt; color: var(--green); white-space: nowrap; }
 
-        .skills dt { font-weight: 600; float: left; clear: left; width: 21%; }
-        .skills dd { margin: 0 0 1.5pt 22%; }
+        /* A grid, not floats: Chromium writes a page's floats into the PDF
+           before its text, so a parser read every tool name at the top of
+           page 2, away from SKILLS and from its proof. Grid items are
+           written in document order. */
+        .skills { display: grid; grid-template-columns: 21% 1fr; column-gap: 1%; }
+        .skills dt { font-weight: 600; }
+        .skills dd { margin: 0 0 1.5pt; }
         .run { color: var(--dim); }
 
         footer { margin-top: 8pt; padding-top: 4pt; border-top: 0.5pt solid var(--rule); font-size: 7.6pt; color: var(--dim); }

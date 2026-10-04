@@ -21,7 +21,7 @@ Professional portfolio website for **Moses Kolleh Sesay**, a Sustainability & Cl
 - **Role-specific lenses**: `case-studies.html?lens=water`, `?lens=climate-risk`, `?lens=sustainable-ai`, `?lens=esg-csrd` — shareable views that reframe the portfolio for one kind of role. They **reorder and frame, they never filter**: every case study stays on the page in every view, because a view that hides inconvenient work is a CV that lies by omission. Without JavaScript the switcher steps aside and every case study shows in the default view
 - **No dead ends**: every page but the homepage shares one small nav (Home, Case studies, Research, CV, Contact, with the page you are on marked) and ends with a way to reach Moses: his address, the contact form and the CV. The pages built on `carbon-ai.css` have the homepage's light theme and its switch, and keep the reader's choice from page to page (`theme.js`, before the first paint); with nothing chosen they follow the system's setting, with or without JavaScript. The homepage follows it only with JavaScript: without, it stays dark, because following the system there would put a second copy of every light-theme rule in its first view. The text-only field report and the 404 page take the nav and the call to action as plain lines, and no script
 - **[Research outputs](research.html)**: theses, reports, datasets, code and tools, grouped by whether you can open them: public, on request, or held by the client. The public ones lead with Moses's own repositories on GitHub (a groundwater toolkit, the GAIA Green AI framework, a CMIP6 extremes pipeline, an A/B test in SQL and Python, the sustainable-AI prototypes and the maintained EcoPrompt Coach), each described only as far as the repository itself shows. No DOI, journal or conference is named anywhere, because none of this work has one — and a test fails the build if one ever appears without proof
-- **[Check my numbers](claims.html)**: every figure the site prints, in digits or in words, from the hero's 164 water points and the Wuppertal "team of six" to the first view's weight, with what it counts, the one basis it rests on and whether a reader can check it (public, with where; on request; or not checkable from outside). Each figure on a page is marked with its entry in `content/claims.json`, and `npm test` fails on a figure the ledger does not hold, on a page, in its labels and captions, or in what a script prints of its own (the field terminal, the Assay, the receipt, the coach's tips). See [Every number has a basis](#every-number-has-a-basis-the-claims-ledger)
+- **[Check my numbers](claims.html)**: every figure the site prints, in digits or in words, from the hero's 164 water points and the Wuppertal "team of six" to the first view's weight, with what it counts, the one basis it rests on and whether a reader can check it (public, with where; on request; or not checkable from outside). Each figure on a page is marked with its entry in `content/claims.json`, and `npm test` fails on a figure the ledger does not hold, on a page, in its labels and captions, or in what a script prints of its own (the field terminal, the Assay, the receipt, the narration player, the coach's tips). See [Every number has a basis](#every-number-has-a-basis-the-claims-ledger)
 - **A CV printed from the same facts**: `npm run cv` prints `assets/Moses_Kolleh_Sesay_CV.pdf` from `content/` and the homepage's own words, so it says what the site says, and a test fails once it falls behind them. See [The CV](#the-cv)
 - **[Open counts](stats.html)**: what the site's own cookieless counter has counted, rebuilt weekly — the five numbers that say whether the site works, page views by page, lens and window width, referrers, features used and bytes per page view, in whole weeks. Every count under 5 reads `<5`, a figure that would let one be worked out by subtraction reads `held`, and the page prints the exact payload a page view sends. See [Open counts](#open-counts)
 - **Borehole core-log experience timeline**: career history logged the way a geologist logs a core — depth is time, every layer is a chapter. Each role is a short card (dates, role, organisation, one line), the rest a press away
@@ -252,7 +252,7 @@ npm run voice -- --clone path/to/sample # make a voice model (add --sections to 
 
 The API key is used only there, on your machine; it never reaches the browser.
 Fish Audio bills 1 credit per UTF-8 byte of text, so the cost is known before
-anything is sent: the eight sections are ~8,400 credits today (8,411 on
+anything is sent: the eight sections are ~8,500 credits today (8,505 on
 2026-10-04), and the dry run
 prints the exact figure. Scripts are hashed, so fixing one sentence re-renders
 one file. `scripts/lib/voice-signature.js` is
@@ -421,10 +421,13 @@ The suites, and the failure each one exists to prevent:
   and what that script prints of its own is read from its source and held
   to the ledger (the field terminal, whose drill's depths are a made-up log
   that says so, the Assay's evidence, the receipt, You Draw It, the coach
-  and its tips, Anatomy of a Prompt, the games), and the footer's badge
-  prints no fixed figure; the hosts hold no figure of their own in the
-  HTML; each "Where" link on `claims.html` lands on a section or a view
-  that shows the figure;
+  and its tips, Anatomy of a Prompt, the games, the narration player), and
+  the footer's badge prints no fixed figure; every copy of the grams per MB
+  is the ledger's; the hosts hold no figure of their own in the HTML; the
+  rules `stats.html` states are the counter's code's; each "Where" link on
+  `claims.html` goes to the figure in sight where the page has it so, and
+  otherwise into its fold, which it names (`npm run smoke` follows each
+  link and finds the figure drawn);
   every number the narration says in words is an entry's; each figure the
   budget measures is what it measures today; `claims.html` lists every
   entry, where the pages mark it and how to check it; and the validator is
@@ -458,7 +461,7 @@ The suites, and the failure each one exists to prevent:
   not null, not a placeholder, not GitHub or LinkedIn; the homepage's cards
   are profile.json's, with a named Verify link exactly where there is one.
 - **`testimonials.test.js`** — a quote without a source, a "LinkedIn" source
-  that is not a linkedin.com profile or recommendations address, or an
+  that is not the recommendations address of a linkedin.com profile, or an
   on-request one without the date permission was given, is refused, as is a
   fourth entry, a quote over 200 characters or one stating a figure the
   claims ledger does not hold as written; with none, the homepage shows
@@ -727,9 +730,12 @@ by hand in `index.html`, `carbon-ai.html`, `field-report.html` and
 one from `content/` (`scripts/lib/claims.js` finds it by how the ledger
 writes it). The build writes [`claims.html`](claims.html) from the ledger,
 "Check my numbers": every figure, its basis, whether it can be checked, and
-the pages that mark it, each linked to the section or the view of the case
-studies that shows it, linked from the homepage's figures, every page's
-footer and the 404 page.
+the pages that mark it, each linked to the place that shows it in sight: a
+section, a view of the case studies, or, where every mark is folded (the
+badge's method note, a role behind More, a photo's caption, the research
+page's reproduction notes), into the fold, which the link names and the
+page opens on arrival. It is linked from the homepage's figures, every
+page's footer and the 404 page.
 
 `tests/claims.test.js` fails on a mark that disagrees with its entry, an
 entry with no basis or one that says another number, a number the narration
@@ -752,9 +758,14 @@ their own is not skipped: each host names its script, whose strings are
 read from the source and held to the ledger the same way, the field
 terminal's lines (`modules/terminal.js`), the Assay's evidence lines, the
 receipt's field-report size, You Draw It's words and the coach's tips
-among them. A testimonial's or a certificate's figure is marked like
-any other, and the build refuses one the ledger does not hold as written.
-The open counts on `stats.html` are the counter's own.
+among them, and the narration player's note on its weight. A testimonial's
+or a certificate's figure is marked like any other, and the build refuses
+one the ledger does not hold as written. The open counts on `stats.html`
+are the counter's own and skipped; the rules that page states (30 counts a
+minute, nothing under 5 published, up to 20 features, the window-width
+classes) are printed from the counter's code (`counterRules` in
+`scripts/lib/content.js` reads `Code.gs`, `count.js` and
+`scripts/fetch-stats.js`), marked `data-rule`, and held to it.
 
 To add a figure: give it an entry, mark it on the page (`npm run
 build:content` marks it in generated pages, by its value or a `forms`

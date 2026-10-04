@@ -806,8 +806,10 @@ keep, and some figures could move to "public" with a link only you have.
   - *What:* a public link, or a document you will send on request.
   - *Unlocks:* the team size and the programme's length move to "public"
     with the link, or to "on request". A result has only two states: with a
-    public link its `verifiable` becomes `true` and its `basis` cites the
-    link; records you would send on request can be named in its `basis`,
+    public link its `verifiable` becomes `true` and its `check` holds the
+    link (the build refuses a result called checkable with no `check` and no
+    public work in its case study); records you would send on request can
+    be named in its `basis`,
     but it stays "not checkable from outside" unless results are given an
     on-request state (a small change to `scripts/lib/content.js`; say if
     you want it).
@@ -819,6 +821,28 @@ keep, and some figures could move to "public" with a link only you have.
   (`content/claims.json` → `old-images`).
   - *What:* confirm the corrected line, or say what the 25 came from.
   - *Check:* nothing to change if you confirm it.
+- [ ] **N4. Two results that were labelled checkable, with nowhere to
+  check them.** The coastal case's "10,226 sub-basins modelled" and the
+  soft-path case's "Successfully defended at Hunan University, May 2021"
+  said "Checkable from outside" on the homepage cards, the case studies,
+  the CV and in the narration, while the site cited no source for the
+  count, and `claims.html` filed the same degree certificate under "on
+  request". Both now say "not checkable from outside".
+  - *What:* for the count, open Wageningen University's MARINA page,
+    `https://www.wur.nl/en/research/products-services/marina-model-assess-river-inputs-pollutants-seas`.
+    A web search shows it saying the model "is applicable for 10,226
+    sub-basins of the world", but nobody building the site could open it.
+    If it says so, it is the place to check the figure. For the degree, an
+    outside route to verify it, if you have one (an online verification
+    report from China's degree authority, for example).
+  - *Where:* `content/projects.json` → `coastal` or `water-management` →
+    `results[0]`: add `"check": "<the address>"` and set `verifiable` to
+    `true`; add the host to `TRUSTED_HOSTS` in `scripts/lib/content.js`,
+    with a line saying you opened it. Then `npm run build:content` and
+    `npm run cv`, and in `content/narration.json` the projects script's
+    "You cannot check that…" line for it.
+  - *Check:* `npm test` passes; the card says "Checkable from outside", and
+    `claims.html` links the address.
 
 ---
 
@@ -937,8 +961,9 @@ keep, and some figures could move to "public" with a link only you have.
     - `name`, and `role`: theirs, as they would want it shown;
     - `relationship`: how they know your work ("managed me at …");
     - `source`: either `{ "type": "linkedin", "url": "…" }`, their
-      recommendation's address on linkedin.com (a profile or its
-      recommendations page, nothing else), or
+      recommendation's address on linkedin.com: the recommendations page
+      of your profile, `https://www.linkedin.com/in/<you>/details/recommendations/`,
+      where the quote is shown (a bare profile address is refused), or
       `{ "type": "on-request", "permissionDate": "YYYY-MM-DD" }`, the day
       they agreed, if it is not public and you will put a reader in touch.
     Then `npm run build:content`.

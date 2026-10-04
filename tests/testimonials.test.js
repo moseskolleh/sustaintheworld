@@ -2,8 +2,8 @@
 //
 // Anyone can write a kind sentence and put a name under it. A quote goes
 // on the homepage only from content/testimonials.json, and only with a
-// source a reader can check: a LinkedIn recommendation (a linkedin.com
-// profile or recommendations address), or "on request" with the date the
+// source a reader can check: a LinkedIn recommendation (the recommendations
+// address of a linkedin.com profile), or "on request" with the date the
 // person agreed to be quoted. The list is empty until Moses has asked two
 // or three people (owner checklist), and while it is empty the homepage
 // shows nothing: no heading, no "coming soon".
@@ -62,7 +62,7 @@ const one = (t) => check({ testimonials: [t] });
 // --- The validator --------------------------------------------------------------
 {
     assert(one(linkedin).length === 0, 'Validate: accepts a LinkedIn recommendations address');
-    assert(one(Object.assign(clone(linkedin), { source: { type: 'linkedin', url: 'https://linkedin.com/in/someone-else-123' } })).length === 0, 'Validate: accepts a LinkedIn profile address');
+    assert(one(Object.assign(clone(linkedin), { source: { type: 'linkedin', url: 'https://linkedin.com/in/someone-else-123/details/recommendations' } })).length === 0, 'Validate: accepts a recommendations address on linkedin.com without www or a closing slash');
     assert(one(onRequest).length === 0, 'Validate: accepts "on request" with the date permission was given');
     assert(check({ testimonials: [linkedin, onRequest, linkedin] }).length === 0, 'Validate: accepts three');
 
@@ -72,9 +72,13 @@ const one = (t) => check({ testimonials: [t] });
     };
     const without = (k) => { const t = clone(linkedin); delete t[k]; return t; };
     refused(without('source'), 'a quote without a source', /no source/);
-    refused(Object.assign(clone(linkedin), { source: { type: 'linkedin', url: 'https://example.com/in/moses' } }), 'a "LinkedIn" source off linkedin.com', /linkedin\.com profile or its recommendations/);
-    refused(Object.assign(clone(linkedin), { source: { type: 'linkedin', url: 'https://www.linkedin.com/posts/someone_activity-123' } }), 'a LinkedIn post, which is not a recommendation', /linkedin\.com profile or its recommendations/);
-    refused(Object.assign(clone(linkedin), { source: { type: 'linkedin', url: 'https://www.linkedin.com/company/undrr' } }), 'a company page', /linkedin\.com profile or its recommendations/);
+    refused(Object.assign(clone(linkedin), { source: { type: 'linkedin', url: 'https://example.com/in/moses' } }), 'a "LinkedIn" source off linkedin.com', /recommendations on a linkedin\.com profile/);
+    refused(Object.assign(clone(linkedin), { source: { type: 'linkedin', url: 'https://www.linkedin.com/posts/someone_activity-123' } }), 'a LinkedIn post, which is not a recommendation', /recommendations on a linkedin\.com profile/);
+    refused(Object.assign(clone(linkedin), { source: { type: 'linkedin', url: 'https://www.linkedin.com/company/undrr' } }), 'a company page', /recommendations on a linkedin\.com profile/);
+    // A bare profile is anyone's page, the quoted person's own included, and
+    // does not show the recommendation: the plan asks for the recommendation.
+    refused(Object.assign(clone(linkedin), { source: { type: 'linkedin', url: 'https://www.linkedin.com/in/moseskollehsesay/' } }), 'a bare profile address, which shows no recommendation', /recommendations on a linkedin\.com profile/);
+    refused(Object.assign(clone(linkedin), { source: { type: 'linkedin', url: 'https://www.linkedin.com/in/a-colleague' } }), 'the quoted person\'s own profile', /details\/recommendations/);
     refused(Object.assign(clone(linkedin), { source: { type: 'linkedin', url: 'http://www.linkedin.com/in/moseskollehsesay' } }), 'a plain-http address', /linkedin\.com profile/);
     refused(Object.assign(clone(linkedin), { source: { type: 'linkedin', url: 'https://www.linkedin.com.evil.example/in/moses' } }), 'a look-alike host', /linkedin\.com profile/);
     refused(Object.assign(clone(linkedin), { source: { type: 'linkedin' } }), 'a LinkedIn source with no address', /linkedin\.com profile/);

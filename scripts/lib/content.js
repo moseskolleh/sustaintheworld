@@ -388,6 +388,32 @@ function checkAtAGlance(glance, languages) {
 // them in a public Action log, and an unsuppressed count is exactly the thing
 // that must not appear there.
 // ------------------------------------------------------------------
+/**
+ * The counter's rules, as its code sets them: how many counts a minute the
+ * endpoint takes, how long one waits for the sheet, the suppression
+ * threshold, how many referring sites are named, how many features a page
+ * view sends and where the window-width classes break. stats.html states
+ * each, and printed them typed in: the page could say 30 a minute of an
+ * endpoint set to 20 and nothing would notice. renderStats prints them from
+ * here, marked, and tests/claims.test.js holds each mark to this. A
+ * constant renamed or rewritten so it cannot be read fails the build.
+ */
+function counterRules() {
+    const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
+    const take = (rel, re, what) => {
+        const m = read(rel).match(re);
+        if (!m) throw new Error(`${rel}: ${what} cannot be read (${re}); stats.html prints it from there`);
+        return m.slice(1).map(Number);
+    };
+    const [perMinute] = take('google-apps-script/Code.gs', /\bvar COUNT_MAX_PER_MINUTE = (\d+);/, 'COUNT_MAX_PER_MINUTE');
+    const [lockMs] = take('google-apps-script/Code.gs', /\bvar COUNT_LOCK_TIMEOUT_MS = (\d+);/, 'COUNT_LOCK_TIMEOUT_MS');
+    const [suppressBelow] = take('scripts/fetch-stats.js', /\bconst SUPPRESS_BELOW = (\d+);/, 'SUPPRESS_BELOW');
+    const [referrersListed] = take('scripts/fetch-stats.js', /\bconst REFERRERS_LISTED = (\d+);/, 'REFERRERS_LISTED');
+    const [featuresMax] = take('count.js', /features\.length < (\d+)/, 'the cap on features');
+    const [vpSmall, vpLarge] = take('count.js', /vp: w < (\d+) \? 's' : w < (\d+) \? 'm' : 'l'/, 'the window-width classes');
+    return { perMinute, lockSeconds: lockMs / 1000, suppressBelow, referrersListed, featuresMax, vpSmall, vpMediumMax: vpLarge - 1, vpLarge };
+}
+
 const STATS_STATUSES = ['not-collecting', 'collecting'];
 const STATS_MIN_SUPPRESSION = 5;
 const STATS_HELD = 'held';
@@ -720,7 +746,10 @@ function checkMeta(meta) {
     if (!meta || !('confirmedOn' in meta)) problems.push('profile meta: confirmedOn is missing; it is null until Moses confirms the ongoing facts himself');
     else if (meta.confirmedOn !== null) {
         if (!isDay(meta.confirmedOn)) problems.push(`profile meta: confirmedOn must be null or a day, as YYYY-MM-DD (${meta.confirmedOn})`);
-        else if (Date.parse(meta.confirmedOn) > Date.now()) problems.push(`profile meta: confirmedOn ${meta.confirmedOn} is still to come`);
+        // A calendar day, not an instant: the build's clock is UTC, and Moses
+        // in Amsterdam setting his own today before 01:00 or 02:00 was told
+        // it was still to come. The latest day anywhere on Earth is UTC+14.
+        else if (meta.confirmedOn > new Date(Date.now() + 14 * 3600e3).toISOString().slice(0, 10)) problems.push(`profile meta: confirmedOn ${meta.confirmedOn} is still to come`);
     }
     return problems;
 }
@@ -763,10 +792,11 @@ function checkCertifications(certifications) {
 // content/testimonials.json — a quote with no source is a claim
 //
 // Anyone can write a kind sentence and put a name under it. Each entry
-// therefore says where a reader can check it: a LinkedIn recommendation (a
-// profile or recommendations address on linkedin.com), or "on request",
-// with the date the person gave permission to be quoted. No other kind of
-// source is accepted, and an entry without one is refused. The homepage
+// therefore says where a reader can check it: a LinkedIn recommendation
+// (the recommendations address of a linkedin.com profile, where it is
+// shown), or "on request", with the date the person gave permission to be
+// quoted. No other kind of source is accepted, and an entry without one is
+// refused. The homepage
 // shows them only when there is at least one, and it is held to a length
 // (LENGTH in scripts/check-budget.js), so each quote is an excerpt of at
 // most 200 characters. Measured in Chromium on the homepage before the rest
@@ -780,7 +810,10 @@ function checkCertifications(certifications) {
 const TESTIMONIAL_KEYS = ['quote', 'name', 'role', 'relationship', 'source'];
 const TESTIMONIAL_LIMITS = { entries: 3, quote: 200 };
 const LINKEDIN_HOSTS = ['linkedin.com', 'www.linkedin.com'];
-const LINKEDIN_PATH = /^\/in\/[A-Za-z0-9_%-]+(?:\/details\/recommendations)?\/?$/;
+// The recommendations a profile has received, where the quote is shown: a
+// bare profile address is anyone's page, the quoted person's own included,
+// and does not show the recommendation at all.
+const LINKEDIN_PATH = /^\/in\/[A-Za-z0-9_%-]+\/details\/recommendations\/?$/;
 const ISO_DAY = /^(\d{4})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
 const realDay = (d) => ISO_DAY.test(d) && new Date(`${d}T00:00:00Z`).toISOString().slice(0, 10) === d;
 
@@ -808,7 +841,7 @@ function checkTestimonials(file) {
             let url = null;
             try { url = new URL(s.url); } catch (e) { /* reported below */ }
             if (!url || url.protocol !== 'https:' || !LINKEDIN_HOSTS.includes(url.host) || !LINKEDIN_PATH.test(url.pathname) || url.hash) {
-                problems.push(`${at}: a LinkedIn source needs the https address of a linkedin.com profile or its recommendations (got ${JSON.stringify(s.url)})`);
+                problems.push(`${at}: a LinkedIn source needs the https address of the recommendations on a linkedin.com profile, …/in/<name>/details/recommendations/ (got ${JSON.stringify(s.url)})`);
             }
         } else if (s.type === 'on-request') {
             Object.keys(s).filter(k => !['type', 'permissionDate'].includes(k)).forEach(k => problems.push(`${at}: an on-request source has no field "${k}"`));
@@ -882,6 +915,29 @@ function resultFor(claim, projects) {
     if (!cs) return null;
     const result = (cs.results || []).find(r => mentions(`${r.claim} ${r.basis}`, claim));
     return result ? { cs, result } : null;
+}
+
+/**
+ * "Checkable from outside" has to say where, as the ledger's other public
+ * entries do: the result's own `check` (a source a reader opens, on a host
+ * the repository trusts, or a page of this site) or public work in its case
+ * study a reader can open. Two results were labelled checkable with nowhere
+ * to look: a model's sub-basin count, whose source was never cited, and a
+ * degree whose certificate claims.html files as on request.
+ */
+function checkResultCheck(at, cs, r) {
+    const which = `${at}: result "${(r.claim || '').slice(0, 40)}"`;
+    if (r.check !== undefined) {
+        const bad = urlProblem(r.check);
+        if (bad) return [`${which}: check ${bad}`];
+        if (r.verifiable !== true) return [`${which}: has a check, so it is checkable — say verifiable: true, or drop the check`];
+        return [];
+    }
+    const open = (cs.artifacts || []).some(a => a.status === 'public' && a.url);
+    if (r.verifiable === true && !open) {
+        return [`${which}: is called checkable from outside with nowhere to check it — give it a check (the address of a source that shows it), publish the work that does, or make it not verifiable`];
+    }
+    return [];
 }
 
 /** How checkable a claim is: a result's is the case study's own. */
@@ -1104,6 +1160,7 @@ function loadAll() {
             if (typeof r.verifiable !== 'boolean') {
                 problems.push(`${at}: result "${(r.claim || '').slice(0, 40)}" does not say whether a reader can check it`);
             }
+            problems.push(...checkResultCheck(at, cs, r));
         });
 
         (cs.artifacts || []).forEach((a, i) => {
@@ -1250,8 +1307,10 @@ module.exports = {
     WIDGETS,
     load,
     loadAll,
+    counterRules,
     urlProblem,
     checkAvailability,
+    checkResultCheck,
     checkCard,
     checkGallery,
     checkFindings,

@@ -246,7 +246,7 @@
     {
       "id": "web-carbon",
       "value": "0.36",
-      "unit": "g CO₂e per MB transferred: the figure the footer's badge and receipt use",
+      "unit": "g CO₂e per MB transferred: the figure the footer's badge, its receipt and the narration player use",
       "basis": { "factor": "TRANSFER.gramsPerMB.value", "url": "https://sustainablewebdesign.org/estimating-digital-emissions/" },
       "checkable": "public",
       "check": "https://sustainablewebdesign.org/estimating-digital-emissions/"

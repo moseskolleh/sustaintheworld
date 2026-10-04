@@ -337,6 +337,8 @@ async function visit(context, page, rel, origin) {
     await exerciseJourneyAndChart(browser, origin);
     await exerciseStatsPage(browser, origin);
     await checkClaimMarks(browser, origin);
+    await claimsLandInSight(browser, origin);
+    await notFoundLinks(browser, origin);
     await printFolds(browser, origin);
     await printPalette(browser, origin);
 
@@ -1945,6 +1947,78 @@ async function checkClaimMarks(browser, origin) {
     await context.close();
 }
 
+// claims.html's "Where" links each go to the figure on its page. They went
+// to the top of pages up to sixteen screens long, or to places where the
+// figure was folded away: the badge's [hidden] method note, a closed field
+// note while #projects showed the same 70%, a role's depth behind More, a
+// photo row, the research page's reproduction notes. tests/claims.test.js
+// holds the addresses in the HTML; here each is followed as a reader would,
+// scripts on, and a mark of the figure has to be drawn in the place it
+// lands on, with that place in the window.
+async function claimsLandInSight(browser, origin) {
+    // Reduced motion: the homepage glides to a far target over a second or
+    // more, and the landing is what is checked, not the glide.
+    const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
+    const page = await context.newPage();
+    await page.goto(`${origin}/claims.html`, { waitUntil: 'load' });
+    const links = await page.evaluate(() => [...document.querySelectorAll('li.cl-item')]
+        .flatMap(li => [...li.querySelectorAll('.cl-where a')].map(a => [li.id.replace(/^claim-/, ''), a.getAttribute('href')])));
+    const byHref = new Map();
+    links.filter(([, href]) => href !== '404.html').forEach(([id, href]) => byHref.set(href, (byHref.get(href) || []).concat(id)));
+    const missed = [];
+    for (const [href, ids] of byHref) {
+        await page.goto(`${origin}/${href}`, { waitUntil: 'load' });
+        // The homepage lands a task after load, waits for what it opens, and
+        // lands again as sections swap their estimated heights for real ones.
+        let last = null;
+        for (let i = 0; i < 20; i++) {
+            await page.waitForTimeout(250);
+            const now = await page.evaluate(() => [scrollY, document.documentElement.scrollHeight].join());
+            if (i > 2 && now === last) break;
+            last = now;
+        }
+        const out = await page.evaluate((list) => {
+            const hash = decodeURIComponent(location.hash.slice(1));
+            const lens = new URLSearchParams(location.search).get('lens');
+            const place = hash ? document.getElementById(hash) : document.querySelector(`[data-lens-panel="${lens}"]`);
+            if (!place) return list.map(id => `${id}: nothing at ${location.hash || location.search}`);
+            const region = [place];
+            if (/^H[1-6]$/.test(place.tagName)) {
+                for (let el = place.nextElementSibling; el && !(/^H[1-6]$/.test(el.tagName) && el.tagName <= place.tagName); el = el.nextElementSibling) region.push(el);
+            }
+            const top = place.getBoundingClientRect().top;
+            const inWindow = top > -innerHeight && top < innerHeight;
+            return list.filter((id) => {
+                const marks = region.flatMap(el => (el.matches(`[data-claim="${id}"]`) ? [el] : []).concat([...el.querySelectorAll(`[data-claim="${id}"]`)]));
+                return !inWindow || !marks.some(el => el.checkVisibility({ visibilityProperty: true }) && el.getClientRects().length > 0);
+            }).map(id => `${id}: not in sight at ${location.pathname.split('/').pop()}${location.search}${location.hash}${inWindow ? '' : ' (the page did not land there)'}`);
+        }, ids);
+        missed.push(...out);
+    }
+    if (missed.length) bad(`claims.html: ${missed.length} "Where" link(s) land where the figure is not in sight: ${missed.join('; ')}`);
+    else ok(`claims.html: all ${links.length - links.filter(([, h]) => h === '404.html').length} "Where" links land with the figure in sight (${byHref.size} addresses followed, scripts on)`);
+    await context.close();
+}
+
+// The 404 page's links: a fourth, "check my numbers", wrapped onto a row
+// of its own on a desktop, under three. Two rows of two there, within the
+// page's column; a phone stacks them.
+async function notFoundLinks(browser, origin) {
+    const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const page = await context.newPage();
+    await page.goto(`${origin}/404.html`, { waitUntil: 'load' });
+    await page.evaluate(() => document.fonts.ready);
+    const rows = await page.evaluate(() => {
+        const by = new Map();
+        document.querySelectorAll('.links a').forEach((a) => { const t = Math.round(a.getBoundingClientRect().top); by.set(t, (by.get(t) || 0) + 1); });
+        return [...by.values()];
+    });
+    const wide = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
+    if (rows.length === 2 && rows.every(n => n === 2) && !wide) ok('404.html at 1440px: its four links sit in two rows of two');
+    else bad(`404.html at 1440px: its links fall into rows of ${rows.join(', ')}${wide ? ', and the page scrolls sideways' : ''}`);
+    await context.close();
+}
+
 // Printed, or saved as a PDF, the case studies and the research page keep
 // what they fold for the screen's length: every method, the closing note,
 // the commands to reproduce the work. Chromium prints a closed <details> as
@@ -1981,12 +2055,17 @@ async function printFolds(browser, origin) {
 // the light palette back. Each page is printed (print media) from the dark
 // theme here, and every line of text that would go on paper has to read on
 // white at 4.5:1. The PDF check above prints the light theme and reads
-// text; this reads colour.
+// text; this reads colour, and opacity with it: printed soon after arriving,
+// the homepage's sections were still waiting to fade in, at opacity 0, and
+// paper got their headings and white space while this read their colour
+// and passed them. So each colour is laid over white at the opacity it
+// reaches paper with, its ancestors' included. The field report styles
+// itself inline, lime and pale grey from a dark system, and is read too.
 async function printPalette(browser, origin) {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, colorScheme: 'dark' });
     await context.addInitScript(() => { try { localStorage.setItem('theme', 'dark'); } catch (e) { /* the system's dark stands */ } });
     const page = await context.newPage();
-    for (const rel of ['index.html', 'case-studies.html', 'claims.html', 'carbon-ai.html', 'research.html']) {
+    for (const rel of ['index.html', 'case-studies.html', 'claims.html', 'carbon-ai.html', 'research.html', 'stats.html', 'field-report.html']) {
         await page.goto(`${origin}/${rel}`, { waitUntil: 'load' });
         await page.emulateMedia({ media: 'print', colorScheme: 'dark' });
         // Switching media here starts the colour transitions a card has on
@@ -2003,8 +2082,11 @@ async function printPalette(browser, origin) {
                 if (!el.getClientRects().length || ![...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) return;
                 const c = rgb(getComputedStyle(el).color);
                 if (c.length > 3 && c[3] === 0) return;
-                const ratio = 1.05 / (lum(c) + 0.05);
-                if (ratio < 4.5) out.push(`"${el.textContent.trim().slice(0, 30)}" ${getComputedStyle(el).color} (${ratio.toFixed(2)}:1)`);
+                let shown = c.length > 3 ? c[3] : 1;
+                for (let up = el; up; up = up.parentElement) shown *= Number(getComputedStyle(up).opacity);
+                const onWhite = c.slice(0, 3).map(v => 255 - (255 - v) * shown);
+                const ratio = 1.05 / (lum(onWhite) + 0.05);
+                if (ratio < 4.5) out.push(`"${el.textContent.trim().slice(0, 30)}" ${getComputedStyle(el).color}${shown < 1 ? ` at opacity ${shown.toFixed(2)}` : ''} (${ratio.toFixed(2)}:1)`);
             });
             return out;
         });

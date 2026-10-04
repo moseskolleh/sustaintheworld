@@ -62,7 +62,8 @@
             line-height: 1.7;
             margin-bottom: 24px;
         }
-        .links { display: flex; flex-wrap: wrap; gap: 12px; }
+        /* Four links: two rows of two, not three and one left over. */
+        .links { display: grid; grid-template-columns: repeat(2, max-content); gap: 12px; }
         .links a {
             font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
             font-size: 0.85rem;
@@ -82,7 +83,7 @@
         @media (max-width: 560px) {
             body { padding: 16px; }
             .wrap { flex-direction: column; gap: 20px; text-align: center; }
-            .links { justify-content: center; }
+            .links { display: flex; flex-wrap: wrap; justify-content: center; }
         }
     </style>
 </head>

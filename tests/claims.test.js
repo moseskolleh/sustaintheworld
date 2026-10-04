@@ -23,9 +23,14 @@
 //     field terminal, the Assay's evidence, the receipt, You Draw It, the
 //     coach's tips and the rest of what fills a host the scan skips, read
 //     from their source; or the footer's badge prints a fixed one;
+//   · a copy of the grams per MB (the narration player's, the build's)
+//     parts from the ledger's;
+//   · a rule the open counts page states (30 counts a minute, nothing
+//     under 5) parts from the counter's code;
 //   · the narration says a number in words that no entry backs;
-//   · claims.html leaves an entry out, or says it appears somewhere it
-//     does not.
+//   · claims.html leaves an entry out, says it appears somewhere it does
+//     not, or links it to a place where it is folded away while the page
+//     shows it elsewhere, or into a fold the link neither opens nor names.
 //
 // The scan reads the pages as shipped, with no script run, so a number a
 // calculator works out in the browser is not on them: those hosts are named
@@ -67,9 +72,12 @@ try {
 const CLAIMS = data.claims.claims;
 const byId = new Map(CLAIMS.map(c => [c.id, c]));
 
-// The pages a figure can be on. stats.html is the visit counter's own
-// measurements, rewritten weekly, and says what each counts beside it.
-const PAGES = ['index.html', 'case-studies.html', 'research.html', 'carbon-ai.html', 'field-report.html', '404.html', 'claims.html'];
+// The pages a figure can be on. stats.html's counts are the visit
+// counter's own, rewritten weekly, and skipped (figures.DRAWN); what that
+// page says of the counter's rules (30 counts a minute, nothing under 5)
+// is about the site itself, and is read like any page's, each rule marked
+// [data-rule] and held to the code that sets it.
+const PAGES = ['index.html', 'case-studies.html', 'research.html', 'carbon-ai.html', 'field-report.html', '404.html', 'claims.html', 'stats.html'];
 const docs = Object.fromEntries(PAGES.map(p => [p, new JSDOM(read(p)).window.document]));
 
 // ===================================================================
@@ -159,6 +167,33 @@ PAGES.forEach((page) => {
     assert(wrong.length === 0, `${page}: every marked figure is a ledger entry and says what it says (${wrong.join('; ') || `${doc.querySelectorAll('[data-claim]').length} marks`})`);
 });
 
+// The open counts page states the counter's rules: how many counts a minute
+// it takes, the threshold under which nothing is published, how many
+// features a page view sends. They were typed into the page, true when
+// typed and held to nothing. Each is marked with its rule now and must say
+// what the code says (scripts/lib/content.js, counterRules, which reads
+// Code.gs, count.js and scripts/fetch-stats.js).
+{
+    const rules = Object.assign(content.counterRules(), { baselineWeeks: require('../scripts/build-content.js').BASELINE_WEEKS });
+    const wrong = [];
+    let n = 0;
+    PAGES.forEach(page => docs[page].querySelectorAll('[data-rule]').forEach((el) => {
+        n++;
+        const key = el.getAttribute('data-rule');
+        if (page !== 'stats.html') wrong.push(`${page} marks a counter rule (${key}); only the open counts page states them`);
+        else if (!(key in rules)) wrong.push(`"${key}" is not one of the counter's rules`);
+        else if (!figures.agrees(String(rules[key]), el.textContent.trim())) wrong.push(`${key} says "${el.textContent.trim()}", the code ${rules[key]}`);
+    }));
+    const used = new Set(Array.from(docs['stats.html'].querySelectorAll('[data-rule]')).map(el => el.getAttribute('data-rule')));
+    // How many referring sites are named is said with the table of them, once counting has started.
+    const unsaid = ['perMinute', 'lockSeconds', 'suppressBelow', 'featuresMax', 'vpSmall', 'vpMediumMax', 'baselineWeeks']
+        .concat(data.stats.status === 'collecting' ? ['referrersListed', 'vpLarge'] : []).filter(k => !used.has(k));
+    assert(n > 10 && wrong.length === 0 && unsaid.length === 0,
+        `stats.html: every rule of the counter it states says what the code sets (${n} marks; ${wrong.concat(unsaid.map(k => `${k} unmarked`)).join('; ') || 'all agree'})`);
+    // The fetcher writes its threshold into content/stats.json, and the page prints that.
+    assert(data.stats.suppressBelow === rules.suppressBelow, `stats.json suppresses below the fetcher's threshold (${data.stats.suppressBelow}, ${rules.suppressBelow})`);
+}
+
 // ===================================================================
 // The scan: a numeral nobody marked
 // ===================================================================
@@ -176,15 +211,13 @@ const RUNTIME = {
         '#ledgerReviewed', '#ledgerTable', '#ledgerSources', 'select'].map(sel => [sel, 'coach'])), { '#anatomyDraw': 'anatomy' }),
     'case-studies.html': { '#drillResult': 'games', '#drillScore': 'games', '#floodNote': 'games', '#floodLevelLabel': 'games' }
 };
-// Numerals made from the page's own structure, not claims about anything.
-const COUNTED = {
-    'index.html': [['.corelog-depth, .corelog-head', 'the core log\'s depth scale: time drawn as depth']],
-    'case-studies.html': [['.cs-photos > summary', 'a count of the photos in the row, made from the gallery'],
-        ['.cs-method-n', 'a count of the method\'s steps, made from the list it folds'],
-        ['.flood-ticks', 'the river slider\'s steps, on a schematic not drawn to scale']],
-    'research.html': [['.rs-summary', 'a count of the entries the page lists, made from them']]
-};
-const SKIP = 'script, style, svg, template, noscript, [data-claim]';
+// Numerals made from the page's own structure, not claims about anything,
+// and the open counts page's counts (scripts/lib/claims.js, DRAWN, which
+// claims.html's "Not on this list" is written from).
+const COUNTED = Object.fromEntries(Object.entries(figures.DRAWN).map(([page, list]) => [page, list.map(d => [d.sel, d.why, d.once])]));
+// A mark: [data-claim] holds a figure to the ledger, [data-rule] one of
+// the counter's rules to its code (held below).
+const SKIP = 'script, style, svg, template, noscript, [data-claim], [data-rule]';
 // The words around a numeral: its block, or the span it sits in (tags and
 // chips run together without a space between them).
 const BLOCK = 'span, p, li, dd, dt, h1, h2, h3, h4, h5, h6, td, th, figcaption, summary, label, a, button, div, section, header, footer, main, body';
@@ -307,9 +340,10 @@ PAGES.forEach((page) => {
 
     // A host the scan skips has to earn it: present, and with no figure typed into it.
     const typed = [];
+    const once = new Map(counted.filter(c => c[2]).map(([sel, , state]) => [sel, state]));
     runtime.concat(counted.map(([sel]) => sel)).forEach((sel) => {
         const hosts = doc.querySelectorAll(sel);
-        if (!hosts.length) typed.push(`${sel} is not on the page`);
+        if (!hosts.length && !(once.has(sel) && !(page === 'stats.html' && data.stats.status === 'collecting'))) typed.push(`${sel} is not on the page`);
         if (runtime.includes(sel)) {
             hosts.forEach(h => numerals(doc, h, 'script, style, svg, [data-claim]').filter(n => !n.why)
                 .forEach(n => typed.push(`${sel} holds ${n.numeral} ("${n.words}")`)));
@@ -415,6 +449,10 @@ function between(src, from, to, file) {
 // The literals that read as words a person is shown, not an id, a class, a
 // colour or an SVG path: two letters together, and a space.
 const readAsWords = (list) => list.filter(t => /[A-Za-z]{2,}/.test(t) && /\s/.test(t.trim()));
+// Of a string of markup, what a reader is shown: its text and its labels,
+// not data-step="-1".
+const shownOf = (t) => (!/<[a-z]/i.test(t) ? t
+    : [t.replace(/<[^>]*>/g, ' ')].concat([...t.matchAll(/\b(?:aria-label|title|alt)="([^"]*)"/g)].map(m => m[1])).join(' '));
 
 // The Assay's rules are data the page builds from, so they are read as the
 // page has them: the homepage booted with its scripts.
@@ -467,7 +505,15 @@ const PRINTED = {
     // energy per token").
     coach: { what: 'the EcoPrompt Coach (carbon-ai.js)', texts: readAsWords(literals(read('carbon-ai.js'))), sure: /hidden output tokens/ },
     anatomy: { what: 'Anatomy of a Prompt (modules/anatomy.js)', texts: readAsWords(literals(read('modules/anatomy.js'))), sure: /Scope 2/ },
-    games: { what: 'the borehole and flood games (modules/dossier.js)', texts: readAsWords(literals(read('modules/dossier.js'))), sure: /STRIKE/ }
+    games: { what: 'the borehole and flood games (modules/dossier.js)', texts: readAsWords(literals(read('modules/dossier.js'))), sure: /STRIKE/ },
+    // The narration player is built when Listen is pressed, so no page's
+    // HTML holds it: its weight label's tooltip typed in "0.36 g CO₂e per
+    // MB", and nothing held that copy. It prints the badge's figure now; a
+    // figure typed in again is caught here. Its browser voice moves no
+    // bytes, and says so.
+    player: { what: 'the narration player (modules/dispatch.js)', texts: readAsWords(literals(read('modules/dispatch.js'))).map(shownOf),
+        sure: /Sustainable Web Design model/,
+        why: (text, a, b) => (/^browser voice · 0 KB transferred$/.test(text) && text.slice(a, b) === '0' ? 'nothing transferred: the browser voice moves no bytes' : null) }
 };
 {
     const hosts = Object.entries(RUNTIME).flatMap(([page, map]) => Object.entries(map).map(([sel, key]) => `${page} ${sel} → ${key}`));
@@ -550,9 +596,23 @@ const narration = [data.narration.intro ? data.narration.intro.text : ''].concat
 
     // The footer's badge carries its own copies of two inputs.
     const script = read('script.js');
-    const constant = (name) => ((script.match(new RegExp(`const ${name} = ([\\d.]+);`)) || [])[1]);
+    const constant = (name, src = script) => ((src.match(new RegExp(`const ${name} = ([\\d.]+);`)) || [])[1]);
     assert(figures.agrees(byId.get('median-page').value, constant('MEDIAN_PAGE_MB')) && figures.agrees(byId.get('web-carbon').value, constant('G_CO2_PER_MB')),
         `Ledger: the badge in script.js compares against the ledger's median page and weighs with its grams per MB (${constant('MEDIAN_PAGE_MB')}, ${constant('G_CO2_PER_MB')})`);
+
+    // The grams per MB, wherever the site weighs a transfer. The badge
+    // shares its constant as mks.carbon, which the receipt and the
+    // narration player read; the player once typed in a copy of its own,
+    // and so did a note in the factor set, and moving the ledger's figure
+    // would have left both behind with every test passing. The build's
+    // copy weighs the recording and the PR receipt.
+    const dispatch = read('modules/dispatch.js');
+    const build = constant('GRAMS_PER_MB', read('scripts/lib/voice-signature.js'));
+    const typed = ['script.js', 'carbon-ai.js', 'ai-carbon-data.js'].concat(fs.readdirSync(path.join(ROOT, 'modules')).filter(f => f.endsWith('.js')).map(f => `modules/${f}`))
+        .flatMap(f => literals(read(f)).flatMap(t => [...t.matchAll(/(\d+(?:\.\d+)?)\s*g CO₂e(?: per |\/)MB/g)].map(m => `${f}: ${m[1]}`)));
+    assert(/const \{ gramsPerMB \} = mks\.carbon;/.test(dispatch) && /\* gramsPerMB\b/.test(dispatch) && !/\d\.\d+ g CO₂e/.test(literals(dispatch).join(' '))
+        && figures.agrees(byId.get('web-carbon').value, build) && typed.every(t => figures.agrees(byId.get('web-carbon').value, t.split(': ')[1])),
+        `Ledger: every copy of the grams per MB is the ledger's ${byId.get('web-carbon').value}: the player weighs with the badge's (mks.carbon), the build's is ${build}, and a script that writes the figure writes it (${typed.join('; ') || 'none does'})`);
 
     // The borehole game's scoreboard draws the two rates as rows of ten.
     const rows = Array.from(docs['case-studies.html'].querySelectorAll('.strike-waffle[data-row]')).filter(w => /^\d+$/.test(w.getAttribute('data-row')));
@@ -603,7 +663,20 @@ const narration = [data.narration.intro ? data.narration.intro.text : ''].concat
     }).map(li => li.id);
     assert(unvalued.length === 0, `claims.html: each entry opens with its figure, marked (${unvalued.join(', ') || 'all do'})`);
 
-    const { CLAIM_PAGES } = require('../scripts/build-content.js');
+    const { CLAIM_PAGES, marksIn } = require('../scripts/build-content.js');
+    // Where the generator sends a reader, on a page written to test it: the
+    // figure in sight wins over the same figure folded earlier in a field
+    // note; a figure only in a [hidden] note is addressed inside it, named
+    // by the control that opens it; a heading with an id is a place up to
+    // the next heading; "hidden" inside a class is not the attribute.
+    const probe = marksIn('<main id="main"><section id="about"><details class="fieldnote"><summary>Note</summary><p><span data-claim="a">70%</span></p></details></section>' +
+        '<section id="projects"><p><span data-claim="a">70%</span></p></section><footer><button type="button" aria-controls="note" aria-label="How">?</button>' +
+        '<div id="note" hidden><p><span data-claim="b">0.36</span></p></div></footer><h2 id="log">Log</h2><dl><dd><span data-claim="c">23</span></dd></dl>' +
+        '<h2>Next</h2><p class="a hidden b"><span data-claim="d">5</span></p></main>');
+    const said = (id) => JSON.stringify(probe.get(id));
+    assert(probe.get('a').place === '#projects' && !probe.get('a').fold && probe.get('b').place === '#note' && probe.get('b').fold.kind === 'hidden' &&
+        probe.get('b').fold.name === 'How' && probe.get('c').place === '#log' && probe.get('d').place === '' && !probe.get('d').fold,
+        `Where: a figure in sight wins, a folded one is addressed inside its fold and named, a heading is a place (${['a', 'b', 'c', 'd'].map(said).join(' ')})`);
     const wrongWhere = [];
     const wrongCheck = [];
     const wrongPlace = [];
@@ -611,16 +684,34 @@ const narration = [data.narration.intro ? data.narration.intro.text : ''].concat
         const c = byId.get(li.id.replace(/^claim-/, ''));
         if (!c) return;
         const listed = Array.from(li.querySelectorAll('.cl-where a')).map(a => a.getAttribute('href').split(/[?#]/)[0]).sort();
-        // Each link lands where the figure is: in the section it names, or
-        // in the view of the case studies that shows it. On the case
-        // studies, whose first mark of a figure is often in a view's hidden
-        // panel, a bare link went to the top of the page.
+        // Each link lands where the figure is, in sight: in the place it
+        // names, or in the view of the case studies that shows it. A bare
+        // link went to the top of a page up to sixteen screens long; the
+        // homepage's four footer figures sat in the badge's [hidden] method
+        // note, the research page's two in a closed fold, and strike-rate
+        // went to a folded field note while #projects showed 70% in the
+        // open. So a link goes to a mark in sight when the page has one;
+        // when every mark is folded, it points into the fold (each page's
+        // script opens a fold its address points into) and says where it
+        // waits. Only the one-screen 404 page is linked bare.
         li.querySelectorAll('.cl-where a').forEach((a) => {
             const [, file, lens, frag] = a.getAttribute('href').match(/^([^?#]+)(?:\?lens=([\w-]+))?(?:#(.+))?$/) || [];
             const doc = docs[file];
             const place = frag ? doc && doc.getElementById(frag) : lens ? doc && doc.querySelector(`[data-lens-panel="${lens}"]`) : null;
-            const lands = place && place.querySelector(`[data-claim="${c.id}"]`);
-            if ((frag || lens) ? !lands : file === 'case-studies.html') wrongPlace.push(`${c.id}: ${a.getAttribute('href')}`);
+            // A heading's place runs to the next heading of its rank or above
+            // (the field report is one flat page under its headings).
+            const region = [];
+            for (let el = place; el && (el === place || !(/^H[1-6]$/.test(el.tagName) && el.tagName <= place.tagName)); el = /^H[1-6]$/.test(place.tagName) ? el.nextElementSibling : null) region.push(el);
+            const marks = region.flatMap(el => (el.matches(`[data-claim="${c.id}"]`) ? [el] : []).concat(Array.from(el.querySelectorAll(`[data-claim="${c.id}"]`))));
+            const inSight = (el) => !figures.foldAround(el) && !el.closest('[data-lens-panel][hidden]');
+            const elsewhere = doc ? Array.from(doc.querySelectorAll(`[data-claim="${c.id}"]`)).some(inSight) : false;
+            const fold = marks.length && !marks.some(el => !figures.foldAround(el)) ? figures.foldAround(marks[0]) : null;
+            const why = !(frag || lens) ? (file === '404.html' ? '' : 'a bare link, to the top of the page')
+                : !marks.length ? 'no mark of it there'
+                    : fold && elsewhere ? 'folded there, while the page shows it in sight elsewhere'
+                        : fold && !fold.contains(place) ? 'folded, and the address is outside the fold, so nothing opens it'
+                            : fold && !/, (?:in|under|behind) /.test(a.textContent) ? 'folded, and the link does not say where it waits' : '';
+            if (why) wrongPlace.push(`${c.id}: ${a.getAttribute('href')} (${why})`);
         });
         const actual = Array.from(MARKS.get(c.id) || []).sort();
         if (JSON.stringify(listed) !== JSON.stringify(actual)) wrongWhere.push(`${c.id}: says ${listed.join(', ') || 'nowhere'}, marked on ${actual.join(', ') || 'none'}`);
@@ -640,6 +731,15 @@ const narration = [data.narration.intro ? data.narration.intro.text : ''].concat
         }
     });
     assert(Object.keys(CLAIM_PAGES).every(p => PAGES.includes(p)), 'claims.html: reads the marks on every page this test scans');
+
+    // "Not on this list" names what the scan lets by. The core log's depths
+    // and the flood game's steps were let by here and named nowhere there;
+    // the open counts page was excused for its counts, not its rules.
+    const notListed = doc.querySelector('.cl-not-listed').textContent.replace(/\s+/g, ' ');
+    const unnamed = Object.values(figures.DRAWN).flat().filter(d => d.listed && !notListed.toLowerCase().includes(d.listed.toLowerCase())).map(d => d.sel)
+        .concat(Object.values(figures.DRAWN).flat().filter(d => !d.listed && !/^(?:a count of|the visit counter's own counts|the example of)/.test(d.why)).map(d => d.sel));
+    assert(unnamed.length === 0 && /rules it states[^.]*printed there from the counter’s code, and a test fails the build/.test(notListed),
+        `claims.html: "Not on this list" names every kind of numeral the scan lets by, and says the open counts page's rules are held to the code (${unnamed.join(', ') || 'all named'})`);
     assert(wrongWhere.length === 0, `claims.html: where each figure appears is where the pages mark it (${wrongWhere.join('; ') || 'all agree'})`);
     assert(wrongPlace.length === 0, `claims.html: each "Where" link lands on a section or a view that shows the figure, and every one into the case studies has one (${wrongPlace.join('; ') || 'all do'})`);
     assert(wrongCheck.length === 0, `claims.html: each says whether it can be checked as the ledger does, and a checkable one links to a place that exists (${wrongCheck.join('; ') || 'all do'})`);

@@ -557,7 +557,7 @@ rule makes that cheap.
 
 What the plan's branch implements so far, step by step, as it stands on
 `wave/w4-integrate`, checked against the code and the test runs on
-2026-10-03 (`npm test`: 2,305 passing assertions in twenty-eight suites, the
+2026-10-04 (`npm test`: 2,386 passing assertions in twenty-eight suites, the
 figure the runner prints at the end; `npm run smoke -- --require` in
 Chromium: passed, and its length check measured every page within its
 ceiling). Waves 1 and 2 are on `main` (pull requests #48 and #49, merged
@@ -776,7 +776,7 @@ screens at 1440×900 and 16.31 at 390×844, from 19.4 and 32.7 when this plan
 was written (18.78 and 32.18 when the wave began); `index.html` was 84 KB on
 disk (21 KB gzipped), from 134 KB; the homepage's first view was 275 KB over
 the wire, from 282 KB. After wave 4 it is 9.42 and 16.49 screens and 276 KB
-(282,785 bytes), within the same ceilings.
+(283,035 bytes), within the same ceilings.
 What the wave needs from Moses is in the owner checklist: F1–F3 (the
 strip's facts) and P1 and P2 (two choices to confirm); S7, when it went
 live, is done.
@@ -927,8 +927,10 @@ live, is done.
    included, follows the system's setting. The field report and the 404
    page take the nav and the call to action as plain lines, with no script,
    no back to top and no light theme: the field report was 9,720 bytes, just
-   under where its quoted "9 KB" would round to 10 (wave 4's claim marks
-   took it to 10,470, quoted as 10 KB under its 11 KB ceiling), and
+   under where its quoted "9 KB" would round to 10 (wave 4's claim marks,
+   its seventh project and its line of code links keep it under 10.5 KB,
+   quoted as 10 KB under its 11 KB ceiling; the claims test fails if the
+   quote and `npm run budget` part), and
    `404.html` is self-contained. axe finds no violation on any page in
    either theme.
 9. ✓ **Ratchet the budgets,** once the rest of wave 3 was in: the
@@ -948,15 +950,26 @@ none, and each lens's own is shown in its view), the claims-ledger test is
 green, and the CV is generated. Not done as a phase: the findings the plan
 names (3.3), the testimonials (3.5), the certificates' links (3.8) and the
 "Present" role (3.10) wait on Moses. Where the plan began, 3 of 12
-case-study results were checkable from outside and 3 of 5 "public" research
-outputs were the portfolio itself; now 5 of 15 results across seven case
-studies are, and 10 of 16 outputs are public, 4 of them this site's own
-pages. No ceiling was raised: the homepage's first view grew 693 bytes
-(282,092 → 282,785), past the rounding line, and is quoted as 276 KB
-everywhere; 136 of those bytes are the light palette restated for print,
-since a reader printing from the dark theme got lime figures and pale-grey
-text on white paper, and no saving of the same size was found that kept
-the stylesheet's comments. `case-studies.html` grew most (106,779 →
+case-study results were labelled checkable from outside and 3 of 5 "public"
+research outputs were the portfolio itself. Two of those three labels said
+where to check nothing: the coastal model's 10,226 sub-basins cited no
+source, and the Hunan defence rests on a certificate `claims.html` files as
+on request. The build now refuses a result called checkable without a
+source of its own (`check`) or public work in its case study, and both say
+"not checkable from outside" until Moses supplies one (N4). So 3 of 15
+results across seven case studies are checkable today, each at a public
+repository, and 10 of 16 outputs are public, 4 of them this site's own
+pages. No ceiling was raised: the homepage's first view grew 943 bytes
+(282,092 → 283,035), past one rounding line and short of the next, and is
+quoted as 276 KB everywhere. 136 of those bytes are the light palette
+restated for print, since a reader printing from the dark theme got lime
+figures and pale-grey text on white paper; about 90 open what hides a
+figure the ledger links to (the badge's method note, a role behind More, a
+field note) and print every section, where paper got headings and white
+space; neither had a saving of the same size that kept the stylesheet's
+and the script's comments. The on-demand total paid for the narration
+player's shared constant by moving two comment blocks of
+`modules/dispatch.js` that restated the README to a pointer at it. `case-studies.html` grew most (106,779 →
 111,373 bytes, 243 under its ceiling once its inline script shipped
 without its comment lines; 11.54 and 19.74 screens against 11.85 and
 19.78), and
@@ -965,7 +978,7 @@ new, with ceilings of 101 KB and 7.54 and 13.53 screens, set at what it
 measured plus 5% once the review had put the figures written in words on
 it (36 entries). What the wave needs
 from Moses is in the owner checklist: R1–R7 (his repositories), G1–G4 (the
-ESG case and the findings), N1–N3 (the ledger's evidence), D1–D3 and L1 (the
+ESG case and the findings), N1–N4 (the ledger's evidence), D1–D3 and L1 (the
 CV, the ministry's name, the certificates, the testimonials) and F5.
 
 1. ✓ **His public work on the site.** All six public repositories are
@@ -1080,22 +1093,32 @@ CV, the ministry's name, the certificates, the testimonials) and F5.
    those the generated pages print from `content/`. `claims.html`, generated,
    lists them by checkability with the pages that mark each, each "Where"
    linking the section, or the view of the case studies, that shows the
-   figure; it is linked under the hero's figures, from every footer and
-   from the 404 page. `tests/claims.test.js` fails on
+   figure in sight; where every mark of it on a page is folded (the
+   badge's method note, a role behind More, a photo's caption, the
+   research page's reproduction notes) the link points into the fold,
+   names it, and the page opens it on arrival, which `npm run smoke`
+   checks by following every link. It is linked under the hero's figures,
+   from every footer and from the 404 page. `tests/claims.test.js` fails on
    a mark that disagrees with its entry, an entry with no basis, a number
    the narration says that no entry backs, and an unmarked numeral on any
-   page but `stats.html` (whose counts are the counter's own), in digits or
-   in words, in the text or in the labels, tooltips, photo captions and
-   descriptions a reader is shown. A size said in words is read too ("a
+   page, in digits or in words, in the text or in the labels, tooltips,
+   photo captions and descriptions a reader is shown. On `stats.html` the
+   weekly counts are skipped as the counter's own, and the rules the page
+   states (30 counts a minute, nothing under 5 published, up to 20
+   features, the window-width classes, the four-week baseline) are printed
+   from the counter's code and held to it, so `claims.html` says that page
+   is held another way rather than listed. A size said in words is read too ("a
    fifth of a kettle", "twice", "millions of"): the kettle, which had no
    basis, is gone, and "an order of magnitude" is held to the factor set.
    Every host the scan skips because a script fills it names that script,
    and what the script prints of its own is read from its source and held
    to the ledger: the field terminal's lines, the Assay's evidence ("164
    water points…", once held only to appearing somewhere on the site), the
-   receipt's 10 KB, You Draw It's words and the coach's tips, three of
-   which quoted ranges no source gave ("4–10× more energy per token") and
-   now print only what they work out or the factor set holds. The footer's
+   receipt's 10 KB, You Draw It's words, the narration player's weight
+   note (which typed in its own grams per MB, and now reads the badge's) and
+   the coach's tips, three of which quoted ranges no source gave ("4–10×
+   more energy per token") and now print only what they work out or the
+   factor set holds. The footer's
    badge prints no fixed figure. The allowlist is wider than years: `EXEMPT` in
    `scripts/lib/claims.js` also passes dates, section numbers, standards'
    names, versions, return periods and the like, each narrowly, and a test
@@ -1111,7 +1134,8 @@ CV, the ministry's name, the certificates, the testimonials) and F5.
    its source. Two figures were corrected: "~25 MB of images" had no basis and is now "~22 MB on
    arrival", measured at commit `3d7ab78`; the field report is quoted at
    10 KB and ≈0.004 g. ✗ Moses: the evidence behind the on-request and
-   not-checkable figures, the 22 MB line (N1–N3), and a source for the 30%
+   not-checkable figures, the 22 MB line and the two results' sources
+   (N1–N4), and a source for the 30%
    (E1).
 7. ✓ **A CV generated from `content/`.** `npm run cv`
    (`scripts/build-cv.js`) prints `assets/Moses_Kolleh_Sesay_CV.pdf`, two A4

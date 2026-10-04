@@ -302,7 +302,7 @@
             <h2>Reproducing what is here</h2>
             <details>
                 <summary>How, and the commands to run</summary>
-                <p>The outputs that are part of this site run from its one clone, with no build step and no API key; each repository above says how to run it. The EcoPrompt Coach and the homepage's energy chart read one factor set, so they cannot disagree about a model. The chart shows each model's published figure for a <span data-claim="answer-tokens">1,000</span>-token answer; the coach multiplies it by data-centre overhead (PUE, <span data-claim="default-pue">1.2</span> unless you change it), so for the same answer it prints <span data-claim="default-pue">1.2</span> times the chart's figure. The map regenerates byte-identically from pinned dependencies. The narration is content-addressed, so re-rendering unchanged text costs nothing.</p>
+                <p id="reproduce">The outputs that are part of this site run from its one clone, with no build step and no API key; each repository above says how to run it. The EcoPrompt Coach and the homepage's energy chart read one factor set, so they cannot disagree about a model. The chart shows each model's published figure for a <span data-claim="answer-tokens">1,000</span>-token answer; the coach multiplies it by data-centre overhead (PUE, <span data-claim="default-pue">1.2</span> unless you change it), so for the same answer it prints <span data-claim="default-pue">1.2</span> times the chart's figure. The map regenerates byte-identically from pinned dependencies. The narration is content-addressed, so re-rendering unchanged text costs nothing.</p>
                 <dl class="rs-commands">
                     <dt><code>npm install &amp;&amp; npm test</code></dt><dd>runs every suite, the map check and the asset-weight budgets</dd>
                     <dt><code>npm run map:build</code></dt><dd>regenerates the journey map from Natural Earth data</dd>
@@ -330,6 +330,13 @@
     </footer>
     <script>
     (function () {
+        function reveal() {
+            var t = location.hash && document.getElementById(location.hash.slice(1));
+            var d = t && t.closest('details:not([open])');
+            if (d) { d.open = true; t.scrollIntoView(); }
+        }
+        reveal();
+        addEventListener('hashchange', reveal);
         var folds = '.cs-method-fold, .cs-footnote details, .rs-repro details';
         addEventListener('beforeprint', function () {
             document.querySelectorAll(folds).forEach(function (d) {

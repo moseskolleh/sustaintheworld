@@ -160,8 +160,9 @@ const BUDGETS = {
     // where it appears, so it grows by an entry with every figure the site
     // gains. Set when the page was made (October 2026) at its measure plus
     // 5%, as the ratchet would set it: a new budget, not a raised one. The
-    // three GAIA entries the wave's other lanes brought still fit under it,
-    // about 4% below, so it was left where it was.
+    // three GAIA entries the wave's other lanes brought, and the review's
+    // longer "Where" lines, still fit under it, so it was left where it
+    // was (`npm run budget` says by how much).
     claimsWire: {
         label: 'Check my numbers (claims.html), over the wire (with fonts)',
         max: 101 * KB,

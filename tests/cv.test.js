@@ -68,6 +68,21 @@ function assert(cond, msg) {
     const raw = pdfBuf.toString('latin1');
     assert(!/\/Subtype\s*\/Type3/.test(raw) && /\/Subtype\s*\/CIDFontType2/.test(raw), 'Shape: every font is embedded as TrueType, none as Type 3 outlines');
 
+    // --- The skills, in reading order ----------------------------------------
+    // Floated, the tool names went into the PDF before the rest of page 2:
+    // a parser met eight names at the top of the page, then the projects
+    // running on from page 1, and the proofs eighty lines later under
+    // SKILLS. Each name is read under the heading, straight before its proof.
+    {
+        const model = cv.cvModel(data, fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8'));
+        const heading = flat.indexOf('SKILLS');
+        const astray = model.skills.toolkit.filter((t) => {
+            const at = flat.indexOf(squash(`${t.name}${t.sub ? `${t.sub} — ` : ''}proof:`));
+            return heading < 0 || at < heading;
+        }).map(t => t.name);
+        assert(heading > -1 && astray.length === 0, `Reading order: each tool is read under SKILLS, beside its proof (${astray.join(', ') || `all ${model.skills.toolkit.length}`})`);
+    }
+
     // --- The profile, all of it -----------------------------------------
     {
         const missing = [];
@@ -243,6 +258,15 @@ function assert(cond, msg) {
         const refused = ['TBC', '2026-02-30', '2999-01-01'].map(d => content.checkMeta({ verifiedOn: profile.meta.verifiedOn, confirmedOn: d }).length > 0);
         assert(refused.every(Boolean) && content.checkMeta({ verifiedOn: profile.meta.verifiedOn }).length > 0,
             'Validator: meta.confirmedOn is null or a real day that has come, and is never left out');
+        // A day, not an instant: at 01:30 in Amsterdam on 5 October it is
+        // still the 4th in UTC, and Moses setting his own today was told it
+        // was still to come. Any day already begun somewhere is taken.
+        const clock = Date.now;
+        Date.now = () => Date.parse('2026-10-04T23:30:00Z');
+        const today = content.checkMeta({ verifiedOn: profile.meta.verifiedOn, confirmedOn: '2026-10-05' });
+        const ahead = content.checkMeta({ verifiedOn: profile.meta.verifiedOn, confirmedOn: '2026-10-06' });
+        Date.now = clock;
+        assert(today.length === 0 && ahead.length === 1, `Validator: meta.confirmedOn may be today in Amsterdam before UTC has reached it, and not a day after (${today.concat(ahead).join('; ')})`);
 
         // The page is valid HTML, by the rules the site's pages are held to.
         const { HtmlValidate } = require('html-validate');

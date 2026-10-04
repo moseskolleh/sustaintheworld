@@ -350,18 +350,22 @@ if (document.readyState === 'complete') {
 const navToggle = document.getElementById('navToggle');
 const navMenu = document.getElementById('navMenu');
 
-// Open the receipt panel when a deep-link target is in it, so a shared
-// /#receiptPanel reveals the receipt instead of landing on a closed panel.
-// The Assay the same: "grade your job description" lands on it open. It
-// grows below its own top, so there is nothing to wait for.
+// Open what hides a deep-link target (claims.html links into each): a
+// [hidden] block by its control (aria-controls), so /#receiptPanel shows
+// the receipt and the method note opens; a closed <details>; a role behind
+// More. The receipt fills as it opens, so the landing waits for it. The
+// Assay the same; it grows below its own top, so there is nothing to wait for.
 const revealTarget = (target) => {
     if (!target || !target.closest) return false;
     let expanded = false;
-    const panel = target.id === 'receiptPanel' ? target : target.closest('#receiptPanel');
-    if (panel && panel.hasAttribute('hidden')) {
-        const rb = document.getElementById('receiptBtn');
-        if (rb) { rb.click(); expanded = true; }
-    }
+    const box = target.closest('[hidden]');
+    const opener = box && box.id && document.querySelector(`[aria-controls="${box.id}"]`);
+    if (opener) { opener.click(); expanded = true; }
+    const fold = target.closest('details:not([open])');
+    if (fold) fold.open = true;
+    const card = target.closest('.timeline-content:not(.is-open)');
+    const more = card && card.querySelector('.corelog-more');
+    if (more) more.click();
     const assay = target.closest('#assay');
     const shut = assay && assay.querySelector('.assay-open[aria-expanded="false"]');
     if (shut) shut.click();

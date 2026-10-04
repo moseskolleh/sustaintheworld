@@ -270,11 +270,23 @@ const fieldText = plain(fieldReport);
     });
     assert(wrongIndex.length === 0, `Figures: every homepage project card shows its case study's years (wrong: ${wrongIndex.join('; ') || 'none'})`);
 
-    // The field report numbers its projects in the case-study order.
-    const section = fieldReport.split(/<h2>Projects<\/h2>/)[1] || '';
+    // The text-only edition names the code the full site links: the public
+    // repositories were the point of Phase 3, and it named none of them.
+    const repos = [...new Set(fs.readdirSync(ROOT).filter(f => f.endsWith('.html') && f !== 'field-report.html')
+        .flatMap(f => [...read(f).matchAll(/https:\/\/github\.com\/moseskolleh\/([\w.-]+?)(?=["/#?])/g)].map(m => m[1])))]
+        .filter(r => r !== 'sustaintheworld');   // this site's own source, linked as a record of it
+    const evidence = (fieldReport.split(/<h2>Evidence<\/h2>/)[1] || '').split('<h2')[0];
+    const unnamed = repos.filter(r => !evidence.includes(r));
+    assert(repos.length >= 6 && unnamed.length === 0 && /href="https:\/\/github\.com\/moseskolleh"/.test(evidence),
+        `Field report: its evidence names every repository the site links, with a link to them (${unnamed.join(', ') || repos.join(', ')})`);
+
+    // The field report numbers its projects in the case-study order, all of
+    // them: it listed the homepage's six beside "seven case studies".
+    const all = JSON.parse(read('content/projects.json')).caseStudies;
+    const section = fieldReport.split(/<h2[^>]*>Projects<\/h2>/)[1] || '';
     const listed = (section.split('</dl>')[0].match(/<dt>\[\d+\][^<]*<\/dt>/g) || []);
-    assert(listed.length === projects.length, `Figures: the field report lists every case study the homepage shows (${listed.length}/${projects.length})`);
-    const wrongField = projects
+    assert(listed.length === all.length, `Figures: the field report lists every case study (${listed.length}/${all.length})`);
+    const wrongField = all
         .filter((cs, i) => !listed[i] || years(listed[i]) !== years(cs.period))
         .map((cs) => `${cs.id} vs "${cs.period}"`);
     assert(wrongField.length === 0, `Figures: every field-report project shows its case study's years (wrong: ${wrongField.join('; ') || 'none'})`);

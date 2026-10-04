@@ -300,8 +300,8 @@
         {
           "claim": "10,226 sub-basins modelled",
           "basis": "The sub-basin count of the MARINA-Multi model configuration used — a property of the model domain, not an estimate.",
-          "brief": "A property of the model domain used, not an estimate.",
-          "verifiable": true
+          "brief": "A property of the model domain used, not an estimate; the thesis is on request.",
+          "verifiable": false
         },
         {
           "claim": "Identified the socioeconomic factors that dominate coastal pollution export",
@@ -553,9 +553,9 @@
       "results": [
         {
           "claim": "Successfully defended at Hunan University, May 2021",
-          "basis": "Degree awarded — MSc Industrial Engineering, 2021. The one fully checkable claim in this case study.",
-          "brief": "Degree awarded: MSc Industrial Engineering, 2021.",
-          "verifiable": true
+          "basis": "Degree awarded — MSc Industrial Engineering, 2021. The certificate is the evidence, on request.",
+          "brief": "Degree awarded: MSc Industrial Engineering, 2021; the certificate is on request.",
+          "verifiable": false
         },
         {
           "claim": "A community-centred alternative to pipe-and-pump thinking, scoped for fast-growing cities in the Global South",

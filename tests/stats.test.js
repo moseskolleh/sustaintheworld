@@ -656,6 +656,27 @@ const page = (s) => new JSDOM(renderStats({ stats: s, lenses })).window.document
     assert(!/No referring site/.test(refText) && /no referring site .* is not in this table/i.test(refText.replace(/\s+/g, ' ')),
         'Counting: the referrer table has no "no referrer" row (Code.gs never stores one), and says so');
 
+    // The counter's rules the page states are printed from its code and
+    // marked (tests/claims.test.js holds the committed page): drawn with
+    // counts, every mark still says what the code says, and outside the
+    // counts every other number is a date, "one" or a count of what the
+    // page shows. The page typed in 30 a minute, under 5 and up to 20 names.
+    const figures = require('../scripts/lib/claims.js');
+    const rules = Object.assign(content.counterRules(), { baselineWeeks: require('../scripts/build-content.js').BASELINE_WEEKS });
+    const marks = Array.from(doc.querySelectorAll('[data-rule]'));
+    const off = marks.filter(el => !figures.agrees(String(rules[el.getAttribute('data-rule')]), el.textContent.trim()));
+    const keys = new Set(marks.map(el => el.getAttribute('data-rule')));
+    const frame = doc.body.cloneNode(true);
+    frame.querySelectorAll(figures.DRAWN['stats.html'].map(d => d.sel).concat('[data-rule]', 'script', 'style').join(', ')).forEach(el => el.remove());
+    const text = frame.textContent.replace(/\s+/g, ' ');
+    const loose = [];
+    const NUM = /(?<![A-Za-z\d.,])\d+(?:[.,]\d+)*/g;
+    let m;
+    while ((m = NUM.exec(text))) if (!figures.exemptAt(text, m.index, m.index + m[0].length)) loose.push(text.slice(m.index - 30, m.index + 30));
+    figures.wordRuns(text).filter(r => !figures.wordExempt(text, r)).forEach(r => loose.push(text.slice(r.index - 30, r.end + 30)));
+    assert(marks.length > 10 && !off.length && ['referrersListed', 'vpLarge', 'perMinute', 'featuresMax'].every(k => keys.has(k)) && !loose.length,
+        `Counting: the counter's rules are printed from its code, marked, and nothing else in the page's frame is a figure (${marks.length} marks; ${off.map(el => `${el.getAttribute('data-rule')} "${el.textContent}"`).concat(loose.map(t => `"…${t}…"`)).join('; ') || 'all held'})`);
+
     // Without a whole week there is no counting file to draw: the guard
     // refuses one.
     const noWeek = JSON.parse(JSON.stringify(stats));

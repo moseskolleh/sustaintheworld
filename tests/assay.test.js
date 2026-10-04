@@ -153,8 +153,22 @@ function resolves(href) {
     const qgis = a.met.find(m => m.label === 'QGIS');
     assert(qgis && qgis.ev.length === 1 && resolves(qgis.ev[0].href),
         `WASH ad: QGIS is matched to where the page shows it (${qgis && qgis.ev[0].t})`);
+    // The toolkit says its GIS proof is on request, with no public GIS
+    // project yet: the Assay showed that line with a green tick.
+    assert(qgis && qgis.ev[0].part === true && /no public/.test(qgis.ev[0].t), `WASH ad: QGIS's proof, with no public project, is marked partial (${qgis && qgis.ev[0].t})`);
+    const python = a.met.find(m => m.label === 'Python');
+    assert(!python || python.ev.every(e => !e.part), 'WASH ad: a proof with public work behind it is not marked partial');
     const years = a.met.find(m => /year of experience/.test(m.label));
     assert(years && years.ev[0].href === '#experience', `WASH ad: "at least one year" is met, pointing at the experience section (${years && years.ev[0].t})`);
+
+    const input = doc.getElementById('assayInput');
+    const result = doc.getElementById('assayResult');
+    input.value = ADS.wash;
+    doc.getElementById('assayRun').click();
+    const rowOf = (label) => Array.from(result.querySelectorAll('.assay-matches .assay-row')).find(r => r.querySelector('.assay-req').textContent === label);
+    const drawn = rowOf('QGIS');
+    assert(!!drawn && !!drawn.querySelector('.assay-ev a.assay-part') && Array.from(result.querySelectorAll('.assay-matches .assay-ev a:not(.assay-part)')).length > 0,
+        'Page: the QGIS row\'s proof is drawn partial (style.css gives it the amber "?"), the rest ticked');
 }
 
 // ===================================================================

@@ -1025,14 +1025,14 @@ html.js .assay.is-folding:not(.is-open) .assay-body { display: none; }
 .assay-ev span::before, .assay-ev a::before { content: '✓'; position: absolute; left: 0; color: var(--primary-green); }
 
 .assay-note { margin-top: 16px; font-size: 0.74rem; color: var(--text-dim); line-height: 1.5; }
-/* A gap, or a fact to confirm, is a row like a match: as prominent, with a
-   different mark. */
+/* A gap, a fact to confirm or a proof with no public work behind it is a
+   row like a match: as prominent, with a different mark. */
 .assay-map + .assay-map { margin-top: 18px; }
 .assay-ev a { text-underline-offset: 3px; }
 .assay-ev a:hover { color: var(--primary-green); }
 .assay-row-gap .assay-ev span { color: var(--text-primary); }
 .assay-ev .assay-miss::before { content: '✗'; color: var(--accent-salmon); }
-.assay-ev .assay-ask::before { content: '?'; color: var(--accent-amber); }
+.assay-ev .assay-ask::before, .assay-ev .assay-part::before { content: '?'; color: var(--accent-amber); }
 .assay-soft { margin-left: 6px; padding: 1px 7px; border: 1px solid var(--line-color); border-radius: 999px; font: 400 0.62rem var(--font-mono); color: var(--text-secondary); }
 
 @media (max-width: 560px) {
@@ -2509,10 +2509,13 @@ html.js .reveal.visible {
     }
 }
 
+/* Printed soon after arriving, the page was headings and white space; the
+   chart's footnote, faded for the screen, was 4.4:1 on paper. */
 @media print {
     html.js main > section {
         content-visibility: visible;
     }
+    html.js .reveal, html .eco-footnote { opacity: 1; transform: none; }
 }
 
 /* Nothing moves in a block until script.js marks it in view. A loop or

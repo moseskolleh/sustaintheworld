@@ -117,6 +117,22 @@ const { projects, research, lenses } = data;
     assert(content.checkAvailability('t', { status: 'on-request' }).length === 0, 'Guard: accepts an on-request entry with no link');
     assert(content.checkAvailability('t', { status: 'internal', heldBy: 'UNDRR' }).length === 0, 'Guard: accepts an internal entry that names its holder');
 
+    // "Checkable from outside" says where. The coastal case's 10,226 and the
+    // Hunan defence were labelled so with no source cited and no public
+    // work, and claims.html filed the same certificate under "on request".
+    const shut = { artifacts: [{ name: 'Thesis', status: 'on-request' }] };
+    const result = { claim: 'A count', basis: 'A property of the model domain', verifiable: true };
+    const says = (cs, r) => content.checkResultCheck('t', cs, r).join(' ');
+    assert(/nowhere to check it/.test(says(shut, result)), 'Guard: rejects a result called checkable with no source and no public work');
+    assert(/not a host/.test(says(shut, { ...result, check: 'https://example.org/marina' })), 'Guard: rejects a result checked at a host the repository does not trust');
+    assert(/drop the check/.test(says(shut, { ...result, verifiable: false, check: 'https://github.com/moseskolleh/WaterProject' })), 'Guard: rejects a check on a result that says it cannot be checked');
+    assert(says(shut, { ...result, check: 'https://github.com/moseskolleh/WaterProject' }) === '' &&
+        says({ artifacts: [{ name: 'Code', status: 'public', url: 'https://github.com/moseskolleh/WaterProject' }] }, result) === '' &&
+        says(shut, { ...result, verifiable: false }) === '',
+        'Guard: accepts a checkable result with a source of its own or public work, and a result that says it cannot be checked');
+    const checkable = data.projects.caseStudies.flatMap(cs => cs.results.filter(r => r.verifiable).map(r => `${cs.id}: ${r.claim.slice(0, 30)}`));
+    assert(!checkable.some(r => /^(?:coastal|water-management):/.test(r)), `Results: the coastal count and the Hunan defence are not called checkable while nothing says where (${checkable.join('; ')})`);
+
     // A role view needs public work a reader can open beyond this site: a
     // game on one of its pages is not enough, a repository is, and so is
     // an output placed in the view by its own `lenses`.
@@ -536,6 +552,32 @@ function loadWith(name, change) {
     const intro = trigrams(doc.querySelector('.rs-intro p').textContent);
     const shared = [...lead].filter(t => intro.has(t)).length / (lead.size || 1);
     assert(shared < 0.25, `Research page: the intro does not repeat the hero lead (${Math.round(shared * 100)}% of its phrasing shared)`);
+}
+
+// --- an address into a fold opens it -------------------------------------
+// claims.html's "Where" links send a reader to a figure in a photo's
+// caption and to two in the reproduction notes. A closed fold showed only
+// its summary, and the research page's link went to the top of the page.
+// The page's script opens the fold its address points into, and lands on it.
+{
+    const arrive = (file, hash) => new JSDOM(fs.readFileSync(path.join(ROOT, file), 'utf8'), {
+        runScripts: 'dangerously',
+        url: `https://example.com/${file}${hash}`,
+        beforeParse: (w) => { w.Element.prototype.scrollIntoView = function () { w.landedOn = this.id; }; }
+    }).window;
+    const research = arrive('research.html', '#reproduce');
+    const notes = research.document.getElementById('reproduce').closest('details');
+    const cases = arrive('case-studies.html', '#un-disaster-photos');
+    const row = cases.document.getElementById('un-disaster-photos').closest('details');
+    const others = Array.from(cases.document.querySelectorAll('details.cs-photos')).filter(d => d !== row && d.open);
+    assert(!!notes && notes.open && research.landedOn === 'reproduce' && !!row && row.open && cases.landedOn === 'un-disaster-photos' && !others.length,
+        'Folds: an address into the reproduction notes or a photo row opens that fold, and only that one, and lands on it');
+    const plain = arrive('case-studies.html', '#un-disaster');
+    assert(!plain.document.getElementById('un-disaster-photos').closest('details').open && !plain.landedOn, 'Folds: an address to a case study opens none of its folds');
+    // Printing still shuts again only what printing opened.
+    research.dispatchEvent(new research.Event('beforeprint'));
+    research.dispatchEvent(new research.Event('afterprint'));
+    assert(notes.open, 'Folds: a fold the reader arrived in stays open after printing');
 }
 
 // --- generated files carry their warning ---------------------------------
