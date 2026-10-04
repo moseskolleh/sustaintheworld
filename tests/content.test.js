@@ -512,15 +512,16 @@ const fieldText = plain(fieldReport);
 
     // And the view shows it. research.html links an output with no case
     // study to the view its lenses name; that view's panel lists it, linked,
-    // and links back to its entry, so the link lands on something.
+    // and links back to its entry, so the link lands on something. Without
+    // JavaScript the link lands on the "all" view, which lists it too.
     const cs = new (require('jsdom').JSDOM)(read('case-studies.html')).window.document;
-    const unshown = research.outputs.filter(o => !o.caseStudy).flatMap(o => (o.lenses || []).map(l => [o, l])).filter(([o, l]) => {
+    const unshown = research.outputs.filter(o => !o.caseStudy).flatMap(o => (o.lenses ? o.lenses.concat('all') : []).map(l => [o, l])).filter(([o, l]) => {
         const panel = cs.querySelector(`[data-lens-panel="${l}"]`);
         return !panel || !(o.status !== 'public' || panel.querySelector(`.cs-lens-evidence a[href="${o.url}"]`))
             || !panel.querySelector(`.cs-lens-evidence a[href="research.html#${o.id}"]`);
     }).map(([o, l]) => `${o.id} in ${l}`);
     assert(research.outputs.some(o => o.lenses) && unshown.length === 0,
-        `Lenses: each output placed in a view by its lenses is listed, linked, in that view's panel (${unshown.join(', ') || 'all are'})`);
+        `Lenses: each output placed in a view by its lenses is listed, linked, in that view's panel and in the "all" view a reader without JavaScript gets (${unshown.join(', ') || 'all are'})`);
 
     // Research outputs that are this site itself stay, but no longer make up
     // most of the public list.
@@ -576,10 +577,14 @@ const fieldText = plain(fieldReport);
     assert(proven && elsewhere.length === 0, `Power BI: claimed nowhere without a proof link (${elsewhere.join(', ') || 'none'})`);
 }
 
-// --- Skills: each proof is public work, or says there is none ------------
+// --- Skills: each proof is public work that shows it, or says there is none
 // The proofs pointed at #projects, #education and the coach on this site.
-// Each now opens a repository or a case study with public work beyond this
-// site; a tool with neither says so in words and links nowhere.
+// Each now opens a repository, or says in words that there is no public
+// project, and then links nowhere or to the case study that tells the work.
+// QGIS pointed at the groundwater case study and passed because the case
+// study had a public repository, WaterProject, which shows no GIS work at
+// all. A case study is a proof only if one of its public artifacts names
+// the tool.
 {
     const content = require('../scripts/lib/content.js');
     const research = JSON.parse(read('content/research.json'));
@@ -588,21 +593,29 @@ const fieldText = plain(fieldReport);
     const items = Array.from(doc.querySelectorAll('#skills .toolkit-item'));
     const bad = [];
     items.forEach((li) => {
-        const tool = plain(li.querySelector('.toolkit-name').innerHTML).trim();
+        const name = li.querySelector('.toolkit-name');
+        const tool = plain(name.innerHTML).trim();
+        const names = name.firstChild.textContent.split(/[&·/]/).map(n => n.trim()).filter(Boolean);
         const proof = li.querySelector('.toolkit-proof');
         const href = proof && proof.getAttribute('href');
         if (!proof) return bad.push(`${tool}: no proof`);
+        const none = /no public (?:[\w.]+ )?project/.test(proof.textContent);
         if (!href) {
-            if (proof.localName === 'a' || !/no public project/.test(proof.textContent)) bad.push(`${tool}: an unlinked proof that does not say there is no public project`);
+            if (proof.localName === 'a' || !none) bad.push(`${tool}: an unlinked proof that does not say there is no public project`);
             return;
         }
         const cs = href.startsWith('case-studies.html#') && projects.find(c => c.id === href.split('#')[1]);
         const repo = research.outputs.some(o => o.url === href && o.status === 'public');
-        const csPublic = cs && (cs.artifacts || []).some(a => a.status === 'public' && /^https?:\/\//.test(a.url));
-        if (!repo && !csPublic) bad.push(`${tool}: ${href}`);
+        const shows = cs && (cs.artifacts || []).some(a => a.status === 'public' && /^https?:\/\//.test(a.url)
+            && names.some(n => new RegExp(`\\b${n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(`${a.name} ${a.note || ''}`)));
+        if (none && !cs) bad.push(`${tool}: says there is no public project, yet links ${href}`);
+        if (!none && !repo && !shows) bad.push(`${tool}: ${href} has no public work that shows ${names.join(' or ')}`);
         if (/^https?:/.test(href) && proof.getAttribute('rel') !== 'noopener') bad.push(`${tool}: an off-site link without rel="noopener"`);
     });
-    assert(items.length === 6 && bad.length === 0, `Skills: every proof is a public repository or a case study with one, or says there is none (wrong: ${bad.join('; ') || 'none'})`);
+    assert(items.length === 6 && bad.length === 0, `Skills: every proof is public work that shows the tool, or says there is none (wrong: ${bad.join('; ') || 'none'})`);
+    const gis = items.find(li => /^QGIS/.test(plain(li.innerHTML).trim()));
+    assert(!!gis && /on request; no public GIS project yet/.test(gis.querySelector('.toolkit-proof').textContent),
+        'Skills: the GIS proof says its maps are on request and there is no public GIS project yet (owner checklist R7)');
     // The Tableau proof is the repository that links the dashboard, and says
     // only that: no workbook is in it.
     const tableau = items.find(li => /^Tableau/.test(plain(li.innerHTML).trim()));
@@ -668,13 +681,13 @@ const fieldText = plain(fieldReport);
     const months = (Date.now() - verified.getTime()) / (1000 * 60 * 60 * 24 * 30.44);
     if (months > profile.meta.staleAfterMonths) {
         console.log('');
-        console.log(`NOTICE: content/profile.json was last verified ${Math.floor(months)} months ago (${profile.meta.verifiedOn}).`);
+        console.log(`NOTICE: content/profile.json was logged ${Math.floor(months)} months ago (${profile.meta.verifiedOn}).`);
         console.log(`        "${profile.currentRole.displayDates}" at ${profile.currentRole.organization} is still being`);
-        console.log('        published as current. Confirm it, then update meta.verifiedOn — or close the role');
+        console.log('        published as current. Confirm it, then set meta.confirmedOn and meta.verifiedOn — or close the role');
         console.log('        in profile.json, index.html, field-report.html, the CV and the narration together.');
         console.log('');
     } else {
-        console.log(`INFO: profile verified ${Math.floor(months)} month(s) ago; next review due after ${profile.meta.staleAfterMonths}.`);
+        console.log(`INFO: profile logged ${Math.floor(months)} month(s) ago; next review due after ${profile.meta.staleAfterMonths}.`);
     }
 }
 

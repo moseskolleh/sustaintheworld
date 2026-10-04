@@ -775,8 +775,8 @@ Measured in Chromium once the page had settled: the homepage was 9.36
 screens at 1440×900 and 16.31 at 390×844, from 19.4 and 32.7 when this plan
 was written (18.78 and 32.18 when the wave began); `index.html` was 84 KB on
 disk (21 KB gzipped), from 134 KB; the homepage's first view was 275 KB over
-the wire, from 282 KB. After wave 4 it is 9.42 and 16.46 screens and 276 KB
-(282,621 bytes), within the same ceilings.
+the wire, from 282 KB. After wave 4 it is 9.42 and 16.49 screens and 276 KB
+(282,785 bytes), within the same ceilings.
 What the wave needs from Moses is in the owner checklist: F1–F3 (the
 strip's facts) and P1 and P2 (two choices to confirm); S7, when it went
 live, is done.
@@ -951,16 +951,20 @@ names (3.3), the testimonials (3.5), the certificates' links (3.8) and the
 case-study results were checkable from outside and 3 of 5 "public" research
 outputs were the portfolio itself; now 5 of 15 results across seven case
 studies are, and 10 of 16 outputs are public, 4 of them this site's own
-pages. No ceiling was raised: the homepage's first view grew 557 bytes
-(282,092 → 282,649), past the rounding line, and is quoted as 276 KB
-everywhere; `case-studies.html` grew most (106,779 → 111,050 bytes, 566
-under its ceiling once its inline script shipped without its comment
-lines; 11.51 and 19.58 screens against 11.85 and 19.78), and
+pages. No ceiling was raised: the homepage's first view grew 693 bytes
+(282,092 → 282,785), past the rounding line, and is quoted as 276 KB
+everywhere; 136 of those bytes are the light palette restated for print,
+since a reader printing from the dark theme got lime figures and pale-grey
+text on white paper, and no saving of the same size was found that kept
+the stylesheet's comments. `case-studies.html` grew most (106,779 →
+111,373 bytes, 243 under its ceiling once its inline script shipped
+without its comment lines; 11.54 and 19.74 screens against 11.85 and
+19.78), and
 `research.html` is 8.97 screens on a phone against 8.99. `claims.html` is
 new, with ceilings of 101 KB and 7.54 and 13.53 screens, set at what it
 measured plus 5% once the review had put the figures written in words on
 it (36 entries). What the wave needs
-from Moses is in the owner checklist: R1–R6 (his repositories), G1–G4 (the
+from Moses is in the owner checklist: R1–R7 (his repositories), G1–G4 (the
 ESG case and the findings), N1–N3 (the ledger's evidence), D1–D3 and L1 (the
 CV, the ministry's name, the certificates, the testimonials) and F5.
 
@@ -970,13 +974,18 @@ CV, the ministry's name, the certificates, the testimonials) and F5.
    and so behind the water lens), GAIA-Framework- (its own case study, step
    2), climatematch-pipeline (no case study of its own: a new `lenses` field
    places it in the climate-risk view, whose panel lists it after the
-   lens's evidence, and its note says it has no licence file),
+   lens's evidence, as the "all" view does too, which is the one a reader
+   without JavaScript gets, and its note says it has no licence file),
    A-B-Testing-at-Globox, and SustainableAIPrototypes and promptcoach
    (both public artifacts of the sustainable-AI case study). The toolkit's
-   proofs point at them: Python at WaterProject, QGIS at the groundwater case
-   study, SQL at the GloBox test, Tableau at the same repository, whose
-   README links a Tableau Public dashboard, and JavaScript at promptcoach. Machine learning, shown by a
-   certificate alone, says "no public project yet" and links nowhere, and
+   proofs point at them: Python at WaterProject, SQL at the GloBox test,
+   Tableau at the same repository, whose README links a Tableau Public
+   dashboard, and JavaScript at promptcoach. Machine learning, shown by a
+   certificate alone, says "no public project yet" and links nowhere. QGIS
+   links the groundwater case study and says its maps are "on request; no
+   public GIS project yet": that case study's one public repository,
+   WaterProject, shows no QGIS or ArcGIS work, and a test now accepts a
+   case study as a proof only when a public artifact of it names the tool.
    Power BI is claimed nowhere (a test keeps it so). `checkLensWork` in
    `scripts/lib/content.js` refuses a lens with no public work of its own
    beyond the site's own pages: the artifacts of the case studies that list
@@ -987,10 +996,12 @@ CV, the ministry's name, the certificates, the testimonials) and F5.
    (public, on request, held by the client), each note ending with its case
    study or lens, the reproduction notes folded. No partner is newly named.
    WaterProject's apps and the Tableau dashboard are reached through their
-   repositories, not linked directly: their hosts are not on the allowlist.
-   ✗ Moses: the client names in WaterProject, the SQL label, a public
-   machine-learning project, whether the dashboard and the apps are live,
-   and climatematch's licence (R1–R6).
+   repositories, not linked directly: WaterProject's README says its Pages
+   app goes live only once Pages is switched on, which nobody has
+   confirmed (R5), and the Streamlit and Tableau hosts are not on the
+   allowlist. ✗ Moses: the client names in WaterProject, the SQL label, a
+   public machine-learning project, whether the dashboard and the apps are
+   live, climatematch's licence, and public GIS work (R1–R7).
 2. ✓ **An ESG/CSRD lens and case study.** `?lens=esg-csrd`, "ESG & CSRD
    reporting", built from GAIA, Anatomy of a Prompt and the OnePointFive
    accelerator. Its home case study is a seventh, GAIA, presented as method
@@ -999,7 +1010,10 @@ CV, the ministry's name, the certificates, the testimonials) and F5.
    `carbon-ai.html#anatomy`) and two results checkable from outside, each on
    what the repository states (3,984 cross-engine checks passing at 2.2.0;
    every output mapped to GRI, ESRS E1 and E3, IFRS S2, CDP and SBTi, as a
-   mapping, not an assurance). The sustainable-AI case joins the lens. GAIA
+   mapping, not an assurance). Its method opens with the rebuild on
+   published science: the OnePointFive accelerator, which the repository
+   never mentions and which came months before it, is the ESG view's
+   background, not a step of GAIA. The sustainable-AI case joins the lens. GAIA
    has no homepage card (`homepageCard: false`); the homepage's projects
    section links the ESG view beside the other three. Each view now opens on
    its home case studies, so `?lens=esg-csrd` opens on GAIA, the climate
@@ -1013,7 +1027,11 @@ CV, the ministry's name, the certificates, the testimonials) and F5.
    from the field notes, the case studies' own text, photo captions, the
    climate lens and the GAIA repository, so where the evidence is thin the
    list is short: UNDRR has one, and Wuppertal one, its recommendation
-   having named no measure. Partial because none of the three findings this
+   having named no measure. The sustainable-AI finding on the spread
+   between models rests on the coach's factor set, not on the field note
+   that says it, and says "few tools put it in front of the person typing"
+   where it said "nobody", beside the case's own tools that do; the
+   principles finding names two of the five cards, as the photo shows them. Partial because none of the three findings this
    step names is on the site: the coastal finding says only that the thesis
    sets out which drivers dominate; Wuppertal has no measure; the
    sustainable-AI case gives its five design principles, not the ministry's
@@ -1041,7 +1059,11 @@ CV, the ministry's name, the certificates, the testimonials) and F5.
    whose validator refuses a quote without a source (a linkedin.com profile
    or recommendations address, or "on request" with the date permission was
    given), a fourth entry or a quote over 200 characters; the homepage draws
-   a block under the core log only when there is an entry. Partial because
+   a block under the core log only when there is an entry. A figure in a
+   quote, or in a certificate's line, is marked like any other on the
+   homepage, and one the claims ledger does not hold as written is refused
+   by name (`checkQuotedFigures`): a form on its entry is the fix, and the
+   quote is never edited. Partial because
    there are none, so the homepage shows nothing: ✗ Moses, two or three
    people with permission (L1). No full-length one fits yet: with stand-in
    quotes of 200 characters, one takes the homepage to 9.80 screens at
@@ -1056,15 +1078,25 @@ CV, the ministry's name, the certificates, the testimonials) and F5.
    figure on `index.html`, `carbon-ai.html`, `field-report.html` and
    `404.html` is wrapped by hand in `<span data-claim>`, and the build marks
    those the generated pages print from `content/`. `claims.html`, generated,
-   lists them by checkability with the pages that mark each, linked under
-   the hero's figures and from every footer. `tests/claims.test.js` fails on
+   lists them by checkability with the pages that mark each, each "Where"
+   linking the section, or the view of the case studies, that shows the
+   figure; it is linked under the hero's figures, from every footer and
+   from the 404 page. `tests/claims.test.js` fails on
    a mark that disagrees with its entry, an entry with no basis, a number
    the narration says that no entry backs, and an unmarked numeral on any
    page but `stats.html` (whose counts are the counter's own), in digits or
    in words, in the text or in the labels, tooltips, photo captions and
-   descriptions a reader is shown; the field terminal's lines are read from
-   its source and held to the ledger, and the footer's badge prints no
-   fixed figure. The allowlist is wider than years: `EXEMPT` in
+   descriptions a reader is shown. A size said in words is read too ("a
+   fifth of a kettle", "twice", "millions of"): the kettle, which had no
+   basis, is gone, and "an order of magnitude" is held to the factor set.
+   Every host the scan skips because a script fills it names that script,
+   and what the script prints of its own is read from its source and held
+   to the ledger: the field terminal's lines, the Assay's evidence ("164
+   water points…", once held only to appearing somewhere on the site), the
+   receipt's 10 KB, You Draw It's words and the coach's tips, three of
+   which quoted ranges no source gave ("4–10× more energy per token") and
+   now print only what they work out or the factor set holds. The footer's
+   badge prints no fixed figure. The allowlist is wider than years: `EXEMPT` in
    `scripts/lib/claims.js` also passes dates, section numbers, standards'
    names, versions, return periods and the like, each narrowly, and a test
    feeds it the same numbers counting something; `WORD_EXEMPT` passes "one"
@@ -1089,7 +1121,10 @@ CV, the ministry's name, the certificates, the testimonials) and F5.
    embedded as TrueType and nothing fetched. `tests/cv.test.js` reads the
    PDF back without a browser: every role, degree and certificate, every
    case study's headline result, the public outputs; none of the dropped
-   claims, no name not yet cleared, no number `content/` lacks; and
+   claims, no name not yet cleared, no number `content/` lacks, and no
+   "facts confirmed" line until Moses has set `meta.confirmedOn` (it ended
+   "Facts last verified 5 August 2026", the day the record is logged as of,
+   which nobody had confirmed); and
    `assets/cv.hash` fails it once `content/` or the homepage has moved on
    without a new print. The old CV's "10,000+", 95%, 15%, "3+ years" and
    Power BI are gone. His phone number is on it, as the homepage's contact
@@ -1114,9 +1149,11 @@ CV, the ministry's name, the certificates, the testimonials) and F5.
    or reordered on one side only stops the build.
 10. ✗ **Re-verify the "Present" role** (F5). `SustainableAIPrototypes` was
     last changed on 2025-11-26, and promptcoach's handover document from the
-    Digital Society School is dated January 2026. Bumping `meta.verifiedOn`
-    now also redraws the core log and the CV's "Facts last verified" line,
-    so `npm run cv` follows it.
+    Digital Society School is dated January 2026. Moses's confirmation is
+    `meta.confirmedOn`, null until he sets it, and only then does the CV say
+    the facts were confirmed; bumping `meta.verifiedOn` redraws the core log
+    (the narration says "as last logged", not "today"), so `npm run cv`
+    follows either.
 
 **Phase 4.** 4.3 ◐ the ten stock-voice tracks (4.13 MB) are retired; the
 `intro` script (193 words, opening "Kushe") is in `content/narration.json`;

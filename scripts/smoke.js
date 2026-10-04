@@ -338,6 +338,7 @@ async function visit(context, page, rel, origin) {
     await exerciseStatsPage(browser, origin);
     await checkClaimMarks(browser, origin);
     await printFolds(browser, origin);
+    await printPalette(browser, origin);
 
     // The top nav at every desktop width: one line per item, nothing past the
     // right edge. It used to wrap "Case studies" and the coach's link at every
@@ -1922,6 +1923,17 @@ async function checkClaimMarks(browser, origin) {
         if (!marks.length) bad(`${rel}: no figure is marked with its ledger entry`);
         else if (wrong.length) bad(`${rel}: once its scripts have run, ${wrong.length} marked figure(s) disagree with the ledger: ${wrong.join(', ')}`);
         else ok(`${rel}: once its scripts have run, all ${marks.length} marked figures say what the ledger says`);
+        // A mark is an element, so in a flex or grid row it becomes an item
+        // of its own: "Seven in ten: what reading the ground is worth" split
+        // into two columns on a phone, the mark one and the words after it
+        // the other. A mark sits in running text, never beside a loose line
+        // of words in a flex or grid box.
+        const split = await page.evaluate(() => [...document.querySelectorAll('[data-claim]')].filter((el) => {
+            const box = el.parentElement;
+            return /flex|grid/.test(getComputedStyle(box).display) && [...box.childNodes].some(n => n.nodeType === 3 && n.textContent.trim());
+        }).map(el => `"${el.parentElement.textContent.trim().slice(0, 50)}"`));
+        if (split.length) bad(`${rel}: a marked figure is a flex or grid item beside loose words, which lay out as columns: ${split.join(', ')}`);
+        else ok(`${rel}: every marked figure sits in running text, none a flex or grid item beside loose words`);
     }
     for (const width of [320, 390]) {
         await page.setViewportSize({ width, height: 800 });
@@ -1959,6 +1971,46 @@ async function printFolds(browser, origin) {
         else ok(`${rel} printed: all ${kept.length} folded passages are on paper${folded.length ? ', and the photo rows stay folded' : ''}`);
         const shut = await page.evaluate(() => Array.from(document.querySelectorAll('details')).filter(d => d.open).length);
         if (shut) bad(`${rel}: printing left ${shut} fold(s) open on screen`);
+    }
+    await context.close();
+}
+
+// Printed from the dark theme, the browser dropped the dark backgrounds and
+// kept the dark theme's text: the lime figures on claims.html came out at
+// about 1.3:1 on white paper, the headings pale grey. The print rules put
+// the light palette back. Each page is printed (print media) from the dark
+// theme here, and every line of text that would go on paper has to read on
+// white at 4.5:1. The PDF check above prints the light theme and reads
+// text; this reads colour.
+async function printPalette(browser, origin) {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, colorScheme: 'dark' });
+    await context.addInitScript(() => { try { localStorage.setItem('theme', 'dark'); } catch (e) { /* the system's dark stands */ } });
+    const page = await context.newPage();
+    for (const rel of ['index.html', 'case-studies.html', 'claims.html', 'carbon-ai.html', 'research.html']) {
+        await page.goto(`${origin}/${rel}`, { waitUntil: 'load' });
+        await page.emulateMedia({ media: 'print', colorScheme: 'dark' });
+        // Switching media here starts the colour transitions a card has on
+        // screen (the journey's cards ease every property over 0.3 s), and
+        // read at once, a heading was still white. Paper gets where they
+        // end, so they are run to the end first.
+        await page.evaluate(() => document.getAnimations().filter(a => a instanceof CSSTransition).forEach(a => a.finish()));
+        const faint = await page.evaluate(() => {
+            const rgb = (c) => (c.match(/[\d.]+/g) || []).map(Number);
+            const lum = ([r, g, b]) => [r, g, b].map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; })
+                .reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0);
+            const out = [];
+            document.querySelectorAll('main h1, main h2, main h3, main h4, main p, main li, main dd, main figcaption, main [data-claim], main .cl-value').forEach((el) => {
+                if (!el.getClientRects().length || ![...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) return;
+                const c = rgb(getComputedStyle(el).color);
+                if (c.length > 3 && c[3] === 0) return;
+                const ratio = 1.05 / (lum(c) + 0.05);
+                if (ratio < 4.5) out.push(`"${el.textContent.trim().slice(0, 30)}" ${getComputedStyle(el).color} (${ratio.toFixed(2)}:1)`);
+            });
+            return out;
+        });
+        await page.emulateMedia({ media: 'screen' });
+        if (faint.length) bad(`${rel} printed from the dark theme: ${faint.length} line(s) faint on white paper, e.g. ${faint.slice(0, 4).join('; ')}`);
+        else ok(`${rel} printed from the dark theme: every line of text reads on white paper at 4.5:1 or better`);
     }
     await context.close();
 }

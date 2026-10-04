@@ -17,8 +17,12 @@
 //     so fixing is easy;
 //   · a count of what a page shows in full ("seven case studies") is not
 //     the count content/ holds;
-//   · the field terminal (modules/terminal.js) prints a figure the ledger
-//     does not hold, or the footer's badge prints a fixed one;
+//   · a size said in words ("a fifth of a kettle", "twice as much") is
+//     neither reworded into a figure nor one the factor set is held to;
+//   · a script prints a figure of its own the ledger does not hold: the
+//     field terminal, the Assay's evidence, the receipt, You Draw It, the
+//     coach's tips and the rest of what fills a host the scan skips, read
+//     from their source; or the footer's badge prints a fixed one;
 //   · the narration says a number in words that no entry backs;
 //   · claims.html leaves an entry out, or says it appears somewhere it
 //     does not.
@@ -26,7 +30,7 @@
 // The scan reads the pages as shipped, with no script run, so a number a
 // calculator works out in the browser is not on them: those hosts are named
 // below, and must hold no figure of their own in the HTML. What the scripts
-// print of their own, the terminal's lines and the badge's, is read from
+// print of their own into them, and the terminal's lines, is read from
 // their source.
 //
 // Run with: node tests/claims.test.js
@@ -34,6 +38,7 @@
 const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
+const { run } = require('./harness.js');
 const content = require('../scripts/lib/content.js');
 const figures = require('../scripts/lib/claims.js');
 
@@ -157,13 +162,19 @@ PAGES.forEach((page) => {
 // ===================================================================
 // The scan: a numeral nobody marked
 // ===================================================================
-// Hosts whose numbers are worked out in the browser: model outputs, not
-// claims. In the HTML as shipped each holds a placeholder.
+// Hosts a script fills in the browser. In the HTML as shipped each holds a
+// placeholder. What the script works out there, a grade, a footprint, a
+// guess at a curve, is a model output, not a claim. What it prints of its
+// own is not: the Assay's "164 water points" and the coach's tips were
+// typed into scripts, skipped here with the hosts, and nothing held them.
+// So each host names the script that fills it, and what that script
+// prints of its own is read from its source below (PRINTED) and held to
+// the ledger as the pages are.
 const RUNTIME = {
-    'index.html': ['#ydi', '#carbonBadgeText', '#receiptBody', '#assayResult'],
-    'carbon-ai.html': ['.ca-out', '[id^="equiv"]', '#tipsList', '#chartBars', '.ca-hint', '#inputNotice',
-        '#anatomyDraw', '#ledgerReviewed', '#ledgerTable', '#ledgerSources', 'select'],
-    'case-studies.html': ['#drillResult', '#drillScore', '#floodNote', '#floodLevelLabel']
+    'index.html': { '#ydi': 'ydi', '#carbonBadgeText': 'badge', '#receiptBody': 'receipt', '#assayResult': 'assay' },
+    'carbon-ai.html': Object.assign(Object.fromEntries(['.ca-out', '[id^="equiv"]', '#tipsList', '#chartBars', '.ca-hint', '#inputNotice',
+        '#ledgerReviewed', '#ledgerTable', '#ledgerSources', 'select'].map(sel => [sel, 'coach'])), { '#anatomyDraw': 'anatomy' }),
+    'case-studies.html': { '#drillResult': 'games', '#drillScore': 'games', '#floodNote': 'games', '#floodLevelLabel': 'games' }
 };
 // Numerals made from the page's own structure, not claims about anything.
 const COUNTED = {
@@ -197,7 +208,7 @@ function numerals(doc, root, skip) {
             const at = offset + m.index;
             found.push({ numeral: m[0], words: words(at, at + m[0].length), why: figures.exemptAt(text, at, at + m[0].length) });
         }
-        figures.wordRuns(node.textContent).forEach((r) => {
+        figures.wordRuns(node.textContent).concat(figures.sizeRuns(node.textContent)).forEach((r) => {
             const run = Object.assign({}, r, { index: offset + r.index, end: offset + r.end });
             found.push({ numeral: r.text, words: words(run.index, run.end), why: figures.wordExempt(text, run) });
         });
@@ -225,7 +236,7 @@ function numeralsIn(text, why = () => null) {
         const [a, b] = [m.index, m.index + m[0].length];
         if (!inMark(a, b)) found.push({ numeral: m[0], words: words(a, b), why: figures.exemptAt(text, a, b) || why(text, a, b) });
     }
-    figures.wordRuns(text).forEach((r) => {
+    figures.wordRuns(text).concat(figures.sizeRuns(text)).forEach((r) => {
         if (!inMark(r.index, r.end)) found.push({ numeral: r.text, words: words(r.index, r.end), why: figures.wordExempt(text, r) || why(text, r.index, r.end, r) });
     });
     return found;
@@ -259,9 +270,18 @@ function numeralsIn(text, why = () => null) {
     assert(JSON.stringify(attr) === '["15","six"]', `Scan: in a label, a figure written as the ledger writes it passes and one it does not hold is caught (${attr.join(', ')})`);
 }
 
+// A size in words is a quantity with no numeral: "a fifth of a kettle" had
+// no basis, and nothing saw it. It is caught now, an ordinal is not, and
+// the one the factor set is held to below is let by.
+{
+    const doc = new JSDOM('<main><p>This answer boiled a fifth of a kettle, nearly twice as much, across millions of queries: the third tip.</p><p>The models are an order of magnitude apart.</p></main>').window.document;
+    const found = numerals(doc, doc.body, SKIP).filter(n => !n.why).map(n => n.numeral);
+    assert(JSON.stringify(found) === '["a fifth","twice","millions"]', `Scan: catches a fraction, a multiplier and a magnitude in words, and lets an ordinal and a held size by (${found.join(', ')})`);
+}
+
 PAGES.forEach((page) => {
     const doc = docs[page];
-    const runtime = RUNTIME[page] || [];
+    const runtime = Object.keys(RUNTIME[page] || {});
     const counted = COUNTED[page] || [];
     const skip = [SKIP].concat(runtime, counted.map(([sel]) => sel)).join(', ');
     const unmarked = numerals(doc, doc.body, skip).filter(n => !n.why);
@@ -314,32 +334,14 @@ PAGES.forEach((page) => {
     assert(unlabelled.length === 0, `Illustrative: every illustrative figure is labelled so where it is shown (${unlabelled.join('; ') || 'all are'})`);
 }
 
-// A count of what a page shows in full is let through as one, so it has to
-// be that count: "seven case studies" with an eighth in projects.json would
-// be a figure nobody holds.
-{
-    const said = PAGES.map(p => docs[p].body.textContent + ' ' + docs[p].head.textContent)
-        .concat([data.narration.intro ? data.narration.intro.text : ''], data.narration.scripts.map(x => x.text))
-        .concat(literals(read('modules/terminal.js'))).join(' ');
-    const wrong = [];
-    let checked = 0;
-    const held = Object.assign({ page: p => docs[p], source: read }, data);
-    figures.SHOWN_IN_FULL.filter(c => c.count).forEach((c) => {
-        c.re.lastIndex = 0;
-        let m;
-        while ((m = c.re.exec(said))) {
-            checked++;
-            const n = figures.wordRuns(m[0])[0].value;
-            if (n !== c.count(held)) wrong.push(`"${m[0]}" where there are ${c.count(held)} (${c.what})`);
-        }
-    });
-    assert(checked > 5 && figures.SHOWN_IN_FULL.every(c => c.count || c.named) && wrong.length === 0, `Counts: each count of what a page shows in full is the count of what it shows (${checked} said; ${wrong.join('; ') || 'all agree'})`);
-}
-
 // ===================================================================
 // What the scripts print of their own
 // ===================================================================
-/** The string literals in a script's source, a template's ${…} read as a gap (its own literals are taken too). */
+/**
+ * The string literals in a script's source, a template's ${…} read as a gap
+ * (its own literals are taken too). A regular expression is skipped whole:
+ * a quote inside one ("[\w'’]") once read the code after it as a string.
+ */
 function literals(src) {
     const out = [];
     let i = 0;
@@ -376,10 +378,26 @@ function literals(src) {
         i = j + 1;
         return buf;
     };
+    // A slash starts a regular expression where a value is expected: after
+    // an operator, a bracket, a comma, an arrow or `return`, never after a
+    // name or `)`.
+    const regexAt = () => /(?:[(,=:[!&|?{};>]|\breturn|\btypeof)\s*$/.test(src.slice(Math.max(0, i - 12), i));
+    const regex = () => {
+        let j = i + 1;
+        let inClass = false;
+        while (j < src.length && src[j] !== '\n' && (inClass || src[j] !== '/')) {
+            if (src[j] === '\\') j++;
+            else if (src[j] === '[') inClass = true;
+            else if (src[j] === ']') inClass = false;
+            j++;
+        }
+        i = j + 1;
+    };
     while (i < src.length) {
         const ch = src[i];
         if (ch === '/' && src[i + 1] === '/') { i = src.indexOf('\n', i); if (i < 0) break; }
         else if (ch === '/' && src[i + 1] === '*') i = src.indexOf('*/', i) + 2;
+        else if (ch === '/' && regexAt()) regex();
         else if (ch === "'" || ch === '"') out.push(quoted(ch));
         else if (ch === '`') out.push(template());
         else i++;
@@ -387,30 +405,124 @@ function literals(src) {
     return out;
 }
 
-// The field terminal on the homepage (press `) prints the record in its own
-// words: 164 water points, 10,226 sub-basins, a 70% strike rate, "odds are
-// 7/10". Nothing read them, so they could drift from the ledger unseen.
-{
-    const src = read('modules/terminal.js');
-    const strings = literals(src);
-    assert(strings.some(t => /164 water points/.test(t)) && strings.some(t => /odds are 7\/10/.test(t)), `Terminal: its printed lines are read from the source (${strings.length} strings)`);
-    // The drill command's log is a game: its depths are made up, and its
-    // first line says so. Only a depth in metres is let by, and only there.
-    const drill = literals(src.slice(src.indexOf('drill: ('), src.indexOf('cv: (')));
-    const madeUp = drill.some(t => /made-up/.test(t));
-    assert(madeUp, `Terminal: the drill's log says it is made up (${drill[0]})`);
-    const depth = (text, a, b) => (madeUp && drill.includes(text) && /^\s*m\b/.test(text.slice(b)) ? 'a depth in the drill\'s made-up log' : null);
-    const loose = strings.flatMap(t => numeralsIn(t, depth).filter(n => !n.why).map(n => `${n.numeral} in "${n.words}"`));
-    loose.forEach(n => console.log(`  unmarked: modules/terminal.js: ${n}`));
-    assert(loose.length === 0, `Terminal: every figure it prints is one the ledger holds, written as it writes it (${loose.length} not${loose.length ? ', listed above' : ''})`);
+/** The part of a source between two markers, which must both be there. */
+function between(src, from, to, file) {
+    const a = src.indexOf(from);
+    const b = a < 0 ? -1 : src.indexOf(to, a + from.length);
+    if (a < 0 || b < 0) throw new Error(`${file}: "${from}" … "${to}" is not in the source; the test reads what it prints from there`);
+    return src.slice(a, b);
+}
+// The literals that read as words a person is shown, not an id, a class, a
+// colour or an SVG path: two letters together, and a space.
+const readAsWords = (list) => list.filter(t => /[A-Za-z]{2,}/.test(t) && /\s/.test(t.trim()));
 
+// The Assay's rules are data the page builds from, so they are read as the
+// page has them: the homepage booted with its scripts.
+const assay = run(null, { clock: true, before: (w) => { w.console.log = () => {}; } }).window.mks.assay;
+
+/**
+ * What each script prints of its own, read from its source: `texts` the
+ * strings, `sure` one line it must have found (so a renamed marker cannot
+ * read nothing and pass), and `why` a numeral it lets by, with the reason.
+ */
+const interactives = read('modules/interactives.js');
+const terminalSrc = read('modules/terminal.js');
+const drillLog = literals(between(terminalSrc, 'drill: (', 'cv: (', 'modules/terminal.js'));
+const PRINTED = {
+    // The field terminal on the homepage (press `) prints the record in its
+    // own words: 164 water points, 10,226 sub-basins, a 70% strike rate,
+    // "odds are 7/10". The drill command's log is a game: its depths are made
+    // up, and its first line says so. Only a depth in metres is let by, and
+    // only there.
+    terminal: { what: 'the field terminal (modules/terminal.js)', texts: literals(terminalSrc), sure: /164 water points/,
+        why: (text, a, b) => (drillLog.some(t => /made-up/.test(t)) && drillLog.includes(text) && /^\s*m\b/.test(text.slice(b)) ? 'a depth in the drill\'s made-up log' : null) },
     // The footer's badge prints what this visit weighed, worked out in the
     // browser; when the browser cannot say, it printed a fixed "under ~1 MB
     // per visit" that nothing held. It prints no figure of its own now.
-    const script = read('script.js');
-    const badge = [...script.matchAll(/badgeText\.textContent\s*=\s*(['"`][\s\S]*?['"`]);/g)].map(m => literals(m[1]).join(' '));
-    const fixed = badge.flatMap(t => numeralsIn(t).filter(n => !n.why).map(n => `${n.numeral} in "${n.words}"`));
-    assert(badge.length >= 2 && fixed.length === 0, `Badge: the footer's badge prints only what it measures, no fixed figure (${badge.length} lines; ${fixed.join('; ') || 'none fixed'})`);
+    badge: { what: 'the footer\'s badge (script.js)', sure: /./,
+        texts: [...read('script.js').matchAll(/badgeText\.textContent\s*=\s*(['"`][\s\S]*?['"`]);/g)].map(m => literals(m[1]).join(' ')) },
+    // The Assay grades an ad in the browser, but beside each area it matches
+    // it prints the record behind it, typed into its rules: "164 water
+    // points…", "a 70% aquifer strike rate", "54 global hazard information
+    // systems". Those, its gaps and the lines around them.
+    assay: { what: 'the Assay\'s evidence, gaps and messages (modules/interactives.js)', sure: /164 water points/,
+        texts: assay.RULES.strengths.flatMap(r => [r.label].concat(r.ev.map(e => e.t)))
+            .concat(assay.RULES.gaps.flatMap(g => [g.label, g.text]), assay.RULES.confirm.map(c => c.label),
+                assay.RULES.languages.map(l => l.confirm || ''),
+                literals(between(interactives, '// --- The page', '// YOU DRAW IT', 'modules/interactives.js'))) },
+    // The receipt sums the visit's own bytes, and beside them the field
+    // report's size, typed in.
+    receipt: { what: 'the receipt\'s fixed lines (modules/interactives.js)', sure: /Text-only report/,
+        texts: literals(between(interactives, 'const lines = [];', 'return lines;', 'modules/interactives.js')) },
+    // You Draw It's verdict, card and table: the estimates come from the
+    // factor set; its own words name the answer it prices.
+    ydi: { what: 'You Draw It\'s verdict, card and table (modules/interactives.js)', sure: /1,000-token answer/,
+        texts: readAsWords(literals(between(interactives, 'const est = ', '// Shape grade', 'modules/interactives.js'))
+            .concat(literals(between(interactives, 'let shape;', 'cardData = {', 'modules/interactives.js')),
+                literals(between(interactives, 'callout.textContent', 'svg.appendChild(callout)', 'modules/interactives.js')),
+                literals(between(interactives, 'const factorText', 'const factorLines', 'modules/interactives.js')),
+                literals(between(interactives, '// --- accessible', '// THE RECEIPT', 'modules/interactives.js')))) },
+    // The coach: its outputs, its hints, its notices, its evidence ledger and
+    // its tips. Three tips once quoted ranges nothing sourced ("4–10× more
+    // energy per token").
+    coach: { what: 'the EcoPrompt Coach (carbon-ai.js)', texts: readAsWords(literals(read('carbon-ai.js'))), sure: /hidden output tokens/ },
+    anatomy: { what: 'Anatomy of a Prompt (modules/anatomy.js)', texts: readAsWords(literals(read('modules/anatomy.js'))), sure: /Scope 2/ },
+    games: { what: 'the borehole and flood games (modules/dossier.js)', texts: readAsWords(literals(read('modules/dossier.js'))), sure: /STRIKE/ }
+};
+{
+    const hosts = Object.entries(RUNTIME).flatMap(([page, map]) => Object.entries(map).map(([sel, key]) => `${page} ${sel} → ${key}`));
+    const unheld = hosts.filter(h => !PRINTED[h.split(' → ')[1]]);
+    assert(unheld.length === 0, `Scripts: every host the scan skips names the script that fills it, and what that script prints of its own is read (${unheld.join('; ') || `${hosts.length} hosts`})`);
+    Object.entries(PRINTED).forEach(([key, p]) => {
+        const found = p.texts.length > 0 && p.texts.some(t => p.sure.test(t));
+        const loose = p.texts.flatMap(t => numeralsIn(t, p.why).filter(n => !n.why).map(n => `${n.numeral} in "${n.words}"`));
+        loose.forEach(n => console.log(`  unmarked: ${key}: ${n}`));
+        assert(found && loose.length === 0, `Scripts: every figure ${p.what} prints of its own is one the ledger holds, written as it writes it (${p.texts.length} strings read; ${loose.length} not${loose.length ? ', listed above' : ''})`);
+    });
+    assert(PRINTED.terminal.texts.some(t => /odds are 7\/10/.test(t)) && drillLog.some(t => /made-up/.test(t)), 'Scripts: the terminal\'s drill log says it is made up, and only its depths are let by');
+    assert(PRINTED.badge.texts.length >= 2, `Scripts: the badge's lines are read (${PRINTED.badge.texts.length})`);
+}
+
+// Proof that the hold bites, on the figures the review changed in a copy
+// of the Assay: 164 → 200 water points, 14 → 50 solar-powered, 54 → 10
+// hazard systems, and the receipt's 10 KB → 9 KB. Each is caught.
+{
+    const drifted = ['200 water points in Sierra Leone: 100 wells rehabilitated, 50 boreholes built, 14 solar-powered',
+        '164 water points in Sierra Leone: 100 wells rehabilitated, 50 boreholes built, 50 solar-powered',
+        'UNDRR: documented 10 global hazard information systems for the Sendai Framework', '9 KB']
+        .map(t => numeralsIn(t).filter(n => !n.why).map(n => n.numeral).join());
+    assert(JSON.stringify(drifted) === '["200","50","10","9"]', `Scripts: a figure drifted in a script's evidence line is caught (${drifted.join(' | ')})`);
+}
+
+// A count of what a page shows in full is let through as one, so it has to
+// be that count: "seven case studies" with an eighth in projects.json would
+// be a figure nobody holds.
+{
+    const said = PAGES.map(p => docs[p].body.textContent + ' ' + docs[p].head.textContent)
+        .concat([data.narration.intro ? data.narration.intro.text : ''], data.narration.scripts.map(x => x.text))
+        .concat(Object.values(PRINTED).flatMap(p => p.texts)).join(' ');
+    const wrong = [];
+    let checked = 0;
+    const held = Object.assign({ page: p => docs[p], source: read }, data);
+    figures.SHOWN_IN_FULL.filter(c => c.count).forEach((c) => {
+        c.re.lastIndex = 0;
+        let m;
+        while ((m = c.re.exec(said))) {
+            checked++;
+            const n = figures.wordRuns(m[0])[0].value;
+            if (n !== c.count(held)) wrong.push(`"${m[0]}" where there are ${c.count(held)} (${c.what})`);
+        }
+    });
+    assert(checked > 5 && figures.SHOWN_IN_FULL.every(c => c.count || c.named) && wrong.length === 0, `Counts: each count of what a page shows in full is the count of what it shows (${checked} said; ${wrong.join('; ') || 'all agree'})`);
+}
+
+// A size said in words that the scan lets by sums up the factor set, and
+// still does: "an order of magnitude" is how far apart the models are and
+// how far each estimate is good to.
+{
+    const factors = content.loadFactors();
+    const results = figures.HELD_SIZES.map(h => Object.assign({ what: h.what }, h.holds(factors)));
+    assert(results.every(r => r.ok), `Sizes: each size in words the pages say sums up the factor set and still does (${results.map(r => `${r.what}: ${r.said}`).join('; ')})`);
 }
 
 // ===================================================================
@@ -462,7 +574,7 @@ const narration = [data.narration.intro ? data.narration.intro.text : ''].concat
         CLAIMS.forEach(c => (c.spoken || []).forEach((s) => {
             for (let i = lower.indexOf(s.toLowerCase()); i > -1; i = lower.indexOf(s.toLowerCase(), i + 1)) spans.push([i, i + s.length, c.id]);
         }));
-        figures.wordRuns(text).forEach((run) => {
+        figures.wordRuns(text).concat(figures.sizeRuns(text)).forEach((run) => {
             if (figures.spokenExempt(text, run)) return;
             const span = spans.find(([a, b]) => a <= run.index && b >= run.end);
             if (span) backed++;
@@ -494,10 +606,22 @@ const narration = [data.narration.intro ? data.narration.intro.text : ''].concat
     const { CLAIM_PAGES } = require('../scripts/build-content.js');
     const wrongWhere = [];
     const wrongCheck = [];
+    const wrongPlace = [];
     items.forEach((li) => {
         const c = byId.get(li.id.replace(/^claim-/, ''));
         if (!c) return;
-        const listed = Array.from(li.querySelectorAll('.cl-where a')).map(a => a.getAttribute('href').split('#')[0]).sort();
+        const listed = Array.from(li.querySelectorAll('.cl-where a')).map(a => a.getAttribute('href').split(/[?#]/)[0]).sort();
+        // Each link lands where the figure is: in the section it names, or
+        // in the view of the case studies that shows it. On the case
+        // studies, whose first mark of a figure is often in a view's hidden
+        // panel, a bare link went to the top of the page.
+        li.querySelectorAll('.cl-where a').forEach((a) => {
+            const [, file, lens, frag] = a.getAttribute('href').match(/^([^?#]+)(?:\?lens=([\w-]+))?(?:#(.+))?$/) || [];
+            const doc = docs[file];
+            const place = frag ? doc && doc.getElementById(frag) : lens ? doc && doc.querySelector(`[data-lens-panel="${lens}"]`) : null;
+            const lands = place && place.querySelector(`[data-claim="${c.id}"]`);
+            if ((frag || lens) ? !lands : file === 'case-studies.html') wrongPlace.push(`${c.id}: ${a.getAttribute('href')}`);
+        });
         const actual = Array.from(MARKS.get(c.id) || []).sort();
         if (JSON.stringify(listed) !== JSON.stringify(actual)) wrongWhere.push(`${c.id}: says ${listed.join(', ') || 'nowhere'}, marked on ${actual.join(', ') || 'none'}`);
         const spoken = /the narration/.test(li.querySelector('.cl-where').textContent);
@@ -517,6 +641,7 @@ const narration = [data.narration.intro ? data.narration.intro.text : ''].concat
     });
     assert(Object.keys(CLAIM_PAGES).every(p => PAGES.includes(p)), 'claims.html: reads the marks on every page this test scans');
     assert(wrongWhere.length === 0, `claims.html: where each figure appears is where the pages mark it (${wrongWhere.join('; ') || 'all agree'})`);
+    assert(wrongPlace.length === 0, `claims.html: each "Where" link lands on a section or a view that shows the figure, and every one into the case studies has one (${wrongPlace.join('; ') || 'all do'})`);
     assert(wrongCheck.length === 0, `claims.html: each says whether it can be checked as the ledger does, and a checkable one links to a place that exists (${wrongCheck.join('; ') || 'all do'})`);
 }
 
@@ -540,6 +665,8 @@ const narration = [data.narration.intro ? data.narration.intro.text : ''].concat
     });
     assert(footed.length >= 5 && missing.length === 0, `Shell: every footer links "Check my numbers", marked current on its own page (${footed.length} footers; wrong: ${missing.join(', ') || 'none'})`);
     assert(!!docs['field-report.html'].querySelector('main a[href="claims.html"]'), 'Field report: its evidence list links the ledger');
+    // The 404 page has no shell footer, and it marks a figure too.
+    assert(!!docs['404.html'].querySelector('main nav a[href$="/claims.html"]'), '404: beside the open counts, a link to the ledger');
 
     // A page like any other: in the sitemap, with a byte budget and a length budget.
     const budget = require('../scripts/check-budget.js');

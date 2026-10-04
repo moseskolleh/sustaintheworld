@@ -80,8 +80,10 @@ const typeset = (html) => html
 // hand: a "70%" that came from content/projects.json is held to
 // content/claims.json like one typed into index.html. The figures are
 // found by scripts/lib/claims.js before anything is escaped; main() hands
-// it the ledger, and until then (a test drawing one region) nothing is.
+// it the ledger (useLedger), and until then (a test drawing one region)
+// nothing is.
 let cutFigures = (s) => [[String(s == null ? '' : s), null]];
+const useLedger = (claims) => { cutFigures = figures.marker(claims); };
 const prose = (s) => cutFigures(s)
     .map(([text, id]) => (id ? `<span data-claim="${id}">${esc(text)}</span>` : typeset(esc(text))))
     .join('');
@@ -435,9 +437,11 @@ const codeOnly = (js) => js.replace(/^[ \t]*\/\/.*\n/gm, '');
 // Printed, the folds are open: paper has no press, and the method, the
 // case studies' closing note and research.html's reproduction notes are
 // folded only for the screen's length. content.css opens them for print
-// where the browser knows ::details-content; this does it where it does
-// not, and shuts again only what it opened. The photo rows stay shut on
-// paper as on screen: their photos load only when a row is opened.
+// where the browser knows ::details-content; this opens them in every
+// browser before it prints (which is what a browser without it needs),
+// and shuts again only what it opened. So on paper every fold is [open],
+// and content.css's print rules match that state. The photo rows stay
+// shut on paper as on screen: their photos load only when a row is opened.
 const PRINT_FOLDS = `
     (function () {
         var folds = '.cs-method-fold, .cs-footnote details, .rs-repro details';
@@ -577,10 +581,16 @@ function renderCaseStudies(data) {
     // An output with no case study of its own sits in a view by its
     // `lenses` (content/research.json), and the research page links it to
     // that view: the view lists it after its evidence, so a reader who
-    // follows the link finds it, and can follow it back.
-    const placedIn = (lensId) => data.research.outputs.filter(o => !o.caseStudy && (o.lenses || []).includes(lensId)).map(o =>
-        `<li>${o.status === 'public' && o.url ? `<a href="${esc(o.url)}">${prose(o.title)}</a>` : prose(o.title)}, ` +
-        `${esc(STATUS_LABEL[o.status].toLowerCase())} ${esc(o.type.toLowerCase())} (<a href="research.html#${esc(o.id)}">Research outputs</a>)</li>`);
+    // follows the link finds it, and can follow it back. The "all" view
+    // lists every one of them, with the view it sits in: it is the one a
+    // reader without JavaScript always gets, where the link from the
+    // research page used to land on a page that never named the output.
+    const viewName = (id) => esc((lenses.lenses.find(l => l.id === id) || {}).shortLabel || id);
+    const placedIn = (lensId) => data.research.outputs
+        .filter(o => !o.caseStudy && (o.lenses || []).length && (lensId === 'all' || o.lenses.includes(lensId))).map(o =>
+            `<li>${o.status === 'public' && o.url ? `<a href="${esc(o.url)}">${prose(o.title)}</a>` : prose(o.title)}, ` +
+            `${esc(STATUS_LABEL[o.status].toLowerCase())} ${esc(o.type.toLowerCase())}${lensId === 'all' ? `, in the ${o.lenses.map(viewName).join(' and ')} view` : ''} ` +
+            `(<a href="research.html#${esc(o.id)}">Research outputs</a>)</li>`);
 
     // One panel per lens, all present in the HTML. Without JavaScript the
     // server cannot know which was asked for, so the "all" panel is shown and
@@ -1428,27 +1438,39 @@ const CHECK_GROUPS = [
 ];
 
 /**
- * Where each figure is marked in a page's HTML: claim id → the id of the
- * section or article around its first mark ('' when there is none), so the
- * ledger can link to the place and not just the page. Scripts, styles and
- * comments are skipped; the pages nest no section in an unclosed one.
+ * Where each figure is marked in a page's HTML: claim id → where to send a
+ * reader on that page, so the ledger links to the place and not just the
+ * page: "#id" of the section or article around a mark, or, for a figure
+ * only a view of the case studies shows, "?lens=" and that view, or ''.
+ * The first mark was used, and on the case studies it is often in a view's
+ * panel, which has no id and is hidden until the view is chosen: the link
+ * went to the top of the page, and for the first view's 276 KB to a page
+ * that does not show it until the reader picks the sustainable-AI view. So
+ * the first mark with an address wins; a view's panel is the fallback.
+ * Scripts, styles and comments are skipped; the pages nest no section in
+ * an unclosed one.
  */
 function marksIn(html) {
-    const first = new Map();
+    const where = new Map();
     const open = [];
     const re = /<!--[\s\S]*?-->|<(script|style)\b[\s\S]*?<\/\1\s*>|<(\/?)([a-zA-Z][\w-]*)\b([^>]*)>/g;
+    const attr = (attrs, name) => (attrs.match(new RegExp(`\\b${name}="([^"]+)"`)) || [])[1] || '';
     let m;
     while ((m = re.exec(html))) {
         const [, block, closing, tag, attrs] = m;
         if (block || !tag) continue;
         if (/^(?:section|article)$/i.test(tag)) {
             if (closing) open.pop();
-            else open.push((attrs.match(/\bid="([^"]+)"/) || [])[1] || '');
+            else open.push({ id: attr(attrs, 'id'), lens: attr(attrs, 'data-lens-panel') });
         }
-        const id = !closing && (attrs.match(/\bdata-claim="([^"]+)"/) || [])[1];
-        if (id && !first.has(id)) first.set(id, open.filter(Boolean).pop() || '');
+        const id = !closing && attr(attrs, 'data-claim');
+        if (!id || (where.get(id) || '').startsWith('#')) continue;
+        const near = open.filter(o => o.id).pop();
+        const view = open.filter(o => o.lens && o.lens !== 'all').pop();
+        const place = near ? `#${near.id}` : (view ? `?lens=${view.lens}` : '');
+        if (!where.has(id) || place.startsWith('#') || (place && !where.get(id))) where.set(id, place);
     }
-    return first;
+    return where;
 }
 
 /** Where a reader checks a figure, as a link: the host for another site, the page's name for this one. */
@@ -1518,7 +1540,7 @@ function renderClaims(data, pages) {
         // The chip is the label; the place to check follows it, unpunctuated.
         const check = `<span class="cl-check cl-check-${checkable}">${esc(CHECK_GROUPS.find(g => g.key === checkable).title)}</span>${checkable === 'public' && href ? ` ${checkLink(href)}` : ''}`;
         const places = marked.filter(([, marks]) => marks.has(c.id))
-            .map(([page, marks]) => `<a href="${page}${marks.get(c.id) ? `#${marks.get(c.id)}` : ''}">${esc(CLAIM_PAGES[page])}</a>`);
+            .map(([page, marks]) => `<a href="${page}${marks.get(c.id)}">${esc(CLAIM_PAGES[page])}</a>`);
         if ((c.spoken || []).some(s => spokenText.includes(s.toLowerCase()))) places.push('the narration');
         return `
                 <li class="cl-item" id="claim-${esc(c.id)}">
@@ -1546,8 +1568,9 @@ function renderClaims(data, pages) {
                 About my work or about the site itself, each number is here once, with every page it appears
                 on, whether it is written in digits or in words. The pages mark each one with its entry, and a
                 test fails the build if a page prints a number that is not here, or one that disagrees with its
-                entry, in its text, a label or a photo&rsquo;s caption. The field terminal on the homepage is
-                held to the same list, and so is what the narration says aloud.
+                entry, in its text, a label or a photo&rsquo;s caption. What the scripts print of their own is
+                read from their source and held to the same list: the field terminal, the Assay, the receipt,
+                the coach&rsquo;s tips. So is what the narration says aloud.
             </p>
         </section>
 ${groups}
@@ -1562,7 +1585,9 @@ ${groups}
                 figures the calculators work out in
                 your browser, in the <a href="carbon-ai.html">EcoPrompt Coach</a>, in the chart on the homepage and on the
                 footer&rsquo;s receipt, are model outputs: their inputs are above, and every factor behind them is in
-                the calculator&rsquo;s <a href="carbon-ai.html#evidence">evidence ledger</a>. The
+                the calculator&rsquo;s <a href="carbon-ai.html#evidence">evidence ledger</a>, with its source.
+                &ldquo;An order of magnitude&rdquo; sums up that factor set, how far apart its models are and how
+                far each estimate is good to, and a test holds it there. The
                 <a href="stats.html">open counts</a> are the visit counter&rsquo;s own, rewritten each week.
             </p>
         </section>`;
@@ -1920,10 +1945,10 @@ function injectProjectCards(data, html) {
 // its top is where the role ended (an open role reaches the surface, 0 m)
 // and its base where it began, so a short role is a thin layer and a gap
 // between roles is a gap in the core. The surface is meta.verifiedOn, the
-// day the facts were last checked, not the day of the build: --check
+// day the record is logged as of, not the day of the build: --check
 // compares bytes, so nothing here may read the clock, and a "Present" role
-// is only known to be current up to that day. Confirming the facts and
-// bumping verifiedOn redraws the log; the head says when it was logged.
+// is only logged as current up to that day. Bumping verifiedOn redraws the
+// log; the head says when it was logged.
 //
 // The cards stay hand-authored. Only each layer's depth label and the
 // head's date are written here, matched to the roles in order and by
@@ -1990,7 +2015,7 @@ function renderCertificates(profile) {
             '    <div class="education-card certification">',
             `        <h4 class="cert-title">${esc(c.name)}</h4>`,
             `        <p class="cert-meta">${esc(c.issuer)} &middot; <span class="mono-label">${esc(c.displayDate)}</span>${verify}</p>`,
-            `        <p class="cert-line">${esc(c.covered)}</p>`,
+            `        <p class="cert-line">${markOnly(c.covered)}</p>`,
             '    </div>'
         ].join('\n');
     });
@@ -2008,7 +2033,7 @@ function renderTestimonials(file) {
             : `Quoted with permission given <time datetime="${esc(t.source.permissionDate)}">${dayName(t.source.permissionDate)}</time>; the original on request`;
         return [
             '        <figure class="testimonial skills-panel">',
-            `            <blockquote><p>${esc(t.quote)}</p></blockquote>`,
+            `            <blockquote><p>${markOnly(t.quote)}</p></blockquote>`,
             `            <figcaption class="cert-line"><strong>${esc(t.name)}</strong>, ${esc(t.role)} &middot; ${esc(t.relationship)} &middot; ${source}</figcaption>`,
             '        </figure>'
         ].join('\n');
@@ -2097,7 +2122,7 @@ function main() {
     }
 
     // From here on, every figure prose() prints from content/ is marked.
-    cutFigures = figures.marker(data.claims.claims);
+    useLedger(data.claims.claims);
 
     const outputs = [
         ['case-studies.html', renderCaseStudies(data)],
@@ -2148,4 +2173,4 @@ function main() {
 if (require.main === module) main();
 
 module.exports = { renderStats, EXAMPLE_PAYLOAD, renderAtAGlance, shellFacts, shellRegions, shellMarkers,
-    corelogDepths, injectCorelog, renderCertificates, renderTestimonials, homeRegions, fillRegion, marksIn, CLAIM_PAGES, PAGE_NAMES };
+    corelogDepths, injectCorelog, renderCertificates, renderTestimonials, homeRegions, fillRegion, marksIn, CLAIM_PAGES, PAGE_NAMES, useLedger };

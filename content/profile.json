@@ -19,13 +19,18 @@
     "with it. Edit here first, run npm run build:content, then make the pages",
     "match; the test tells you which ones are behind.",
     "",
-    "`verifiedOn` is the date a human last confirmed the ongoing facts (the",
-    "'Present' role in particular) were still true. The test prints a loud notice",
-    "when it goes stale."
+    "`verifiedOn` is the date the record is logged as of: the core log's",
+    "surface, and the date the test counts from when it prints a loud notice",
+    "that the ongoing facts (the 'Present' role in particular) are due a check.",
+    "It is not, by itself, Moses's word that they are still true.",
+    "`confirmedOn` is: the day Moses himself last confirmed the ongoing facts,",
+    "and only he sets it. It is null until he does; the CV says the facts were",
+    "confirmed, and when, only once it is set (owner checklist F5)."
   ],
 
   "meta": {
     "verifiedOn": "2026-08-05",
+    "confirmedOn": null,
     "staleAfterMonths": 6
   },
 
@@ -220,6 +225,6 @@
     { "path": "carbon-ai.html", "loc": "https://moseskolleh.github.io/sustaintheworld/carbon-ai.html", "lastmod": "2026-10-04", "changefreq": "monthly", "priority": "0.8" },
     { "path": "field-report.html", "loc": "https://moseskolleh.github.io/sustaintheworld/field-report.html", "lastmod": "2026-10-04", "changefreq": "monthly", "priority": "0.3" },
     { "path": "claims.html", "loc": "https://moseskolleh.github.io/sustaintheworld/claims.html", "lastmod": "2026-10-04", "changefreq": "monthly", "priority": "0.5" },
-    { "path": "stats.html", "loc": "https://moseskolleh.github.io/sustaintheworld/stats.html", "lastmod": "2026-10-03", "changefreq": "weekly", "priority": "0.2" }
+    { "path": "stats.html", "loc": "https://moseskolleh.github.io/sustaintheworld/stats.html", "lastmod": "2026-10-04", "changefreq": "weekly", "priority": "0.2" }
   ]
 }

@@ -337,6 +337,9 @@ html:not(.js) .cs-lenses { display: none; }
 /* An interactive's host: its heading and the line that stands in for it
    until modules/dossier.css and .js arrive (or for good, without them). */
 .cs-play { margin: 0 0 20px; }
+/* A game's title is one run of words with a figure marked in it: as a
+   flex row, the mark and the words after it were two columns on a phone. */
+.cs-play > .cs-stage-h { display: block; }
 .cs-play-summary {
     margin: 0;
     font-size: 0.85rem;
@@ -639,13 +642,17 @@ html.lightbox-open { overflow: hidden; }
 }
 /* Printed, the folds are open: paper has no press. The method, the
    closing note and the reproduction notes are folded for the screen's
-   length alone; an inline script opens them where ::details-content is not
-   known (PRINT_FOLDS, build-content.js). The photo rows stay shut. */
+   length alone; an inline script also opens them before printing, in
+   every browser (PRINT_FOLDS, build-content.js), which is how one without
+   ::details-content prints them. The photo rows stay shut. */
 @media print {
     .cs-method-fold::details-content,
     .cs-footnote details::details-content,
     .rs-repro details::details-content { content-visibility: visible; display: block; }
-    .cs-method-fold .cs-stage-h::after { content: none; }
+    /* Open, the sign is "−", and the rule that draws it names [open]: so
+       does this one, or it loses on paper, where the folds are open. */
+    .cs-method-fold .cs-stage-h::after,
+    .cs-method-fold[open] .cs-stage-h::after { content: none; }
 }
 /* Low-energy and reduced-motion visitors get no transitions to pay for. */
 @media (prefers-reduced-motion: reduce) {

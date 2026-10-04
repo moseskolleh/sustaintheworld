@@ -438,21 +438,26 @@ limits allow.
     at the Digital Society School with Ministry of Finance (NL) partners",
     and its `docs/legacy/` holds the EcoPrompt Coach handover document,
     dated January 2026. A handover reads like an ending; only you can say.
-  - *Where:* `content/profile.json` → `meta.verifiedOn` (now `2026-08-05`).
-    Set it to the day you confirm. If the role has ended, say when: its end
+  - *Where:* `content/profile.json` → `meta.confirmedOn` (now `null`) and
+    `meta.verifiedOn` (now `2026-08-05`). Set both to the day you confirm.
+    `confirmedOn` is yours alone: it is your word that the facts still
+    hold, and nobody else sets it. `verifiedOn` was set when this file was
+    written, not by you, so it is only the day the record is logged as of. If the role has ended, say when: its end
     month goes in `currentRole` and `experience[0]`, and the pages that call
     it current change with them, by hand, in one commit: "Sept 2025 —
     Present" in `index.html`'s experience card, "Sep 2025–now" and
-    "2025–now" in `field-report.html`, and "At the surface — today — I'm a
-    researcher…" in the experience script of `content/narration.json`
+    "2025–now" in `field-report.html`, and "At the surface, as last logged,
+    I'm a researcher…" in the experience script of `content/narration.json`
     (the notice `npm test` prints names the same places).
   - *Then:* `npm run build:content`, then `npm run cv`, and commit
     `content/profile.json`, `index.html`, `assets/Moses_Kolleh_Sesay_CV.pdf`
     and `assets/cv.hash` together. Since wave 4 the day you set is also the
     surface of the core log: every layer's depth is measured from it, and
-    its head reads "LOGGED" and that month (today "LOGGED AUG 2026"). The CV
-    ends "Facts last verified" and that day. `tests/cv.test.js` fails until
-    the CV is printed again.
+    its head reads "LOGGED" and that month (today "LOGGED AUG 2026"). Once
+    `confirmedOn` is set, the CV ends "Facts last confirmed" and that day;
+    until then it makes no such claim (it used to print "Facts last
+    verified" and the logged day, which nobody had confirmed).
+    `tests/cv.test.js` fails until the CV is printed again.
   - *Unlocks:* the one open-ended fact on the site stays true. `npm test`
     prints a notice once `verifiedOn` is more than six months old (from
     early February 2027 as it stands).
@@ -691,15 +696,16 @@ The coach has one name, EcoPrompt Coach, and the site links its maintained
 app as the canonical tool. These are the questions only you can answer.
 
 - [ ] **R1. WaterProject names third-party clients.** Its examples name a
-  private client, ACF, Living Water International and WiNGiN (for example
-  `examples/README.md`, `examples/run_dr_timbo_completion.py`,
-  `examples/run_kuntolo_step_test.py`). The site names none of them.
+  private client and three organisations it worked for or with, in
+  `examples/README.md` and the example scripts beside it. The site names
+  none of them, and this checklist does not either: the repository is
+  where to look.
   - *What:* decide whether the public repository should keep those names.
     This is a change in WaterProject, not in this site.
   - *Unlocks:* nothing on this site waits for it; it is the same consent
     question as D2, asked of another repository.
-  - *Check:* a search of the WaterProject repository for those names finds
-    only what you have agreed to.
+  - *Check:* a search of the WaterProject repository for the client and
+    organisation names in `examples/` finds only what you have agreed to.
 - [ ] **R2. The SQL label, "PostgreSQL · MySQL".** The homepage's toolkit
   labels SQL that way, but its proof, the GloBox A/B test, is plain SQL that
   shows neither.
@@ -717,7 +723,7 @@ app as the canonical tool. These are the questions only you can answer.
     URL is already trusted), then the toolkit's machine-learning row in
     `index.html` becomes a link to it, as the others are; the skills
     narration in `content/narration.json` says "no public project yet" and
-    changes with it.
+    changes with it. R7 asks the same of GIS.
   - *Check:* `npm test` passes; `npm run cv` again.
 - [ ] **R4. Is the Tableau Public dashboard still live?** Tableau's only
   evidence is the GloBox README's link to it
@@ -744,6 +750,22 @@ app as the canonical tool. These are the questions only you can answer.
   - *Where:* a `LICENSE` file in that repository; then that `note` in
     `content/research.json` drops the words, and `npm run build:content`.
   - *Check:* `research.html` no longer says it has none.
+- [ ] **R7. Public GIS work, if there is any.** The toolkit's QGIS & ArcGIS
+  row links the groundwater case study and says "on request; no public GIS
+  project yet": its maps are on request, and WaterProject, the case study's
+  one public repository, shows no QGIS or ArcGIS work (it mentions them
+  only as a planned import in `docs/geolibre_integration.md`).
+  - *What:* a public map, project file or repository of yours that shows
+    QGIS or ArcGIS work, or permission to publish one of the groundwater
+    maps.
+  - *Where:* a public artifact on the groundwater case study in
+    `content/projects.json` whose name or note says it is QGIS or ArcGIS
+    work (or a new output in `content/research.json`); then the row in
+    `index.html` drops "on request; no public GIS project yet", and the
+    skills narration in `content/narration.json` with it.
+  - *Check:* `npm test` passes (`tests/content.test.js` accepts a case
+    study as a proof only when a public artifact of it names the tool);
+    `npm run cv` again.
 
 ---
 
@@ -922,10 +944,15 @@ keep, and some figures could move to "public" with a link only you have.
     Then `npm run build:content`.
   - *Unlocks:* the testimonials block under the core log on the homepage.
     Until there is one entry it shows nothing at all. The build refuses a
-    quote without a source, a fourth entry or a quote over 200 characters.
+    quote without a source, a fourth entry or a quote over 200 characters,
+    and one that states a figure the claims ledger does not hold as the
+    quote writes it: "164 water points" is fine, and is marked like any
+    other; "a team of 23" needs a form, `"team of 23"`, on the team-size
+    entry in `content/claims.json` (the build names the figure).
   - *Room:* none yet, at full length. The homepage is 9.42 of 9.79 screens
-    at 1440×900 and 16.46 of 17.09 at 390×844. Measured on this branch with
-    stand-in quotes of 200 characters, one takes it to 9.80 on a desktop,
+    at 1440×900 and 16.49 of 17.09 at 390×844. Measured on this branch when
+    it was 16.46 on a phone, with stand-in quotes of 200 characters, one
+    takes it to 9.80 on a desktop,
     just over (on a phone, 16.86, within), and two to 9.80 and 17.18, over
     both. So before the first goes in, about a hundredth of a desktop screen
     has to come off the homepage, and for two, about a tenth of

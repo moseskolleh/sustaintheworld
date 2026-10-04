@@ -915,7 +915,7 @@ window.mks.share = (() => {
         else if (gWh < lo) msg = `You put the biggest model at ~${gWh.toFixed(2)} Wh. ${est}, so you underestimated the frontier, about ${Math.round(rWh / gWh)}× below its central figure.`;
         else if (gWh > hi) msg = `You had the frontier at ~${gWh.toFixed(2)} Wh. ${est}, so that is an overestimate.`;
         else msg = `You had the frontier at ~${gWh.toFixed(2)} Wh. ${est}: your guess is within that range.`;
-        msg += ` A 1B model answers for about ${tiny} Wh, so the frontier reasoning model uses roughly ${factorFrontier}× more for the same 1,000-token answer (${factors} across the ranges). That gap is exactly what the tools people prompt with never show them.`;
+        msg += ` A 1B model answers for about ${tiny} Wh, so the frontier reasoning model uses roughly ${factorFrontier}× more for the same 1,000-token answer (${factors} across the ranges). That gap is what the tools people prompt with rarely show them.`;
         // Shape grade: did they capture the frontier spike, not just a magnitude?
         let guessPeak = KNOWN;
         for (let i = KNOWN + 1; i < n; i++) if (guess[i] > guess[guessPeak]) guessPeak = i;
@@ -955,7 +955,7 @@ window.mks.share = (() => {
         ctx.font = "600 19px 'Space Grotesk', system-ui, sans-serif";
         const shapeLines = wrapText(ctx, cardData.shape, cw);
         ctx.font = "400 16px 'Inter', system-ui, sans-serif";
-        const factorText = `By the published estimates, the frontier reasoning model uses about ${cardData.factor}× the energy per answer of a 1-billion-parameter model (${cardData.factors} across their ranges).`;
+        const factorText = `By the published estimates, the frontier reasoning model uses about ${cardData.factor}× the energy per answer of a 1B model (${cardData.factors} across their ranges).`;
         const factorLines = wrapText(ctx, factorText, cw);
         const headerH = 78;
         const H = headerH + 26 + shapeLines.length * 26 + 14 + factorLines.length * 23 + 66;

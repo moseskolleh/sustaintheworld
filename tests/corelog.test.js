@@ -6,7 +6,7 @@
 // every one was about ten metres short. scripts/build-content.js now works
 // each layer's interval out from content/profile.json: its top where the
 // role ended (0 m for the open one), its base where it began, measured
-// from meta.verifiedOn, the day the facts were last checked, so the build
+// from meta.verifiedOn, the day the record is logged as of, so the build
 // never reads the clock. This holds the page to that arithmetic, and the
 // arithmetic to figures worked out by hand.
 //

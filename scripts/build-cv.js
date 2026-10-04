@@ -165,7 +165,11 @@ function cvModel(data, indexHtml) {
             text: absolute(o.url).startsWith(site) ? `on the site: ${absolute(o.url).slice(site.length)}` : bare(o.url)
         })),
         skills: { toolkit: home.toolkit, areas: home.areas, frameworks: home.frameworks },
-        footer: `Printed from ${bare(site)}, which gives the basis of every result above. Facts last verified ${dayName(profile.meta.verifiedOn)}.`
+        // "Facts last verified" printed the date the record is logged as of,
+        // which no one had confirmed (docs/owner-checklist.md, F5). The CV
+        // says the facts were confirmed only once Moses has said so.
+        footer: `Printed from ${bare(site)}, which gives the basis of every result above.` +
+            (profile.meta.confirmedOn ? ` Facts last confirmed ${dayName(profile.meta.confirmedOn)}.` : '')
     };
 }
 

@@ -93,6 +93,33 @@ html.light-mode {
     --hero-overlay-bottom: rgba(248, 250, 246, 0.95);
 }
 
+/* Printed, the light palette whatever the screen showed: paper is white.
+   tests/shell.test.js keeps it html.light-mode's. */
+@media print {
+    :root {
+        color-scheme: light;
+        --primary-green: #1a7a1a;
+        --dark-bg: #f5f6f3;
+        --darker-bg: #ffffff;
+        --card-bg: #ffffff;
+        --card-bg-alt: #fafbf8;
+        --text-primary: #161914;
+        --text-secondary: #54584f;
+        --text-dim: #5f635a;
+        --accent-color: #1a7a1a;
+        --hover-color: #146414;
+        --accent-amber: #8a6100;
+        --accent-blue: #1c6fa6;
+        --accent-salmon: #b0442c;
+        --accent-emerald: #127a3f;
+        --line-color: rgba(34, 139, 34, 0.25);
+        --line-soft: rgba(34, 139, 34, 0.1);
+        --box-shadow: 0 8px 30px rgba(34, 139, 34, 0.1);
+        --hero-overlay-top: rgba(248, 250, 246, 0.82);
+        --hero-overlay-bottom: rgba(248, 250, 246, 0.95);
+    }
+}
+
 * {
     margin: 0;
     padding: 0;

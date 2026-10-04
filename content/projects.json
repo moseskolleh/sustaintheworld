@@ -86,8 +86,8 @@
           "fullCaption": "'Dear future, I'm ready' — the research team at the Digital Society School, Amsterdam." },
         { "src": "assets/img/sustainable-ai-6.webp", "width": 900, "height": 675,
           "alt": "Five printed cards showing the framework's design principles on wooden stands",
-          "caption": "The framework distilled to five design principles — from \"make the invisible visible\" to a clear go/no-go checkpoint.",
-          "fullCaption": "The framework distilled to five design principles — from 'make the invisible visible' to a clear go/no-go checkpoint." },
+          "caption": "The framework distilled to five design principles — among them \"make the invisible visible\" and a go/no-go checkpoint.",
+          "fullCaption": "The framework distilled to five design principles — among them 'make the invisible visible' and a go/no-go checkpoint." },
         { "src": "assets/img/sustainable-ai-5.webp", "width": 900, "height": 675, "layout": "wide",
           "alt": "The team behind a demo table with toolkit cards, booklets and screens",
           "caption": "Demo day — putting the decision-support toolkit into visitors' hands.",
@@ -151,12 +151,12 @@
       "findings": [
         {
           "kind": "finding",
-          "text": "Between the most and least efficient model on the same task, the gap can exceed an order of magnitude, and nobody puts it in front of the person typing the prompt.",
-          "basis": "Field note 03, on the homepage."
+          "text": "Between the most and least efficient model on the same task, the gap can exceed an order of magnitude, and few tools put it in front of the person typing the prompt.",
+          "basis": "The factor set behind the EcoPrompt Coach, adapted from Jegham et al. (2025), model by model in its evidence ledger."
         },
         {
           "kind": "finding",
-          "text": "The framework came down to five design principles, from \"make the invisible visible\" to a clear go/no-go checkpoint.",
+          "text": "The framework came down to five design principles, among them \"make the invisible visible\" and a go/no-go checkpoint.",
           "basis": "The printed cards in the photos below; the framework itself is not public."
         },
         {
@@ -182,7 +182,6 @@
       "problem": "An organisation that uses AI may have to report on it, and its sustainability report has no line called \"AI\". How do prompts become figures on the lines it has — energy, Scope 2 and 3, water — without more precision than the data allows?",
 
       "method": [
-        "Worked through Scope 1–3 accounting, materiality assessments and transition planning in the hands-on labs of the OnePointFive sustainability consulting accelerator (Cohort 7).",
         "Rebuilt the framework on published science in four modules, Ground, Assess, Interpret and Act: energy, carbon and water per request and per month, each a low, central and high value whose spread is set by the data's quality tier.",
         "Reported Scope 2 location- and market-based side by side, never blended, and mapped each output to the disclosure line it fills: GRI 302, 303 and 305, ESRS E1 and E3, IFRS S2, CDP and SBTi.",
         "Put one query on those lines on this site: Anatomy of a Prompt places the calculator's query on Scope 2, Scope 3 and ESRS E3."
@@ -529,8 +528,8 @@
           "fullCaption": "Graduation day with the international cohort at Hunan University." },
         { "src": "assets/img/soft-path-6.webp", "width": 900, "height": 1200,
           "alt": "Moses with a colleague at an industrial equipment expo in China",
-          "caption": "An industrial-equipment expo during the Hunan years — the engineering half of the story.",
-          "fullCaption": "An industrial-equipment expo during the Hunan years — the engineering half of the dual-master's story." }
+          "caption": "An industrial-equipment expo during the Hunan years — the engineering side of the story.",
+          "fullCaption": "An industrial-equipment expo during the Hunan years — the engineering side of the dual-master's story." }
       ],
 
       "problem": "Freetown keeps building bigger pipes, and keeps running dry. The uncomfortable question: what if the answer isn't more hard infrastructure at all?",

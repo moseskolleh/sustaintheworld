@@ -15,7 +15,9 @@
 //                              what the narration says aloud, come to the
 //                              entry's own value (quantity)
 //   tests/claims.test.js       finds every number on every page, in digits
-//                              or in words, and fails on one that is
+//                              or in words, and every size said in words
+//                              ("a fifth", "twice", "an order of
+//                              magnitude"), and fails on one that is
 //                              neither marked nor one of the EXEMPT (or, in
 //                              words, WORD_EXEMPT) kinds below
 //
@@ -163,13 +165,14 @@ const EXEMPT = [
     { why: 'a section or step number, zero-padded', re: /(?<![\d.,])0\d(?![\d%]|[.,]\d)/g },
     { why: 'a section number, named as one', re: /\b[Ss]ection \d+(?:\.\d+)*\b/g },
     { why: 'a list ordinal', re: /\[\d{1,2}\]/g },
-    { why: 'the name of a standard or a reporting line', re: /\b(?:Scopes? \d(?:\s*(?:[–-]|to|and)\s*\d)?|category \d+|SDGs? \d+(?:\s*(?:&|and)\s*\d+)?|ISO \d+|IFRS S\d(?:\s*[&/]\s*S\d)?|E\d(?:-\d+)?|GRI \d{3}(?:(?:\s*[/,]\s*|,? and )\d{3})*)\b/g },
+    { why: 'the name of a standard or a reporting line', re: /\b(?:Scopes? \d(?:\s*(?:[–-]|to|and|,)\s*\d)*|category \d+|SDGs? \d+(?:\s*(?:&|and)\s*\d+)?|ISO \d+|IFRS S\d(?:\s*[&/]\s*S\d)?|E\d(?:-\d+)?|GRI \d{3}(?:(?:\s*[/,]\s*|,? and )\d{3})*)\b/g },
     { why: 'the name of a statistic (a 20-year return level)', re: /\b\d+-year return (?:levels?|periods?)\b/g },
     { why: 'the name of a cohort', re: /\bCohort \d+\b/g },
     { why: 'a place\'s coordinates', re: /\d+(?:\.\d+)?° ?[NSEW]\b/g },
     { why: 'a phone number', re: /\+\d{1,3}(?:[  ]\d{2,4}){2,4}/g },
     { why: 'an HTTP status code', re: /\b(?:error|HTTP) 404\b/g },
-    { why: 'a unit: per thousand tokens', re: /\bper[- ]1k\b/g },
+    { why: 'a unit: per thousand tokens', re: /\b(?:per[- ]|Wh\/)1k\b/g },
+    { why: 'a model\'s size, as its name gives it (a 1B model)', re: /\b\d+B model\b/g },
     { why: 'a dataset\'s name (Natural Earth\'s 1:50m coastlines)', re: /\bNatural Earth \d+ ?m\b/g },
     { why: 'a version number', re: /\bv?\d+\.\d+\.\d+\b/g },
     { why: 'a version, named as one (version 2, GAIA 1.0)', re: /\b(?:[Vv]ersion|GAIA(?: Framework)?) \d+(?:\.\d+)*\b/g },
@@ -206,8 +209,8 @@ const SMALL = '(?:one|two|three|four|five|six|seven|eight|nine|ten)';
 // Each says what it counts and how to count it (in content/, on a page, or
 // in a script's source): tests/claims.test.js holds the words to that
 // number, so "seven case studies" cannot outlive an eighth. Where the things
-// follow the count in the same breath ("four modules, Ground, Assess,
-// Interpret and Act"), the sentence is its own check.
+// are named in the same breath ("four modules, Ground, Assess, Interpret
+// and Act"), the sentence is its own check.
 const SHOWN_IN_FULL = [
     { re: /\bsix projects\b/gi, what: 'the homepage\'s project cards',
       count: d => d.projects.caseStudies.filter(cs => cs.homepageCard !== false).length },
@@ -219,17 +222,61 @@ const SHOWN_IN_FULL = [
     { re: /\bthree smallest models\b/gi, what: 'the models the homepage chart plots before the reader draws',
       count: d => Number((d.source('modules/interactives.js').match(/\bconst KNOWN = (\d+);/) || [])[1]) },
     { re: /\bfour modules, Ground, Assess, Interpret and Act\b/g, what: 'GAIA\'s modules, named after the count', named: true },
+    { re: /\btwo ESRS lines quantified\b/g, what: 'Anatomy of a Prompt\'s Scope 2 and cooling water, named just before the count', named: true },
     { re: /\bfive things to try\b/gi, what: 'the links of the homepage\'s play index, after it',
       count: d => d.page('index.html').querySelectorAll('.play-index a').length }
 ];
 const shownInFull = { why: 'a count of what the page shows in full, every one of them on it', res: SHOWN_IN_FULL.map(c => c.re) };
 const ONE = { why: '"one", a word before it is a count', test: (run) => run.value === 1 && /^one$/i.test(run.text) };
 
+// ------------------------------------------------------------------
+// Sizes in words
+//
+// "This answer boiled a fifth of a kettle", "nearly twice as much",
+// "millions of queries": a quantity with no numeral in it, which the
+// numbers above never see, so a page could say one with no basis at all
+// (the kettle had none). These are found too: a fraction after a count
+// ("a fifth of", "two thirds", and "half"), a multiplier ("twice",
+// "tenfold"), a magnitude, and the plural scales. An ordinal ("a third
+// line") is not a size and is left. A size the site says is either
+// reworded into a figure the ledger holds, or is one of HELD_SIZES: what
+// it sums up is named, and tests/claims.test.js checks it still does.
+// ------------------------------------------------------------------
+// "A third of" is a share and "a third line" a third one: a single part
+// counts only before "of"; "two thirds" is a share either way.
+const PART = '(?:third|quarter|fifth|sixth|seventh|eighth|ninth|tenth)';
+const SIZES = new RegExp(`\\b(?:(?:an?|one)[\\s-]+${PART}(?=\\s+of\\b)|(?:two|three|four|five|six|seven|eight|nine)[\\s-]+${PART}s|halves|half|twice|${SMALL}fold|\\d+-?fold|hundredfold|thousandfold|orders? of magnitude|dozens|hundreds|thousands|millions|billions)\\b`, 'gi');
+
+/** The sizes said in words in a text, each with where it sits. */
+function sizeRuns(text) {
+    const runs = [];
+    SIZES.lastIndex = 0;
+    let m;
+    while ((m = SIZES.exec(text))) runs.push({ text: m[0], index: m.index, end: m.index + m[0].length, size: true });
+    return runs;
+}
+
+// Each says what it sums up and how to test that it still does, against
+// the calculator's factor set (ai-carbon-data.js).
+const HELD_SIZES = [
+    { re: /\ban order of magnitude\b/gi,
+      what: 'the factor set: its models more than ten times apart, each estimate good to within ten times',
+      holds: (f) => {
+          const wh = Object.values(f.MODELS).map(m => m.energyPer1kTokens_Wh);
+          const spread = Math.max(...wh) / Math.min(...wh);
+          const loose = Object.values(f.MODELS).filter(m => m.range[1] / m.range[0] >= 10).map(m => m.label);
+          return { ok: spread > 10 && !loose.length, said: `${Math.round(spread)}× apart${loose.length ? `; ranges of ten times or more: ${loose.join(', ')}` : ''}` };
+      } }
+];
+const heldSizes = { why: 'a size the calculator\'s factor set shows, held to it', res: HELD_SIZES.map(h => h.re) };
+
 /** On the pages (tests/claims.test.js reads them with these). */
 const WORD_EXEMPT = [
     ONE,
-    { why: 'a name: net zero', res: [/\bnet[- ]zero\b/gi] },
-    shownInFull
+    { why: 'a name: net zero, the Big Four', res: [/\bnet[- ]zero\b/gi, /\bBig Four\b/g] },
+    { why: '"near zero": nothing, not a figure', res: [/\bnear zero\b/gi] },
+    shownInFull,
+    heldSizes
 ];
 
 /** In the narration, which also says years and the ordinals of its lists. */
@@ -238,7 +285,8 @@ const SPOKEN_EXEMPT = [
     ONE,
     { why: 'a list ordinal ("One, the sustainable A.I. framework")', res: [new RegExp(`(?:^|[.:!?]\\s+)(?:And\\s+)?${SMALL},`, 'gi')] },
     { why: 'the name of a standard (Scopes 1 to 3)', res: [/\bscopes? one to three\b/gi] },
-    shownInFull
+    shownInFull,
+    heldSizes
 ];
 
 /** Why a run of number words in `text` is not a figure, by `rules`, or null. */
@@ -337,4 +385,30 @@ function marker(claims) {
     };
 }
 
-module.exports = { wordRuns, numbers, quantity, agrees, EXEMPT, exemptAt, SHOWN_IN_FULL, WORD_EXEMPT, wordExempt, SPOKEN_EXEMPT, spokenExempt, markable, displays, pattern, marker, plain };
+/**
+ * The numbers in a text the ledger cannot mark: neither one of its figures,
+ * written as it writes them, nor one of the EXEMPT or WORD_EXEMPT kinds.
+ * For text the build marks but did not write (a testimonial, a
+ * certificate's line), so it can refuse one the pages would print unmarked.
+ */
+function unheld(text, claims) {
+    const s = plain(text);
+    const marked = [];
+    let at = 0;
+    marker(claims)(s).forEach(([t, id]) => { if (id) marked.push([at, at + t.length]); at += t.length; });
+    const inMark = (a, b) => marked.some(([x, y]) => x <= a && y >= b);
+    const out = [];
+    DIGITS.lastIndex = 0;
+    let m;
+    while ((m = DIGITS.exec(s))) {
+        const [a, b] = [m.index, m.index + m[0].length];
+        // As the page scan reads them: a digit after a letter is part of a
+        // name ("S1", "R1"), not a number.
+        if (/[A-Za-z]/.test(s.charAt(a - 1))) continue;
+        if (!inMark(a, b) && !exemptAt(s, a, b)) out.push(m[0]);
+    }
+    wordRuns(s).concat(sizeRuns(s)).forEach((r) => { if (!inMark(r.index, r.end) && !wordExempt(s, r)) out.push(r.text); });
+    return out;
+}
+
+module.exports = { unheld, wordRuns, sizeRuns, numbers, quantity, agrees, EXEMPT, exemptAt, SHOWN_IN_FULL, HELD_SIZES, WORD_EXEMPT, wordExempt, SPOKEN_EXEMPT, spokenExempt, markable, displays, pattern, marker, plain };

@@ -310,6 +310,10 @@ const profile = JSON.parse(read('content/profile.json'));
 {
     const { SCRIPTS } = require('../voice-scripts.js');
     const byId = Object.fromEntries(SCRIPTS.map(s => [s.id, s]));
+    // A sentence ends at a stop and a capital, but not after an initialism
+    // the narration spells for the voice: "Sustainable A.I. Prototypes" is
+    // one name.
+    const sentences = (t) => t.split(/(?<=[.!?])(?<!\b(?:[A-Z]\.)+)\s+(?=[A-Z])/);
     assert(!byId.notes && !byId.education, 'Narration: no script for a section that is now part of another');
     assert(/field notes/i.test(byId.about.label) && /what a hundred and sixty-four water points taught me about data/.test(byId.about.text),
         'Narration: About reads its field notes');
@@ -334,7 +338,7 @@ const profile = JSON.parse(read('content/profile.json'));
         [/^It runs entirely in your browser\.$/, ['entirely in your browser']],
         [/^The text never leaves this page, and no A\.I\. model is downloaded to do it\.$/, ['the text never leaves this page', 'no AI model is downloaded to do it']]
     ];
-    byId.contact.text.split(/(?<=[.!?])\s+(?=[A-Z])/).forEach((sentence) => {
+    sentences(byId.contact.text).forEach((sentence) => {
         const entry = SAID.find(([re]) => re.test(sentence));
         const missing = entry ? entry[1].filter(words => !section.includes(words)) : null;
         assert(!!entry && !missing.length,
@@ -350,7 +354,7 @@ const profile = JSON.parse(read('content/profile.json'));
         [/^Six projects, each with its headline result and how I know it\.$/, ['Six projects, each with its headline result and how I know it.']],
         [/^One, the sustainable A\.I\. framework: a working decision-support prototype, not a slide deck\.$/,
             ['Sustainable AI Framework', 'A working decision-support prototype, not a slide deck']],
-        [/^You can check that: the team's prototypes are public on GitHub, with my role in its README\.$/,
+        [/^You can check that: the team's prototypes are public on GitHub, as Sustainable A\.I\. Prototypes, with my role in its README\.$/,
             ['Checkable from outside The team\'s prototypes are public on GitHub as Sustainable AI Prototypes, with my role in its README.']],
         [/^Two, coastal water pollution dynamics: ten thousand two hundred and twenty-six sub-basins modelled\.$/,
             ['Coastal Water Pollution Dynamics', '10,226 sub-basins modelled']],
@@ -375,7 +379,7 @@ const profile = JSON.parse(read('content/profile.json'));
         [/^The whole of each is in the case studies, and two of them you can play with there: site a borehole, or flood a river\.$/,
             ['The whole of each, with the basis for every number, is in the case studies']]
     ];
-    const projectSentences = byId.projects.text.split(/(?<=[.!?])\s+(?=[A-Z])/);
+    const projectSentences = sentences(byId.projects.text);
     projectSentences.forEach((sentence) => {
         const entry = PROJECTS_SAID.find(([re]) => re.test(sentence));
         const missing = entry ? entry[1].filter(words => !cards.includes(words)) : null;

@@ -703,6 +703,29 @@ function checkStats(stats) {
 }
 
 // ------------------------------------------------------------------
+// The record's two dates (profile.meta)
+//
+// `verifiedOn` is the day the record is logged as of: the core log's
+// surface, and where the staleness notice counts from. `confirmedOn` is
+// Moses's own word that the ongoing facts still hold, null until he gives
+// it. The CV printed "Facts last verified" and the first date, which no one
+// had confirmed; it prints "Facts last confirmed" from the second alone, so
+// a date that is not a day, or one still to come, would print a
+// confirmation nobody gave. (realDay is the testimonials' check, below.)
+// ------------------------------------------------------------------
+function checkMeta(meta) {
+    const isDay = (d) => typeof d === 'string' && realDay(d);
+    const problems = [];
+    if (!meta || !isDay(meta.verifiedOn)) problems.push(`profile meta: verifiedOn must be a day, as YYYY-MM-DD (${meta && meta.verifiedOn})`);
+    if (!meta || !('confirmedOn' in meta)) problems.push('profile meta: confirmedOn is missing; it is null until Moses confirms the ongoing facts himself');
+    else if (meta.confirmedOn !== null) {
+        if (!isDay(meta.confirmedOn)) problems.push(`profile meta: confirmedOn must be null or a day, as YYYY-MM-DD (${meta.confirmedOn})`);
+        else if (Date.parse(meta.confirmedOn) > Date.now()) problems.push(`profile meta: confirmedOn ${meta.confirmedOn} is still to come`);
+    }
+    return problems;
+}
+
+// ------------------------------------------------------------------
 // profile.certifications — each with what it covered, and optionally
 // where the issuer says so
 //
@@ -749,10 +772,10 @@ function checkCertifications(certifications) {
 // most 200 characters. Measured in Chromium on the homepage before the rest
 // of wave 4, two at that length added 0.40 of a 1440x900 screen and 0.77 of
 // a 390x844 one, against 0.43 and 0.78 to spare. With wave 4 merged the
-// homepage is 9.42 and 16.46 screens, and stand-ins at that length take it
-// to 9.80 and 16.86 with one quote, 9.80 and 17.18 with two, over the 9.79
-// and 17.09 ceilings: room has to be made first, and smoke.js's length
-// check says so.
+// homepage was 9.42 and 16.46 screens (16.49 once the GIS proof said its
+// maps are on request), and stand-ins at that length took it to 9.80 and
+// 16.86 with one quote, 9.80 and 17.18 with two, over the 9.79 and 17.09
+// ceilings: room has to be made first, and smoke.js's length check says so.
 // ------------------------------------------------------------------
 const TESTIMONIAL_KEYS = ['quote', 'name', 'role', 'relationship', 'source'];
 const TESTIMONIAL_LIMITS = { entries: 3, quote: 200 };
@@ -796,6 +819,28 @@ function checkTestimonials(file) {
             problems.push(`${at}: source type ${JSON.stringify(s.type)} is not "linkedin" or "on-request"`);
         }
     });
+    return problems;
+}
+
+// ------------------------------------------------------------------
+// A figure in someone else's words
+//
+// The homepage holds every number it prints to the claims ledger, a
+// testimonial's and a certificate's line included: the build marks a
+// figure the ledger holds, and tests/claims.test.js fails on one it does
+// not. A quote is someone's own words and is never edited, so a figure in
+// it that the ledger does not hold, or holds written another way, is
+// refused here, by name, rather than by a scan of the page later: give it
+// an entry, or a `forms` entry for how the quote writes it ("team of 23"),
+// or choose another excerpt.
+// ------------------------------------------------------------------
+function checkQuotedFigures({ testimonials, certifications }, claims) {
+    const problems = [];
+    const say = (at, text) => figures.unheld(text, claims).forEach((n) => {
+        problems.push(`${at}: "${n}" is a figure the claims ledger does not hold as written; add it to content/claims.json (an entry, or a form of one), or quote another excerpt`);
+    });
+    ((testimonials && testimonials.testimonials) || []).forEach((t, i) => { if (t && typeof t.quote === 'string') say(`testimonial ${i + 1}${t.name ? ` (${t.name})` : ''}`, t.quote); });
+    (certifications || []).forEach((c) => { if (c && typeof c.covered === 'string') say(`certificate "${c.name}"`, c.covered); });
     return problems;
 }
 
@@ -1160,6 +1205,9 @@ function loadAll() {
         }
     }
 
+    // --- the record's dates ---------------------------------------------
+    problems.push(...checkMeta(profile.meta));
+
     // --- languages (optional) ------------------------------------------
     problems.push(...checkLanguages(profile.languages));
 
@@ -1169,6 +1217,7 @@ function loadAll() {
     // --- certificates and testimonials: what a reader can check ----------
     problems.push(...checkCertifications(profile.certifications));
     problems.push(...checkTestimonials(testimonials));
+    problems.push(...checkQuotedFigures({ testimonials, certifications: profile.certifications }, claims.claims));
 
     if (problems.length) {
         throw new Error(`content failed validation:\n  - ${problems.join('\n  - ')}`);
@@ -1218,10 +1267,12 @@ module.exports = {
     orderForLens,
     publicWorkFor,
     checkLensWork,
+    checkMeta,
     VERIFY_HOSTS,
     checkCertifications,
     TESTIMONIAL_LIMITS,
     checkTestimonials,
+    checkQuotedFigures,
     CHECKABLE,
     BASIS_KINDS,
     checkClaims,

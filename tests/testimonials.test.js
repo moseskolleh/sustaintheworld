@@ -14,7 +14,8 @@ const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
 const content = require('../scripts/lib/content.js');
-const { renderTestimonials, fillRegion, shellMarkers } = require('../scripts/build-content.js');
+const { renderTestimonials, renderCertificates, fillRegion, shellMarkers, useLedger } = require('../scripts/build-content.js');
+const figures = require('../scripts/lib/claims.js');
 
 const ROOT = path.join(__dirname, '..');
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), 'utf8');
@@ -124,6 +125,39 @@ const one = (t) => check({ testimonials: [t] });
         && figures.every(f => f.matches('.skills-panel') && f.querySelector('figcaption.cert-line')),
         'Drawn: the block wears classes style.css already draws (the field notes\' block and grid, a card, a certificate\'s line)');
     assert(/\.testimonial a \{\s*color: var\(--primary-green\);/.test(css), 'Drawn: its link takes the green, not a browser\'s default blue');
+}
+
+// --- A figure in a quote -------------------------------------------------------
+// The homepage holds every number to the claims ledger, and the quote was
+// printed escaped but unmarked: the first one to say "164 water points"
+// failed npm test, and no edit to content/ could fix it. A figure the
+// ledger holds is marked now, the words as written; one it does not is
+// refused by the build, by name, before any page is drawn.
+{
+    const claims = JSON.parse(read('content/claims.json')).claims;
+    useLedger(claims);
+    const quote = 'Moses ran the siting surveys behind our 164 water points, and a 70% strike rate is what reading the ground first bought us.';
+    const said = Object.assign(clone(onRequest), { quote });
+    const doc = new JSDOM(renderTestimonials({ testimonials: [said] })).window.document;
+    const p = doc.querySelector('blockquote p');
+    const marks = Array.from(p.querySelectorAll('[data-claim]')).map(m => `${m.textContent}=${m.getAttribute('data-claim')}`);
+    assert(marks.join() === '164=water-points,70%=strike-rate' && p.textContent === quote,
+        `Figures: a quote's figures the ledger holds are marked, and its words are as written (${marks.join(', ')})`);
+    const unmarked = figures.unheld(p.textContent, claims).filter(n => !marks.some(m => m.startsWith(`${n}=`)));
+    assert(content.checkQuotedFigures({ testimonials: { testimonials: [said] } }, claims).length === 0 && unmarked.length === 0,
+        'Figures: and the build accepts it');
+    const team = Object.assign(clone(onRequest), { quote: 'He kept a team of 23 on schedule through a whole dry season.' });
+    const refusedTeam = content.checkQuotedFigures({ testimonials: { testimonials: [team] } }, claims);
+    assert(refusedTeam.length === 1 && /"23" is a figure the claims ledger does not hold as written/.test(refusedTeam[0]),
+        `Figures: one the ledger does not hold as written ("a team of 23") is refused by name (${refusedTeam[0] || 'accepted'})`);
+    const formed = claims.map(c => (c.id === 'team-size' ? Object.assign({}, c, { forms: ['team of 23'] }) : c));
+    assert(content.checkQuotedFigures({ testimonials: { testimonials: [team] } }, formed).length === 0,
+        'Figures: and a form in content/claims.json, the way the quote writes it, is the fix');
+    const cert = renderCertificates({ certifications: [{ name: 'X', issuer: 'Y', displayDate: '2024', year: 2024, covered: 'Fieldwork behind 164 water points' }] });
+    assert(/<span data-claim="water-points">164<\/span>/.test(cert), 'Figures: a certificate\'s line is marked the same way');
+    assert(content.checkQuotedFigures({ certifications: [{ name: 'X', covered: 'Across 12 modules' }] }, claims).some(p2 => /certificate "X": "12"/.test(p2)),
+        'Figures: and a figure in one the ledger does not hold is refused');
+    useLedger([]);
 }
 
 if (failures > 0) {

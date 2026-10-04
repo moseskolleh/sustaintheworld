@@ -69,8 +69,9 @@
                 About my work or about the site itself, each number is here once, with every page it appears
                 on, whether it is written in digits or in words. The pages mark each one with its entry, and a
                 test fails the build if a page prints a number that is not here, or one that disagrees with its
-                entry, in its text, a label or a photo&rsquo;s caption. The field terminal on the homepage is
-                held to the same list, and so is what the narration says aloud.
+                entry, in its text, a label or a photo&rsquo;s caption. What the scripts print of their own is
+                read from their source and held to the same list: the field terminal, the Assay, the receipt,
+                the coach&rsquo;s tips. So is what the narration says aloud.
             </p>
         </section>
 
@@ -81,7 +82,7 @@
                 <li class="cl-item" id="claim-sub-basins">
                     <p class="cl-figure"><span class="cl-value" data-claim="sub-basins">10,226</span> river sub-basins modelled with the MARINA-Multi model</p>
                     <p class="cl-basis"><span class="mono-label">Basis</span> <a href="case-studies.html#coastal">Coastal Water Pollution Dynamics</a>, &ldquo;<span data-claim="sub-basins">10,226</span> sub-basins modelled&rdquo;: The sub-basin count of the MARINA-Multi model configuration used &mdash; a property of the model domain, not an estimate.</p>
-                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span> <a href="case-studies.html#coastal">Case studies</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html#journey">Home</a> &middot; <a href="case-studies.html">Case studies</a> &middot; <a href="research.html#msc-wur">Research</a> &middot; <a href="field-report.html">Field report</a> &middot; the narration</span></p>
+                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span> <a href="case-studies.html#coastal">Case studies</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html#journey">Home</a> &middot; <a href="case-studies.html#coastal">Case studies</a> &middot; <a href="research.html#msc-wur">Research</a> &middot; <a href="field-report.html">Field report</a> &middot; the narration</span></p>
                 </li>
                 <li class="cl-item" id="claim-gaia-checks">
                     <p class="cl-figure"><span class="cl-value" data-claim="gaia-checks">3,984</span> cross-engine checks passing in GAIA: its workbook, web estimator and reference code giving the same answers</p>
@@ -96,7 +97,7 @@
                 <li class="cl-item" id="claim-first-view">
                     <p class="cl-figure"><span class="cl-value" data-claim="first-view">276</span> KB over the wire: the homepage's first view, fonts included</p>
                     <p class="cl-basis"><span class="mono-label">Basis</span> The budget &ldquo;First view of the homepage, over the wire (fonts included)&rdquo;, measured by <code>npm run budget</code> on every build. The build fails if the homepage outgrows its ceiling or a page quotes another figure, and a real browser checks the estimate in CI.</p>
-                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span> <a href="https://github.com/moseskolleh/sustaintheworld#performance">github.com</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html">Home</a> &middot; <a href="case-studies.html">Case studies</a></span></p>
+                    <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span> <a href="https://github.com/moseskolleh/sustaintheworld#performance">github.com</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html">Home</a> &middot; <a href="case-studies.html?lens=sustainable-ai">Case studies</a></span></p>
                 </li>
                 <li class="cl-item" id="claim-field-report-kb">
                     <p class="cl-figure"><span class="cl-value" data-claim="field-report-kb">10</span> KB: the text-only field report, as saved</p>
@@ -110,7 +111,7 @@
                 </li>
                 <li class="cl-item" id="claim-old-images">
                     <p class="cl-figure"><span class="cl-value" data-claim="old-images">22</span> MB of images the homepage loaded on arrival before its redesign</p>
-                    <p class="cl-basis"><span class="mono-label">Basis</span> <a href="https://github.com/moseskolleh/sustaintheworld/tree/3d7ab78becfe366975e2e6eadafa244d41b420dc">This site's own history: the homepage and its photos at the last commit before they were converted to WebP</a>. The hero photos and the profile photo, all fetched on arrival, summed from the files at that commit. With the photos it fetched only on a scroll, the page used nearly twice as much.</p>
+                    <p class="cl-basis"><span class="mono-label">Basis</span> <a href="https://github.com/moseskolleh/sustaintheworld/tree/3d7ab78becfe366975e2e6eadafa244d41b420dc">This site's own history: the homepage and its photos at the last commit before they were converted to WebP</a>. The hero photos and the profile photo, all fetched on arrival, summed from the files at that commit.</p>
                     <p class="cl-meta"><span class="cl-check cl-check-public">Checkable from outside</span> <a href="https://github.com/moseskolleh/sustaintheworld/tree/3d7ab78becfe366975e2e6eadafa244d41b420dc">github.com</a> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html">Home</a></span></p>
                 </li>
                 <li class="cl-item" id="claim-web-carbon">
@@ -193,7 +194,7 @@
                 <li class="cl-item" id="claim-continents">
                     <p class="cl-figure"><span class="cl-value" data-claim="continents">3</span> continents studied and worked on: Africa, Asia and Europe</p>
                     <p class="cl-basis"><span class="mono-label">Basis</span> Sierra Leone for the BSc and the drilling work, China for the MSc at Hunan, and the Netherlands and Germany for the MSc at Wageningen, UNDRR in Bonn and the Digital Society School. The degree certificates are the evidence. <span class="cl-file">Recorded in <code>content/profile.json</code>.</span></p>
-                    <p class="cl-meta"><span class="cl-check cl-check-on-request">On request</span> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html">Home</a> &middot; the narration</span></p>
+                    <p class="cl-meta"><span class="cl-check cl-check-on-request">On request</span> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html#journey">Home</a> &middot; the narration</span></p>
                 </li>
                 <li class="cl-item" id="claim-countries">
                     <p class="cl-figure"><span class="cl-value" data-claim="countries">4</span> countries studied and worked in: Sierra Leone, China, Germany and the Netherlands</p>
@@ -215,27 +216,27 @@
                 <li class="cl-item" id="claim-water-points">
                     <p class="cl-figure"><span class="cl-value" data-claim="water-points">164</span> water points delivered across Sierra Leone</p>
                     <p class="cl-basis"><span class="mono-label">Basis</span> <a href="case-studies.html#groundwater">Groundwater Potential Mapping</a>, &ldquo;Method carried into the borehole siting that followed, part of <span data-claim="water-points">164</span> water points delivered across Sierra Leone&rdquo;: The boreholes behind the <span data-claim="strike-rate">70%</span> strike rate were sited with the survey method in the Team &amp; Team International fieldwork. They are part of the <span data-claim="water-points">164</span> water points &mdash; <span data-claim="wells-rehabilitated">100</span> hand-dug wells rehabilitated, <span data-claim="boreholes-constructed">50</span> boreholes constructed, <span data-claim="solar-boreholes">14</span> solar-powered boreholes, itemised and summing to <span data-claim="water-points">164</span> &mdash; but not all of them: a rehabilitated well needs no siting, and no survey siting is recorded for the other boreholes. The mapping informed siting; it is not the sole cause of the outcome.</p>
-                    <p class="cl-meta"><span class="cl-check cl-check-not-checkable">Not checkable from outside</span> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html">Home</a> &middot; <a href="case-studies.html">Case studies</a> &middot; <a href="research.html#field-notes">Research</a> &middot; <a href="field-report.html">Field report</a> &middot; the narration</span></p>
+                    <p class="cl-meta"><span class="cl-check cl-check-not-checkable">Not checkable from outside</span> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html#journey">Home</a> &middot; <a href="case-studies.html#groundwater">Case studies</a> &middot; <a href="research.html#field-notes">Research</a> &middot; <a href="field-report.html">Field report</a> &middot; the narration</span></p>
                 </li>
                 <li class="cl-item" id="claim-wells-rehabilitated">
                     <p class="cl-figure"><span class="cl-value" data-claim="wells-rehabilitated">100</span> hand-dug wells rehabilitated: part of those water points</p>
                     <p class="cl-basis"><span class="mono-label">Basis</span> The same result as <a href="#claim-water-points"><span data-claim="water-points">164</span> water points delivered across Sierra Leone</a>, in <a href="case-studies.html#groundwater">Groundwater Potential Mapping</a>.</p>
-                    <p class="cl-meta"><span class="cl-check cl-check-not-checkable">Not checkable from outside</span> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html#about">Home</a> &middot; <a href="case-studies.html">Case studies</a> &middot; <a href="field-report.html">Field report</a></span></p>
+                    <p class="cl-meta"><span class="cl-check cl-check-not-checkable">Not checkable from outside</span> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html#about">Home</a> &middot; <a href="case-studies.html#groundwater">Case studies</a> &middot; <a href="field-report.html">Field report</a></span></p>
                 </li>
                 <li class="cl-item" id="claim-boreholes-constructed">
                     <p class="cl-figure"><span class="cl-value" data-claim="boreholes-constructed">50</span> boreholes constructed: part of those water points</p>
                     <p class="cl-basis"><span class="mono-label">Basis</span> The same result as <a href="#claim-water-points"><span data-claim="water-points">164</span> water points delivered across Sierra Leone</a>, in <a href="case-studies.html#groundwater">Groundwater Potential Mapping</a>.</p>
-                    <p class="cl-meta"><span class="cl-check cl-check-not-checkable">Not checkable from outside</span> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html#about">Home</a> &middot; <a href="case-studies.html">Case studies</a> &middot; <a href="field-report.html">Field report</a></span></p>
+                    <p class="cl-meta"><span class="cl-check cl-check-not-checkable">Not checkable from outside</span> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html#about">Home</a> &middot; <a href="case-studies.html#groundwater">Case studies</a> &middot; <a href="field-report.html">Field report</a></span></p>
                 </li>
                 <li class="cl-item" id="claim-solar-boreholes">
                     <p class="cl-figure"><span class="cl-value" data-claim="solar-boreholes">14</span> solar-powered boreholes with storage tanks: the rest of them</p>
                     <p class="cl-basis"><span class="mono-label">Basis</span> The same result as <a href="#claim-water-points"><span data-claim="water-points">164</span> water points delivered across Sierra Leone</a>, in <a href="case-studies.html#groundwater">Groundwater Potential Mapping</a>.</p>
-                    <p class="cl-meta"><span class="cl-check cl-check-not-checkable">Not checkable from outside</span> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html#about">Home</a> &middot; <a href="case-studies.html">Case studies</a> &middot; <a href="field-report.html">Field report</a></span></p>
+                    <p class="cl-meta"><span class="cl-check cl-check-not-checkable">Not checkable from outside</span> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html#about">Home</a> &middot; <a href="case-studies.html#groundwater">Case studies</a> &middot; <a href="field-report.html">Field report</a></span></p>
                 </li>
                 <li class="cl-item" id="claim-strike-rate">
                     <p class="cl-figure"><span class="cl-value" data-claim="strike-rate">70%</span> aquifer strike rate on the boreholes sited with the resistivity survey</p>
                     <p class="cl-basis"><span class="mono-label">Basis</span> <a href="case-studies.html#groundwater">Groundwater Potential Mapping</a>, &ldquo;<span data-claim="strike-rate">70%</span> aquifer strike rate in subsequent drilling&rdquo;: Successful strikes as a share of boreholes drilled on sites selected with the survey method, during the Team &amp; Team International fieldwork. The site sets it beside roughly <span data-claim="blind-siting">30%</span> for blind siting in the same geology, but no source for that baseline is recorded &mdash; so wherever the <span data-claim="blind-siting">30%</span> appears it is labelled illustrative, not measured.</p>
-                    <p class="cl-meta"><span class="cl-check cl-check-not-checkable">Not checkable from outside</span> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html#about">Home</a> &middot; <a href="case-studies.html">Case studies</a> &middot; <a href="field-report.html">Field report</a> &middot; the narration</span></p>
+                    <p class="cl-meta"><span class="cl-check cl-check-not-checkable">Not checkable from outside</span> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html#about">Home</a> &middot; <a href="case-studies.html#groundwater">Case studies</a> &middot; <a href="field-report.html">Field report</a> &middot; the narration</span></p>
                 </li>
                 <li class="cl-item" id="claim-blind-siting">
                     <p class="cl-figure"><span class="cl-value" data-claim="blind-siting">30%</span> strike rate for blind siting in the same geology: the comparison the borehole game draws</p>
@@ -245,7 +246,7 @@
                 <li class="cl-item" id="claim-hazard-systems">
                     <p class="cl-figure"><span class="cl-value" data-claim="hazard-systems">54</span> global hazard information systems documented for UNDRR</p>
                     <p class="cl-basis"><span class="mono-label">Basis</span> <a href="case-studies.html#un-disaster">UN Disaster Risk Reduction &mdash; hazard data</a>, &ldquo;<span data-claim="hazard-systems">54</span> global hazard information systems identified and documented&rdquo;: A count of the systems catalogued during the internship, recorded in the deliverable. Countable, not estimated.</p>
-                    <p class="cl-meta"><span class="cl-check cl-check-not-checkable">Not checkable from outside</span> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html">Home</a> &middot; <a href="case-studies.html">Case studies</a> &middot; <a href="research.html#undrr-hazard-inventory">Research</a> &middot; <a href="field-report.html">Field report</a> &middot; the narration</span></p>
+                    <p class="cl-meta"><span class="cl-check cl-check-not-checkable">Not checkable from outside</span> <span class="cl-where"><span class="mono-label">Where</span> <a href="index.html#journey">Home</a> &middot; <a href="case-studies.html#un-disaster">Case studies</a> &middot; <a href="research.html#undrr-hazard-inventory">Research</a> &middot; <a href="field-report.html">Field report</a> &middot; the narration</span></p>
                 </li>
                 <li class="cl-item" id="claim-coverage-gain">
                     <p class="cl-figure"><span class="cl-value" data-claim="coverage-gain">25%</span> more regional and hazard-type coverage in UNDRR's catalogue of those systems</p>
@@ -265,7 +266,7 @@
                 <li class="cl-item" id="claim-wuppertal-team">
                     <p class="cl-figure"><span class="cl-value" data-claim="wuppertal-team">6</span> people in the interdisciplinary team of the Wuppertal flood-resilience consultancy</p>
                     <p class="cl-basis"><span class="mono-label">Basis</span> As I record it; the consultancy report is the client's. <span class="cl-file">Recorded in <code>content/profile.json</code>.</span></p>
-                    <p class="cl-meta"><span class="cl-check cl-check-not-checkable">Not checkable from outside</span> <span class="cl-where"><span class="mono-label">Where</span> <a href="case-studies.html">Case studies</a> &middot; <a href="field-report.html">Field report</a></span></p>
+                    <p class="cl-meta"><span class="cl-check cl-check-not-checkable">Not checkable from outside</span> <span class="cl-where"><span class="mono-label">Where</span> <a href="case-studies.html#wuppertal">Case studies</a> &middot; <a href="field-report.html">Field report</a></span></p>
                 </li>
                 <li class="cl-item" id="claim-undrr-months">
                     <p class="cl-figure"><span class="cl-value" data-claim="undrr-months">5</span> months with UNDRR in Bonn: the internship, June to October</p>
@@ -285,7 +286,9 @@
                 figures the calculators work out in
                 your browser, in the <a href="carbon-ai.html">EcoPrompt Coach</a>, in the chart on the homepage and on the
                 footer&rsquo;s receipt, are model outputs: their inputs are above, and every factor behind them is in
-                the calculator&rsquo;s <a href="carbon-ai.html#evidence">evidence ledger</a>. The
+                the calculator&rsquo;s <a href="carbon-ai.html#evidence">evidence ledger</a>, with its source.
+                &ldquo;An order of magnitude&rdquo; sums up that factor set, how far apart its models are and how
+                far each estimate is good to, and a test holds it there. The
                 <a href="stats.html">open counts</a> are the visit counter&rsquo;s own, rewritten each week.
             </p>
         </section>

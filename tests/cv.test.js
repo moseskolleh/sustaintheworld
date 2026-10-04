@@ -229,6 +229,21 @@ function assert(cond, msg) {
         assert(Array.from(doc.querySelectorAll('a')).every(x => !/^Verify/.test(x.textContent)) || profile.certifications.some(c => c.verifyUrl),
             'Model: no Verify link without a verifyUrl');
 
+        // "Facts last verified 5 August 2026" ended the CV, from the day the
+        // record is logged as of, which nobody had confirmed. The CV says
+        // the facts were confirmed only once Moses has (meta.confirmedOn),
+        // and the validator takes no placeholder and no day still to come.
+        const confirmed = /Facts last (?:verified|confirmed)/;
+        assert(profile.meta.confirmedOn ? has(`Facts last confirmed`) : !confirmed.test(text),
+            `PDF: it claims the facts were confirmed only if Moses has said so (meta.confirmedOn ${profile.meta.confirmedOn}; ${(text.match(/Facts last \w+ [^.]*/) || ['no such line'])[0]})`);
+        const said = JSON.parse(JSON.stringify(data));
+        said.profile.meta.confirmedOn = '2026-09-01';
+        assert(/Facts last confirmed 1 September 2026\.$/.test(cv.cvModel(said, read('index.html')).footer) && !confirmed.test(model.footer) === !profile.meta.confirmedOn,
+            'Model: once Moses sets meta.confirmedOn, the CV ends "Facts last confirmed" and that day');
+        const refused = ['TBC', '2026-02-30', '2999-01-01'].map(d => content.checkMeta({ verifiedOn: profile.meta.verifiedOn, confirmedOn: d }).length > 0);
+        assert(refused.every(Boolean) && content.checkMeta({ verifiedOn: profile.meta.verifiedOn }).length > 0,
+            'Validator: meta.confirmedOn is null or a real day that has come, and is never left out');
+
         // The page is valid HTML, by the rules the site's pages are held to.
         const { HtmlValidate } = require('html-validate');
         const report = await new HtmlValidate(require('../.htmlvalidate.cjs')).validateString(html, 'cv.html');

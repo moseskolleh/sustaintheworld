@@ -14,8 +14,10 @@
     "with no basis, a number on any page, in digits or in words, in its text",
     "or its labels and captions, that is neither marked nor a year, a date, a",
     "section number, a standard's name, \"one\", a count of what the page",
-    "shows in full and the like, a figure the field terminal prints that is",
-    "not here, and a number the narration says aloud that no entry backs.",
+    "shows in full and the like, a size said in words (\"a fifth\", \"twice\")",
+    "that nothing holds, a figure a script prints of its own (the field",
+    "terminal, the Assay, the receipt, the coach's tips) that is not here, and",
+    "a number the narration says aloud that no entry backs.",
     "",
     "FIELDS (scripts/lib/content.js refuses anything else)",
     "",
@@ -57,7 +59,8 @@
     "Numbers the calculators work out in the browser (the coach on carbon-ai.html, the",
     "homepage chart, the footer's receipt) are model outputs, not claims:",
     "their inputs are entries here, where the pages print them, and every",
-    "factor is in the evidence ledger on carbon-ai.html. The open counts on",
+    "factor is in the evidence ledger on carbon-ai.html. What those scripts",
+    "print of their own is held here like a page. The open counts on",
     "stats.html are the visit counter's own measurements, rewritten weekly."
   ],
 
@@ -235,7 +238,7 @@
       "basis": {
         "source": "This site's own history: the homepage and its photos at the last commit before they were converted to WebP",
         "url": "https://github.com/moseskolleh/sustaintheworld/tree/3d7ab78becfe366975e2e6eadafa244d41b420dc",
-        "note": "The hero photos and the profile photo, all fetched on arrival, summed from the files at that commit. With the photos it fetched only on a scroll, the page used nearly twice as much."
+        "note": "The hero photos and the profile photo, all fetched on arrival, summed from the files at that commit."
       },
       "checkable": "public",
       "check": "https://github.com/moseskolleh/sustaintheworld/tree/3d7ab78becfe366975e2e6eadafa244d41b420dc"
