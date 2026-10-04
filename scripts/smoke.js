@@ -2026,6 +2026,7 @@ async function notFoundLinks(browser, origin) {
 // opened them for print. The photo rows stay folded on paper as on screen.
 // The PDF is read back as the CV's test reads the CV.
 async function printFolds(browser, origin) {
+    if (!CHROMIUM) return ok(`printed folds: not printed in ${BROWSER} (page.pdf is headless Chromium's) — the Chromium run reads them`);
     const { pdfText } = require('./lib/pdf-text.js');
     const { projects, research } = require('./lib/content.js').loadAll();
     const alnum = (s) => String(s).replace(/[^A-Za-z0-9]/g, '');
